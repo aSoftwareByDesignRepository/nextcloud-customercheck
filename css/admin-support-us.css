@@ -1,0 +1,625 @@
+/**
+ * Support & Us — dedicated Administration page + offer surface.
+ *
+ * Layout: full-bleed hero (copy + trust) → partner spotlight → titled option grid.
+ * Theme tokens only (no purple/cream AI clichés). WCAG 2.1 AA focus + contrast hooks.
+ *
+ * @copyright Copyright (c) 2026, Software by Design GbR
+ * @license AGPL-3.0-or-later
+ */
+
+/* === support-us:azc start === */
+
+/* Shell-scoped page root — fill available width (beats stale/cached 56rem caps). */
+#app-content.crm-app--support-us .crm-support-us-page,
+.crm-support-us-page {
+	display: flex;
+	flex-direction: column;
+	gap: var(--crm-space-6, 2rem);
+	width: 100%;
+	max-width: none;
+	min-width: 0;
+	margin: 0;
+	padding-block-end: var(--crm-space-7, 3rem);
+	box-sizing: border-box;
+}
+
+/* ── Hero ─────────────────────────────────────────────────────── */
+.crm-support-us-page__hero {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+	gap: var(--crm-space-5, 1.25rem);
+	align-items: start;
+	padding: var(--crm-space-6, 2rem) var(--crm-space-5, 1.25rem);
+	border: 1px solid var(--crm-border, var(--color-border));
+	border-radius: var(--crm-radius-lg, 16px);
+	background:
+		linear-gradient(
+			155deg,
+			color-mix(in srgb, var(--color-primary-element) 16%, var(--color-main-background)) 0%,
+			var(--color-main-background) 48%,
+			color-mix(in srgb, var(--color-main-text) 5%, var(--color-main-background)) 100%
+		);
+	box-sizing: border-box;
+	overflow: hidden;
+	position: relative;
+}
+
+.crm-support-us-page__hero::before {
+	content: "";
+	position: absolute;
+	inset-block-start: -20%;
+	inset-inline-end: -8%;
+	width: min(28rem, 55vw);
+	height: min(28rem, 55vw);
+	border-radius: 50%;
+	background: color-mix(in srgb, var(--color-primary-element) 10%, transparent);
+	pointer-events: none;
+	z-index: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	.crm-support-us-page__hero::before {
+		animation: azc-support-us-hero-glow 18s ease-in-out infinite alternate;
+	}
+}
+
+@keyframes azc-support-us-hero-glow {
+	from { transform: translate(0, 0) scale(1); opacity: 0.85; }
+	to { transform: translate(-4%, 6%) scale(1.08); opacity: 1; }
+}
+
+.crm-support-us-page__hero-main,
+.crm-support-us-page__trust {
+	position: relative;
+	z-index: 1;
+}
+
+.crm-support-us-page__hero-main {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: var(--crm-space-4, 1rem);
+	min-width: 0;
+}
+
+/* Official SBD wordmark sits on a light plate so brand colours stay legible
+ * on every Nextcloud theme (logo SVG uses dark fills). */
+.crm-support-us-page__brand {
+	display: inline-flex;
+	align-items: center;
+	margin: 0;
+}
+
+.crm-support-us-page__brand-link {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	max-width: 100%;
+	padding: 0.65rem 0.95rem;
+	border-radius: var(--crm-radius-md, 12px);
+	border: 1px solid color-mix(in srgb, var(--color-main-text) 12%, transparent);
+	/* Solid light plate — logo fills are dark; must beat link resets. */
+	background-color: #ffffff !important;
+	box-shadow: var(--crm-shadow-sm);
+	text-decoration: none !important;
+	color: inherit !important;
+	line-height: 1.1;
+	overflow: visible;
+	box-sizing: border-box;
+	transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+#app-content.crm-app--support-us a.crm-support-us-page__brand-link {
+	background-color: #ffffff !important;
+	text-decoration: none !important;
+}
+
+.crm-support-us-page__brand-link:hover {
+	border-color: color-mix(in srgb, var(--color-primary-element) 40%, transparent);
+	box-shadow: var(--crm-shadow-md, 0 4px 12px rgba(0, 0, 0, 0.12));
+}
+
+.crm-support-us-page__brand-link:focus-visible {
+	outline: 3px solid var(--color-primary-element, var(--color-main-text));
+	outline-offset: 2px;
+}
+
+/* Mark + HTML wordmark: never clips under SVG <text> font fallback. */
+.crm-support-us-page__lockup {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.7rem;
+	min-width: 0;
+}
+
+.crm-support-us-page__mark {
+	display: block;
+	width: 3.25rem;
+	height: 3.25rem;
+	flex: 0 0 auto;
+	object-fit: contain;
+}
+
+.crm-support-us-page__wordmark {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	justify-content: center;
+	gap: 0.1rem;
+	min-width: 0;
+}
+
+.crm-support-us-page__wordmark-software {
+	font-family: "Segoe UI", "Helvetica Neue", Arial, system-ui, sans-serif;
+	font-size: clamp(1.05rem, 2.4vw, 1.35rem);
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	line-height: 1.05;
+	color: #29235c;
+	white-space: nowrap;
+}
+
+.crm-support-us-page__wordmark-by {
+	font-family: "Segoe UI", "Helvetica Neue", Arial, system-ui, sans-serif;
+	font-size: clamp(0.78rem, 1.8vw, 0.95rem);
+	font-weight: 500;
+	font-style: italic;
+	letter-spacing: 0.06em;
+	line-height: 1.1;
+	color: #3c3c3b;
+	white-space: nowrap;
+}
+
+.crm-support-us-page__kicker {
+	margin: 0;
+	font-size: var(--crm-fs-sm, 0.875rem);
+	font-weight: 600;
+	letter-spacing: 0.02em;
+	line-height: var(--crm-line-tight, 1.25);
+	color: var(--crm-muted, var(--color-text-maxcontrast));
+}
+
+.crm-support-us-page__headline {
+	margin: 0;
+	max-width: 36ch;
+	font-size: clamp(1.4rem, 2.6vw, 2rem);
+	font-weight: 700;
+	line-height: var(--crm-line-tight, 1.2);
+	color: var(--crm-text, var(--color-main-text));
+	text-wrap: balance;
+}
+
+.crm-support-us-page__lead {
+	margin: 0;
+	max-width: 48rem;
+	font-size: var(--crm-fs-md, 1rem);
+	line-height: var(--crm-line-base, 1.5);
+	color: var(--crm-text, var(--color-main-text));
+}
+
+/* Beat #app-content-wrapper ul { padding-left: 1.5rem } — historic chip indent. */
+#app-content.crm-app--support-us ul.crm-support-us-page__trust {
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	justify-content: flex-start;
+	gap: var(--crm-space-2, 0.5rem);
+	margin: 0;
+	padding: var(--crm-space-4, 1rem);
+	padding-inline-start: var(--crm-space-4, 1rem);
+	list-style: none;
+	list-style-type: none;
+	border: 1px solid var(--crm-border, var(--color-border));
+	border-radius: var(--crm-radius-md, 12px);
+	background: color-mix(in srgb, var(--color-main-background) 82%, var(--color-primary-element) 18%);
+	box-sizing: border-box;
+	min-width: 0;
+}
+
+#app-content.crm-app--support-us ul.crm-support-us-page__trust > li {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.55rem;
+	min-height: 2.25rem;
+	margin: 0;
+	padding: 0.35rem 0;
+	border: 0;
+	border-radius: 0;
+	background: transparent;
+	font-size: var(--crm-fs-sm, 0.875rem);
+	font-weight: 600;
+	line-height: var(--crm-line-base, 1.45);
+	color: var(--crm-text, var(--color-main-text));
+	list-style: none;
+}
+
+#app-content.crm-app--support-us ul.crm-support-us-page__trust > li::before {
+	content: "";
+	flex: 0 0 auto;
+	width: 0.65rem;
+	height: 0.65rem;
+	margin-block-start: 0.4rem;
+	border-radius: 50%;
+	background: var(--color-primary-element, #0082c9);
+	box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary-element) 22%, transparent);
+}
+
+@media (min-width: 960px) {
+	.crm-support-us-page__hero {
+		grid-template-columns: minmax(0, 1.55fr) minmax(15rem, 22rem);
+		padding: var(--crm-space-7, 3rem) var(--crm-space-6, 2rem);
+		gap: var(--crm-space-6, 2rem);
+	}
+}
+
+/* ── Offer section (page + embed) ─────────────────────────────── */
+.crm-support-us--page {
+	display: flex;
+	flex-direction: column;
+	gap: var(--crm-space-5, 1.25rem);
+	margin: 0;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	width: 100%;
+	max-width: none;
+	min-width: 0;
+}
+
+.crm-support-us--page .crm-support-us__header--page {
+	display: flex;
+	flex-direction: column;
+	gap: var(--crm-space-2, 0.5rem);
+	margin: 0;
+	max-width: 48rem;
+}
+
+.crm-support-us--page .crm-support-us__title {
+	font-size: var(--crm-fs-xl, 1.5rem);
+	font-weight: 700;
+	line-height: var(--crm-line-tight, 1.2);
+	color: var(--crm-text, var(--color-main-text));
+}
+
+.crm-support-us__header {
+	margin: 0;
+}
+
+.crm-support-us__title {
+	margin: 0;
+}
+
+.crm-support-us__intro {
+	margin: 0;
+	max-width: 48rem;
+	font-size: var(--crm-fs-md, 1rem);
+	line-height: var(--crm-line-base, 1.45);
+	color: var(--crm-muted, var(--color-text-maxcontrast));
+}
+
+.crm-support-us__body {
+	display: flex;
+	flex-direction: column;
+	gap: var(--crm-space-5, 1.25rem);
+	width: 100%;
+	min-width: 0;
+}
+
+.crm-support-us__primary {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: var(--crm-space-4, 1rem);
+	width: 100%;
+	max-width: 48rem;
+	padding: var(--crm-space-5, 1.25rem);
+	border: 1px solid var(--crm-border, var(--color-border));
+	border-inline-start: 4px solid var(--color-primary-element, var(--color-primary));
+	border-radius: var(--crm-radius-md, var(--border-radius-large, 8px));
+	background: var(--crm-bg-soft, var(--color-background-hover));
+	box-shadow: var(--crm-shadow-sm);
+	box-sizing: border-box;
+}
+
+/* Page presentation: partner spotlight fills the shell. */
+#app-content.crm-app--support-us .crm-support-us--page .crm-support-us__primary,
+.crm-support-us--page .crm-support-us__primary {
+	max-width: none;
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+	align-items: stretch;
+	gap: var(--crm-space-5, 1.25rem);
+	padding: var(--crm-space-6, 2rem) var(--crm-space-5, 1.25rem);
+	background:
+		linear-gradient(
+			120deg,
+			color-mix(in srgb, var(--color-primary-element) 10%, var(--color-main-background)) 0%,
+			var(--crm-bg-soft, var(--color-background-hover)) 55%,
+			var(--color-main-background) 100%
+		);
+}
+
+.crm-support-us__primary-copy {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: var(--crm-space-3, 0.75rem);
+	min-width: 0;
+}
+
+.crm-support-us__eyebrow {
+	margin: 0;
+	display: inline-flex;
+	align-items: center;
+	min-height: 1.75rem;
+	padding: 0.2rem 0.65rem;
+	border-radius: var(--crm-radius-pill, 999px);
+	border: 1px solid color-mix(in srgb, var(--color-primary-element) 35%, transparent);
+	background: color-mix(in srgb, var(--color-primary-element) 14%, transparent);
+	font-size: var(--crm-fs-xs, 0.8125rem);
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	line-height: var(--crm-line-tight, 1.25);
+	color: var(--color-primary-element, var(--crm-text));
+}
+
+.crm-support-us__offer-title {
+	margin: 0;
+	font-size: clamp(1.2rem, 2vw, 1.45rem);
+	font-weight: 700;
+	line-height: var(--crm-line-tight, 1.25);
+	color: var(--crm-text, var(--color-main-text));
+}
+
+.crm-support-us__benefit {
+	margin: 0;
+	max-width: 48rem;
+	font-size: var(--crm-fs-md, 1rem);
+	line-height: var(--crm-line-base, 1.5);
+	color: var(--crm-text, var(--color-main-text));
+}
+
+.crm-support-us__coverage {
+	margin: 0;
+	max-width: 48rem;
+	font-size: var(--crm-fs-sm, 0.875rem);
+	line-height: var(--crm-line-base, 1.5);
+	color: var(--crm-muted, var(--color-text-maxcontrast));
+}
+
+.crm-support-us__primary-actions {
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	justify-content: center;
+	gap: var(--crm-space-3, 0.75rem);
+	margin-block-start: 0;
+	width: 100%;
+	min-width: 0;
+}
+
+@media (min-width: 900px) {
+	#app-content.crm-app--support-us .crm-support-us--page .crm-support-us__primary,
+	.crm-support-us--page .crm-support-us__primary {
+		grid-template-columns: minmax(0, 1.65fr) minmax(14rem, 22rem);
+		align-items: center;
+	}
+
+	.crm-support-us--page .crm-support-us__primary-actions {
+		padding: var(--crm-space-4, 1rem);
+		border: 1px solid var(--crm-border, var(--color-border));
+		border-radius: var(--crm-radius-md, 12px);
+		background: var(--color-main-background);
+		box-shadow: var(--crm-shadow-sm);
+	}
+}
+
+.crm-support-us__hint {
+	margin: 0;
+	max-width: 40rem;
+	font-size: var(--crm-fs-sm, 0.875rem);
+	line-height: var(--crm-line-base, 1.5);
+	color: var(--crm-muted, var(--color-text-maxcontrast));
+	text-align: start;
+}
+
+.crm-support-us__hint a {
+	color: var(--crm-text, var(--color-main-text));
+	text-decoration: underline;
+	text-underline-offset: 0.15em;
+}
+
+.crm-support-us__secondary {
+	display: flex;
+	flex-direction: column;
+	gap: var(--crm-space-3, 0.75rem);
+	width: 100%;
+	min-width: 0;
+}
+
+.crm-support-us__secondary-title {
+	margin: 0;
+	font-size: var(--crm-fs-md, 1rem);
+	font-weight: 600;
+	line-height: var(--crm-line-tight, 1.25);
+	color: var(--crm-text, var(--color-main-text));
+}
+
+.crm-support-us__options {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(15.5rem, 1fr));
+	gap: var(--crm-space-4, 1rem);
+	width: 100%;
+}
+
+.crm-support-us__option {
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	justify-content: space-between;
+	gap: var(--crm-space-3, 0.75rem);
+	min-height: 100%;
+	padding: var(--crm-space-5, 1.25rem);
+	border: 1px solid var(--crm-border, var(--color-border));
+	border-radius: var(--crm-radius-md, var(--border-radius-large, 8px));
+	background: var(--crm-bg-card, var(--color-main-background));
+	box-sizing: border-box;
+	transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.crm-support-us__option:hover,
+.crm-support-us__option:focus-within {
+	border-color: color-mix(in srgb, var(--color-primary-element) 45%, var(--crm-border, var(--color-border)));
+	box-shadow: var(--crm-shadow-md, 0 4px 12px rgba(0, 0, 0, 0.12));
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	.crm-support-us__option:hover,
+	.crm-support-us__option:focus-within {
+		transform: translateY(-2px);
+	}
+}
+
+.crm-support-us__option-title {
+	margin: 0;
+	font-size: var(--crm-fs-lg, 1.125rem);
+	font-weight: 700;
+	line-height: var(--crm-line-tight, 1.25);
+	color: var(--crm-text, var(--color-main-text));
+}
+
+.crm-support-us__option-hint {
+	margin: 0;
+	flex: 1 1 auto;
+	font-size: var(--crm-fs-sm, 0.875rem);
+	line-height: var(--crm-line-base, 1.5);
+	color: var(--crm-muted, var(--color-text-maxcontrast));
+}
+
+.crm-support-us__cta {
+	min-height: 2.75rem;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding-inline: 1.15rem;
+	text-align: center;
+	text-decoration: none !important;
+	box-sizing: border-box;
+	width: auto;
+	max-width: 100%;
+	border-radius: var(--crm-radius-md, 12px);
+	transition: filter 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+}
+
+/* Support Us CTAs are azc-btn anchors — reinforce solid surfaces against any
+ * leftover link cascade (page-scoped safety net). */
+#app-content.crm-app--support-us a.crm-support-us__cta.crm-btn--primary {
+	background-color: var(--color-primary-element, #0082c9) !important;
+	border-color: var(--color-primary-element, #0082c9) !important;
+	color: var(--color-primary-element-text, #fff) !important;
+}
+
+#app-content.crm-app--support-us a.crm-support-us__cta.crm-btn--primary:hover {
+	background-color: var(--color-primary-element-hover, var(--color-primary-element)) !important;
+	border-color: var(--color-primary-element-hover, var(--color-primary-element)) !important;
+	color: var(--color-primary-element-text, #fff) !important;
+}
+
+#app-content.crm-app--support-us a.crm-support-us__cta.crm-btn--secondary {
+	background-color: color-mix(in srgb, var(--color-main-background) 82%, var(--color-main-text) 18%) !important;
+	border-color: var(--color-border-dark, var(--crm-border-strong, var(--color-border))) !important;
+	color: var(--crm-text, var(--color-main-text)) !important;
+}
+
+#app-content.crm-app--support-us a.crm-support-us__cta.crm-btn--secondary:hover {
+	background-color: color-mix(in srgb, var(--color-main-background) 70%, var(--color-main-text) 30%) !important;
+	border-color: var(--color-primary-element, var(--crm-border-strong)) !important;
+	color: var(--crm-text, var(--color-main-text)) !important;
+}
+
+.crm-support-us__option .crm-support-us__cta,
+.crm-support-us--page .crm-support-us__primary-actions .crm-support-us__cta {
+	align-self: stretch;
+	width: 100%;
+}
+
+.crm-support-us-page__hero a:focus-visible,
+.crm-support-us__cta:focus-visible,
+.crm-support-us__hint a:focus-visible,
+.crm-support-us__more a:focus-visible,
+.crm-support-us__contact a:focus-visible {
+	outline: 3px solid var(--color-primary-element, var(--color-main-text));
+	outline-offset: 2px;
+}
+
+.crm-support-us__tertiary {
+	display: flex;
+	flex-direction: column;
+	gap: var(--crm-space-2, 0.5rem);
+	padding-block-start: var(--crm-space-4, 1rem);
+	border-block-start: 1px solid var(--crm-border, var(--color-border));
+}
+
+.crm-support-us__more,
+.crm-support-us__contact {
+	margin: 0;
+	font-size: var(--crm-fs-sm, 0.875rem);
+	line-height: var(--crm-line-base, 1.5);
+	color: var(--crm-muted, var(--color-text-maxcontrast));
+}
+
+.crm-support-us__more a,
+.crm-support-us__contact a {
+	color: var(--crm-text, var(--color-main-text));
+	text-decoration: underline;
+	text-underline-offset: 0.15em;
+}
+
+@media (max-width: 640px) {
+	.crm-support-us-page__hero {
+		padding: var(--crm-space-5, 1.25rem) var(--crm-space-4, 1rem);
+	}
+
+	#app-content.crm-app--support-us ul.crm-support-us-page__trust {
+		width: 100%;
+	}
+
+	.crm-support-us-page__lockup {
+		gap: 0.55rem;
+	}
+
+	.crm-support-us-page__mark {
+		width: 2.75rem;
+		height: 2.75rem;
+	}
+
+	.crm-support-us__options {
+		grid-template-columns: 1fr;
+	}
+
+	.crm-support-us__cta,
+	.crm-support-us__primary-actions .crm-support-us__cta {
+		width: 100%;
+	}
+
+	.crm-support-us__primary,
+	.crm-support-us__option {
+		width: 100%;
+		max-width: none;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.crm-support-us__cta,
+	.crm-support-us__option,
+	.crm-support-us-page__brand-link,
+	.crm-support-us-page__hero::before {
+		transition: none;
+		animation: none;
+		transform: none;
+	}
+}
+
+/* === support-us:azc end === */

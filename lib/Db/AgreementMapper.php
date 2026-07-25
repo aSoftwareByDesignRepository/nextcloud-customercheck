@@ -1,0 +1,295 @@
+<?php
+
+declare(strict_types=1);
+
+namespace OCA\CustomerCheck\Db;
+
+use OCA\CustomerCheck\Constants;
+use OCP\AppFramework\Db\DoesNotExistException;
+use OCP\AppFramework\Db\QBMapper;
+use OCP\DB\QueryBuilder\IQueryBuilder;
+use OCP\IDBConnection;
+
+/**
+ * @extends QBMapper<Agreement>
+ */
+class AgreementMapper extends QBMapper
+{
+	public function __construct(IDBConnection $db)
+	{
+		parent::__construct($db, 'crm_agreement', Agreement::class);
+	}
+
+	/**
+	 * @throws DoesNotExistException
+	 */
+	public function findById(int $id): Agreement
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('*')
+			->from($this->getTableName())
+			->where($qb->expr()->eq('id', $qb->createNamedParameter($id, IQueryBuilder::PARAM_INT)));
+
+		return $this->findEntity($qb);
+	}
+
+	/** @return Agreement[] */
+	public function findByCompany(int $companyId): array
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('*')
+			->from($this->getTableName())
+			->where($qb->expr()->eq('company_id', $qb->createNamedParameter($companyId, IQueryBuilder::PARAM_INT)))
+			->orderBy('valid_until', 'ASC')
+			->addOrderBy('id', 'ASC')
+			->setMaxResults(1000);
+
+		return $this->findEntities($qb);
+	}
+
+	/**
+	 * @param array{companyId?: int, kind?: string, status?: string, invoiceStatus?: string, expiringBefore?: \DateTimeInterface} $filters
+	 * @return Agreement[]
+	 */
+	public function search(array $filters = [], int $limit = 500, int $offset = 0): array
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('*')->from($this->getTableName());
+		$this->applyFilters($qb, $filters);
+		$qb->orderBy('valid_until', 'ASC')
+			->addOrderBy('id', 'ASC')
+			->setMaxResults(max(1, min(5000, $limit)))
+			->setFirstResult(max(0, $offset));
+
+		return $this->findEntities($qb);
+	}
+
+	/**
+	 * @param array{companyId?: int, kind?: string, status?: string, invoiceStatus?: string, expiringBefore?: \DateTimeInterface} $filters
+	 */
+	public function countSearch(array $filters = []): int
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->select($qb->func()->count('*', 'cnt'))->from($this->getTableName());
+		$this->applyFilters($qb, $filters);
+
+		$result = $qb->executeQuery();
+		$count = (int)$result->fetchOne();
+		$result->closeCursor();
+
+		return $count;
+	}
+
+	/**
+	 * Agreements the renewal engine watches: they have a `valid_until` and are
+	 * not in a terminal status (§6.1). Chunked for the 10k-agreement budget (§15).
+	 *
+	 * @return Agreement[]
+	 */
+	public function findRenewalCandidates(int $limit = 500, int $offset = 0): array
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('*')
+			->from($this->getTableName())
+			->where($qb->expr()->isNotNull('valid_until'))
+			->andWhere($qb->expr()->notIn(
+				'status',
+				$qb->createNamedParameter(Constants::AGREEMENT_TERMINAL_STATUSES, IQueryBuilder::PARAM_STR_ARRAY)
+			))
+			->orderBy('id', 'ASC')
+			->setMaxResults(max(1, min(5000, $limit)))
+			->setFirstResult(max(0, $offset));
+
+		return $this->findEntities($qb);
+	}
+
+	/** @return Agreement[] */
+	public function findPartnerAgreements(int $limit = 1000): array
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('*')
+			->from($this->getTableName())
+			->where($qb->expr()->eq('kind', $qb->createNamedParameter('partner')))
+			->andWhere($qb->expr()->notIn(
+				'status',
+				$qb->createNamedParameter(Constants::AGREEMENT_TERMINAL_STATUSES, IQueryBuilder::PARAM_STR_ARRAY)
+			))
+			->orderBy('id', 'ASC')
+			->setMaxResults(max(1, min(5000, $limit)));
+
+		return $this->findEntities($qb);
+	}
+
+	public function findBySalesLogId(int $salesLogId): ?Agreement
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('*')
+			->from($this->getTableName())
+			->where($qb->expr()->eq('sales_log_id', $qb->createNamedParameter($salesLogId, IQueryBuilder::PARAM_INT)))
+			->setMaxResults(1);
+
+		try {
+			return $this->findEntity($qb);
+		} catch (DoesNotExistException) {
+			return null;
+		}
+	}
+
+	/** @return Agreement[] */
+	public function findByIcInvoiceId(int $icInvoiceId): array
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('*')
+			->from($this->getTableName())
+			->where($qb->expr()->eq('ic_invoice_id', $qb->createNamedParameter($icInvoiceId, IQueryBuilder::PARAM_INT)))
+			->setMaxResults(100);
+
+		return $this->findEntities($qb);
+	}
+
+	/**
+	 * Exact invoice-reference match; the caller must treat >1 hit as ambiguous (§14.3).
+	 *
+	 * @return Agreement[]
+	 */
+	public function findByInvoiceRef(string $invoiceRef): array
+	{
+		$invoiceRef = trim($invoiceRef);
+		if ($invoiceRef === '') {
+			return [];
+		}
+
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('*')
+			->from($this->getTableName())
+			->where($qb->expr()->eq('invoice_ref', $qb->createNamedParameter($invoiceRef)))
+			->setMaxResults(100);
+
+		return $this->findEntities($qb);
+	}
+
+	/**
+	 * Same company + product family, used to build supersede chains (§5.4).
+	 *
+	 * @return Agreement[]
+	 */
+	public function findByCompanyAndProduct(int $companyId, string $productCode): array
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('*')
+			->from($this->getTableName())
+			->where($qb->expr()->eq('company_id', $qb->createNamedParameter($companyId, IQueryBuilder::PARAM_INT)))
+			->andWhere($qb->expr()->eq('product_code', $qb->createNamedParameter($productCode)))
+			->orderBy('valid_until', 'ASC')
+			->addOrderBy('id', 'ASC')
+			->setMaxResults(500);
+
+		return $this->findEntities($qb);
+	}
+
+	/**
+	 * Newest non-terminal agreement for company+product — supersede proposal target (§8.6).
+	 */
+	public function findActiveByCompanyProduct(int $companyId, string $productCode): ?Agreement
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('*')
+			->from($this->getTableName())
+			->where($qb->expr()->eq('company_id', $qb->createNamedParameter($companyId, IQueryBuilder::PARAM_INT)))
+			->andWhere($qb->expr()->eq('product_code', $qb->createNamedParameter($productCode)))
+			->andWhere($qb->expr()->notIn(
+				'status',
+				$qb->createNamedParameter(Constants::AGREEMENT_TERMINAL_STATUSES, IQueryBuilder::PARAM_STR_ARRAY)
+			))
+			->orderBy('valid_until', 'DESC')
+			->addOrderBy('id', 'DESC')
+			->setMaxResults(1);
+
+		try {
+			return $this->findEntity($qb);
+		} catch (DoesNotExistException) {
+			return null;
+		}
+	}
+
+	public function deleteByCompany(int $companyId): int
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->delete($this->getTableName())
+			->where($qb->expr()->eq('company_id', $qb->createNamedParameter($companyId, IQueryBuilder::PARAM_INT)));
+
+		return $qb->executeStatement();
+	}
+
+	/**
+	 * GDPR erase (§4.8): agreements are retained for ten years for tax/GoBD
+	 * reasons, so only the free-text fields that can name a natural person are
+	 * blanked. Amounts, dates and product codes stay intact.
+	 */
+	public function anonymiseByCompany(int $companyId): int
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->update($this->getTableName())
+			->set('notes', $qb->createNamedParameter(null, IQueryBuilder::PARAM_NULL))
+			->set('cancel_reason', $qb->createNamedParameter(null, IQueryBuilder::PARAM_NULL))
+			->set('created_by', $qb->createNamedParameter('system'))
+			->where($qb->expr()->eq('company_id', $qb->createNamedParameter($companyId, IQueryBuilder::PARAM_INT)));
+
+		return $qb->executeStatement();
+	}
+
+	/**
+	 * @return list<int>
+	 */
+	public function findIdsByCompany(int $companyId): array
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('id')
+			->from($this->getTableName())
+			->where($qb->expr()->eq('company_id', $qb->createNamedParameter($companyId, IQueryBuilder::PARAM_INT)));
+
+		$result = $qb->executeQuery();
+		$ids = [];
+		while (($row = $result->fetch()) !== false) {
+			$ids[] = (int)$row['id'];
+		}
+		$result->closeCursor();
+
+		return $ids;
+	}
+
+	/**
+	 * @param array{companyId?: int, kind?: string, status?: string, invoiceStatus?: string, expiringBefore?: \DateTimeInterface} $filters
+	 */
+	private function applyFilters(IQueryBuilder $qb, array $filters): void
+	{
+		$companyId = (int)($filters['companyId'] ?? 0);
+		if ($companyId > 0) {
+			$qb->andWhere($qb->expr()->eq('company_id', $qb->createNamedParameter($companyId, IQueryBuilder::PARAM_INT)));
+		}
+
+		$kind = (string)($filters['kind'] ?? '');
+		if ($kind !== '') {
+			$qb->andWhere($qb->expr()->eq('kind', $qb->createNamedParameter($kind)));
+		}
+
+		$status = (string)($filters['status'] ?? '');
+		if ($status !== '') {
+			$qb->andWhere($qb->expr()->eq('status', $qb->createNamedParameter($status)));
+		}
+
+		$invoiceStatus = (string)($filters['invoiceStatus'] ?? '');
+		if ($invoiceStatus !== '') {
+			$qb->andWhere($qb->expr()->eq('invoice_status', $qb->createNamedParameter($invoiceStatus)));
+		}
+
+		$expiringBefore = $filters['expiringBefore'] ?? null;
+		if ($expiringBefore instanceof \DateTimeInterface) {
+			$qb->andWhere($qb->expr()->isNotNull('valid_until'));
+			$qb->andWhere($qb->expr()->lte(
+				'valid_until',
+				$qb->createNamedParameter($expiringBefore->format('Y-m-d'))
+			));
+		}
+	}
+}

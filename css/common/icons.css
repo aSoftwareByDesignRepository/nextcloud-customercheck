@@ -1,0 +1,198 @@
+/**
+ * IconCatalog / AzcCatalog SVG sizing and contrast (global).
+ *
+ * Icons must stay compact in flex column layouts and on mobile, where
+ * responsive.css applies max-width:100% to generic svg elements.
+ * Rules here apply inside and outside #app-content (toasts, modals).
+ */
+
+.crm-icon,
+.inline-notice__glyph,
+svg[class*='__icon-svg'],
+svg[class*='__glyph'],
+.crm-page-header__icon-svg,
+.confirm-dialog__icon-svg,
+.toast__icon-svg,
+.form-error__icon-svg {
+	max-width: none;
+	flex-shrink: 0;
+	stroke: currentColor;
+	fill: none;
+	color: inherit;
+}
+
+.crm-icon,
+.inline-notice__glyph,
+.lucide-icon {
+	stroke-width: var(--crm-icon-stroke, 2);
+}
+
+.crm-icon {
+	width: var(--crm-icon-md);
+	height: var(--crm-icon-md);
+	display: block;
+}
+
+/* Shared status icon wells (inline notices, alerts, toasts) */
+.crm-status-icon-well,
+.inline-notice__icon,
+.alert-icon,
+.toast-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+	width: var(--crm-icon-well);
+	height: var(--crm-icon-well);
+	border-radius: var(--crm-radius-sm, 6px);
+	background: var(--color-main-background);
+	color: var(--color-main-text);
+	border: 2px solid var(--color-border);
+}
+
+.crm-status-icon-well .crm-icon,
+.crm-status-icon-well .inline-notice__glyph,
+.inline-notice__icon .crm-icon,
+.inline-notice__icon .inline-notice__glyph,
+.inline-notice__icon svg,
+.alert-icon .crm-icon,
+.alert-icon svg,
+.toast-icon .crm-icon,
+.toast-icon svg {
+	width: var(--crm-icon-lg);
+	height: var(--crm-icon-lg);
+}
+
+/* Notification icon fills: common/notification-surfaces.css */
+
+.form-error__icon {
+	color: var(--color-error, #c32c2c);
+}
+
+/* Confirm dialogs (portaled modals) */
+.confirm-dialog__icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+	line-height: 1;
+	color: var(--color-main-text);
+}
+
+.confirm-dialog__icon .crm-icon,
+.confirm-dialog__icon .confirm-dialog__icon-svg {
+	width: var(--crm-icon-lg);
+	height: var(--crm-icon-lg);
+}
+
+/* Legacy empty state decorative well */
+.empty-state__icon .crm-icon {
+	width: 2rem;
+	height: 2rem;
+}
+
+/* Design-system empty state (if an icon is added later) */
+.crm-empty-state__icon .crm-icon {
+	width: 1.75rem;
+	height: 1.75rem;
+}
+
+/* Legacy .btn with IconCatalog (not only .crm-btn) */
+.btn .btn__icon,
+.btn__icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+}
+
+.btn .btn__icon-svg,
+.btn__icon .crm-icon,
+.btn__icon-svg {
+	width: var(--crm-icon-md);
+	height: var(--crm-icon-md);
+}
+
+/* Host wrapper created by js/common/datepicker.js */
+.crm-datepicker-host {
+	position: relative;
+	display: inline-block;
+	width: 100%;
+	max-width: 100%;
+}
+
+.crm-datepicker-host--flex {
+	display: block;
+	position: relative;
+	flex: 1 1 10rem;
+	min-width: 0;
+}
+
+.crm-datepicker-host .datepicker-input {
+	width: 100%;
+	box-sizing: border-box;
+	padding-inline-end: 3rem;
+}
+
+/* Datepicker toggle injected beside inputs */
+.crm-datepicker-toggle {
+	position: absolute;
+	inset-inline-end: 0;
+	top: 50%;
+	transform: translateY(-50%);
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 44px;
+	min-height: 44px;
+	padding: 4px 8px;
+	background: none;
+	border: none;
+	cursor: pointer;
+	color: var(--color-main-text, inherit);
+}
+
+.crm-datepicker-toggle:focus-visible {
+	outline: 2px solid var(--color-primary-element, #0082c9);
+	outline-offset: 2px;
+}
+
+.crm-datepicker-toggle .crm-icon,
+.crm-datepicker-toggle__icon {
+	width: var(--crm-icon-md);
+	height: var(--crm-icon-md);
+	color: var(--color-main-text);
+}
+
+/* NC dashboard desklet status glyphs */
+.dashboard-widget-status-icon.crm-icon,
+.dashboard-widget-status-icon {
+	width: var(--crm-icon-sm);
+	height: var(--crm-icon-sm);
+}
+
+@media (prefers-contrast: more) {
+	.crm-icon,
+	.inline-notice__glyph,
+	.lucide-icon {
+		stroke-width: 2.25;
+	}
+
+	.crm-status-icon-well,
+	.inline-notice__icon,
+	.alert-icon,
+	.toast-icon {
+		border-width: 3px;
+	}
+}
+
+@media (forced-colors: active) {
+	.crm-status-icon-well,
+	.inline-notice__icon,
+	.alert-icon,
+	.toast-icon {
+		border: 2px solid CanvasText;
+		background: Canvas;
+		color: CanvasText;
+	}
+}

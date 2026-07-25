@@ -1,0 +1,99 @@
+<?xml version="1.0"?>
+<!--
+  - SPDX-FileCopyrightText: 2026 Alexander Mäule <info@software-by-design.de>
+  - SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+<info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+	<id>customercheck</id>
+	<name>CustomerCheck</name>
+	<name lang="de">CustomerCheck</name>
+	<summary>Internal customer and revenue hub for the Check app family</summary>
+	<summary lang="de">Interner Kunden- und Umsatz-Hub für die Check-App-Familie</summary>
+	<description><![CDATA[
+# CustomerCheck
+
+Internal customer & revenue hub: one 360° view per customer — who bought what, who paid,
+which licenses and Check Partner contracts expire when — with automated renewal reminders
+on top of the existing Check apps.
+
+**Internal distribution only.** This app holds sales data and is not published to the app store.
+
+## Highlights
+
+- **Companies & contacts** — canonical slug-keyed customer registry with cross-app links
+- **Agreements** — licenses, Check Partner packages, one-time items with a full lifecycle
+- **Renewal engine** — reminders at 60/30/7/0/+7 days, guaranteed exactly once
+- **Pipeline** — deals as filterable table and kanban board with fixed stages
+- **Activities & Today** — one work queue for everything you owe a customer
+- **Check Partner hours** — 15-minute quota log with automatic 80 % alert
+- **Read-only integrations** — SbdLicenseOps, InvoicingCheck, ProjectCheck, TicketCheck
+- **Access control** — fail-closed allowlists, app administrators, group gating
+- **Accessibility** — WCAG 2.1 AA target; responsive from 320 px
+- **Bilingual** — German and English
+
+## Requirements
+
+- Nextcloud 32–34
+- PHP 8.2+
+- MySQL/MariaDB or PostgreSQL
+	]]></description>
+	<description lang="de"><![CDATA[
+# CustomerCheck
+
+Interner Kunden- und Umsatz-Hub: eine 360°-Sicht pro Kunde — wer hat was gekauft, wer hat bezahlt,
+welche Lizenzen und Check-Partner-Verträge laufen wann aus — mit automatischen Verlängerungs­erinnerungen
+auf Basis der bestehenden Check-Apps.
+
+**Nur interne Verteilung.** Diese App enthält Vertriebsdaten und wird nicht im App Store veröffentlicht.
+
+## Funktionen
+
+- **Firmen & Kontakte** — kanonisches, slug-basiertes Kundenverzeichnis mit App-übergreifenden Verknüpfungen
+- **Vereinbarungen** — Lizenzen, Check-Partner-Pakete, Einmalposten mit vollständigem Lebenszyklus
+- **Verlängerungs-Engine** — Erinnerungen bei 60/30/7/0/+7 Tagen, garantiert genau einmal
+- **Pipeline** — Deals als filterbare Tabelle und Kanban-Board mit festen Phasen
+- **Aktivitäten & Heute** — eine Arbeitsliste für alles, was Kunden offen haben
+- **Check-Partner-Stunden** — 15-Minuten-Kontingentprotokoll mit automatischer 80-%-Warnung
+- **Nur-Lese-Integrationen** — SbdLicenseOps, InvoicingCheck, ProjectCheck, TicketCheck
+- **Zugriffssteuerung** — restriktive Freigabelisten, App-Administratoren, Gruppensteuerung
+- **Barrierefreiheit** — WCAG 2.1 AA als Ziel; responsiv ab 320 px
+- **Zweisprachig** — Deutsch und Englisch
+	]]></description>
+	<version>1.0.7</version>
+	<licence>AGPL-3.0-or-later</licence>
+	<author mail="info@software-by-design.de" homepage="http://nextcloud.software-by-design.de">Alexander Mäule</author>
+	<namespace>CustomerCheck</namespace>
+	<category>organization</category>
+	<website>http://nextcloud.software-by-design.de</website>
+	<bugs>https://github.com/aSoftwareByDesignRepository/nextcloud-customercheck/issues</bugs>
+	<dependencies>
+		<nextcloud min-version="32" max-version="34"/>
+		<php min-version="8.2"/>
+		<database>mysql</database>
+		<database>pgsql</database>
+	</dependencies>
+	<background-jobs>
+		<job>OCA\CustomerCheck\BackgroundJob\RenewalReminderJob</job>
+		<job>OCA\CustomerCheck\BackgroundJob\WeeklyDigestJob</job>
+		<job>OCA\CustomerCheck\BackgroundJob\InvoicePaidPollJob</job>
+		<job>OCA\CustomerCheck\BackgroundJob\AgreementStatusRecomputeJob</job>
+	</background-jobs>
+	<commands>
+		<command>OCA\CustomerCheck\Command\UpgradeBackupCommand</command>
+	</commands>
+	<repair-steps>
+		<install>
+			<step>OCA\CustomerCheck\Repair\EnsureCustomerCheckSchema</step>
+		</install>
+		<pre-migration>
+			<step>OCA\CustomerCheck\Repair\BackupBeforeUpdate</step>
+		</pre-migration>
+
+		<post-migration>
+			<step>OCA\CustomerCheck\Repair\EnsureCustomerCheckSchema</step>
+		</post-migration>
+		<uninstall>
+			<step>OCA\CustomerCheck\Repair\UninstallDropTables</step>
+		</uninstall>
+	</repair-steps>
+</info>

@@ -1,0 +1,118 @@
+(function () {
+  'use strict';
+  const C = window.CustomerCheckComponents || window.CrmComponents;
+  const Api = window.CustomerCheckApi;
+  if (C && C.init) { C.init(); }
+
+  const form = document.getElementById('crm-company-form');
+  if (!form) return;
+  const errBox = document.getElementById('crm-company-form-error');
+  const nameInput = document.getElementById('crm-company-name');
+  const slugInput = document.getElementById('crm-company-slug');
+
+  /**
+   * Filter sibling <select> options by name — keeps value=id under the hood.
+   * @param {HTMLInputElement|null} filter
+   * @param {HTMLSelectElement|null} select
+   */
+  function wireSiblingFilter(filter, select) {
+    if (!filter || !select || select.tagName !== 'SELECT') return;
+    const all = Array.from(select.options).map((opt) => ({
+      value: opt.value,
+      label: opt.textContent || '',
+      selected: opt.selected,
+    }));
+    filter.addEventListener('input', () => {
+      const q = filter.value.trim().toLowerCase();
+      const current = select.value;
+      select.innerHTML = '';
+      all.forEach((row) => {
+        if (row.value !== '' && q !== '' && row.label.toLowerCase().indexOf(q) === -1) {
+          return;
+        }
+        const opt = document.createElement('option');
+        opt.value = row.value;
+        opt.textContent = row.label;
+        if (row.value === current) opt.selected = true;
+        select.appendChild(opt);
+      });
+      if (current && !Array.from(select.options).some((o) => o.value === current)) {
+        select.value = '';
+      }
+    });
+  }
+
+  wireSiblingFilter(
+    document.getElementById('crm-company-pc-filter'),
+    document.getElementById('crm-company-pc'),
+  );
+  wireSiblingFilter(
+    document.getElementById('crm-company-tc-filter'),
+    document.getElementById('crm-company-tc'),
+  );
+
+  if (form.dataset.mode === 'create' && nameInput && slugInput) {
+    let timer = null;
+    nameInput.addEventListener('input', () => {
+      clearTimeout(timer);
+      timer = setTimeout(async () => {
+        const name = nameInput.value.trim();
+        if (name.length < 2) return;
+        try {
+          const res = await Api.post('/companies/suggest-slug', { name });
+          if (res && res.data && res.data.slug && !slugInput.dataset.touched) {
+            slugInput.value = res.data.slug;
+          }
+        } catch (e) { /* suggestion is best-effort */ }
+      }, 250);
+    });
+    slugInput.addEventListener('input', () => { slugInput.dataset.touched = '1'; });
+  }
+
+  form.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    errBox.hidden = true;
+    let slug = document.getElementById('crm-company-slug').value.trim();
+    const name = document.getElementById('crm-company-name').value.trim();
+    if (form.dataset.mode === 'create' && slug === '' && name.length >= 2) {
+      try {
+        const res = await Api.post('/companies/suggest-slug', { name });
+        if (res && res.data && res.data.slug) {
+          slug = res.data.slug;
+          slugInput.value = slug;
+        }
+      } catch (e) { /* fall through to server validation */ }
+    }
+    const body = {
+      name: name,
+      slug: slug,
+      status: document.getElementById('crm-company-status').value,
+      lang: document.getElementById('crm-company-lang').value,
+      notes: document.getElementById('crm-company-notes').value,
+    };
+    const pc = document.getElementById('crm-company-pc');
+    const tc = document.getElementById('crm-company-tc');
+    if (pc) {
+      const v = parseInt(pc.value, 10);
+      body.pcCustomerId = Number.isFinite(v) && v > 0 ? v : null;
+    }
+    if (tc) {
+      const v = parseInt(tc.value, 10);
+      body.tcCustomerId = Number.isFinite(v) && v > 0 ? v : null;
+    }
+    try {
+      let res;
+      if (form.dataset.mode === 'edit') {
+        body.updatedAt = form.dataset.updatedAt || null;
+        res = await Api.put('/companies/' + form.dataset.id, body);
+      } else {
+        res = await Api.post('/companies', body);
+      }
+      const id = res.data && (res.data.id || (res.data.company && res.data.company.id));
+      window.location.href = OC.generateUrl('/apps/customercheck/companies/' + id);
+    } catch (e) {
+      errBox.hidden = false;
+      errBox.textContent = (e.payload && e.payload.message) || e.message;
+    }
+  });
+})();

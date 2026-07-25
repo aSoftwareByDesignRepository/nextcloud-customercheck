@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SPDX-FileCopyrightText: 2026 Alexander Maeule <info@software-by-design.de>
+  SPDX-License-Identifier: AGPL-3.0-or-later
+
+  CustomerCheck white glyph for Nextcloud header / app menu / navigation entry.
+  Motif matches in-app Lucide building-2 (customers). The check is an evenodd
+  cutout so the header colour shows through the tick on every theme.
+  White fills only so Nextcloud invert filters keep the glyph visible.
+  XML comments must not contain double-hyphen (breaks strict SVG parsers).
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true">
+	<path fill="#ffffff" fill-rule="evenodd" d="M8 2a2 2 0 0 0-2 2v18h12V4a2 2 0 0 0-2-2H8ZM9.5 14.8l-2-2-1.4 1.4 3.4 3.4 7-7-1.4-1.4-5.6 5.6z"/>
+	<path fill="#ffffff" d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2V12z"/>
+	<path fill="#ffffff" d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2V9z"/>
+</svg>

@@ -1,0 +1,133 @@
+/**
+ * Banner callouts — icon + structured body (title, text, actions).
+ * WCAG 2.1 AA: 44px action targets, visible focus, theme-safe contrast.
+ */
+
+/* Legacy flat markup (no __body): stack instead of scattered flex items */
+#app-content.crm-app .crm-callout:not(:has(.crm-callout__body)),
+.modal-backdrop .crm-callout:not(:has(.crm-callout__body)) {
+	flex-direction: column;
+	align-items: stretch;
+	flex-wrap: nowrap;
+	gap: var(--crm-space-2, 0.5rem);
+}
+
+/* Prevent flex:1 on __text from stretching the first line in stacked flat callouts */
+#app-content.crm-app .crm-callout:not(:has(.crm-callout__body)) > .crm-callout__text,
+#app-content.crm-app .crm-callout:not(:has(.crm-callout__body)) > .crm-callout__hint,
+.modal-backdrop .crm-callout:not(:has(.crm-callout__body)) > .crm-callout__text,
+.modal-backdrop .crm-callout:not(:has(.crm-callout__body)) > .crm-callout__hint {
+	flex: 0 0 auto;
+	align-self: stretch;
+	max-width: none;
+	width: 100%;
+}
+
+#app-content.crm-app .crm-callout:not(:has(.crm-callout__body)) > .crm-callout__actions,
+#app-content.crm-app .crm-callout:not(:has(.crm-callout__body)) > p.crm-callout__actions,
+.modal-backdrop .crm-callout:not(:has(.crm-callout__body)) > .crm-callout__actions,
+.modal-backdrop .crm-callout:not(:has(.crm-callout__body)) > p.crm-callout__actions {
+	margin-top: var(--crm-space-2, 0.5rem);
+}
+
+/* Banner layout: icon | content grid with action aligned on wide screens */
+#app-content.crm-app .crm-callout--banner,
+.modal-backdrop .crm-callout--banner {
+	flex-wrap: nowrap;
+	align-items: flex-start;
+	gap: var(--crm-space-4, 1rem);
+}
+
+#app-content.crm-app .crm-callout--banner .crm-callout__body,
+.modal-backdrop .crm-callout--banner .crm-callout__body {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	grid-template-areas:
+		'title actions'
+		'text actions';
+	align-items: center;
+	column-gap: var(--crm-space-4, 1rem);
+	row-gap: var(--crm-space-2, 0.5rem);
+	width: 100%;
+}
+
+#app-content.crm-app .crm-callout--banner .crm-callout__title,
+.modal-backdrop .crm-callout--banner .crm-callout__title {
+	grid-area: title;
+}
+
+#app-content.crm-app .crm-callout--banner .crm-callout__text,
+.modal-backdrop .crm-callout--banner .crm-callout__text {
+	grid-area: text;
+	max-width: none;
+}
+
+#app-content.crm-app .crm-callout--banner .crm-callout__actions,
+.modal-backdrop .crm-callout--banner .crm-callout__actions {
+	grid-area: actions;
+	align-self: center;
+	justify-content: flex-end;
+	margin: 0;
+}
+
+#app-content.crm-app .crm-callout--banner .crm-callout__actions .crm-btn,
+.modal-backdrop .crm-callout--banner .crm-callout__actions .crm-btn {
+	min-height: 44px;
+	white-space: nowrap;
+}
+
+/* Title-only or text-only banners */
+#app-content.crm-app .crm-callout--banner .crm-callout__body:not(:has(.crm-callout__text)),
+.modal-backdrop .crm-callout--banner .crm-callout__body:not(:has(.crm-callout__text)) {
+	grid-template-areas:
+		'title actions';
+}
+
+#app-content.crm-app .crm-callout--banner .crm-callout__body:not(:has(.crm-callout__title)),
+.modal-backdrop .crm-callout--banner .crm-callout__body:not(:has(.crm-callout__title)) {
+	grid-template-areas:
+		'text actions';
+}
+
+#app-content.crm-app .crm-callout--banner .crm-callout__body:not(:has(.crm-callout__actions)),
+.modal-backdrop .crm-callout--banner .crm-callout__body:not(:has(.crm-callout__actions)) {
+	grid-template-columns: 1fr;
+	grid-template-areas:
+		'title'
+		'text';
+}
+
+@media (max-width: 720px) {
+	#app-content.crm-app .crm-callout--banner,
+	.modal-backdrop .crm-callout--banner {
+		flex-wrap: wrap;
+	}
+
+	#app-content.crm-app .crm-callout--banner .crm-callout__body,
+	.modal-backdrop .crm-callout--banner .crm-callout__body {
+		grid-template-columns: 1fr;
+		grid-template-areas:
+			'title'
+			'text'
+			'actions';
+	}
+
+	#app-content.crm-app .crm-callout--banner .crm-callout__actions,
+	.modal-backdrop .crm-callout--banner .crm-callout__actions {
+		justify-content: stretch;
+		width: 100%;
+	}
+
+	#app-content.crm-app .crm-callout--banner .crm-callout__actions .crm-btn,
+	.modal-backdrop .crm-callout--banner .crm-callout__actions .crm-btn {
+		flex: 1 1 auto;
+		justify-content: center;
+	}
+}
+
+@media (forced-colors: active) {
+	#app-content.crm-app .crm-callout--banner .crm-callout__icon,
+	.modal-backdrop .crm-callout--banner .crm-callout__icon {
+		border: 1px solid CanvasText;
+	}
+}

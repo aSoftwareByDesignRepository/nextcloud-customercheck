@@ -1,0 +1,389 @@
+<?php
+
+declare(strict_types=1);
+
+namespace OCA\CustomerCheck\Service;
+
+use OCA\CustomerCheck\AppInfo\Application;
+use OCA\CustomerCheck\Constants;
+use OCA\CustomerCheck\Db\Activity;
+use OCA\CustomerCheck\Db\ActivityMapper;
+use OCA\CustomerCheck\Db\Agreement;
+use OCA\CustomerCheck\Exception\NotFoundException;
+use OCA\CustomerCheck\Exception\ValidationException;
+use OCA\CustomerCheck\Support\DateMath;
+use OCA\CustomerCheck\Support\OptimisticLock;
+use OCP\AppFramework\Db\DoesNotExistException;
+use OCP\AppFramework\Utility\ITimeFactory;
+use OCP\IL10N;
+
+/**
+ * Activities — the single "what do I owe whom" list (§4.5, §8.3).
+ *
+ * Every activity carries a due date: a dateless note belongs on the timeline,
+ * not in the work queue. `origin` records who created it so the UI can badge
+ * automation-created rows as "Auto" (§14.2).
+ */
+class ActivityService
+{
+	public function __construct(
+		private readonly ActivityMapper $activityMapper,
+		private readonly TimelineService $timelineService,
+		private readonly VTodoService $vTodoService,
+		private readonly ITimeFactory $timeFactory,
+		private readonly IL10N $l10n,
+	) {
+	}
+
+	/**
+	 * @throws NotFoundException
+	 */
+	public function get(int $id): Activity
+	{
+		try {
+			return $this->activityMapper->findById($id);
+		} catch (DoesNotExistException) {
+			throw new NotFoundException($this->l10n->t('This activity no longer exists.'));
+		}
+	}
+
+	/**
+	 * @param array{companyId?: int, dealId?: int, type?: string, openOnly?: bool, doneOnly?: bool, dueBefore?: \DateTimeInterface} $filters
+	 * @return Activity[]
+	 */
+	public function search(array $filters = [], int $limit = 500, int $offset = 0): array
+	{
+		return $this->activityMapper->search($filters, $limit, $offset);
+	}
+
+	/**
+	 * @param array{companyId?: int, dealId?: int, type?: string, openOnly?: bool, doneOnly?: bool, dueBefore?: \DateTimeInterface} $filters
+	 */
+	public function count(array $filters = []): int
+	{
+		return $this->activityMapper->countSearch($filters);
+	}
+
+	/**
+	 * @param array<string, mixed> $input
+	 * @throws ValidationException
+	 */
+	public function create(array $input, string $actor): Activity
+	{
+		$companyId = (int)($input['companyId'] ?? 0);
+		if ($companyId <= 0) {
+			throw ValidationException::field(
+				Constants::ERR_VALIDATION,
+				'companyId',
+				$this->l10n->t('Pick the company this activity belongs to.'),
+			);
+		}
+
+		$now = $this->timeFactory->getDateTime();
+		$activity = new Activity();
+		$activity->setCompanyId($companyId);
+		$activity->setCreatedBy($actor);
+		$activity->setCreatedAt($now);
+		$activity->setUpdatedAt($now);
+		$activity->setOrigin($this->normaliseOrigin((string)($input['origin'] ?? 'user')));
+
+		$this->applyInput($activity, $input);
+
+		return $this->activityMapper->insert($activity);
+	}
+
+	/**
+	 * @param array<string, mixed> $input
+	 * @throws ValidationException
+	 * @throws \OCA\CustomerCheck\Exception\ConflictException
+	 */
+	public function update(int $id, array $input, string $actor, ?string $updatedAtPrecondition): Activity
+	{
+		$activity = $this->get($id);
+		OptimisticLock::assertFresh($activity->getUpdatedAt(), $updatedAtPrecondition);
+
+		$this->applyInput($activity, $input);
+		$activity->setUpdatedAt($this->timeFactory->getDateTime());
+
+		return $this->activityMapper->update($activity);
+	}
+
+	/**
+	 * Toggle completion. Returns the stored entity so the UI can offer undo
+	 * with the fresh `updatedAt` (§9.6).
+	 */
+	public function setDone(int $id, bool $done, string $actor, ?string $updatedAtPrecondition): Activity
+	{
+		$activity = $this->get($id);
+		OptimisticLock::assertFresh($activity->getUpdatedAt(), $updatedAtPrecondition, false);
+
+		$activity->setDoneAt($done ? $this->timeFactory->getDateTime() : null);
+		$activity->setUpdatedAt($this->timeFactory->getDateTime());
+
+		return $this->activityMapper->update($activity);
+	}
+
+	/**
+	 * One-way VTODO push (§7.2). Idempotent: a second push is refused because
+	 * `todo_uri` is already set.
+	 *
+	 * @return array{pushed: bool, todoUri: string|null, reason: string|null}
+	 */
+	public function pushToTasks(int $id, string $userId): array
+	{
+		$activity = $this->get($id);
+
+		$existing = $activity->getTodoUri();
+		if ($existing !== null && $existing !== '') {
+			return ['pushed' => false, 'todoUri' => $existing, 'reason' => 'already_pushed'];
+		}
+
+		$result = $this->vTodoService->push($activity, $userId);
+		if ($result === null) {
+			return ['pushed' => false, 'todoUri' => null, 'reason' => 'no_writable_calendar'];
+		}
+
+		$activity->setTodoUri($result);
+		$activity->setUpdatedAt($this->timeFactory->getDateTime());
+		$this->activityMapper->update($activity);
+
+		return ['pushed' => true, 'todoUri' => $result, 'reason' => null];
+	}
+
+	/**
+	 * Grace-end follow-up (§6.2): due the day after the grace period closed.
+	 * Idempotent — the ledger already guarantees one grace-end reminder per
+	 * agreement term, and the title probe protects against manual re-runs.
+	 */
+	public function createChurnDecisionTask(Agreement $agreement): ?Activity
+	{
+		$title = $this->l10n->t('Decide about churn after grace period');
+		$agreementId = (int)$agreement->getId();
+
+		if ($this->activityMapper->hasOpenSystemActivity($agreementId, $title)) {
+			return null;
+		}
+
+		$now = $this->timeFactory->getDateTime();
+		$activity = new Activity();
+		$activity->setCompanyId((int)$agreement->getCompanyId());
+		$activity->setAgreementId($agreementId);
+		$activity->setType('todo');
+		$activity->setTitle($title);
+		$activity->setDetails($this->l10n->t(
+			'The grace period for "%s" has ended. Cancel the agreement or record a late renewal.',
+			[(string)$agreement->getLabel()],
+		));
+		$activity->setDueDate(new \DateTime(DateMath::addDays($now, 1)->format('Y-m-d')));
+		$activity->setOrigin('system');
+		$activity->setCreatedBy('system');
+		$activity->setCreatedAt($now);
+		$activity->setUpdatedAt($now);
+
+		return $this->activityMapper->insert($activity);
+	}
+
+	/**
+	 * "Generate / attach license key" task after an invoice-paid transition
+	 * (§14.3). Idempotent by (agreement, title) on open activities.
+	 */
+	public function createAttachKeyTask(Agreement $agreement): ?Activity
+	{
+		$title = $this->l10n->t('Generate / attach license key');
+		$agreementId = (int)$agreement->getId();
+
+		if ($this->activityMapper->hasOpenSystemActivity($agreementId, $title)) {
+			return null;
+		}
+
+		$now = $this->timeFactory->getDateTime();
+		$activity = new Activity();
+		$activity->setCompanyId((int)$agreement->getCompanyId());
+		$activity->setAgreementId($agreementId);
+		$activity->setType('todo');
+		$activity->setTitle($title);
+		$activity->setDetails($this->l10n->t(
+			'The invoice for "%s" is paid but no license key is attached yet.',
+			[(string)$agreement->getLabel()],
+		));
+		$activity->setDueDate(new \DateTime($now->format('Y-m-d')));
+		$activity->setOrigin('system');
+		$activity->setCreatedBy('system');
+		$activity->setCreatedAt($now);
+		$activity->setUpdatedAt($now);
+
+		return $this->activityMapper->insert($activity);
+	}
+
+	/**
+	 * Webhook intake task (§14.4): "Reply to inquiry", due today.
+	 */
+	public function createLeadReplyTask(int $companyId, int $dealId, string $type, ?string $details): Activity
+	{
+		$now = $this->timeFactory->getDateTime();
+		$activity = new Activity();
+		$activity->setCompanyId($companyId);
+		$activity->setDealId($dealId);
+		$activity->setType(in_array($type, Constants::ACTIVITY_TYPES, true) ? $type : 'email');
+		$activity->setTitle($this->l10n->t('Reply to inquiry'));
+		$activity->setDetails($details === null ? null : mb_substr($details, 0, 4000));
+		$activity->setDueDate(new \DateTime($now->format('Y-m-d')));
+		$activity->setOrigin('webhook');
+		$activity->setCreatedBy('system');
+		$activity->setCreatedAt($now);
+		$activity->setUpdatedAt($now);
+
+		return $this->activityMapper->insert($activity);
+	}
+
+	/**
+	 * Bulk-dismiss remaining open follow-up activities for a deal (§14.2).
+	 * Only sequence-originated open activities are closed; user-created ones stay.
+	 *
+	 * @return array{dismissed: int}
+	 */
+	public function dismissRemainingFollowUps(int $dealId, string $actor): array
+	{
+		if ($dealId <= 0) {
+			return ['dismissed' => 0];
+		}
+		$origins = ['sequence_quoted', 'sequence_won'];
+		$open = $this->activityMapper->search(['dealId' => $dealId, 'openOnly' => true], 200);
+		$now = $this->timeFactory->getDateTime();
+		$dismissed = 0;
+		foreach ($open as $activity) {
+			$origin = (string)$activity->getOrigin();
+			if (!in_array($origin, $origins, true)) {
+				continue;
+			}
+			$activity->setDoneAt($now);
+			$activity->setUpdatedAt($now);
+			$this->activityMapper->update($activity);
+			$dismissed++;
+		}
+		return ['dismissed' => $dismissed];
+	}
+
+	public function deleteForCompany(int $companyId): int
+	{
+		return $this->activityMapper->deleteByCompany($companyId);
+	}
+
+	/**
+	 * Group open activities into the Today / Overdue / Later buckets the
+	 * Activities page renders as visual sections (§9.8).
+	 *
+	 * @param Activity[] $activities
+	 * @return array{overdue: list<Activity>, today: list<Activity>, later: list<Activity>}
+	 */
+	public function bucketByDueDate(array $activities, \DateTimeInterface $today): array
+	{
+		$buckets = ['overdue' => [], 'today' => [], 'later' => []];
+
+		foreach ($activities as $activity) {
+			$due = $activity->getDueDate();
+			if ($due === null) {
+				$buckets['later'][] = $activity;
+				continue;
+			}
+			$delta = DateMath::daysBetween($today, $due);
+			if ($delta < 0) {
+				$buckets['overdue'][] = $activity;
+			} elseif ($delta === 0) {
+				$buckets['today'][] = $activity;
+			} else {
+				$buckets['later'][] = $activity;
+			}
+		}
+
+		return $buckets;
+	}
+
+	/**
+	 * @param array<string, mixed> $input
+	 * @throws ValidationException
+	 */
+	private function applyInput(Activity $activity, array $input): void
+	{
+		$fields = [];
+
+		if (array_key_exists('type', $input)) {
+			$type = (string)$input['type'];
+			if (!in_array($type, Constants::ACTIVITY_TYPES, true)) {
+				$fields['type'] = $this->l10n->t('Choose call, email, meeting or to-do.');
+			} else {
+				$activity->setType($type);
+			}
+		}
+
+		if (array_key_exists('title', $input)) {
+			$title = trim((string)$input['title']);
+			if ($title === '') {
+				$fields['title'] = $this->l10n->t('Give the activity a short title.');
+			} elseif (mb_strlen($title) > 255) {
+				$fields['title'] = $this->l10n->t('Keep the title under 256 characters.');
+			} else {
+				$activity->setTitle($title);
+			}
+		}
+
+		if (array_key_exists('details', $input)) {
+			$details = trim((string)($input['details'] ?? ''));
+			if (mb_strlen($details) > 4000) {
+				$fields['details'] = $this->l10n->t('Keep the details under 4000 characters.');
+			} else {
+				$activity->setDetails($details === '' ? null : $details);
+			}
+		}
+
+		if (array_key_exists('dueDate', $input)) {
+			$due = DateMath::parseStrictDate((string)($input['dueDate'] ?? ''));
+			if ($due === null) {
+				$fields['dueDate'] = $this->l10n->t('Enter the due date as YYYY-MM-DD.');
+			} else {
+				$activity->setDueDate(new \DateTime($due->format('Y-m-d')));
+			}
+		}
+
+		if (array_key_exists('dealId', $input)) {
+			$dealId = (int)($input['dealId'] ?? 0);
+			$activity->setDealId($dealId > 0 ? $dealId : null);
+		}
+
+		if (array_key_exists('agreementId', $input)) {
+			$agreementId = (int)($input['agreementId'] ?? 0);
+			$activity->setAgreementId($agreementId > 0 ? $agreementId : null);
+		}
+
+		if ($activity->getDueDate() === null) {
+			$fields['dueDate'] = $this->l10n->t('Every activity needs a due date. Use a timeline note for undated remarks.');
+		}
+		if ((string)$activity->getTitle() === '') {
+			$fields['title'] = $this->l10n->t('Give the activity a short title.');
+		}
+
+		if ($fields !== []) {
+			throw new ValidationException(
+				Constants::ERR_VALIDATION,
+				$this->l10n->t('Please correct the highlighted fields.'),
+				$fields,
+			);
+		}
+	}
+
+	private function normaliseOrigin(string $origin): string
+	{
+		return in_array($origin, Constants::ACTIVITY_ORIGINS, true) ? $origin : 'user';
+	}
+
+	/**
+	 * Timeline note helper so callers do not need the timeline service directly.
+	 */
+	public function logNote(int $companyId, string $note, string $actor): void
+	{
+		$this->timelineService->append($companyId, 'note', $actor, [
+			'note' => mb_substr(trim($note), 0, 1000),
+			'app' => Application::APP_ID,
+		]);
+	}
+}

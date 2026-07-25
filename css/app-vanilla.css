@@ -1,0 +1,17 @@
+/**
+ * CustomerCheck — lightweight page helpers (no AZC leftovers).
+ * Kept as a dedicated sheet so css/app.css @import stays resolvable (404 breaks
+ * some browsers’ handling of later @imports in the same parent sheet).
+ */
+
+#app-content.crm-app .crm-page-stack {
+	display: flex;
+	flex-direction: column;
+	gap: var(--crm-space-5, 1.25rem);
+	width: 100%;
+	min-width: 0;
+}
+
+#app-content.crm-app .crm-page-stack > * {
+	min-width: 0;
+}

@@ -1,0 +1,401 @@
+/**
+ * Manager scope list filter bars (time entries + absences).
+ * Isolated from global .crm-filter-grid / subgrid rules in page-patterns.css.
+ */
+
+#app-content.crm-app--manager-time-entries .manager-scope-page__toolbar,
+#app-content.crm-app--manager-absences .manager-scope-page__toolbar {
+	--crm-manager-filter-label-h: calc(var(--crm-fs-sm, 0.875rem) * var(--crm-line-tight, 1.25));
+	--crm-manager-filter-label-gap: var(--crm-space-2, 0.5rem);
+	padding: 0 0 var(--crm-space-4, 1rem);
+	margin: 0 0 var(--crm-space-4, 1rem);
+	border: none;
+	border-bottom: 1px solid var(--crm-border, var(--color-border));
+	border-radius: 0;
+	background: transparent;
+}
+
+#app-content.crm-app--manager-time-entries .manager-scope-page__filter-form,
+#app-content.crm-app--manager-absences .manager-scope-page__filter-form {
+	display: flex;
+	flex-direction: column;
+	gap: var(--crm-space-3, 0.75rem);
+	margin: 0;
+}
+
+/* ── Filter grid (row 1: criteria + actions, row 2: date range) ─── */
+#app-content.crm-app--manager-time-entries .manager-scope-page__toolbar .manager-scope-filter,
+#app-content.crm-app--manager-absences .manager-scope-page__toolbar .manager-scope-filter {
+	display: grid;
+	align-items: stretch;
+	column-gap: var(--crm-space-4, 1rem);
+	row-gap: var(--crm-space-4, 1rem);
+	width: 100%;
+	margin: 0;
+}
+
+#app-content.crm-app--manager-time-entries .manager-scope-page__toolbar .manager-scope-filter {
+	grid-template-columns:
+		minmax(0, 1.35fr)
+		minmax(0, 1fr)
+		minmax(0, auto);
+	grid-template-areas:
+		'employee status actions'
+		'dates dates dates';
+}
+
+#app-content.crm-app--manager-absences .manager-scope-page__toolbar .manager-scope-filter--extended {
+	grid-template-columns:
+		minmax(0, 1.3fr)
+		minmax(0, 0.95fr)
+		minmax(0, 0.95fr)
+		minmax(0, auto);
+	grid-template-areas:
+		'employee type status actions'
+		'dates dates dates dates';
+}
+
+#app-content.crm-app--manager-time-entries .manager-scope-page__toolbar .crm-filter-field--employee,
+#app-content.crm-app--manager-absences .manager-scope-page__toolbar .crm-filter-field--employee {
+	grid-area: employee;
+}
+
+#app-content.crm-app--manager-absences .manager-scope-page__toolbar .crm-filter-field--type {
+	grid-area: type;
+}
+
+#app-content.crm-app--manager-time-entries .manager-scope-page__toolbar .crm-filter-field--status,
+#app-content.crm-app--manager-absences .manager-scope-page__toolbar .crm-filter-field--status {
+	grid-area: status;
+}
+
+#app-content.crm-app--manager-time-entries .manager-scope-page__toolbar .crm-filter-field--actions,
+#app-content.crm-app--manager-absences .manager-scope-page__toolbar .crm-filter-field--actions {
+	grid-area: actions;
+}
+
+#app-content.crm-app--manager-time-entries .manager-scope-page__toolbar .crm-filter-field--dates,
+#app-content.crm-app--manager-absences .manager-scope-page__toolbar .crm-filter-field--dates {
+	grid-area: dates;
+}
+
+/* Override global subgrid on .crm-filter-field (page-patterns.css) */
+#app-content.crm-app--manager-time-entries .manager-scope-page__toolbar .manager-scope-filter > .crm-filter-field,
+#app-content.crm-app--manager-absences .manager-scope-page__toolbar .manager-scope-filter > .crm-filter-field {
+	display: grid;
+	grid-template-rows: auto minmax(44px, auto);
+	grid-row: auto;
+	grid-column: auto;
+	gap: var(--crm-manager-filter-label-gap);
+	min-width: 0;
+}
+
+#app-content.crm-app--manager-time-entries .manager-scope-page__toolbar .manager-scope-filter > .crm-filter-field--dates,
+#app-content.crm-app--manager-absences .manager-scope-page__toolbar .manager-scope-filter > .crm-filter-field--dates {
+	grid-template-rows: auto auto;
+}
+
+#app-content.crm-app--manager-time-entries .manager-scope-page__toolbar .crm-filter-field__label,
+#app-content.crm-app--manager-absences .manager-scope-page__toolbar .crm-filter-field__label {
+	font-size: var(--crm-fs-sm, 0.875rem);
+	font-weight: 600;
+	line-height: var(--crm-line-tight, 1.25);
+	color: var(--crm-text, var(--color-main-text));
+	margin: 0;
+}
+
+#app-content.crm-app--manager-time-entries .manager-scope-page__toolbar .crm-filter-field__control,
+#app-content.crm-app--manager-absences .manager-scope-page__toolbar .crm-filter-field__control {
+	position: relative;
+	display: block;
+	min-width: 0;
+	min-height: 44px;
+	flex-direction: unset;
+	justify-content: unset;
+}
+
+#app-content.crm-app--manager-time-entries .manager-scope-page__toolbar .crm-filter-field--actions .crm-filter-field__control,
+#app-content.crm-app--manager-absences .manager-scope-page__toolbar .crm-filter-field--actions .crm-filter-field__control {
+	display: flex;
+	align-items: center;
+	min-height: 44px;
+	margin-top: calc(var(--crm-manager-filter-label-h) + var(--crm-manager-filter-label-gap));
+}
+
+#app-content.crm-app--manager-time-entries .manager-scope-page__toolbar .form-input,
+#app-content.crm-app--manager-time-entries .manager-scope-page__toolbar .form-select,
+#app-content.crm-app--manager-absences .manager-scope-page__toolbar .form-input,
+#app-content.crm-app--manager-absences .manager-scope-page__toolbar .form-select {
+	min-height: 44px;
+	width: 100%;
+	box-sizing: border-box;
+}
+
+#app-content.crm-app--manager-time-entries .manager-scope-page__toolbar .crm-filter-field--dates .crm-filter-field__control,
+#app-content.crm-app--manager-absences .manager-scope-page__toolbar .crm-filter-field--dates .crm-filter-field__control {
+	min-height: 0;
+}
+
+#app-content.crm-app--manager-time-entries .manager-scope-page__toolbar .crm-date-range,
+#app-content.crm-app--manager-absences .manager-scope-page__toolbar .crm-date-range {
+	display: flex;
+	flex-wrap: nowrap;
+	align-items: center;
+	gap: var(--crm-space-2, 0.5rem) var(--crm-space-3, 0.75rem);
+	width: 100%;
+	max-width: 32rem;
+}
+
+#app-content.crm-app--manager-time-entries .manager-scope-page__toolbar .crm-date-range__part,
+#app-content.crm-app--manager-absences .manager-scope-page__toolbar .crm-date-range__part {
+	display: block;
+	flex: 1 1 0;
+	min-width: 9.5rem;
+	max-width: 14rem;
+}
+
+#app-content.crm-app--manager-time-entries .manager-scope-page__toolbar .crm-date-range__sep,
+#app-content.crm-app--manager-absences .manager-scope-page__toolbar .crm-date-range__sep {
+	flex: 0 0 auto;
+	align-self: center;
+	padding: 0;
+	margin: 0;
+	white-space: nowrap;
+	font-size: var(--crm-fs-sm, 0.875rem);
+	font-weight: 500;
+	color: var(--crm-muted, var(--color-text-maxcontrast));
+}
+
+#app-content.crm-app--manager-time-entries .manager-scope-page__toolbar .crm-date-range__part .crm-datepicker-host,
+#app-content.crm-app--manager-absences .manager-scope-page__toolbar .crm-date-range__part .crm-datepicker-host,
+#app-content.crm-app--manager-time-entries .manager-scope-page__toolbar .crm-date-range__part .crm-datepicker-host--flex,
+#app-content.crm-app--manager-absences .manager-scope-page__toolbar .crm-date-range__part .crm-datepicker-host--flex {
+	position: relative;
+	display: block;
+	width: 100%;
+	max-width: 100%;
+	min-height: 44px;
+}
+
+#app-content.crm-app--manager-time-entries .manager-scope-page__toolbar .crm-date-range__part .datepicker-input,
+#app-content.crm-app--manager-absences .manager-scope-page__toolbar .crm-date-range__part .datepicker-input {
+	min-width: 0;
+	width: 100%;
+	padding-inline-end: 3rem;
+	font-variant-numeric: tabular-nums;
+	color: var(--color-main-text, var(--crm-text));
+	background-color: var(--color-main-background, var(--crm-bg));
+	border: 1px solid var(--color-border, var(--crm-border));
+}
+
+#app-content.crm-app--manager-time-entries .manager-scope-page__toolbar .crm-date-range__part .crm-datepicker-toggle,
+#app-content.crm-app--manager-absences .manager-scope-page__toolbar .crm-date-range__part .crm-datepicker-toggle {
+	position: absolute !important;
+	inset-inline-end: 0;
+	top: 50% !important;
+	transform: translateY(-50%) !important;
+	color: var(--color-main-text, var(--crm-text));
+	background: color-mix(in srgb, var(--color-primary-element, #0082c9) 12%, var(--color-main-background, #fff));
+	border: 1px solid color-mix(in srgb, var(--color-primary-element, #0082c9) 35%, var(--color-border, #ddd));
+	border-radius: var(--crm-radius-sm, 6px);
+}
+
+#app-content.crm-app--manager-time-entries .manager-scope-page__toolbar .crm-date-range__part .crm-datepicker-toggle:focus-visible,
+#app-content.crm-app--manager-absences .manager-scope-page__toolbar .crm-date-range__part .crm-datepicker-toggle:focus-visible,
+#app-content.crm-app--manager-time-entries .manager-scope-page__toolbar .crm-date-range__part .datepicker-input:focus-visible,
+#app-content.crm-app--manager-absences .manager-scope-page__toolbar .crm-date-range__part .datepicker-input:focus-visible {
+	outline: 3px solid var(--color-primary-element, #0082c9);
+	outline-offset: 2px;
+}
+
+/* Employee picker in toolbar */
+#app-content.crm-app--manager-time-entries .manager-scope-page__toolbar .user-picker,
+#app-content.crm-app--manager-absences .manager-scope-page__toolbar .user-picker {
+	width: 100%;
+}
+
+#app-content.crm-app--manager-time-entries .manager-scope-page__toolbar .user-picker__control,
+#app-content.crm-app--manager-absences .manager-scope-page__toolbar .user-picker__control {
+	position: relative;
+	display: block;
+	width: 100%;
+}
+
+#app-content.crm-app--manager-time-entries .manager-scope-page__toolbar .user-picker__search,
+#app-content.crm-app--manager-absences .manager-scope-page__toolbar .user-picker__search {
+	width: 100%;
+	padding-inline-end: calc(var(--crm-space-7, 2.75rem) + var(--crm-space-2, 0.5rem));
+}
+
+#app-content.crm-app--manager-time-entries .manager-scope-page__toolbar .user-picker__clear,
+#app-content.crm-app--manager-absences .manager-scope-page__toolbar .user-picker__clear {
+	position: absolute;
+	inset-inline-end: var(--crm-space-2, 0.5rem);
+	top: 50%;
+	transform: translateY(-50%);
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 2.75rem;
+	min-height: 2.75rem;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	border-radius: var(--crm-radius-sm, 6px);
+	background: transparent;
+	color: var(--crm-muted, var(--color-text-maxcontrast));
+	font-size: 1.25rem;
+	line-height: 1;
+	cursor: pointer;
+}
+
+#app-content.crm-app--manager-time-entries .manager-scope-page__toolbar .user-picker__clear:hover,
+#app-content.crm-app--manager-time-entries .manager-scope-page__toolbar .user-picker__clear:focus-visible,
+#app-content.crm-app--manager-absences .manager-scope-page__toolbar .user-picker__clear:hover,
+#app-content.crm-app--manager-absences .manager-scope-page__toolbar .user-picker__clear:focus-visible {
+	background: var(--color-background-hover, var(--crm-bg-soft));
+	color: var(--crm-text, var(--color-main-text));
+}
+
+#app-content.crm-app--manager-time-entries .manager-scope-page__toolbar .user-picker__clear:focus-visible,
+#app-content.crm-app--manager-absences .manager-scope-page__toolbar .user-picker__clear:focus-visible {
+	outline: 2px solid var(--color-primary-element, #0082c9);
+	outline-offset: 2px;
+}
+
+#app-content.crm-app--manager-time-entries .manager-scope-page__toolbar .user-picker__list,
+#app-content.crm-app--manager-absences .manager-scope-page__toolbar .user-picker__list {
+	inset-inline: 0;
+	top: 100%;
+	z-index: 20;
+}
+
+#app-content.crm-app--manager-time-entries .manager-scope-page__toolbar .form-help,
+#app-content.crm-app--manager-absences .manager-scope-page__toolbar .form-help {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	margin: -1px;
+	padding: 0;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+	border: 0;
+}
+
+/* Reset global .crm-filter-actions grid-row when used as control wrapper */
+#app-content.crm-app--manager-time-entries .manager-scope-page__toolbar .crm-filter-field__control.crm-filter-actions,
+#app-content.crm-app--manager-absences .manager-scope-page__toolbar .crm-filter-field__control.crm-filter-actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: flex-start;
+	gap: var(--crm-space-2, 0.5rem);
+	grid-row: auto;
+	align-self: auto;
+}
+
+#app-content.crm-app--manager-time-entries .manager-scope-page__toolbar .crm-filter-actions .crm-btn,
+#app-content.crm-app--manager-absences .manager-scope-page__toolbar .crm-filter-actions .crm-btn {
+	flex: 0 1 auto;
+	min-width: 6.75rem;
+	min-height: 44px;
+}
+
+#app-content.crm-app--manager-time-entries .manager-scope-page__toolbar-feedback,
+#app-content.crm-app--manager-absences .manager-scope-page__toolbar-feedback {
+	margin: 0;
+}
+
+#app-content.crm-app--manager-time-entries .manager-scope-page__toolbar-footnote,
+#app-content.crm-app--manager-absences .manager-scope-page__toolbar-footnote {
+	margin: 0;
+	max-width: 72ch;
+	font-size: var(--crm-fs-sm, 0.875rem);
+	line-height: var(--crm-line-base, 1.45);
+	color: var(--crm-muted, var(--color-text-maxcontrast));
+}
+
+@media (max-width: 1100px) {
+	#app-content.crm-app--manager-time-entries .manager-scope-page__toolbar .manager-scope-filter {
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+		grid-template-areas:
+			'employee employee'
+			'status actions'
+			'dates dates';
+	}
+
+	#app-content.crm-app--manager-absences .manager-scope-page__toolbar .manager-scope-filter--extended {
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+		grid-template-areas:
+			'employee employee'
+			'type status'
+			'actions actions'
+			'dates dates';
+	}
+}
+
+@media (max-width: 900px) {
+	#app-content.crm-app--manager-time-entries .manager-scope-page__toolbar .crm-date-range,
+	#app-content.crm-app--manager-absences .manager-scope-page__toolbar .crm-date-range {
+		flex-wrap: wrap;
+		max-width: none;
+	}
+}
+
+@media (max-width: 768px) {
+	#app-content.crm-app--manager-time-entries .manager-scope-page__toolbar .manager-scope-filter {
+		grid-template-columns: 1fr;
+		grid-template-areas:
+			'employee'
+			'status'
+			'dates'
+			'actions';
+	}
+
+	#app-content.crm-app--manager-absences .manager-scope-page__toolbar .manager-scope-filter--extended {
+		grid-template-columns: 1fr;
+		grid-template-areas:
+			'employee'
+			'type'
+			'status'
+			'dates'
+			'actions';
+	}
+
+	#app-content.crm-app--manager-time-entries .manager-scope-page__toolbar .crm-date-range__part,
+	#app-content.crm-app--manager-absences .manager-scope-page__toolbar .crm-date-range__part {
+		max-width: none;
+		flex: 1 1 9.5rem;
+	}
+
+	#app-content.crm-app--manager-time-entries .manager-scope-page__toolbar .crm-filter-field--actions .crm-filter-field__control,
+	#app-content.crm-app--manager-absences .manager-scope-page__toolbar .crm-filter-field--actions .crm-filter-field__control {
+		margin-top: 0;
+		min-height: 0;
+	}
+
+	#app-content.crm-app--manager-time-entries .manager-scope-page__toolbar .crm-filter-actions,
+	#app-content.crm-app--manager-absences .manager-scope-page__toolbar .crm-filter-actions {
+		width: 100%;
+	}
+
+	#app-content.crm-app--manager-time-entries .manager-scope-page__toolbar .crm-filter-actions .crm-btn,
+	#app-content.crm-app--manager-absences .manager-scope-page__toolbar .crm-filter-actions .crm-btn {
+		flex: 1 1 calc(50% - 0.5rem);
+		justify-content: center;
+		min-width: 0;
+	}
+
+	#app-content.crm-app--manager-time-entries .manager-scope-page__toolbar .crm-filter-actions .crm-btn--primary,
+	#app-content.crm-app--manager-absences .manager-scope-page__toolbar .crm-filter-actions .crm-btn--primary {
+		flex: 1 1 100%;
+	}
+}
+
+@media (forced-colors: active) {
+	#app-content.crm-app--manager-time-entries .manager-scope-page__toolbar,
+	#app-content.crm-app--manager-absences .manager-scope-page__toolbar {
+		border-bottom-color: CanvasText;
+	}
+}

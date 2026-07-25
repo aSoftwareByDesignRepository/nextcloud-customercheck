@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SPDX-FileCopyrightText: 2026 Alexander Maeule <info@software-by-design.de>
+  SPDX-License-Identifier: AGPL-3.0-or-later
+
+  CustomerCheck dark/uncoloured glyph for dashboard widgets and unified search.
+  Per OCP Dashboard IIconWidget, icons must be black or uncoloured; clients apply
+  background invert when the UI is dark. Same geometry as app.svg.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24" aria-hidden="true">
+	<path fill-rule="evenodd" d="M8 2a2 2 0 0 0-2 2v18h12V4a2 2 0 0 0-2-2H8ZM9.5 14.8l-2-2-1.4 1.4 3.4 3.4 7-7-1.4-1.4-5.6 5.6z"/>
+	<path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2V12z"/>
+	<path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2V9z"/>
+</svg>

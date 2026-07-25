@@ -1,0 +1,194 @@
+/* Color System for ArbeitszeitCheck App
+ * Uses ONLY Nextcloud CSS variables — no hardcoded colors.
+ * Variables MUST be defined on body (not :root) because Nextcloud theme
+ * vars (--color-main-background etc) are set on body [data-theme-X].
+ *
+ * @copyright Copyright (c) 2024, Nextcloud GmbH
+ * @license AGPL-3.0-or-later
+ */
+
+body {
+  /* Map Nextcloud CSS variables — theme compatibility guaranteed */
+  --arbeitszeitcheck-color-main-background: var(--color-main-background);
+  --arbeitszeitcheck-color-background-hover: var(--color-background-hover);
+  --arbeitszeitcheck-color-background-dark: var(--color-background-dark);
+  --arbeitszeitcheck-color-main-text: var(--color-main-text);
+  --arbeitszeitcheck-color-text-maxcontrast: var(--color-text-maxcontrast);
+  --arbeitszeitcheck-color-text-lighter: var(--color-text-lighter);
+  --arbeitszeitcheck-color-primary-text: var(--color-primary-text);
+  --arbeitszeitcheck-color-primary-element: var(--color-primary-element);
+  --arbeitszeitcheck-color-primary-element-light: var(--color-primary-element-light);
+  --arbeitszeitcheck-color-primary-element-text: var(--color-primary-element-text);
+  --arbeitszeitcheck-color-primary-background: var(--color-primary-background);
+
+  /* Primary — from Nextcloud */
+  --arbeitszeitcheck-color-primary: var(--color-primary);
+  --arbeitszeitcheck-color-primary-hover: var(--color-primary-hover);
+  --arbeitszeitcheck-color-primary-active: var(--color-primary-element);
+  --arbeitszeitcheck-color-primary-light: var(--color-primary-light);
+  --arbeitszeitcheck-color-primary-lighter: var(--color-primary-light);
+
+  /* Secondary — derived from theme */
+  --arbeitszeitcheck-color-secondary: var(--color-background-dark);
+  --arbeitszeitcheck-color-secondary-hover: var(--color-background-hover);
+  --arbeitszeitcheck-color-secondary-active: var(--color-background-hover);
+
+  /* Accent — use primary for consistency */
+  --arbeitszeitcheck-color-accent: var(--color-primary);
+  --arbeitszeitcheck-color-accent-hover: var(--color-primary-hover);
+  --arbeitszeitcheck-color-accent-active: var(--color-primary-element);
+  --arbeitszeitcheck-color-accent-light: var(--color-primary-light);
+
+  /* Semantic — from Nextcloud */
+  --arbeitszeitcheck-color-success: var(--color-success);
+  --arbeitszeitcheck-color-success-hover: var(--color-success);
+  --arbeitszeitcheck-color-success-light: color-mix(in srgb, var(--color-success, #22c55e) 15%, transparent);
+  --arbeitszeitcheck-color-success-dark: var(--color-success);
+
+  --arbeitszeitcheck-color-warning: var(--color-warning);
+  --arbeitszeitcheck-color-warning-hover: var(--color-warning);
+  --arbeitszeitcheck-color-warning-light: color-mix(in srgb, var(--color-warning, #f59e0b) 15%, transparent);
+  --arbeitszeitcheck-color-warning-dark: var(--color-warning);
+
+  --arbeitszeitcheck-color-error: var(--color-error);
+  --arbeitszeitcheck-color-error-hover: var(--color-error);
+  --arbeitszeitcheck-color-error-light: color-mix(in srgb, var(--color-error, #ef4444) 15%, transparent);
+  --arbeitszeitcheck-color-error-dark: var(--color-error);
+
+  --arbeitszeitcheck-color-info: var(--color-primary);
+  --arbeitszeitcheck-color-info-hover: var(--color-primary-hover);
+  --arbeitszeitcheck-color-info-light: var(--color-primary-light);
+  --arbeitszeitcheck-color-info-dark: var(--color-primary-element);
+
+  /* Neutrals — from Nextcloud (theme-aware) */
+  --arbeitszeitcheck-color-background: var(--color-main-background);
+  --arbeitszeitcheck-color-background-card: var(--color-main-background);
+  --arbeitszeitcheck-color-background-secondary: var(--color-background-dark);
+  --arbeitszeitcheck-color-background-tertiary: var(--color-background-hover);
+  --arbeitszeitcheck-color-background-elevated: var(--color-main-background);
+  --arbeitszeitcheck-color-background-overlay: color-mix(in srgb, var(--color-main-text) 50%, transparent);
+
+  /* Text — use text-maxcontrast for secondary/muted (WCAG 2.1 AA 4.5:1) */
+  --arbeitszeitcheck-color-text: var(--color-main-text);
+  --arbeitszeitcheck-color-text-secondary: var(--color-text-maxcontrast);
+  --arbeitszeitcheck-color-text-tertiary: var(--color-text-maxcontrast);
+  --arbeitszeitcheck-color-text-inverse: var(--color-primary-text);
+  --arbeitszeitcheck-color-text-muted: var(--color-text-maxcontrast);
+
+  /* Borders */
+  --arbeitszeitcheck-color-border: var(--color-border);
+  --arbeitszeitcheck-color-border-secondary: var(--color-border);
+  --arbeitszeitcheck-color-border-focus: var(--color-primary-element);
+  --arbeitszeitcheck-color-border-error: var(--color-error);
+  --arbeitszeitcheck-color-border-success: var(--color-success);
+  --arbeitszeitcheck-color-border-warning: var(--color-warning);
+
+  /* Shadows — theme-adaptive via color-mix */
+  --arbeitszeitcheck-shadow-subtle: 0 1px 2px color-mix(in srgb, var(--color-main-text) 8%, transparent);
+  --arbeitszeitcheck-shadow-base: 0 2px 8px color-mix(in srgb, var(--color-main-text) 10%, transparent);
+  --arbeitszeitcheck-shadow-md: 0 4px 12px color-mix(in srgb, var(--color-main-text) 12%, transparent);
+  --arbeitszeitcheck-shadow-lg: 0 8px 24px color-mix(in srgb, var(--color-main-text) 15%, transparent);
+  --arbeitszeitcheck-shadow-xl: 0 12px 40px color-mix(in srgb, var(--color-main-text) 18%, transparent);
+
+  /* Gray scale — for scrollbars etc., use theme vars (maxcontrast for AA) */
+  --arbeitszeitcheck-color-gray-400: var(--color-text-maxcontrast);
+  --arbeitszeitcheck-color-gray-500: var(--color-text-maxcontrast);
+  --arbeitszeitcheck-color-gray-900: var(--color-main-text);
+
+  /* Status */
+  --arbeitszeitcheck-color-status-online: var(--color-success);
+  --arbeitszeitcheck-color-status-offline: var(--color-text-maxcontrast);
+  --arbeitszeitcheck-color-status-busy: var(--color-warning);
+  --arbeitszeitcheck-color-status-away: var(--color-primary);
+
+  /* Time Entry */
+  --arbeitszeitcheck-color-time-entry-billable: var(--color-success);
+  --arbeitszeitcheck-color-time-entry-non-billable: var(--color-text-maxcontrast);
+  --arbeitszeitcheck-color-time-entry-overtime: var(--color-warning);
+  --arbeitszeitcheck-color-time-entry-compliant: var(--color-success);
+  --arbeitszeitcheck-color-time-entry-violation: var(--color-error);
+
+  /* Menu */
+  --arbeitszeitcheck-color-menu-background: var(--color-main-background);
+  --arbeitszeitcheck-color-menu-border: var(--color-border);
+  --arbeitszeitcheck-color-menu-item-hover: var(--color-background-hover);
+  --arbeitszeitcheck-color-menu-item-active: var(--color-primary);
+  --arbeitszeitcheck-color-menu-item-active-text: var(--color-primary-text);
+  --arbeitszeitcheck-color-menu-section-header: var(--color-text-maxcontrast);
+  --arbeitszeitcheck-color-menu-user-avatar: var(--color-primary-element);
+  --arbeitszeitcheck-color-menu-user-avatar-text: var(--color-primary-element-text);
+
+  /* Form */
+  --arbeitszeitcheck-color-form-background: var(--color-main-background);
+  --arbeitszeitcheck-color-form-border: var(--color-border);
+  --arbeitszeitcheck-color-form-border-focus: var(--color-primary-element);
+  --arbeitszeitcheck-color-form-border-error: var(--color-error);
+  --arbeitszeitcheck-color-form-border-success: var(--color-success);
+  --arbeitszeitcheck-color-form-label: var(--color-main-text);
+  --arbeitszeitcheck-color-form-help: var(--color-text-maxcontrast);
+  --arbeitszeitcheck-color-form-required: var(--color-error);
+
+  /* Table */
+  --arbeitszeitcheck-color-table-background: var(--color-main-background);
+  --arbeitszeitcheck-color-table-border: var(--color-border);
+  --arbeitszeitcheck-color-table-header-background: var(--color-background-dark);
+  --arbeitszeitcheck-color-table-row-hover: var(--color-background-hover);
+  --arbeitszeitcheck-color-table-row-selected: var(--color-primary-light);
+  --arbeitszeitcheck-color-table-stripe: var(--color-background-dark);
+
+  /* Modal */
+  --arbeitszeitcheck-color-modal-background: var(--color-main-background);
+  --arbeitszeitcheck-color-modal-overlay: var(--arbeitszeitcheck-color-background-overlay);
+  --arbeitszeitcheck-color-modal-border: var(--color-border);
+  --arbeitszeitcheck-color-modal-header-background: var(--color-background-dark);
+  --arbeitszeitcheck-color-modal-footer-background: var(--color-background-dark);
+
+  /* Notification */
+  --arbeitszeitcheck-color-notification-success: var(--color-success);
+  --arbeitszeitcheck-color-notification-success-background: color-mix(in srgb, var(--color-success) 14%, var(--color-main-background));
+  --arbeitszeitcheck-color-notification-error: var(--color-error);
+  --arbeitszeitcheck-color-notification-error-background: color-mix(in srgb, var(--color-error) 14%, var(--color-main-background));
+  --arbeitszeitcheck-color-notification-warning: var(--color-warning);
+  --arbeitszeitcheck-color-notification-warning-background: color-mix(in srgb, var(--color-warning) 14%, var(--color-main-background));
+  --arbeitszeitcheck-color-notification-info: var(--color-primary);
+  --arbeitszeitcheck-color-notification-info-background: color-mix(in srgb, var(--color-primary) 14%, var(--color-main-background));
+
+  /* Button */
+  --arbeitszeitcheck-color-button-primary: var(--color-primary-element);
+  --arbeitszeitcheck-color-button-primary-hover: var(--color-primary-element-hover);
+  --arbeitszeitcheck-color-button-primary-active: var(--color-primary-element);
+  --arbeitszeitcheck-color-button-primary-text: var(--color-primary-element-text);
+  --arbeitszeitcheck-color-button-secondary: var(--color-background-dark);
+  --arbeitszeitcheck-color-button-secondary-hover: var(--color-background-hover);
+  --arbeitszeitcheck-color-button-secondary-active: var(--color-background-hover);
+  --arbeitszeitcheck-color-button-secondary-text: var(--color-main-text);
+  --arbeitszeitcheck-color-button-danger: var(--color-error);
+  --arbeitszeitcheck-color-button-danger-hover: var(--color-error);
+  --arbeitszeitcheck-color-button-danger-text: var(--color-primary-text);
+
+  /* Loading */
+  --arbeitszeitcheck-color-loading-spinner: var(--color-primary-element);
+  --arbeitszeitcheck-color-loading-background: var(--color-background-dark);
+  --arbeitszeitcheck-color-progress-bar: var(--color-primary-element);
+  --arbeitszeitcheck-color-progress-background: var(--color-background-dark);
+
+  /* Shadow aliases (color-mix uses --color-main-text from theme) */
+  --shadow-base: var(--arbeitszeitcheck-shadow-base);
+  --shadow-md: var(--arbeitszeitcheck-shadow-md);
+  --shadow-lg: var(--arbeitszeitcheck-shadow-lg);
+  --shadow-xl: var(--arbeitszeitcheck-shadow-xl);
+
+  /* Light shadow for cards, buttons; composed from main-text for dark-mode awareness */
+  --arbeitszeitcheck-color-shadow-light: color-mix(in srgb, var(--color-main-text) 10%, transparent);
+  /* Heavy shadow used by modals; composed from main-text for dark-mode awareness */
+  --arbeitszeitcheck-color-shadow-heavy: color-mix(in srgb, var(--color-main-text) 22%, transparent);
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,0 +1,104 @@
+/**
+ * Legacy .alert banners — aligned with crm-callout contrast (theme-safe, WCAG 2.1 AA).
+ * Prefer templates/common/alert-callout.php for new markup.
+ */
+
+#app-content.crm-app .alert,
+.modal-backdrop .alert,
+.crm-denied .alert {
+	display: flex;
+	flex-direction: row;
+	flex-wrap: nowrap;
+	align-items: flex-start;
+	gap: var(--crm-space-3, 0.75rem) var(--crm-space-4, 1rem);
+	margin: 0 0 var(--crm-space-4, 1rem);
+	padding: var(--crm-space-4, 1rem) var(--crm-space-5, 1.25rem);
+	border: 2px solid var(--color-border, var(--crm-border));
+	border-radius: var(--crm-radius-md, 8px);
+	background: var(--color-main-background, var(--crm-bg));
+	box-shadow: var(--crm-shadow-sm, 0 1px 2px rgb(0 0 0 / 8%));
+	color: var(--color-main-text, var(--crm-text));
+}
+
+/* Variant accents + icon wells: common/notification-surfaces.css */
+
+#app-content.crm-app .alert-icon,
+.modal-backdrop .alert-icon {
+	flex-shrink: 0;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: var(--crm-icon-well, 2.75rem);
+	height: var(--crm-icon-well, 2.75rem);
+	border-radius: var(--crm-radius-sm, 6px);
+}
+
+#app-content.crm-app .alert-icon .crm-icon,
+#app-content.crm-app .alert-icon svg,
+.modal-backdrop .alert-icon .crm-icon,
+.modal-backdrop .alert-icon svg {
+	width: var(--crm-icon-lg, 1.5rem);
+	height: var(--crm-icon-lg, 1.5rem);
+}
+
+#app-content.crm-app .alert-content,
+.modal-backdrop .alert-content {
+	flex: 1 1 auto;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: var(--crm-space-1, 0.25rem);
+}
+
+#app-content.crm-app .alert-title,
+#app-content.crm-app .alert-message,
+#app-content.crm-app .alert-content strong,
+.modal-backdrop .alert-title,
+.modal-backdrop .alert-message,
+.modal-backdrop .alert-content strong {
+	margin: 0;
+	color: var(--color-main-text, var(--crm-text));
+}
+
+#app-content.crm-app .alert-title,
+#app-content.crm-app .alert-content strong,
+.modal-backdrop .alert-title,
+.modal-backdrop .alert-content strong {
+	font-size: var(--crm-fs-md, 1rem);
+	font-weight: 600;
+	line-height: var(--crm-line-tight, 1.25);
+}
+
+#app-content.crm-app .alert-message,
+.modal-backdrop .alert-message {
+	font-size: var(--crm-fs-md, 1rem);
+	line-height: var(--crm-line-base, 1.45);
+	max-width: 70ch;
+}
+
+#app-content.crm-app .alert > .alert-message:only-child,
+.modal-backdrop .alert > .alert-message:only-child {
+	flex: 1 1 auto;
+}
+
+#app-content.crm-app .alert > .alert-message:only-child strong,
+.modal-backdrop .alert > .alert-message:only-child strong {
+	display: block;
+	margin-bottom: var(--crm-space-1, 0.25rem);
+}
+
+@media (forced-colors: active) {
+	#app-content.crm-app .alert,
+	.modal-backdrop .alert {
+		border: 2px solid CanvasText;
+		background: Canvas;
+		color: CanvasText;
+	}
+
+	#app-content.crm-app .alert-icon,
+	.modal-backdrop .alert-icon {
+		border: 1px solid CanvasText;
+		background: Canvas;
+		color: CanvasText;
+	}
+}

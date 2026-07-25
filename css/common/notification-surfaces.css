@@ -1,0 +1,528 @@
+/**
+ * Notifications: callouts, alerts, toasts, inline-notice — theme-safe (WCAG 2.1 AA).
+ * Uses NC --color-*-text / *-rgb for contrast on light, dark, and custom themes.
+ * Icon wells: semantic fill + contrasting glyph (not low-contrast outline-only).
+ */
+
+/* ── Panel accents (visible border + tint on light, dark, custom NC themes) ── */
+#app-content.crm-app .crm-callout--info:not(.crm-semantic-panel),
+.crm-nc-admin-settings .crm-callout--info,
+.modal-backdrop .crm-callout--info:not(.crm-semantic-panel),
+#app-content.crm-app .inline-notice--info,
+.modal-backdrop .inline-notice--info,
+.toast--info {
+	border-color: var(--color-primary-element, #00679e);
+	border-left-width: 5px;
+	border-left-color: var(--color-primary-element, #00679e);
+	background: var(--crm-tint-info);
+}
+
+#app-content.crm-app .crm-callout--warning:not(.crm-semantic-panel),
+.crm-nc-admin-settings .crm-callout--warning,
+.modal-backdrop .crm-callout--warning:not(.crm-semantic-panel),
+#app-content.crm-app .inline-notice--warning,
+.modal-backdrop .inline-notice--warning,
+.toast--warning,
+#app-content.crm-app .alert--warning,
+.modal-backdrop .alert--warning {
+	border-color: var(--color-warning-text, var(--color-warning, #a37200));
+	border-left-width: 5px;
+	border-left-color: var(--color-warning-text, var(--color-warning, #a37200));
+	background: var(--crm-tint-warning);
+}
+
+#app-content.crm-app .crm-callout--success:not(.crm-semantic-panel),
+.crm-nc-admin-settings .crm-callout--success,
+.modal-backdrop .crm-callout--success:not(.crm-semantic-panel),
+.toast--success,
+#app-content.crm-app .alert--success,
+.modal-backdrop .alert--success {
+	border-color: var(--color-success-text, var(--color-success, #2d7b46));
+	border-left-width: 5px;
+	border-left-color: var(--color-success-text, var(--color-success, #2d7b46));
+	background: var(--crm-tint-success);
+}
+
+#app-content.crm-app .crm-callout--danger:not(.crm-semantic-panel),
+#app-content.crm-app .crm-callout--error:not(.crm-semantic-panel),
+.crm-nc-admin-settings .crm-callout--danger,
+.crm-nc-admin-settings .crm-callout--error,
+.modal-backdrop .crm-callout--danger:not(.crm-semantic-panel),
+.modal-backdrop .crm-callout--error:not(.crm-semantic-panel),
+.toast--error,
+#app-content.crm-app .alert--error,
+.modal-backdrop .alert--error {
+	border-color: var(--color-error-text, var(--color-error, #db0606));
+	border-left-width: 5px;
+	border-left-color: var(--color-error-text, var(--color-error, #db0606));
+	background: var(--crm-tint-danger);
+}
+
+#app-content.crm-app .crm-callout--neutral:not(.crm-semantic-panel),
+.modal-backdrop .crm-callout--neutral:not(.crm-semantic-panel) {
+	border-color: var(--color-border);
+	border-left-width: 2px;
+	background: color-mix(in srgb, var(--color-main-text) 5%, var(--color-main-background));
+}
+
+/* Semantic panel panel tints: common/semantic-surfaces.css */
+
+/* ── Icon wells: pale tint + semantic stroke (same model as .crm-page-header__icon) ── */
+.crm-notif-icon-well,
+#app-content.crm-app .crm-callout__icon,
+.modal-backdrop .crm-callout__icon,
+#app-content.crm-app .alert-icon,
+.modal-backdrop .alert-icon,
+.toast-icon,
+#app-content.crm-app .inline-notice__icon,
+.modal-backdrop .inline-notice__icon,
+.crm-status-icon-well {
+	flex-shrink: 0;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: var(--crm-icon-well, 2.25rem);
+	height: var(--crm-icon-well, 2.25rem);
+	min-width: var(--crm-icon-well, 2.25rem);
+	min-height: var(--crm-icon-well, 2.25rem);
+	border-radius: var(--crm-radius-sm, 6px);
+	border: 2px solid var(--color-border);
+	background: var(--color-main-background);
+	color: var(--color-main-text);
+	box-shadow: none;
+}
+
+.crm-notif-icon-well .crm-icon,
+.crm-notif-icon-well .crm-callout__icon-svg,
+.crm-notif-icon-well svg,
+#app-content.crm-app .crm-callout__icon .crm-icon,
+#app-content.crm-app .crm-callout__icon .crm-callout__icon-svg,
+#app-content.crm-app .crm-callout__icon-svg,
+.modal-backdrop .crm-callout__icon .crm-icon,
+.modal-backdrop .crm-callout__icon .crm-callout__icon-svg,
+.modal-backdrop .crm-callout__icon-svg,
+.alert-icon .crm-icon,
+.alert-icon svg,
+.toast-icon .crm-icon,
+.toast-icon svg,
+.toast-icon .toast__icon-svg,
+#app-content.crm-app .inline-notice__icon .crm-icon,
+#app-content.crm-app .inline-notice__icon .inline-notice__glyph,
+#app-content.crm-app .inline-notice__icon svg,
+.modal-backdrop .inline-notice__icon svg {
+	width: var(--crm-icon-lg, 1.375rem);
+	height: var(--crm-icon-lg, 1.375rem);
+	min-width: var(--crm-icon-lg, 1.375rem);
+	min-height: var(--crm-icon-lg, 1.375rem);
+	color: inherit;
+	stroke: currentColor;
+	fill: none;
+	opacity: 1;
+}
+
+/* Filled accent dots in IconCatalog (info / alert) */
+.crm-notif-icon-well svg circle[fill='currentColor'],
+.crm-notif-icon-well svg [fill='currentColor'],
+#app-content.crm-app .crm-callout__icon svg circle[fill='currentColor'],
+#app-content.crm-app .crm-callout__icon svg [fill='currentColor'],
+.toast-icon svg circle[fill='currentColor'],
+.toast-icon svg [fill='currentColor'] {
+	fill: currentColor;
+	stroke: none;
+}
+
+/* Variant wells — modifier class + legacy parent selectors */
+.crm-notif-icon-well--info,
+.crm-callout.crm-callout--info > .crm-callout__icon,
+.crm-callout.crm-callout--info > .crm-notif-icon-well,
+#app-content.crm-app .crm-semantic-panel--info .crm-callout__icon,
+.crm-nc-admin-settings .crm-callout--info .crm-callout__icon,
+.modal-backdrop .crm-callout--info .crm-callout__icon,
+#app-content.crm-app .alert--info .alert-icon,
+.modal-backdrop .alert--info .alert-icon,
+#app-content.crm-app .inline-notice--info .inline-notice__icon,
+.modal-backdrop .inline-notice--info .inline-notice__icon,
+.toast--info .toast-icon {
+	background: var(--crm-tint-info);
+	border-color: var(--crm-notif-fg-info);
+	color: var(--crm-notif-fg-info);
+}
+
+.crm-notif-icon-well--warning,
+.crm-callout.crm-callout--warning > .crm-callout__icon,
+.crm-callout.crm-callout--warning > .crm-notif-icon-well,
+#app-content.crm-app .crm-semantic-panel--warning .crm-callout__icon,
+.crm-nc-admin-settings .crm-callout--warning .crm-callout__icon,
+.modal-backdrop .crm-callout--warning .crm-callout__icon,
+#app-content.crm-app .alert--warning .alert-icon,
+.modal-backdrop .alert--warning .alert-icon,
+#app-content.crm-app .inline-notice--warning .inline-notice__icon,
+.modal-backdrop .inline-notice--warning .inline-notice__icon,
+.toast--warning .toast-icon {
+	background: var(--crm-tint-warning);
+	border-color: var(--crm-notif-fg-warning);
+	color: var(--crm-notif-fg-warning);
+}
+
+.crm-notif-icon-well--success,
+.crm-callout.crm-callout--success > .crm-callout__icon,
+.crm-callout.crm-callout--success > .crm-notif-icon-well,
+#app-content.crm-app .crm-semantic-panel--success .crm-callout__icon,
+.modal-backdrop .crm-callout--success .crm-callout__icon,
+#app-content.crm-app .alert--success .alert-icon,
+.modal-backdrop .alert--success .alert-icon,
+.toast--success .toast-icon {
+	background: var(--crm-tint-success);
+	border-color: var(--crm-notif-fg-success);
+	color: var(--crm-notif-fg-success);
+}
+
+.crm-notif-icon-well--danger,
+.crm-notif-icon-well--error,
+.crm-callout.crm-callout--danger > .crm-callout__icon,
+.crm-callout.crm-callout--danger > .crm-notif-icon-well,
+.crm-callout.crm-callout--error > .crm-callout__icon,
+.crm-callout.crm-callout--error > .crm-notif-icon-well,
+.crm-nc-admin-settings .crm-callout--danger .crm-callout__icon,
+.crm-nc-admin-settings .crm-callout--error .crm-callout__icon,
+.modal-backdrop .crm-callout--danger .crm-callout__icon,
+.modal-backdrop .crm-callout--error .crm-callout__icon,
+#app-content.crm-app .alert--error .alert-icon,
+.modal-backdrop .alert--error .alert-icon,
+.toast--error .toast-icon {
+	background: var(--crm-tint-danger);
+	border-color: var(--crm-notif-fg-danger);
+	color: var(--crm-notif-fg-danger);
+}
+
+.crm-notif-icon-well--neutral,
+.crm-callout.crm-callout--neutral > .crm-callout__icon,
+.crm-callout.crm-callout--neutral > .crm-notif-icon-well,
+.modal-backdrop .crm-callout--neutral .crm-callout__icon {
+	background: color-mix(in srgb, var(--color-main-text) 8%, var(--color-main-background));
+	border-color: var(--color-border-maxcontrast, var(--color-border));
+	color: var(--color-main-text);
+}
+
+#app-content.crm-app .crm-semantic-panel--success.crm-callout.auto-break-panel--disabled .crm-callout__icon {
+	background: color-mix(in srgb, var(--color-main-text) 10%, var(--color-main-background));
+	border-color: var(--color-border);
+	color: var(--color-main-text);
+}
+
+/* Body copy: main text only (AA); hints stay maxcontrast */
+#app-content.crm-app .crm-callout__title,
+.modal-backdrop .crm-callout__title,
+#app-content.crm-app .crm-callout__text,
+.modal-backdrop .crm-callout__text,
+#app-content.crm-app .alert-message,
+.modal-backdrop .alert-message,
+.toast-title,
+.toast-message,
+#app-content.crm-app .inline-notice__title,
+.modal-backdrop .inline-notice__title,
+#app-content.crm-app .inline-notice__text,
+.modal-backdrop .inline-notice__text {
+	color: var(--color-main-text);
+}
+
+#app-content.crm-app .crm-callout__hint,
+.modal-backdrop .crm-callout__hint {
+	color: var(--color-text-maxcontrast, var(--color-main-text));
+}
+
+/* ── Responsive: stack icon + body on narrow viewports ── */
+@media (max-width: 720px) {
+	#app-content.crm-app .crm-callout,
+	.modal-backdrop .crm-callout,
+	#app-content.crm-app .alert,
+	.modal-backdrop .alert,
+	#app-content.crm-app .inline-notice,
+	.modal-backdrop .inline-notice,
+	.toast {
+		flex-wrap: wrap;
+	}
+
+	#app-content.crm-app .crm-callout__icon,
+	.modal-backdrop .crm-callout__icon,
+	.toast-icon,
+	#app-content.crm-app .alert-icon,
+	.modal-backdrop .alert-icon,
+	#app-content.crm-app .inline-notice__icon,
+	.modal-backdrop .inline-notice__icon {
+		margin-bottom: var(--crm-space-1, 0.25rem);
+	}
+}
+
+@media (prefers-contrast: more) {
+	#app-content.crm-app .crm-callout:not(.crm-semantic-panel),
+	.modal-backdrop .crm-callout:not(.crm-semantic-panel),
+	.toast,
+	#app-content.crm-app .alert,
+	.modal-backdrop .alert {
+		border-width: 3px;
+	}
+
+	#app-content.crm-app .crm-callout__icon,
+	.modal-backdrop .crm-callout__icon,
+	.toast-icon,
+	#app-content.crm-app .alert-icon,
+	.modal-backdrop .alert-icon {
+		border-width: 3px;
+	}
+
+	.crm-notif-icon-well .crm-icon,
+	.crm-notif-icon-well svg,
+	#app-content.crm-app .crm-callout__icon .crm-icon,
+	#app-content.crm-app .crm-callout__icon svg {
+		stroke-width: 3;
+	}
+}
+
+/* ── Legacy inline-notice (backward compat) ───────────────── */
+#app-content.crm-app .inline-notice-section,
+.modal-backdrop .inline-notice-section {
+	padding: 0;
+	background: transparent;
+	border: 0;
+	box-shadow: none;
+	margin-bottom: var(--crm-space-4, 1rem);
+}
+
+#app-content.crm-app .inline-notice,
+.modal-backdrop .inline-notice {
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	gap: var(--crm-space-3, 0.75rem) var(--crm-space-4, 1rem);
+	padding: var(--crm-space-4, 1rem) var(--crm-space-5, 1.25rem);
+	border: 2px solid var(--color-border, var(--crm-border));
+	border-radius: var(--crm-radius-md, 8px);
+	background: var(--color-main-background, var(--crm-bg));
+	box-shadow: var(--crm-shadow-sm, 0 1px 2px rgb(0 0 0 / 8%));
+	color: var(--color-main-text, var(--crm-text));
+}
+
+#app-content.crm-app .inline-notice__content,
+.modal-backdrop .inline-notice__content {
+	flex: 1 1 12rem;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: var(--crm-space-2, 0.5rem);
+}
+
+#app-content.crm-app .inline-notice__title,
+.modal-backdrop .inline-notice__title {
+	margin: 0;
+	font-size: var(--crm-fs-lg, 1.125rem);
+	font-weight: 600;
+	line-height: var(--crm-line-tight, 1.25);
+	color: var(--color-main-text, var(--crm-text));
+}
+
+#app-content.crm-app .inline-notice__text,
+.modal-backdrop .inline-notice__text {
+	margin: 0;
+	font-size: var(--crm-fs-md, 1rem);
+	line-height: var(--crm-line-base, 1.45);
+	max-width: 65ch;
+	color: var(--color-main-text, var(--crm-text));
+}
+
+#app-content.crm-app .inline-notice__actions,
+.modal-backdrop .inline-notice__actions {
+	flex-shrink: 0;
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--crm-space-2, 0.5rem);
+	margin: 0;
+}
+
+#app-content.crm-app .inline-notice__actions .crm-btn,
+#app-content.crm-app .inline-notice__actions .btn,
+.modal-backdrop .inline-notice__actions .crm-btn,
+.modal-backdrop .inline-notice__actions .btn {
+	min-height: 44px;
+	white-space: nowrap;
+}
+
+@media (max-width: 42rem) {
+	#app-content.crm-app .inline-notice,
+	.modal-backdrop .inline-notice {
+		flex-direction: column;
+	}
+
+	#app-content.crm-app .inline-notice__actions,
+	.modal-backdrop .inline-notice__actions {
+		width: 100%;
+	}
+
+	#app-content.crm-app .inline-notice__actions .crm-btn,
+	#app-content.crm-app .inline-notice__actions .btn,
+	.modal-backdrop .inline-notice__actions .crm-btn,
+	.modal-backdrop .inline-notice__actions .btn {
+		flex: 1 1 auto;
+		justify-content: center;
+	}
+}
+
+/* ── Toast container (MC parity: bottom-right) ───────────────── */
+.toast-container {
+	position: fixed;
+	bottom: calc(var(--crm-space-5, 1.5rem) + env(safe-area-inset-bottom, 0px));
+	right: calc(var(--crm-space-5, 1.5rem) + env(safe-area-inset-right, 0px));
+	top: auto;
+	z-index: var(--z-toast, 10000);
+	display: flex;
+	flex-direction: column-reverse;
+	gap: var(--crm-space-2, 0.5rem);
+	max-width: min(24rem, calc(100vw - 2rem));
+}
+
+/* ── Toast card (left accent, MC weight) ───────────────────── */
+.toast {
+	display: flex;
+	flex-direction: row;
+	align-items: flex-start;
+	gap: var(--crm-space-3, 0.75rem);
+	padding: var(--crm-space-3, 0.75rem) var(--crm-space-4, 1rem);
+	border: 1px solid var(--crm-border, var(--color-border));
+	border-left-width: 4px;
+	border-radius: var(--crm-radius-md, 12px);
+	background: var(--crm-bg-card, var(--color-main-background));
+	box-shadow: var(--crm-shadow-md, 0 8px 24px color-mix(in srgb, var(--color-main-text) 12%, transparent));
+	color: var(--color-main-text, var(--crm-text));
+	font-weight: 600;
+	max-width: 100%;
+	opacity: 0;
+	transform: translateY(0.75rem);
+	transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.toast--show {
+	opacity: 1;
+	transform: translateY(0);
+}
+
+@keyframes toast-slide-in {
+	from {
+		transform: translateY(0.75rem);
+		opacity: 0;
+	}
+
+	to {
+		transform: translateY(0);
+		opacity: 1;
+	}
+}
+
+.toast--removing {
+	animation: toast-slide-out 0.3s ease-in forwards;
+}
+
+@keyframes toast-slide-out {
+	from {
+		transform: translateY(0);
+		opacity: 1;
+	}
+
+	to {
+		transform: translateY(0.75rem);
+		opacity: 0;
+	}
+}
+
+.toast-content {
+	flex: 1 1 auto;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: var(--crm-space-1, 0.25rem);
+}
+
+.toast-title {
+	margin: 0;
+	font-size: var(--crm-fs-md, 1rem);
+	font-weight: 600;
+	line-height: var(--crm-line-tight, 1.25);
+	color: var(--color-main-text, var(--crm-text));
+}
+
+.toast-message {
+	margin: 0;
+	font-size: var(--crm-fs-md, 1rem);
+	line-height: var(--crm-line-base, 1.45);
+	color: var(--color-main-text, var(--crm-text));
+	max-width: 65ch;
+}
+
+.toast-close {
+	background: none;
+	border: none;
+	font-size: var(--crm-fs-lg, 1.25rem);
+	line-height: 1;
+	color: var(--color-main-text, var(--crm-text));
+	cursor: pointer;
+	padding: var(--crm-space-1, 0.25rem);
+	border-radius: var(--crm-radius-sm, 6px);
+	opacity: 0.85;
+	flex-shrink: 0;
+	min-width: 44px;
+	min-height: 44px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.toast-close:hover,
+.toast-close:focus-visible {
+	opacity: 1;
+	outline: 2px solid var(--color-primary-element, #00679e);
+	outline-offset: 2px;
+}
+
+@media (max-width: 42rem) {
+	.toast-container {
+		left: calc(var(--crm-space-4, 1rem) + env(safe-area-inset-left, 0px));
+		right: calc(var(--crm-space-4, 1rem) + env(safe-area-inset-right, 0px));
+		bottom: calc(var(--crm-space-4, 1rem) + env(safe-area-inset-bottom, 0px));
+		max-width: none;
+	}
+}
+
+@media (forced-colors: active) {
+	#app-content.crm-app .crm-callout,
+	.modal-backdrop .crm-callout,
+	#app-content.crm-app .alert,
+	.modal-backdrop .alert,
+	.toast,
+	#app-content.crm-app .inline-notice,
+	.modal-backdrop .inline-notice {
+		border: 2px solid CanvasText;
+		background: Canvas;
+		color: CanvasText;
+	}
+
+	#app-content.crm-app .crm-callout__icon,
+	.modal-backdrop .crm-callout__icon,
+	.toast-icon,
+	#app-content.crm-app .alert-icon,
+	.modal-backdrop .alert-icon,
+	#app-content.crm-app .inline-notice__icon,
+	.modal-backdrop .inline-notice__icon {
+		border: 2px solid CanvasText;
+		background: Canvas;
+		color: CanvasText;
+		box-shadow: none;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.toast,
+	.toast--removing {
+		animation: none !important;
+		transition: none !important;
+	}
+}

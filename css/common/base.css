@@ -1,0 +1,788 @@
+/* Base Styles and Resets for ArbeitszeitCheck App
+ * Normalizes browser differences and establishes foundation styles
+ * Follows projectcheck pattern with arbeitszeitcheck-specific prefixes
+ */
+
+/* Lucide Icons Base Styling - Global Alignment */
+.lucide-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  stroke-width: var(--crm-icon-stroke, 2);
+  stroke: currentColor;
+  fill: none;
+  display: inline-block;
+  vertical-align: middle;
+  transition: color 0.2s ease;
+  flex-shrink: 0;
+  margin-top: -2px;
+  /* Fine-tune vertical alignment */
+}
+
+.lucide-icon.small {
+  width: 1rem;
+  height: 1rem;
+  stroke-width: 1.25;
+}
+
+.lucide-icon.large {
+  width: 1.5rem;
+  height: 1.5rem;
+  stroke-width: 1.75;
+}
+
+.lucide-icon.xl {
+  width: 2rem;
+  height: 2rem;
+  stroke-width: 2;
+}
+
+/* Global button alignment with icons */
+.button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.button .lucide-icon {
+  margin: 0;
+  vertical-align: baseline;
+}
+
+/* Navigation menu alignment — top-level links only.
+ * Must NOT match .nav-submenu > li > a: a padding shorthand here used to
+ * defeat submenu indent (ID specificity beat .nav-submenu li a). */
+#app-navigation .nav-menu > li > a {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+}
+
+#app-navigation .nav-menu .lucide-icon {
+  width: 1.125rem;
+  height: 1.125rem;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+/* Meta items alignment */
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.meta-item .lucide-icon {
+  margin: 0;
+  flex-shrink: 0;
+}
+
+/* Form section headers alignment */
+.form-section h3,
+.section-header h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.form-section h3 .lucide-icon,
+.section-header h3 .lucide-icon {
+  margin: 0;
+  flex-shrink: 0;
+}
+
+/* Stat cards alignment */
+.stat-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.stat-icon .lucide-icon {
+  width: 1.5rem;
+  height: 1.5rem;
+  margin: 0;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* Action cards alignment */
+.action-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.action-icon .lucide-icon {
+  width: 1.5rem;
+  height: 1.5rem;
+  margin: 0;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* App brand icon */
+.app-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.app-icon .lucide-icon {
+  width: 2rem;
+  height: 2rem;
+  margin: 0;
+}
+
+/* CSS Reset - Scoped to app content to avoid bleeding into Nextcloud core UI */
+#app-content-wrapper *,
+#app-content-wrapper *::before,
+#app-content-wrapper *::after {
+  box-sizing: border-box;
+}
+
+#app-content-wrapper h1,
+#app-content-wrapper h2,
+#app-content-wrapper h3,
+#app-content-wrapper h4,
+#app-content-wrapper h5,
+#app-content-wrapper h6 {
+  margin: 0;
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+#app-content-wrapper p {
+  margin: 0;
+}
+
+/* List Reset - Scoped to app content only */
+#app-content-wrapper ul,
+#app-content-wrapper ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Ensure Nextcloud navigation is not affected by our list styles */
+#app-navigation ul,
+#app-navigation ol,
+#app-navigation li,
+#navigation ul,
+#navigation ol,
+#navigation li,
+.app-navigation ul,
+.app-navigation ol,
+.app-navigation li {
+  list-style: none !important;
+  padding-left: 0 !important;
+}
+
+/* Ensure Nextcloud's main navigation menu doesn't get bulletpoints */
+#appmenu ul,
+#appmenu ol,
+#appmenu li,
+.app-menu ul,
+.app-menu ol,
+.app-menu li {
+  list-style: none !important;
+  padding-left: 0 !important;
+}
+
+/* Link Reset — exclude button anchors so crm-btn / btn keep their fills */
+#app-content-wrapper a:not(.btn):not(.crm-btn) {
+  color: inherit;
+  text-decoration: inherit;
+  background-color: transparent;
+}
+
+/* Form Element Reset - scoped to app content */
+#app-content-wrapper button,
+#app-content-wrapper input,
+#app-content-wrapper optgroup,
+#app-content-wrapper select,
+#app-content-wrapper textarea {
+  font-family: inherit;
+  font-size: 100%;
+  line-height: 1.15;
+  margin: 0;
+}
+
+#app-content-wrapper button,
+#app-content-wrapper input {
+  overflow: visible;
+}
+
+#app-content-wrapper button,
+#app-content-wrapper select {
+  text-transform: none;
+}
+
+#app-content-wrapper button,
+#app-content-wrapper [type="button"],
+#app-content-wrapper [type="reset"],
+#app-content-wrapper [type="submit"] {
+  -webkit-appearance: button;
+  appearance: button;
+}
+
+#app-content-wrapper button::-moz-focus-inner,
+#app-content-wrapper [type="button"]::-moz-focus-inner,
+#app-content-wrapper [type="reset"]::-moz-focus-inner,
+#app-content-wrapper [type="submit"]::-moz-focus-inner {
+  border-style: none;
+  padding: 0;
+}
+
+#app-content-wrapper button:-moz-focusring,
+#app-content-wrapper [type="button"]:-moz-focusring,
+#app-content-wrapper [type="reset"]:-moz-focusring,
+#app-content-wrapper [type="submit"]:-moz-focusring {
+  outline: 1px dotted ButtonText;
+}
+
+#app-content-wrapper fieldset {
+  padding: 0.35em 0.75em 0.625em;
+  margin: 0;
+  border: 0;
+}
+
+legend {
+  box-sizing: border-box;
+  color: inherit;
+  display: table;
+  max-width: 100%;
+  padding: 0;
+  white-space: normal;
+}
+
+progress {
+  vertical-align: baseline;
+}
+
+textarea {
+  overflow: auto;
+}
+
+[type="checkbox"],
+[type="radio"] {
+  box-sizing: border-box;
+  padding: 0;
+}
+
+[type="number"]::-webkit-inner-spin-button,
+[type="number"]::-webkit-outer-spin-button {
+  height: auto;
+}
+
+[type="search"] {
+  -webkit-appearance: textfield;
+  appearance: textfield;
+  outline-offset: -2px;
+}
+
+[type="search"]::-webkit-search-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+::-webkit-file-upload-button {
+  -webkit-appearance: button;
+  appearance: button;
+  font: inherit;
+}
+
+/* Table Reset */
+table {
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+/* Image Reset */
+img {
+  border-style: none;
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+svg {
+  overflow: hidden;
+  vertical-align: middle;
+}
+
+/* Media Reset */
+audio,
+video {
+  display: inline-block;
+}
+
+audio:not([controls]) {
+  display: none;
+  height: 0;
+}
+
+/* Interactive Element Reset */
+details {
+  display: block;
+}
+
+summary {
+  display: list-item;
+}
+
+template {
+  display: none;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+/* Focus Management */
+:focus {
+  outline: 2px solid var(--arbeitszeitcheck-color-border-focus);
+  outline-offset: 2px;
+}
+
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--arbeitszeitcheck-color-border-focus);
+  outline-offset: 2px;
+}
+
+/* Skip Links for Accessibility */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 6px;
+  background: var(--arbeitszeitcheck-color-primary);
+  color: var(--arbeitszeitcheck-color-text-inverse);
+  padding: 8px;
+  text-decoration: none;
+  border-radius: 4px;
+  z-index: 1000;
+  transition: top 0.3s;
+}
+
+.skip-link:focus {
+  top: 6px;
+}
+
+/* Selection Styles */
+::selection {
+  background-color: var(--arbeitszeitcheck-color-primary-light);
+  color: var(--arbeitszeitcheck-color-text);
+}
+
+::-moz-selection {
+  background-color: var(--arbeitszeitcheck-color-primary-light);
+  color: var(--arbeitszeitcheck-color-text);
+}
+
+/* Scrollbar Styles — scoped to app content to avoid affecting header/account menu popover */
+#content.app-customercheck ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+#content.app-customercheck ::-webkit-scrollbar-track {
+  background: var(--arbeitszeitcheck-color-background-secondary);
+}
+
+#content.app-customercheck ::-webkit-scrollbar-thumb {
+  background: var(--arbeitszeitcheck-color-gray-400);
+  border-radius: 9999px;
+}
+
+#content.app-customercheck ::-webkit-scrollbar-thumb:hover {
+  background: var(--arbeitszeitcheck-color-gray-500);
+}
+
+/* Firefox Scrollbar — scoped to app content to avoid affecting header/account menu popover */
+#content.app-customercheck * {
+  scrollbar-width: thin;
+  scrollbar-color: var(--arbeitszeitcheck-color-gray-400) var(--arbeitszeitcheck-color-background-secondary);
+}
+
+/* Override Nextcloud select styles: margin 0, explicit padding for vertical centering */
+#content.app-customercheck select,
+#content.app-customercheck .form-select,
+#content[class*="app-"] select.form-select {
+  margin: 0 !important;
+  padding: 0.625rem 2.5rem 0.625rem 1rem !important;
+  min-height: 44px;
+  height: 44px;
+  line-height: 1.5;
+  font-size: 1rem;
+  box-sizing: border-box;
+}
+
+/* Print Styles — black text on white for paper (standard; screen theme vars don't apply) */
+@media print {
+  *,
+  *::before,
+  *::after {
+    background: transparent !important;
+    color: black !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  a:not(.btn):not(.crm-btn),
+  a:not(.btn):not(.crm-btn):visited {
+    text-decoration: underline;
+  }
+
+  a.btn,
+  a.crm-btn {
+    text-decoration: none !important;
+  }
+
+  a[href]:after {
+    content: " (" attr(href) ")";
+  }
+
+  abbr[title]:after {
+    content: " (" attr(title) ")";
+  }
+
+  a[href^="#"]:after,
+  a[href^="javascript:"]:after {
+    content: "";
+  }
+
+  pre,
+  blockquote {
+    border: 1px solid var(--arbeitszeitcheck-color-border);
+    break-inside: avoid;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  tr,
+  img {
+    break-inside: avoid;
+  }
+
+  img {
+    max-width: 100% !important;
+  }
+
+  p,
+  h2,
+  h3 {
+    orphans: 3;
+    widows: 3;
+  }
+
+  h2,
+  h3 {
+    break-after: avoid;
+  }
+}
+
+/* High Contrast Mode Support */
+@media (prefers-contrast: high) {
+  * {
+    border-color: currentColor !important;
+  }
+
+  img {
+    filter: contrast(1.2);
+  }
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Base Element Styles
+ * Global html/body layout is handled by Nextcloud core.
+ * Avoid redefining it here to prevent side effects in other apps.
+ */
+
+/* Semantic HTML Elements */
+article,
+aside,
+details,
+figcaption,
+figure,
+footer,
+header,
+hgroup,
+main,
+menu,
+nav,
+section {
+  display: block;
+}
+
+/* Form Element Base Styles */
+input,
+textarea,
+select {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  color: inherit;
+  background-color: var(--arbeitszeitcheck-color-background);
+  border: 1px solid var(--arbeitszeitcheck-color-border);
+  border-radius: 4px;
+  padding: 0.5rem 0.75rem;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--arbeitszeitcheck-color-border-focus);
+  box-shadow: 0 0 0 3px var(--arbeitszeitcheck-color-primary-light);
+  outline: none;
+}
+
+input:disabled,
+textarea:disabled,
+select:disabled {
+  background-color: var(--arbeitszeitcheck-color-background-secondary);
+  color: var(--arbeitszeitcheck-color-text-muted);
+  cursor: not-allowed;
+}
+
+/* Button Base Styles */
+button {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.75;
+}
+
+/* Link Base Styles — exclude button anchors (.btn / .crm-btn)
+ * Use --color-primary-element (not --color-primary): brand #00679e fails WCAG AA
+ * on dark main backgrounds (~2.93:1); element is theme-adjusted for AA. */
+#app-content-wrapper a:not(.btn):not(.crm-btn) {
+  color: var(--color-primary-element, var(--arbeitszeitcheck-color-primary-element));
+  text-decoration: none;
+  transition: color 0.15s ease-in-out;
+}
+
+#app-content-wrapper a:not(.btn):not(.crm-btn):hover {
+  color: var(--color-primary-element-hover, var(--arbeitszeitcheck-color-primary-hover));
+  text-decoration: underline;
+}
+
+#app-content-wrapper a:not(.btn):not(.crm-btn):focus {
+  outline: 2px solid var(--arbeitszeitcheck-color-border-focus);
+  outline-offset: 2px;
+}
+
+/* List Base Styles */
+#app-content-wrapper ul,
+#app-content-wrapper ol {
+  padding-left: 1.5rem;
+}
+
+#app-content-wrapper ul {
+  list-style-type: disc;
+}
+
+#app-content-wrapper ol {
+  list-style-type: decimal;
+}
+
+#app-content-wrapper li {
+  margin-bottom: 0.25rem;
+}
+
+/* Table Base Styles */
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--arbeitszeitcheck-color-border);
+}
+
+th {
+  font-weight: var(--arbeitszeitcheck-font-weight-semibold);
+  background-color: var(--arbeitszeitcheck-color-background-secondary);
+}
+
+/* Code Base Styles */
+code {
+  font-family: var(--arbeitszeitcheck-font-family-mono);
+  font-size: 0.875em;
+  background-color: var(--arbeitszeitcheck-color-background-secondary);
+  padding: 0.25rem 0.5rem;
+  border-radius: 3px;
+  color: var(--arbeitszeitcheck-color-text);
+}
+
+pre {
+  font-family: var(--arbeitszeitcheck-font-family-mono);
+  font-size: var(--arbeitszeitcheck-font-size-sm);
+  line-height: var(--arbeitszeitcheck-line-height-relaxed);
+  background-color: var(--arbeitszeitcheck-color-background-secondary);
+  padding: 1rem;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 1rem 0;
+}
+
+pre code {
+  background-color: transparent;
+  padding: 0;
+  border-radius: 0;
+}
+
+/* Blockquote Base Styles */
+blockquote {
+  margin: 1rem 0;
+  padding: 1rem;
+  border-left: 4px solid var(--arbeitszeitcheck-color-primary);
+  background-color: var(--arbeitszeitcheck-color-background-secondary);
+  font-style: italic;
+  color: var(--arbeitszeitcheck-color-text-secondary);
+}
+
+/* Horizontal Rule Base Styles */
+hr {
+  border: none;
+  border-top: 1px solid var(--arbeitszeitcheck-color-border);
+  margin: 1.5rem 0;
+}
+
+/* Small Text Base Styles */
+small {
+  font-size: var(--arbeitszeitcheck-font-size-sm);
+  color: var(--arbeitszeitcheck-color-text-muted);
+}
+
+/* Strong and Emphasis Base Styles */
+strong,
+b {
+  font-weight: var(--arbeitszeitcheck-font-weight-semibold);
+}
+
+em,
+i {
+  font-style: italic;
+}
+
+/* Mark Base Styles */
+mark {
+  background-color: var(--arbeitszeitcheck-color-accent-light);
+  color: var(--arbeitszeitcheck-color-text);
+  padding: 0.25rem;
+  border-radius: 3px;
+}
+
+/* Abbreviation Base Styles */
+abbr[title] {
+  text-decoration: underline dotted;
+  cursor: help;
+}
+
+/* Definition List Base Styles */
+dl {
+  margin: 1rem 0;
+}
+
+dt {
+  font-weight: var(--arbeitszeitcheck-font-weight-semibold);
+  margin-top: 0.5rem;
+}
+
+dd {
+  margin-left: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Address Base Styles */
+address {
+  font-style: normal;
+  line-height: inherit;
+}
+
+/* Time Base Styles */
+time {
+  color: var(--arbeitszeitcheck-color-text-secondary);
+}
+
+/* Meter and Progress Base Styles */
+meter,
+progress {
+  width: 100%;
+  height: 1rem;
+  border-radius: 9999px;
+  background-color: var(--arbeitszeitcheck-color-background-secondary);
+  border: none;
+}
+
+meter::-webkit-meter-bar,
+progress::-webkit-progress-bar {
+  background-color: var(--arbeitszeitcheck-color-background-secondary);
+  border-radius: 9999px;
+}
+
+meter::-webkit-meter-optimum-value,
+progress::-webkit-progress-value {
+  background-color: var(--arbeitszeitcheck-color-success);
+  border-radius: 9999px;
+}
+
+meter::-webkit-meter-suboptimum-value {
+  background-color: var(--arbeitszeitcheck-color-warning);
+  border-radius: 9999px;
+}
+
+meter::-webkit-meter-even-less-good-value {
+  background-color: var(--arbeitszeitcheck-color-error);
+  border-radius: 9999px;
+}
+
+/* Screen Reader Only */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border-width: 0;
+}

@@ -1,0 +1,46 @@
+<?php
+
+declare(strict_types=1);
+
+namespace OCA\CustomerCheck\Tests\Unit;
+
+use PHPUnit\Framework\TestCase;
+
+final class EmailsSectionContractTest extends TestCase
+{
+	public function testPartialTeachesWorkflowAndShowsWithWhomColumns(): void
+	{
+		$src = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/common/crm-emails-section.php');
+		$this->assertStringContainsString('crm-howto', $src);
+		$this->assertStringContainsString('How this works', $src);
+		$this->assertStringContainsString('Last logged contact', $src);
+		$this->assertStringContainsString('CRM email log', $src);
+		$this->assertStringContainsString('withLabel', $src);
+		$this->assertStringContainsString('directionLabel', $src);
+		$this->assertStringContainsString('sourceLabel', $src);
+		$this->assertStringContainsString('mailRelated', $src);
+		$this->assertStringContainsString('data-crm-mail-mode', $src);
+		$this->assertStringContainsString('crm-log-email', $src);
+	}
+
+	public function testCompanyDetailIncludesEmailsPartialAndClarifiesActivities(): void
+	{
+		$html = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/company-detail.php');
+		$this->assertStringContainsString('crm-emails-section.php', $html);
+		$this->assertStringNotContainsString('<section class="crm-card" id="crm-emails"', $html);
+		$this->assertStringContainsString('Who wrote what', $html);
+		$this->assertStringContainsString('Follow-ups you still owe', $html);
+		$this->assertStringContainsString('crm-more-menu', $html);
+		$this->assertStringContainsString('companyId=', $html);
+	}
+
+	public function testLogDialogUsesPersonAndSubjectOnly(): void
+	{
+		$js = (string)file_get_contents(dirname(__DIR__, 2) . '/js/pages/company-detail.js');
+		$this->assertStringContainsString("name: 'personId'", $js);
+		$this->assertStringContainsString("name: 'subject'", $js);
+		$this->assertStringContainsString('You wrote them', $js);
+		$this->assertStringNotContainsString("name: 'fromAddr'", $js);
+		$this->assertStringContainsString('Add a person first', $js);
+	}
+}
