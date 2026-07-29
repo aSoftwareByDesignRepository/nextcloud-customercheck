@@ -28,6 +28,7 @@ class ImportService
 	/** @var list<string> */
 	public const CSV_COLUMNS = [
 		'customerId', 'companyName', 'contactName', 'email',
+		'productCode',
 		'mobileSeats', 'terminalDevices', 'validUntil', 'invoiceId',
 		'amountEur', 'paidAt', 'keyIssuedAt', 'renewalDue', 'notes',
 	];
@@ -42,6 +43,7 @@ class ImportService
 		private readonly TimelineService $timeline,
 		private readonly ImportJobMapper $importJobs,
 		private readonly FacadeProbeService $facades,
+		private readonly ProductCodeRegistry $productCodes,
 		private readonly IDBConnection $db,
 		private readonly ITimeFactory $timeFactory,
 		private readonly IL10N $l10n,
@@ -297,11 +299,18 @@ class ImportService
 				: DateMath::toUtcMidnight($this->timeFactory->getDateTime());
 		}
 
-		$product = mb_strtolower(trim((string)($row['product'] ?? $row['productCode'] ?? 'azc')));
-		if (!in_array($product, Constants::PRODUCT_CODES, true)) {
-			$product = 'azc';
+		$product = mb_strtolower(trim((string)($row['product'] ?? $row['productCode'] ?? '')));
+		if ($product === '') {
+			$product = $this->inferProductCode($row);
 		}
-		$kind = Constants::PRODUCT_CODE_KINDS[$product] ?? 'license';
+		if (!$this->productCodes->isAllowed($product)) {
+			throw ValidationException::field(
+				Constants::ERR_VALIDATION,
+				'productCode',
+				$this->l10n->t('The product code "%s" is not part of the agreement catalogue yet.', [$product]),
+			);
+		}
+		$kind = $this->productCodes->kindFor($product);
 
 		$limits = [];
 		if ($kind === 'license') {
@@ -413,6 +422,10 @@ class ImportService
 		if ($until !== '' && DateMath::parseStrictDate($until) === null) {
 			return ['line' => $lineNo, 'column' => 'validUntil', 'reason' => 'bad_date'];
 		}
+		$productCode = mb_strtolower(trim($row['productCode'] ?? $row['product'] ?? ''));
+		if ($productCode !== '' && preg_match(ProductCodeRegistry::CUSTOM_PATTERN, $productCode) !== 1) {
+			return ['line' => $lineNo, 'column' => 'productCode', 'reason' => 'PRODUCT_CODE_INVALID'];
+		}
 		return null;
 	}
 
@@ -424,6 +437,8 @@ class ImportService
 			'companyName' => trim($row['companyName'] ?? ''),
 			'contactName' => trim($row['contactName'] ?? ''),
 			'email' => mb_strtolower(trim($row['email'] ?? '')),
+			'product' => mb_strtolower(trim($row['product'] ?? $row['productCode'] ?? '')),
+			'productCode' => mb_strtolower(trim($row['productCode'] ?? $row['product'] ?? '')),
 			'mobileSeats' => (int)($row['mobileSeats'] ?? 0),
 			'terminalDevices' => (int)($row['terminalDevices'] ?? 0),
 			'validUntil' => trim($row['validUntil'] ?? ''),
@@ -431,9 +446,19 @@ class ImportService
 			'amountEur' => trim($row['amountEur'] ?? '0'),
 			'paidAt' => trim($row['paidAt'] ?? ''),
 			'notes' => trim($row['notes'] ?? ''),
-			'product' => 'azc',
-			'productCode' => 'azc',
 		];
+	}
+
+	/** @param array<string,mixed> $row */
+	private function inferProductCode(array $row): string
+	{
+		$mobileSeats = max(0, (int)($row['mobileSeats'] ?? 0));
+		$terminalDevices = max(0, (int)($row['terminalDevices'] ?? 0));
+		if ($mobileSeats > 0 || $terminalDevices > 0) {
+			return 'azc';
+		}
+
+		return 'custom';
 	}
 
 	/** @param array<string,mixed> $row */

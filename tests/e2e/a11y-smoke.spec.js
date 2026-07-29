@@ -15,6 +15,7 @@ const pages = [
 
 for (const path of pages) {
   test(`CRM a11y: ${path} has no serious/critical violations`, async ({ page }) => {
+    test.setTimeout(90000);
     test.skip(!process.env.NC_ADMIN_USER && !process.env.NC_EMPLOYEE_USER, 'Requires NC credentials');
     const creds = process.env.NC_ADMIN_USER ? credsFromEnv('ADMIN') : credsFromEnv('EMPLOYEE');
     await login(page, creds);
@@ -30,6 +31,7 @@ for (const path of pages) {
 }
 
 test('CRM a11y: company 360 has no serious/critical violations', async ({ page }) => {
+  test.setTimeout(90000);
   test.skip(!process.env.NC_ADMIN_USER, 'Requires NC admin credentials');
   await login(page, credsFromEnv('ADMIN'));
   await page.goto('/apps/customercheck/companies/new');

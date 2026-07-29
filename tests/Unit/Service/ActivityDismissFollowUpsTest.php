@@ -6,6 +6,7 @@ namespace OCA\CustomerCheck\Tests\Unit\Service;
 
 use OCA\CustomerCheck\Db\Activity;
 use OCA\CustomerCheck\Db\ActivityMapper;
+use OCA\CustomerCheck\Service\AccessControlService;
 use OCA\CustomerCheck\Service\ActivityService;
 use OCA\CustomerCheck\Service\TimelineService;
 use OCA\CustomerCheck\Service\VTodoService;
@@ -28,6 +29,7 @@ final class ActivityDismissFollowUpsTest extends TestCase
 		$this->time->method('getDateTime')->willReturn(new \DateTime('2026-07-25 12:00:00'));
 		$this->service = new ActivityService(
 			$this->mapper,
+			$this->createMock(AccessControlService::class),
 			$this->createMock(TimelineService::class),
 			$this->createMock(VTodoService::class),
 			$this->time,

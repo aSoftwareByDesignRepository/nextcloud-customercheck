@@ -11,11 +11,11 @@ test.describe('Simplified core UX journeys', () => {
 
     await page.goto('/apps/customercheck/');
     await page.waitForSelector('#crm-main-content', { timeout: 30000 });
-    // Either first-run CTAs or calm empty — never a dead end.
-    const firstRun = page.locator('.crm-empty-state__actions a', { hasText: /New company/i });
+    // Either first-run CTAs, calm empty, or suite attention tables — never a dead end.
+    const firstRun = page.locator('.crm-empty-state__actions a', { hasText: /Add company/i });
     const calm = page.locator('.crm-callout--success');
-    const list = page.locator('.crm-list--today');
-    await expect(firstRun.or(calm).or(list).first()).toBeVisible({ timeout: 15000 });
+    const table = page.locator('.crm-command-section table.table, .crm-today-role');
+    await expect(firstRun.or(calm).or(table).first()).toBeVisible({ timeout: 15000 });
 
     await page.goto('/apps/customercheck/companies');
     await page.waitForSelector('#crm-main-content', { timeout: 30000 });
@@ -30,9 +30,7 @@ test.describe('Simplified core UX journeys', () => {
       if (el instanceof HTMLDetailsElement) el.open = true;
     });
     await page.locator('#crm-company-slug').fill(`simple-co-${suffix}`);
-    await page.locator('#crm-company-form').evaluate((form) => {
-      if (form instanceof HTMLFormElement) form.requestSubmit();
-    });
+    await page.locator('#crm-company-form button[type="submit"]').click();
     await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
 
     // Edit primary; Export visible; Erase tucked under More.
@@ -43,11 +41,11 @@ test.describe('Simplified core UX journeys', () => {
     await more.locator('summary').click();
     await expect(page.locator('#crm-company-gdpr-erase')).toBeVisible();
 
-    // Jump bar: primary chips + More sections (still 9 total links).
+    // Jump bar: primary chips + More (Command Center section inventory).
     const jump = page.locator('[data-crm-jump-nav="1"]');
     await expect(jump.locator('.crm-jump-nav__list').first().locator('.crm-jump-nav__link')).toHaveCount(5);
     await expect(jump.locator('.crm-jump-nav__more')).toBeVisible();
-    await expect(jump.locator('.crm-jump-nav__link')).toHaveCount(9);
+    await expect(jump.locator('.crm-jump-nav__link')).toHaveCount(14);
 
     // New agreement keeps company context.
     const newAg = page.locator('a', { hasText: /New agreement/i }).first();

@@ -15,6 +15,8 @@ use OCP\IDBConnection;
  */
 class AgreementMapper extends QBMapper
 {
+	use ExcludesArchivedCompaniesTrait;
+
 	public function __construct(IDBConnection $db)
 	{
 		parent::__construct($db, 'crm_agreement', Agreement::class);
@@ -31,6 +33,27 @@ class AgreementMapper extends QBMapper
 			->where($qb->expr()->eq('id', $qb->createNamedParameter($id, IQueryBuilder::PARAM_INT)));
 
 		return $this->findEntity($qb);
+	}
+
+	/**
+	 * Write-lock the agreement row (CORE §6.3 / PSD §4.8).
+	 *
+	 * Callers MUST already be inside a DB transaction. Serialises concurrent
+	 * supersede/cancel so two writers cannot both observe "active" and create
+	 * two successors (or cancel after a supersede already closed the row).
+	 */
+	public function lockRow(int $id): bool
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('id')
+			->from($this->getTableName())
+			->where($qb->expr()->eq('id', $qb->createNamedParameter($id, IQueryBuilder::PARAM_INT)))
+			->forUpdate();
+		$result = $qb->executeQuery();
+		$row = $result->fetch();
+		$result->closeCursor();
+
+		return $row !== false;
 	}
 
 	/** @return Agreement[] */
@@ -96,7 +119,10 @@ class AgreementMapper extends QBMapper
 				'status',
 				$qb->createNamedParameter(Constants::AGREEMENT_TERMINAL_STATUSES, IQueryBuilder::PARAM_STR_ARRAY)
 			))
-			->orderBy('id', 'ASC')
+			->orderBy('id', 'ASC');
+		// Archived companies stop generating renewal work (Today + reminder job).
+		$this->excludeArchivedCompanies($qb);
+		$qb
 			->setMaxResults(max(1, min(5000, $limit)))
 			->setFirstResult(max(0, $offset));
 
@@ -259,13 +285,29 @@ class AgreementMapper extends QBMapper
 	}
 
 	/**
-	 * @param array{companyId?: int, kind?: string, status?: string, invoiceStatus?: string, expiringBefore?: \DateTimeInterface} $filters
+	 * @param array{companyId?: int, companyIds?: list<int>, kind?: string, status?: string, invoiceStatus?: string, expiringBefore?: \DateTimeInterface, workspaceId?: int} $filters
 	 */
 	private function applyFilters(IQueryBuilder $qb, array $filters): void
 	{
 		$companyId = (int)($filters['companyId'] ?? 0);
+		$workspaceId = (int)($filters['workspaceId'] ?? 0);
+		/** @var list<int> $companyIds */
+		$companyIds = array_values(array_filter(array_map('intval', $filters['companyIds'] ?? [])));
 		if ($companyId > 0) {
 			$qb->andWhere($qb->expr()->eq('company_id', $qb->createNamedParameter($companyId, IQueryBuilder::PARAM_INT)));
+		} elseif ($companyIds !== []) {
+			$qb->andWhere($qb->expr()->in(
+				'company_id',
+				$qb->createNamedParameter($companyIds, IQueryBuilder::PARAM_INT_ARRAY)
+			));
+			$this->excludeArchivedCompanies($qb);
+		} else {
+			// Default lists never show agreements of archived companies (PSD §4.1);
+			// explicit company context (companyId) keeps history reachable.
+			$this->excludeArchivedCompanies($qb);
+		}
+		if ($workspaceId > 0) {
+			$this->restrictToWorkspace($qb, $workspaceId);
 		}
 
 		$kind = (string)($filters['kind'] ?? '');
@@ -292,4 +334,19 @@ class AgreementMapper extends QBMapper
 			));
 		}
 	}
+
+	/** Move agreements during company merge. */
+	public function reassignCompany(int $fromCompanyId, int $toCompanyId): int
+	{
+		if ($fromCompanyId === $toCompanyId) {
+			return 0;
+		}
+		$qb = $this->db->getQueryBuilder();
+		$qb->update($this->getTableName())
+			->set('company_id', $qb->createNamedParameter($toCompanyId, IQueryBuilder::PARAM_INT))
+			->where($qb->expr()->eq('company_id', $qb->createNamedParameter($fromCompanyId, IQueryBuilder::PARAM_INT)));
+
+		return $qb->executeStatement();
+	}
+
 }

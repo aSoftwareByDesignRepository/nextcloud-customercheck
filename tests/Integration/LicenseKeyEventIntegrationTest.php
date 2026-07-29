@@ -63,7 +63,6 @@ class LicenseKeyEventIntegrationTest extends TestCase
 
 	public function testUnknownSlugWritesImportInboxOnly(): void
 	{
-		$before = count($this->importJobs->findRecent(50));
 		$result = $this->service->handle([
 			'salesLogId' => 900001,
 			'customerId' => 'no-such-customer-' . bin2hex(random_bytes(3)),
@@ -74,7 +73,14 @@ class LicenseKeyEventIntegrationTest extends TestCase
 			'generatedBy' => 'integration',
 		]);
 		$this->assertSame('inbox', $result['action']);
-		$this->assertGreaterThan($before, count($this->importJobs->findRecent(50)));
+		$this->assertArrayHasKey('importJobId', $result);
+		$importJobId = (int)$result['importJobId'];
+		$this->assertGreaterThan(0, $importJobId);
+		// Prefer id lookup over findRecent(N) length deltas — shared DBs can already
+		// have ≥N inbox rows, so a capped list length stays flat after a successful insert.
+		$matched = $this->importJobs->findById($importJobId);
+		$this->assertNotNull($matched, 'Inbox row must be readable after orphan license event');
+		$this->assertSame('license_event_orphan', (string)$matched->getSource());
 		$this->assertNull($this->agreements->findBySalesLogId(900001));
 	}
 

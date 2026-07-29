@@ -16,11 +16,13 @@ test.describe('CustomerCheck button cascade', () => {
     await page.goto('/apps/customercheck/companies');
     await page.waitForSelector('#app-content.crm-app', { timeout: 30000 });
 
-    // Source contract (same as CrmBtnCascadeContractTest) — CSS must declare solid fills + 2.75rem.
+    // Source contract (same as CrmBtnCascadeContractTest) — CSS must declare solid fills
+    // + a true 44px minimum (WCAG 2.5.5 target size is defined in CSS px; rem shrinks
+    // under Nextcloud's 15px root font).
     const cssPath = path.resolve(__dirname, '../../css/app.css');
     const css = fs.readFileSync(cssPath, 'utf8');
     expect(css).toContain('#app-content.crm-app .crm-btn--primary');
-    expect(css).toContain('min-height: 2.75rem');
+    expect(css).toContain('min-height: 44px');
     expect(css).toMatch(/background-color:\s*var\(--color-primary-element[^)]*\)\s*!important/);
 
     // Runtime: probe inside the scoped shell and assert computed size in px or rem.
@@ -42,8 +44,8 @@ test.describe('CustomerCheck button cascade', () => {
 
     expect(metrics.ok).toBe(true);
     const minPx = parseFloat(String(metrics.minH));
-    const heightOk = (Number.isFinite(minPx) && (minPx >= 40 || String(metrics.minH).includes('2.75')))
-      || (typeof metrics.h === 'number' && metrics.h >= 40);
+    const heightOk = (Number.isFinite(minPx) && minPx >= 44)
+      || (typeof metrics.h === 'number' && metrics.h >= 44);
     expect(heightOk, JSON.stringify(metrics)).toBe(true);
     expect(metrics.bg).not.toBe('rgba(0, 0, 0, 0)');
   });

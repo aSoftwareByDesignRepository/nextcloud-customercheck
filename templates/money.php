@@ -4,7 +4,7 @@
 /** @var \OCP\IURLGenerator $urlGenerator */
 /** @var \OCA\CustomerCheck\Service\DisplayLabelService|null $labels */
 $filterState = (string)($_['filterState'] ?? '');
-$groups = $_['overview']['groups'] ?? ['overdue' => [], 'sent' => [], 'paid30d' => []];
+$groups = $_['overview']['groups'] ?? ['overdue' => [], 'sent' => [], 'paid30d' => [], 'unknown' => []];
 $items = $_['overview']['items'] ?? [];
 $filterOpen = $filterState !== '';
 $labels = $_['labels'] ?? null;
@@ -20,12 +20,13 @@ include __DIR__ . '/common/page-start.php';
 		<a class="crm-quick-filter<?php if ($filterState === 'overdue'): ?> is-active<?php endif; ?>" href="<?php p($moneyUrl); ?>?state=overdue"<?php if ($filterState === 'overdue'): ?> aria-current="page"<?php endif; ?>><?php p($l->t('Overdue')); ?></a>
 		<a class="crm-quick-filter<?php if ($filterState === 'sent'): ?> is-active<?php endif; ?>" href="<?php p($moneyUrl); ?>?state=sent"<?php if ($filterState === 'sent'): ?> aria-current="page"<?php endif; ?>><?php p($l->t('Unpaid')); ?></a>
 		<a class="crm-quick-filter<?php if ($filterState === 'paid30d'): ?> is-active<?php endif; ?>" href="<?php p($moneyUrl); ?>?state=paid30d"<?php if ($filterState === 'paid30d'): ?> aria-current="page"<?php endif; ?>><?php p($l->t('Paid')); ?></a>
+		<a class="crm-quick-filter<?php if ($filterState === 'unknown'): ?> is-active<?php endif; ?>" href="<?php p($moneyUrl); ?>?state=unknown"<?php if ($filterState === 'unknown'): ?> aria-current="page"<?php endif; ?>><?php p($l->t('Unknown')); ?></a>
 	</nav>
 	<section id="crm-money-filter" class="crm-card crm-filter-panel" <?php if (!$filterOpen): ?>hidden<?php endif; ?> aria-labelledby="crm-money-filter-title">
 		<header class="crm-card__header">
 			<div class="crm-card__header-text">
 				<h2 id="crm-money-filter-title" class="crm-card__title"><?php p($l->t('Filter by payment state')); ?></h2>
-				<p class="crm-card__lead"><?php p($l->t('Show overdue, sent (unpaid) or recently paid agreements — applies instantly.')); ?></p>
+				<p class="crm-card__lead"><?php p($l->t('Show overdue, unpaid, paid, or agreements without an invoice state — applies instantly.')); ?></p>
 			</div>
 		</header>
 		<div class="crm-card__body">
@@ -38,6 +39,7 @@ include __DIR__ . '/common/page-start.php';
 							<option value="overdue" <?php if ($filterState === 'overdue'): ?>selected<?php endif; ?>><?php p($l->t('Overdue')); ?></option>
 							<option value="sent" <?php if ($filterState === 'sent'): ?>selected<?php endif; ?>><?php p($l->t('Sent / unpaid')); ?></option>
 							<option value="paid30d" <?php if ($filterState === 'paid30d'): ?>selected<?php endif; ?>><?php p($l->t('Paid (30 days)')); ?></option>
+							<option value="unknown" <?php if ($filterState === 'unknown'): ?>selected<?php endif; ?>><?php p($l->t('Unknown / none')); ?></option>
 						</select>
 					</div>
 					<div class="crm-filter-field crm-filter-field--actions">
@@ -53,6 +55,7 @@ include __DIR__ . '/common/page-start.php';
 		'overdue' => [$l->t('Overdue'), $l->t('Past due — send a payment reminder.'), 'danger'],
 		'sent' => [$l->t('Sent / unpaid'), $l->t('Invoices sent but not marked paid.'), 'warning'],
 		'paid30d' => [$l->t('Paid (last 30 days)'), $l->t('Recently paid agreements.'), 'success'],
+		'unknown' => [$l->t('Unknown / none'), $l->t('Agreements without an invoice state yet.'), 'neutral'],
 	];
 	foreach ($sections as $key => [$title, $lead, $badge]):
 		$rows = $groups[$key] ?? [];
@@ -77,19 +80,23 @@ include __DIR__ . '/common/page-start.php';
 			<div class="table-container crm-table--responsive">
 				<table class="table table--hover">
 					<thead><tr>
-						<th><?php p($l->t('Company')); ?></th>
-						<th><?php p($l->t('Agreement')); ?></th>
-						<th><?php p($l->t('Status')); ?></th>
-						<th><?php p($l->t('Reference')); ?></th>
-						<th><?php p($l->t('Amount')); ?></th>
+						<th scope="col"><?php p($l->t('Company')); ?></th>
+						<th scope="col"><?php p($l->t('Agreement')); ?></th>
+						<th scope="col"><?php p($l->t('Status')); ?></th>
+						<th scope="col"><?php p($l->t('Reference')); ?></th>
+						<th scope="col"><?php p($l->t('Amount')); ?></th>
 						<?php if ($key !== 'paid30d'): ?>
-						<th class="crm-table-actions-col"><?php p($l->t('Actions')); ?></th>
+						<th scope="col" class="crm-table-actions-col"><?php p($l->t('Actions')); ?></th>
 						<?php endif; ?>
 					</tr></thead>
 					<tbody>
 					<?php foreach ($rows as $row): ?>
 						<tr>
-							<td data-label="<?php p($l->t('Company')); ?>"><a href="<?php p($urlGenerator->linkToRoute('customercheck.page.companyDetail', ['id' => $row['companyId']])); ?>"><?php p($row['companyName']); ?></a></td>
+							<td data-label="<?php p($l->t('Company')); ?>"><?php
+								$crmCompanyLinkId = (int)($row['companyId'] ?? 0);
+								$crmCompanyLinkLabel = (string)($row['companyName'] ?? '');
+								include __DIR__ . '/common/crm-company-link.php';
+							?></td>
 							<td data-label="<?php p($l->t('Agreement')); ?>"><?php p($row['label']); ?></td>
 							<td data-label="<?php p($l->t('Status')); ?>"><span class="crm-badge crm-badge--<?php p($badge); ?>"><?php
 								p($labels instanceof \OCA\CustomerCheck\Service\DisplayLabelService
@@ -101,7 +108,11 @@ include __DIR__ . '/common/page-start.php';
 							<?php if ($key !== 'paid30d'): ?>
 							<td data-label="<?php p($l->t('Actions')); ?>" class="actions-cell crm-table-actions-col">
 								<div class="crm-table-actions">
+									<?php if (!empty($row['agreementId'])): ?>
 									<button type="button" class="crm-btn crm-btn--sm crm-btn--secondary" data-crm-payment-reminder="<?php p($row['agreementId']); ?>" data-company-id="<?php p($row['companyId']); ?>"><?php p($l->t('Payment reminder')); ?></button>
+									<?php else: ?>
+									<span class="crm-muted"><?php p($l->t('From InvoicingCheck')); ?></span>
+									<?php endif; ?>
 								</div>
 							</td>
 							<?php endif; ?>

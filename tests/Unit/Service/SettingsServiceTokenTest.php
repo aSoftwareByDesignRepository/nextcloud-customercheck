@@ -27,10 +27,10 @@ class SettingsServiceTokenTest extends TestCase
 		);
 
 		$random = $this->createMock(ISecureRandom::class);
-		$random->expects($this->exactly(2))->method('generate')->with(
+		$random->expects($this->exactly(3))->method('generate')->with(
 			64,
 			ISecureRandom::CHAR_DIGITS . 'abcdef',
-		)->willReturnOnConsecutiveCalls(str_repeat('a', 64), str_repeat('b', 64));
+		)->willReturnOnConsecutiveCalls(str_repeat('a', 64), str_repeat('b', 64), str_repeat('c', 64));
 
 		$access = $this->createMock(AccessControlService::class);
 		$url = $this->createMock(IURLGenerator::class);
@@ -39,6 +39,7 @@ class SettingsServiceTokenTest extends TestCase
 
 		$this->assertSame(str_repeat('a', 64), $stored[Constants::CONFIG_ICS_TOKEN] ?? null);
 		$this->assertSame(str_repeat('b', 64), $stored[Constants::CONFIG_LEAD_TOKEN] ?? null);
+		$this->assertSame(str_repeat('c', 64), $stored[Constants::CONFIG_ORDER_TOKEN] ?? null);
 		$this->assertSame(Application::APP_ID, Application::APP_ID);
 	}
 }

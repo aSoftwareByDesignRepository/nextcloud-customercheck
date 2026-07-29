@@ -1,10 +1,17 @@
 <?php
+
 declare(strict_types=1);
+
 namespace OCA\CustomerCheck\Controller;
+
 use OCA\CustomerCheck\Service\AccessControlService;
+use OCA\CustomerCheck\Service\CompanyMergeService;
 use OCA\CustomerCheck\Service\CompanyService;
+use OCA\CustomerCheck\Service\DisplayLabelService;
+use OCA\CustomerCheck\Service\SiblingCustomerWriteService;
 use OCA\CustomerCheck\Service\SlugService;
 use OCA\CustomerCheck\Service\TimelineService;
+use OCA\CustomerCheck\Service\WorkspaceAccessService;
 use OCA\CustomerCheck\Support\OptimisticLock;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
@@ -12,17 +19,26 @@ use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\IRequest;
 
+/**
+ * Company registry API — always workspace-scoped (product §3.3).
+ * Cross-workspace access → HTTP 404.
+ */
 class CompanyApiController extends Controller
 {
 	use ApiControllerTrait;
+	use WorkspaceScopedTrait;
 
 	public function __construct(
 		string $appName,
 		IRequest $request,
 		private readonly AccessControlService $accessControl,
+		private readonly WorkspaceAccessService $workspaces,
 		private readonly CompanyService $companies,
+		private readonly CompanyMergeService $merges,
+		private readonly SiblingCustomerWriteService $siblingWrites,
 		private readonly SlugService $slugs,
 		private readonly TimelineService $timeline,
+		private readonly DisplayLabelService $labels,
 	) {
 		parent::__construct($appName, $request);
 	}
@@ -31,18 +47,23 @@ class CompanyApiController extends Controller
 	public function index(): JSONResponse
 	{
 		try {
-			$this->accessControl->requireCanUseApp();
+			$ctx = $this->requireWorkspaceContext();
 			$filters = [
 				'status' => (string)$this->request->getParam('status', ''),
 				'search' => (string)$this->request->getParam('q', ''),
 				'archived' => $this->request->getParam('archived') === '1',
+				'workspaceId' => $ctx['workspaceId'],
 			];
 			$limit = (int)$this->request->getParam('limit', 100);
 			$offset = (int)$this->request->getParam('offset', 0);
 			$rows = $this->companies->search($filters, $limit, $offset);
 			$total = $this->companies->count($filters);
+
 			return $this->ok(array_map([$this, 'serialize'], $rows), Http::STATUS_OK, [
-				'total' => $total, 'limit' => $limit, 'offset' => $offset,
+				'total' => $total,
+				'limit' => $limit,
+				'offset' => $offset,
+				'workspaceId' => $ctx['workspaceId'],
 			]);
 		} catch (\Throwable $e) {
 			return $this->fromThrowable($e);
@@ -53,9 +74,11 @@ class CompanyApiController extends Controller
 	public function create(): JSONResponse
 	{
 		try {
-			$uid = $this->accessControl->requireCanUseApp();
+			$ctx = $this->requireWorkspaceCapability('write');
 			$body = $this->jsonBody();
-			$company = $this->companies->create($body, $uid);
+			$body['workspaceId'] = $ctx['workspaceId'];
+			$company = $this->companies->create($body, $ctx['uid']);
+
 			return $this->ok($this->serialize($company), Http::STATUS_CREATED);
 		} catch (\Throwable $e) {
 			return $this->fromThrowable($e);
@@ -66,8 +89,9 @@ class CompanyApiController extends Controller
 	public function suggestSlug(): JSONResponse
 	{
 		try {
-			$this->accessControl->requireCanUseApp();
+			$this->requireWorkspaceContext();
 			$body = $this->jsonBody();
+
 			return $this->ok(['slug' => $this->slugs->suggestUnique((string)($body['name'] ?? ''))]);
 		} catch (\Throwable $e) {
 			return $this->fromThrowable($e);
@@ -78,8 +102,9 @@ class CompanyApiController extends Controller
 	public function show(int $id): JSONResponse
 	{
 		try {
-			$this->accessControl->requireCanUseApp();
-			return $this->ok($this->serialize($this->companies->get($id)));
+			$company = $this->requireCompanyInResolvedWorkspace($id);
+
+			return $this->ok($this->serialize($company));
 		} catch (\Throwable $e) {
 			return $this->fromThrowable($e);
 		}
@@ -89,10 +114,14 @@ class CompanyApiController extends Controller
 	public function update(int $id): JSONResponse
 	{
 		try {
-			$uid = $this->accessControl->requireCanUseApp();
+			$company = $this->requireCompanyInResolvedWorkspace($id);
+			$ctx = $this->assertLoadedCompanyInWorkspace($company, 'write');
 			$body = $this->jsonBody();
-			$company = $this->companies->update($id, $body, $uid, $this->updatedAtPrecondition($body));
-			return $this->ok($this->serialize($company));
+			// Prevent silent workspace escape via body.
+			unset($body['workspaceId']);
+			$updated = $this->companies->update($id, $body, $ctx['uid'], $this->updatedAtPrecondition($body));
+
+			return $this->ok($this->serialize($updated));
 		} catch (\Throwable $e) {
 			return $this->fromThrowable($e);
 		}
@@ -102,9 +131,11 @@ class CompanyApiController extends Controller
 	public function destroy(int $id): JSONResponse
 	{
 		try {
-			$uid = $this->accessControl->requireCanUseApp();
+			$company = $this->requireCompanyInResolvedWorkspace($id);
+			$ctx = $this->assertLoadedCompanyInWorkspace($company, 'delete');
 			$body = $this->jsonBody();
-			$this->companies->gdprErase($id, (string)($body['confirmSlug'] ?? ''), $uid);
+			$this->companies->gdprErase($id, (string)($body['confirmSlug'] ?? ''), $ctx['uid']);
+
 			return $this->ok(['deleted' => true]);
 		} catch (\Throwable $e) {
 			return $this->fromThrowable($e);
@@ -115,8 +146,10 @@ class CompanyApiController extends Controller
 	public function archive(int $id): JSONResponse
 	{
 		try {
-			$uid = $this->accessControl->requireCanUseApp();
-			return $this->ok($this->serialize($this->companies->archive($id, $uid)));
+			$company = $this->requireCompanyInResolvedWorkspace($id);
+			$ctx = $this->assertLoadedCompanyInWorkspace($company, 'delete');
+
+			return $this->ok($this->serialize($this->companies->archive($id, $ctx['uid'])));
 		} catch (\Throwable $e) {
 			return $this->fromThrowable($e);
 		}
@@ -126,18 +159,146 @@ class CompanyApiController extends Controller
 	public function restore(int $id): JSONResponse
 	{
 		try {
-			$uid = $this->accessControl->requireCanUseApp();
-			return $this->ok($this->serialize($this->companies->restore($id, $uid)));
+			$company = $this->requireCompanyInResolvedWorkspace($id);
+			$ctx = $this->assertLoadedCompanyInWorkspace($company, 'delete');
+
+			return $this->ok($this->serialize($this->companies->restore($id, $ctx['uid'])));
 		} catch (\Throwable $e) {
 			return $this->fromThrowable($e);
 		}
 	}
 
 	#[NoAdminRequired]
+	public function merge(int $id): JSONResponse
+	{
+		try {
+			$source = $this->requireCompanyInResolvedWorkspace($id);
+			$ctx = $this->assertLoadedCompanyInWorkspace($source, 'delete');
+			$body = $this->jsonBody();
+			$into = (int)($body['intoCompanyId'] ?? 0);
+			$keeper = $this->companies->get($into);
+			$this->workspaces->assertCompanyInWorkspace(
+				(int)($keeper->getWorkspaceId() ?? 0),
+				$ctx['workspaceId'],
+			);
+			$intoUpdatedAt = isset($body['intoUpdatedAt']) ? (string)$body['intoUpdatedAt'] : null;
+			$result = $this->merges->merge(
+				$id,
+				$into,
+				$ctx['uid'],
+				$this->updatedAtPrecondition($body),
+				$intoUpdatedAt,
+			);
+
+			return $this->ok([
+				'keeperId' => $result['keeperId'],
+				'sourceId' => $result['sourceId'],
+				'sourceSlug' => $result['sourceSlug'],
+				'moved' => $result['moved'],
+				'company' => $this->serialize($result['company']),
+			]);
+		} catch (\Throwable $e) {
+			return $this->fromThrowable($e);
+		}
+	}
+
+	#[NoAdminRequired]
+	public function createPcCustomer(int $id): JSONResponse
+	{
+		return $this->linkProjectcheck($id);
+	}
+
+	#[NoAdminRequired]
+	public function createTcCustomer(int $id): JSONResponse
+	{
+		return $this->linkTicketcheck($id);
+	}
+
+	#[NoAdminRequired]
+	public function linkProjectcheck(int $id): JSONResponse
+	{
+		try {
+			$company = $this->requireCompanyInResolvedWorkspace($id);
+			$ctx = $this->assertLoadedCompanyInWorkspace($company, 'write');
+			$body = $this->jsonBody();
+			$existing = $this->resolveSiblingLinkId($body, 'pcCustomerId', 'existingPcCustomerId');
+			$result = $this->siblingWrites->createOrLinkPcCustomer(
+				$id,
+				$ctx['uid'],
+				$existing,
+				$this->updatedAtPrecondition($body),
+			);
+
+			return $this->ok([
+				'company' => $this->serialize($result['company']),
+				'pcCustomerId' => $result['pcCustomerId'],
+				'created' => $result['created'],
+			]);
+		} catch (\Throwable $e) {
+			return $this->fromThrowable($e);
+		}
+	}
+
+	#[NoAdminRequired]
+	public function linkTicketcheck(int $id): JSONResponse
+	{
+		try {
+			$company = $this->requireCompanyInResolvedWorkspace($id);
+			$ctx = $this->assertLoadedCompanyInWorkspace($company, 'write');
+			$body = $this->jsonBody();
+			$existing = $this->resolveSiblingLinkId($body, 'tcCustomerId', 'existingTcCustomerId');
+			$result = $this->siblingWrites->createOrLinkTcCustomer(
+				$id,
+				$ctx['uid'],
+				$existing,
+				$this->updatedAtPrecondition($body),
+			);
+
+			return $this->ok([
+				'company' => $this->serialize($result['company']),
+				'tcCustomerId' => $result['tcCustomerId'],
+				'created' => $result['created'],
+			]);
+		} catch (\Throwable $e) {
+			return $this->fromThrowable($e);
+		}
+	}
+
+	/**
+	 * @param array<string, mixed> $body
+	 */
+	private function resolveSiblingLinkId(array $body, string $planKey, string $legacyKey): ?int
+	{
+		$mode = strtolower(trim((string)($body['mode'] ?? '')));
+		$candidate = null;
+		if (isset($body[$planKey]) && $body[$planKey] !== '' && $body[$planKey] !== null) {
+			$candidate = (int)$body[$planKey];
+		} elseif (isset($body[$legacyKey]) && $body[$legacyKey] !== '' && $body[$legacyKey] !== null) {
+			$candidate = (int)$body[$legacyKey];
+		}
+		if ($mode === 'create') {
+			return null;
+		}
+		if ($mode === 'link') {
+			if ($candidate === null || $candidate <= 0) {
+				throw new \OCA\CustomerCheck\Exception\ValidationException(
+					\OCA\CustomerCheck\Constants::ERR_VALIDATION,
+					'Link mode requires an existing sibling customer id.',
+				);
+			}
+
+			return $candidate;
+		}
+
+		return ($candidate !== null && $candidate > 0) ? $candidate : null;
+	}
+
+	#[NoAdminRequired]
 	public function export(int $id): JSONResponse
 	{
 		try {
-			$this->accessControl->requireCanUseApp();
+			$this->requireCompanyInResolvedWorkspace($id);
+
 			return $this->ok($this->companies->gdprExport($id));
 		} catch (\Throwable $e) {
 			return $this->fromThrowable($e);
@@ -148,18 +309,25 @@ class CompanyApiController extends Controller
 	public function timeline(int $id): JSONResponse
 	{
 		try {
-			$this->accessControl->requireCanUseApp();
-			$this->companies->get($id);
+			$this->requireCompanyInResolvedWorkspace($id);
 			$events = $this->timeline->listForCompany($id, 100);
-			$data = array_map(static function ($e): array {
+			$data = array_map(function ($e): array {
+				$createdAt = $e->getCreatedAt();
+				$type = (string)$e->getEventType();
+				$actor = (string)$e->getActor();
+
 				return [
 					'id' => (int)$e->getId(),
-					'eventType' => (string)$e->getEventType(),
-					'actor' => (string)$e->getActor(),
+					'eventType' => $type,
+					'eventTypeLabel' => $this->labels->timelineEventType($type),
+					'actor' => $actor,
+					'actorLabel' => $this->labels->timelineActor($actor),
 					'payloadJson' => $e->getPayloadJson(),
-					'createdAt' => $e->getCreatedAt()?->format(\DateTimeInterface::ATOM),
+					'createdAt' => $createdAt?->format(\DateTimeInterface::ATOM),
+					'createdAtLabel' => $this->labels->timelineWhen($createdAt),
 				];
 			}, $events);
+
 			return $this->ok($data);
 		} catch (\Throwable $e) {
 			return $this->fromThrowable($e);
@@ -171,6 +339,7 @@ class CompanyApiController extends Controller
 	{
 		$raw = file_get_contents('php://input') ?: '';
 		$decoded = json_decode($raw, true);
+
 		return is_array($decoded) ? $decoded : [];
 	}
 
@@ -189,8 +358,14 @@ class CompanyApiController extends Controller
 			'addrStreet' => $c->getAddrStreet(),
 			'addrZip' => $c->getAddrZip(),
 			'addrCity' => $c->getAddrCity(),
+			'workspaceId' => $c->getWorkspaceId(),
+			'kamTier' => $c->getKamTier(),
+			'accountOwnerUserId' => $c->getAccountOwnerUserId(),
+			'nextTouchOn' => $c->getNextTouchOn()?->format('Y-m-d'),
 			'pcCustomerId' => $c->getPcCustomerId(),
 			'tcCustomerId' => $c->getTcCustomerId(),
+			'filesFolderId' => $c->getFilesFolderId(),
+			'filesFolderPath' => $c->getFilesFolderPath(),
 			'archivedAt' => OptimisticLock::format($c->getArchivedAt()),
 			'updatedAt' => OptimisticLock::format($c->getUpdatedAt()),
 		];

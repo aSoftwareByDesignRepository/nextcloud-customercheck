@@ -78,19 +78,23 @@ include __DIR__ . '/common/page-start.php';
 			<div class="table-container crm-table--responsive">
 				<table class="table table--hover">
 					<thead><tr>
-						<th><?php p($l->t('Title')); ?></th>
-						<th><?php p($l->t('Company')); ?></th>
-						<th><?php p($l->t('Type')); ?></th>
-						<th><?php p($l->t('Due')); ?></th>
-						<th><?php p($l->t('Origin')); ?></th>
-						<th class="crm-table-actions-col"><?php p($l->t('Actions')); ?></th>
+						<th scope="col"><?php p($l->t('Title')); ?></th>
+						<th scope="col"><?php p($l->t('Company')); ?></th>
+						<th scope="col"><?php p($l->t('Type')); ?></th>
+						<th scope="col"><?php p($l->t('Due')); ?></th>
+						<th scope="col"><?php p($l->t('Origin')); ?></th>
+						<th scope="col" class="crm-table-actions-col"><?php p($l->t('Actions')); ?></th>
 					</tr></thead>
 					<tbody>
 					<?php foreach ($rows as $act): ?>
 						<tr>
 							<td data-label="<?php p($l->t('Title')); ?>"><?php p($act['title']); ?></td>
 							<td data-label="<?php p($l->t('Company')); ?>">
-								<a href="<?php p($urlGenerator->linkToRoute('customercheck.page.companyDetail', ['id' => $act['companyId']])); ?>"><?php p($act['companyName'] ?? $l->t('Unknown company')); ?></a>
+								<?php
+								$crmCompanyLinkId = (int)($act['companyId'] ?? 0);
+								$crmCompanyLinkLabel = (string)($act['companyName'] ?? '');
+								include __DIR__ . '/common/crm-company-link.php';
+								?>
 							</td>
 							<td data-label="<?php p($l->t('Type')); ?>"><span class="crm-badge"><?php
 								p($labels instanceof \OCA\CustomerCheck\Service\DisplayLabelService

@@ -20,12 +20,14 @@ use OCA\CustomerCheck\Db\Person;
 use OCA\CustomerCheck\Db\PersonMapper;
 use OCA\CustomerCheck\Db\TimelineEvent;
 use OCA\CustomerCheck\Db\TimelineEventMapper;
+use OCA\CustomerCheck\Exception\ConflictException;
 use OCA\CustomerCheck\Exception\NotFoundException;
 use OCA\CustomerCheck\Exception\ValidationException;
 use OCA\CustomerCheck\Support\OptimisticLock;
 use OCP\AppFramework\Db\DoesNotExistException;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\DB\Exception as DbException;
+use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\IDBConnection;
 use OCP\IL10N;
 
@@ -138,12 +140,25 @@ class CompanyService
 	 */
 	public function create(array $input, string $actor): Company
 	{
+		$wsId = (int)($input['workspaceId'] ?? 0);
+		if ($wsId <= 0) {
+			$wsId = $this->resolveDefaultWorkspaceId();
+		}
+		if ($wsId <= 0) {
+			throw new ValidationException(
+				Constants::ERR_VALIDATION,
+				$this->l10n->t('Please correct the highlighted fields.'),
+				['workspaceId' => $this->l10n->t('Choose a workspace for this company.')],
+			);
+		}
+
 		$now = $this->timeFactory->getDateTime();
 
 		$company = new Company();
 		$company->setCountry('DE');
 		$company->setLang('de');
 		$company->setStatus('lead');
+		$company->setWorkspaceId($wsId);
 		$company->setCreatedBy($actor);
 		$company->setCreatedAt($now);
 		$company->setUpdatedAt($now);
@@ -196,7 +211,11 @@ class CompanyService
 		}
 
 		$company->setUpdatedAt($this->timeFactory->getDateTime());
-		$stored = $this->companyMapper->update($company);
+		try {
+			$stored = $this->companyMapper->update($company);
+		} catch (DbException $e) {
+			$this->rethrowMappedUniqueViolation($e, (string)$company->getSlug());
+		}
 
 		$this->timelineService->append($id, 'company.updated', $actor, [
 			'changed' => $this->diffKeys($before, [
@@ -262,9 +281,25 @@ class CompanyService
 	{
 		$company = $this->get($id);
 
+		$mergeNotes = [];
+		foreach ($this->timelineEventMapper->findByCompany($id, 1000) as $event) {
+			if ((string)$event->getEventType() !== Constants::EVENT_COMPANY_MERGED) {
+				continue;
+			}
+			$payload = $event->decodedPayload();
+			$mergeNotes[] = [
+				'at' => $event->getCreatedAt()?->format(\DateTimeInterface::ATOM),
+				'sourceId' => (int)($payload['sourceId'] ?? 0),
+				'sourceSlug' => (string)($payload['sourceSlug'] ?? ''),
+				'sourceName' => (string)($payload['sourceName'] ?? ''),
+				'moved' => $payload['moved'] ?? null,
+			];
+		}
+
 		return [
 			'exportedAt' => $this->timeFactory->getDateTime()->format(\DateTimeInterface::ATOM),
 			'company' => $this->serialiseCompany($company),
+			'mergedHistory' => $mergeNotes,
 			'persons' => array_map(
 				fn (Person $p): array => [
 					'id' => (int)$p->getId(),
@@ -342,20 +377,27 @@ class CompanyService
 				],
 				$this->timelineEventMapper->findByCompany($id, 1000),
 			),
+			'customerPromises' => $this->exportPromises($id),
+			'accountPlans' => $this->exportPlans($id),
 		];
 	}
 
 	/**
-	 * GDPR erase (§4.8).
+	 * GDPR erase (§4.8 / §18.9).
 	 *
-	 * Hard-deleted: persons, activities, email touches and free-text timeline
-	 * notes. Retained but blanked: agreements and hours (ten-year tax/GoBD
-	 * retention), plus every remaining timeline event, which keeps its type and
-	 * date with the payload replaced by `{"gdpr":"erased"}`.
+	 * Hard-deleted: persons, deals, activities, email touches, customer promises,
+	 * account plans + MAP steps, and free-text timeline notes. Shared mail rows
+	 * are re-triaged to unmatched (company_id cleared). Retained but blanked:
+	 * agreements and hours (ten-year tax/GoBD retention), plus remaining timeline
+	 * events (`{"gdpr":"erased"}`).
 	 *
 	 * The confirmation is the typed slug, so a mis-click cannot destroy data.
 	 *
-	 * @return array{personsDeleted: int, activitiesDeleted: int, emailsDeleted: int, notesDeleted: int, agreementsAnonymised: int, hoursAnonymised: int, eventsAnonymised: int}
+	 * @return array{
+	 *   personsDeleted: int, activitiesDeleted: int, emailsDeleted: int, notesDeleted: int,
+	 *   agreementsAnonymised: int, hoursAnonymised: int, eventsAnonymised: int,
+	 *   promisesDeleted: int, plansDeleted: int, mapStepsDeleted: int, mailUnmatched: int
+	 * }
 	 * @throws ValidationException when the typed confirmation does not match
 	 */
 	public function gdprErase(int $id, string $typedSlug, string $actor): array
@@ -372,6 +414,20 @@ class CompanyService
 		}
 
 		$agreementIds = $this->agreementMapper->findIdsByCompany($id);
+
+		$personsDeleted = 0;
+		$activitiesDeleted = 0;
+		$emailsDeleted = 0;
+		$notesDeleted = 0;
+		$agreementsAnonymised = 0;
+		$hoursAnonymised = 0;
+		$eventsAnonymised = 0;
+		$persona = [
+			'promisesDeleted' => 0,
+			'plansDeleted' => 0,
+			'mapStepsDeleted' => 0,
+			'mailUnmatched' => 0,
+		];
 
 		// Lock order: company → deal → agreement → activity/hours → event.
 		$this->db->beginTransaction();
@@ -395,6 +451,7 @@ class CompanyService
 			$activitiesDeleted = $this->activityMapper->deleteByCompany($id);
 			$hoursAnonymised = $this->hoursMapper->anonymiseByAgreements($agreementIds);
 			$emailsDeleted = $this->emailTouchMapper->deleteByCompany($id);
+			$persona = $this->erasePersonaLedgers($id);
 			$notesDeleted = $this->timelineEventMapper->deleteNotesByCompany($id);
 			$eventsAnonymised = $this->timelineEventMapper->anonymiseByCompany($id);
 
@@ -409,6 +466,9 @@ class CompanyService
 			'personsDeleted' => $personsDeleted,
 			'activitiesDeleted' => $activitiesDeleted,
 			'emailsDeleted' => $emailsDeleted,
+			'promisesDeleted' => $persona['promisesDeleted'],
+			'plansDeleted' => $persona['plansDeleted'],
+			'mailUnmatched' => $persona['mailUnmatched'],
 		]);
 
 		return [
@@ -419,6 +479,78 @@ class CompanyService
 			'agreementsAnonymised' => $agreementsAnonymised,
 			'hoursAnonymised' => $hoursAnonymised,
 			'eventsAnonymised' => $eventsAnonymised,
+			'promisesDeleted' => $persona['promisesDeleted'],
+			'plansDeleted' => $persona['plansDeleted'],
+			'mapStepsDeleted' => $persona['mapStepsDeleted'],
+			'mailUnmatched' => $persona['mailUnmatched'],
+		];
+	}
+
+	/**
+	 * Cascade customer promises, account plans/MAP, and re-triage shared mail (§18.9).
+	 *
+	 * @return array{promisesDeleted: int, plansDeleted: int, mapStepsDeleted: int, mailUnmatched: int}
+	 */
+	private function erasePersonaLedgers(int $companyId): array
+	{
+		$promisesDeleted = 0;
+		$plansDeleted = 0;
+		$mapStepsDeleted = 0;
+		$mailUnmatched = 0;
+
+		if ($this->db->tableExists('crm_cust_prm')) {
+			$qb = $this->db->getQueryBuilder();
+			$promisesDeleted = $qb->delete('crm_cust_prm')
+				->where($qb->expr()->eq('company_id', $qb->createNamedParameter($companyId)))
+				->executeStatement();
+		}
+
+		$planIds = [];
+		if ($this->db->tableExists('crm_acct_plan')) {
+			$qb = $this->db->getQueryBuilder();
+			$qb->select('id')->from('crm_acct_plan')
+				->where($qb->expr()->eq('company_id', $qb->createNamedParameter($companyId)));
+			$r = $qb->executeQuery();
+			while ($row = $r->fetch()) {
+				$planIds[] = (int)$row['id'];
+			}
+			$r->closeCursor();
+		}
+
+		if ($planIds !== [] && $this->db->tableExists('crm_map_step')) {
+			$qb = $this->db->getQueryBuilder();
+			$params = [];
+			foreach ($planIds as $i => $pid) {
+				$params[] = $qb->createNamedParameter($pid, null, 'pid' . $i);
+			}
+			$mapStepsDeleted = $qb->delete('crm_map_step')
+				->where($qb->expr()->in('plan_id', $params))
+				->executeStatement();
+		}
+
+		if ($this->db->tableExists('crm_acct_plan')) {
+			$qb = $this->db->getQueryBuilder();
+			$plansDeleted = $qb->delete('crm_acct_plan')
+				->where($qb->expr()->eq('company_id', $qb->createNamedParameter($companyId)))
+				->executeStatement();
+		}
+
+		// Shared mail: re-triage to unmatched (never leave PII match to an erased company).
+		if ($this->db->tableExists('crm_mail_msg')) {
+			$qb = $this->db->getQueryBuilder();
+			$mailUnmatched = $qb->update('crm_mail_msg')
+				->set('company_id', $qb->createNamedParameter(null, IQueryBuilder::PARAM_NULL))
+				->set('matched_how', $qb->createNamedParameter(null, IQueryBuilder::PARAM_NULL))
+				->set('triage_status', $qb->createNamedParameter('open'))
+				->where($qb->expr()->eq('company_id', $qb->createNamedParameter($companyId)))
+				->executeStatement();
+		}
+
+		return [
+			'promisesDeleted' => $promisesDeleted,
+			'plansDeleted' => $plansDeleted,
+			'mapStepsDeleted' => $mapStepsDeleted,
+			'mailUnmatched' => $mailUnmatched,
 		];
 	}
 
@@ -470,6 +602,78 @@ class CompanyService
 	}
 
 	/**
+	 * @return list<array<string, mixed>>
+	 */
+	private function exportPromises(int $companyId): array
+	{
+		if (!$this->db->tableExists('crm_cust_prm')) {
+			return [];
+		}
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('*')->from('crm_cust_prm')
+			->where($qb->expr()->eq('company_id', $qb->createNamedParameter($companyId)))
+			->orderBy('id', 'ASC');
+		$r = $qb->executeQuery();
+		$out = [];
+		while ($row = $r->fetch()) {
+			$out[] = [
+				'id' => (int)$row['id'],
+				'title' => (string)$row['title'],
+				'dueOn' => $row['due_on'] !== null ? (string)$row['due_on'] : null,
+				'status' => (string)$row['status'],
+				'ownerUserId' => $row['owner_user_id'] !== null ? (string)$row['owner_user_id'] : null,
+				'evidence' => $row['evidence'] !== null ? (string)$row['evidence'] : null,
+			];
+		}
+		$r->closeCursor();
+		return $out;
+	}
+
+	/**
+	 * @return list<array<string, mixed>>
+	 */
+	private function exportPlans(int $companyId): array
+	{
+		if (!$this->db->tableExists('crm_acct_plan')) {
+			return [];
+		}
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('*')->from('crm_acct_plan')
+			->where($qb->expr()->eq('company_id', $qb->createNamedParameter($companyId)))
+			->orderBy('id', 'ASC');
+		$r = $qb->executeQuery();
+		$out = [];
+		while ($row = $r->fetch()) {
+			$planId = (int)$row['id'];
+			$map = [];
+			if ($this->db->tableExists('crm_map_step')) {
+				$mq = $this->db->getQueryBuilder();
+				$mq->select('*')->from('crm_map_step')
+					->where($mq->expr()->eq('plan_id', $mq->createNamedParameter($planId)))
+					->orderBy('sort_order', 'ASC');
+				$mr = $mq->executeQuery();
+				while ($step = $mr->fetch()) {
+					$map[] = [
+						'id' => (int)$step['id'],
+						'title' => (string)$step['title'],
+						'status' => (string)$step['status'],
+					];
+				}
+				$mr->closeCursor();
+			}
+			$out[] = [
+				'id' => $planId,
+				'goal' => (string)($row['goal'] ?? ''),
+				'status' => (string)($row['status'] ?? ''),
+				'ownerUserId' => $row['owner_user_id'] !== null ? (string)$row['owner_user_id'] : null,
+				'mapSteps' => $map,
+			];
+		}
+		$r->closeCursor();
+		return $out;
+	}
+
+	/**
 	 * Insert, retrying once with a fresh suffix when a concurrent request took
 	 * the slug between the availability probe and the insert. Only auto-generated
 	 * slugs are retried — an explicit slug must fail loudly as `SLUG_TAKEN`.
@@ -486,6 +690,11 @@ class CompanyService
 			} catch (DbException $e) {
 				if ($e->getReason() !== DbException::REASON_UNIQUE_CONSTRAINT_VIOLATION) {
 					throw $e;
+				}
+				// Sibling unique indexes must never be mislabeled as SLUG_TAKEN.
+				$sibling = $this->classifySiblingUniqueViolation($e);
+				if ($sibling !== null) {
+					$this->throwSiblingLinkConflict($sibling);
 				}
 				if (!$mayRetry || $attempt === $attempts - 1) {
 					throw ValidationException::field(
@@ -504,6 +713,67 @@ class CompanyService
 			Constants::ERR_SLUG_TAKEN,
 			'slug',
 			$this->l10n->t('The slug "%s" is already in use. Pick another one.', [(string)$company->getSlug()]),
+		);
+	}
+
+	/**
+	 * Map unique-index races (SHARED-IDENTITY I5) to typed API errors instead of 500s.
+	 *
+	 * @return never
+	 */
+	private function rethrowMappedUniqueViolation(DbException $e, string $slug): void
+	{
+		if ($e->getReason() !== DbException::REASON_UNIQUE_CONSTRAINT_VIOLATION) {
+			throw $e;
+		}
+		$sibling = $this->classifySiblingUniqueViolation($e);
+		if ($sibling !== null) {
+			$this->throwSiblingLinkConflict($sibling);
+		}
+		throw ValidationException::field(
+			Constants::ERR_SLUG_TAKEN,
+			'slug',
+			$this->l10n->t('The slug "%s" is already in use. Pick another one.', [$slug]),
+		);
+	}
+
+	/**
+	 * @return 'pc'|'tc'|null
+	 */
+	private function classifySiblingUniqueViolation(DbException $e): ?string
+	{
+		$haystack = strtolower($e->getMessage());
+		$previous = $e->getPrevious();
+		if ($previous instanceof \Throwable) {
+			$haystack .= ' ' . strtolower($previous->getMessage());
+		}
+		if (str_contains($haystack, 'crm_co_pc_uq')
+			|| (str_contains($haystack, 'pc_customer_id') && str_contains($haystack, 'unique'))) {
+			return 'pc';
+		}
+		if (str_contains($haystack, 'crm_co_tc_uq')
+			|| (str_contains($haystack, 'tc_customer_id') && str_contains($haystack, 'unique'))) {
+			return 'tc';
+		}
+
+		return null;
+	}
+
+	/**
+	 * @param 'pc'|'tc' $sibling
+	 * @return never
+	 */
+	private function throwSiblingLinkConflict(string $sibling): void
+	{
+		if ($sibling === 'pc') {
+			throw new ConflictException(
+				$this->l10n->t('This ProjectCheck customer is already linked to another company.'),
+				Constants::ERR_LINK_CONFLICT,
+			);
+		}
+		throw new ConflictException(
+			$this->l10n->t('This TicketCheck customer is already linked to another company.'),
+			Constants::ERR_LINK_CONFLICT,
 		);
 	}
 
@@ -586,11 +856,77 @@ class CompanyService
 
 		if (array_key_exists('pcCustomerId', $input)) {
 			$pcId = (int)($input['pcCustomerId'] ?? 0);
-			$company->setPcCustomerId($pcId > 0 ? $pcId : null);
+			if ($pcId > 0) {
+				$other = $this->companyMapper->findByPcCustomerId($pcId);
+				if ($other !== null && (int)$other->getId() !== (int)($company->getId() ?? 0)) {
+					$fields['pcCustomerId'] = $this->l10n->t('This ProjectCheck customer is already linked to another company.');
+				} else {
+					$company->setPcCustomerId($pcId);
+				}
+			} else {
+				$company->setPcCustomerId(null);
+			}
 		}
 		if (array_key_exists('tcCustomerId', $input)) {
 			$tcId = (int)($input['tcCustomerId'] ?? 0);
-			$company->setTcCustomerId($tcId > 0 ? $tcId : null);
+			if ($tcId > 0) {
+				$other = $this->companyMapper->findByTcCustomerId($tcId);
+				if ($other !== null && (int)$other->getId() !== (int)($company->getId() ?? 0)) {
+					$fields['tcCustomerId'] = $this->l10n->t('This TicketCheck customer is already linked to another company.');
+				} else {
+					$company->setTcCustomerId($tcId);
+				}
+			} else {
+				$company->setTcCustomerId(null);
+			}
+		}
+
+		if (array_key_exists('filesFolderId', $input)) {
+			$fid = $input['filesFolderId'];
+			if ($fid === null || $fid === '' || (int)$fid <= 0) {
+				$company->setFilesFolderId(null);
+			} else {
+				$company->setFilesFolderId((int)$fid);
+			}
+		}
+		if (array_key_exists('filesFolderPath', $input)) {
+			$path = $input['filesFolderPath'];
+			if ($path === null || trim((string)$path) === '') {
+				$company->setFilesFolderPath(null);
+			} else {
+				$company->setFilesFolderPath(mb_substr(trim((string)$path), 0, 4000));
+			}
+		}
+
+		if (array_key_exists('workspaceId', $input)) {
+			$ws = (int)($input['workspaceId'] ?? 0);
+			if ($ws > 0) {
+				$company->setWorkspaceId($ws);
+			}
+		}
+
+		if (array_key_exists('kamTier', $input)) {
+			$tier = trim((string)$input['kamTier']);
+			if (!in_array($tier, Constants::KAM_TIERS, true)) {
+				$fields['kamTier'] = $this->l10n->t('Choose standard, key or partner.');
+			} else {
+				$company->setKamTier($tier);
+			}
+		}
+		if (array_key_exists('kamTierLock', $input)) {
+			$company->setKamTierLock(!empty($input['kamTierLock']) ? 1 : 0);
+		}
+		if (array_key_exists('accountOwnerUserId', $input)) {
+			$owner = trim((string)($input['accountOwnerUserId'] ?? ''));
+			$company->setAccountOwnerUserId($owner !== '' ? $owner : null);
+		}
+		if (array_key_exists('touchIntervalDays', $input)) {
+			$days = (int)($input['touchIntervalDays'] ?? 0);
+			$company->setTouchIntervalDays($days > 0 ? $days : null);
+		}
+		if (array_key_exists('nextTouchOn', $input)) {
+			$nt = \OCA\CustomerCheck\Support\DateMath::parseStrictDate((string)($input['nextTouchOn'] ?? ''));
+			$company->setNextTouchOn($nt !== null ? new \DateTime($nt->format('Y-m-d')) : null);
 		}
 
 		if ($isCreate && (string)$company->getName() === '' && !isset($fields['name'])) {
@@ -644,6 +980,31 @@ class CompanyService
 		$scheme = strtolower((string)parse_url($url, PHP_URL_SCHEME));
 
 		return in_array($scheme, ['http', 'https'], true);
+	}
+
+	/**
+	 * Bootstrap / webhook / import path: attach to the Default workspace when
+	 * the caller did not pass workspaceId (product §6).
+	 */
+	private function resolveDefaultWorkspaceId(): int
+	{
+		try {
+			if (!$this->db->tableExists('crm_workspace')) {
+				return 0;
+			}
+		} catch (\Throwable) {
+			return 0;
+		}
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('id')
+			->from('crm_workspace')
+			->where($qb->expr()->eq('is_default', $qb->createNamedParameter(1)))
+			->setMaxResults(1);
+		$result = $qb->executeQuery();
+		$id = (int)$result->fetchOne();
+		$result->closeCursor();
+
+		return $id > 0 ? $id : 0;
 	}
 
 	/**

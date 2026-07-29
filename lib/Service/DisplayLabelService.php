@@ -52,6 +52,20 @@ final class DisplayLabelService
 		return $this->l10n->t('Untitled customer');
 	}
 
+	/**
+	 * Billing / money integrity state — COMMAND-CENTER-SPEC §7.2 (human labels).
+	 */
+	public function billingState(string $state): string
+	{
+		return match ($state) {
+			'ok' => $this->l10n->t('Paid up'),
+			'attention' => $this->l10n->t('Needs attention'),
+			'critical' => $this->l10n->t('Overdue'),
+			'unknown' => $this->l10n->t('Unknown'),
+			default => $this->l10n->t('Unknown'),
+		};
+	}
+
 	public function companyStatus(string $status): string
 	{
 		return match ($status) {
@@ -59,6 +73,214 @@ final class DisplayLabelService
 			'active' => $this->l10n->t('Active'),
 			'paused' => $this->l10n->t('Paused'),
 			'churned' => $this->l10n->t('Churned'),
+			default => $status !== '' ? $status : $this->l10n->t('Unknown'),
+		};
+	}
+
+	/**
+	 * Chase primary reason codes — never show snake_case in the UI.
+	 */
+	public function chaseReason(string $reason): string
+	{
+		return match ($reason) {
+			'lead_sla' => $this->l10n->t('Lead SLA overdue'),
+			'close_overdue' => $this->l10n->t('Close date overdue'),
+			'no_next_action' => $this->l10n->t('No next action'),
+			'quote_followup_due' => $this->l10n->t('Quote follow-up due'),
+			'close_this_week' => $this->l10n->t('Closing this week'),
+			'stale_stage' => $this->l10n->t('Stage went stale'),
+			'unowned' => $this->l10n->t('No owner'),
+			default => $reason !== '' ? $reason : $this->l10n->t('Needs chase'),
+		};
+	}
+
+	/**
+	 * Pulse attention kind — never show snake_case in the UI.
+	 */
+	public function pulseAttentionKind(string $kind): string
+	{
+		return match ($kind) {
+			'renewal_hot' => $this->l10n->t('Renewal soon'),
+			'overdue_invoice' => $this->l10n->t('Overdue invoice'),
+			'plan_stalled' => $this->l10n->t('Plan stalled'),
+			'plan_at_risk' => $this->l10n->t('Plan at risk'),
+			default => $kind !== '' ? $kind : $this->l10n->t('Attention'),
+		};
+	}
+
+	/**
+	 * Unbilled Pulse metric hint — granny-readable; never machine states in chrome.
+	 */
+	public function unbilledHint(string $state): string
+	{
+		return match ($state) {
+			'ok' => $this->l10n->t('Open billable hours from ProjectCheck that are not invoiced yet.'),
+			'unavailable' => $this->l10n->t('ProjectCheck is off — unbilled hours cannot be shown.'),
+			'honesty_blocked' => $this->l10n->t('Unbilled hours are not ready yet — we will not guess zero.'),
+			default => $this->l10n->t('Unbilled hours unknown.'),
+		};
+	}
+
+	public function planHealth(string $health): string
+	{
+		return match ($health) {
+			'healthy' => $this->l10n->t('Healthy'),
+			'stalled' => $this->l10n->t('Stalled'),
+			'at_risk' => $this->l10n->t('At risk'),
+			'ok' => $this->l10n->t('OK'),
+			default => $health !== '' ? $health : $this->l10n->t('Unknown'),
+		};
+	}
+
+	public function commitmentStatus(string $status): string
+	{
+		return match ($status) {
+			'committed' => $this->l10n->t('Committed'),
+			'done' => $this->l10n->t('Done'),
+			'missed' => $this->l10n->t('Missed'),
+			'carried' => $this->l10n->t('Carried'),
+			'abandoned' => $this->l10n->t('Abandoned'),
+			default => $status !== '' ? $status : $this->l10n->t('Unknown'),
+		};
+	}
+
+	public function coverageFlag(string $flag): string
+	{
+		return match ($flag) {
+			'champion_gap' => $this->l10n->t('Missing champion'),
+			'buyer_gap' => $this->l10n->t('Missing budget decision-maker'),
+			'champion_left' => $this->l10n->t('Champion left'),
+			'touch_overdue' => $this->l10n->t('Follow-up overdue'),
+			'promise_overdue' => $this->l10n->t('Promise overdue'),
+			'partner_hours_hot' => $this->l10n->t('Partner hours running low'),
+			'renewal_hot' => $this->l10n->t('Renewal soon'),
+			default => $flag !== '' ? $flag : $this->l10n->t('Coverage issue'),
+		};
+	}
+
+	/**
+	 * Coverage gap slot keys from CoverageLogic::$missing — never show snake_case.
+	 */
+	public function coverageMissing(string $slot): string
+	{
+		return match ($slot) {
+			'economic_buyer' => $this->l10n->t('Budget decision-maker'),
+			'champion' => $this->l10n->t('Champion'),
+			'day_to_day_or_technical' => $this->l10n->t('Day-to-day or technical contact'),
+			default => $slot !== '' ? $slot : $this->l10n->t('Coverage issue'),
+		};
+	}
+
+	/**
+	 * Timeline audit event types — never show dotted machine keys in the UI.
+	 */
+	public function timelineEventType(string $type): string
+	{
+		return match ($type) {
+			'company.created' => $this->l10n->t('Company created'),
+			'company.updated' => $this->l10n->t('Company updated'),
+			'company.archived' => $this->l10n->t('Company archived'),
+			'company.restored' => $this->l10n->t('Company restored'),
+			'company.merged' => $this->l10n->t('Companies merged'),
+			'company.pc_linked' => $this->l10n->t('Linked to ProjectCheck'),
+			'company.tc_linked' => $this->l10n->t('Linked to TicketCheck'),
+			'agreement.created' => $this->l10n->t('Agreement created'),
+			'agreement.status' => $this->l10n->t('Agreement status changed'),
+			'agreement.cancelled' => $this->l10n->t('Agreement cancelled'),
+			'agreement.superseded' => $this->l10n->t('Agreement replaced'),
+			'reminder.sent' => $this->l10n->t('Renewal reminder sent'),
+			'reminder.skipped' => $this->l10n->t('Renewal reminder skipped'),
+			'deal.stage' => $this->l10n->t('Deal stage changed'),
+			'hours.logged' => $this->l10n->t('Hours logged'),
+			'import.linked' => $this->l10n->t('Import linked'),
+			'email.logged' => $this->l10n->t('Email logged'),
+			'email.composed' => $this->l10n->t('Email composed'),
+			'mail_sent' => $this->l10n->t('Email sent'),
+			'invoice.paid' => $this->l10n->t('Invoice marked paid'),
+			'invoice.paid.ambiguous' => $this->l10n->t('Invoice payment needs review'),
+			'lead.webhook' => $this->l10n->t('Lead received'),
+			'order.webhook' => $this->l10n->t('Order received'),
+			'digest.sent' => $this->l10n->t('Weekly digest sent'),
+			'quota.alert' => $this->l10n->t('Partner hours alert'),
+			'gdpr.erased' => $this->l10n->t('Personal data erased'),
+			'note' => $this->l10n->t('Note'),
+			default => $this->l10n->t('Update'),
+		};
+	}
+
+	/**
+	 * Timeline actor UIDs / system roles — never show empty; soft-label known roles.
+	 */
+	public function timelineActor(string $actor): string
+	{
+		$actor = trim($actor);
+		return match ($actor) {
+			'', 'system' => $this->l10n->t('System'),
+			'webhook' => $this->l10n->t('Webhook'),
+			default => $actor,
+		};
+	}
+
+	/**
+	 * Locale-aware when-label for timeline rows (ISO stays on &lt;time datetime&gt;).
+	 */
+	public function timelineWhen(?\DateTimeInterface $at): string
+	{
+		if ($at === null) {
+			return '';
+		}
+
+		return (string)$this->l10n->l('datetime', $at);
+	}
+
+	public function personStatus(string $status): string
+	{
+		return match ($status) {
+			'active' => $this->l10n->t('Active'),
+			'left' => $this->l10n->t('Left'),
+			'unknown' => $this->l10n->t('Unknown'),
+			default => $status !== '' ? $status : $this->l10n->t('Unknown'),
+		};
+	}
+
+	public function communicationKind(string $kind): string
+	{
+		return match ($kind) {
+			'email_touch' => $this->l10n->t('Logged email'),
+			'mail_related' => $this->l10n->t('Related mail'),
+			'shared_mail' => $this->l10n->t('Shared mail'),
+			'activity' => $this->l10n->t('Activity'),
+			default => $kind !== '' ? $kind : $this->l10n->t('Touch'),
+		};
+	}
+
+	public function mailDirection(string $direction): string
+	{
+		return match ($direction) {
+			'inbound' => $this->l10n->t('Inbound'),
+			'outbound' => $this->l10n->t('Outbound'),
+			default => $direction !== '' ? $direction : '',
+		};
+	}
+
+	public function promiseStatus(string $status): string
+	{
+		return match ($status) {
+			'open' => $this->l10n->t('Open'),
+			'done' => $this->l10n->t('Done'),
+			'broken' => $this->l10n->t('Broken'),
+			'cancelled' => $this->l10n->t('Cancelled'),
+			default => $status !== '' ? $status : $this->l10n->t('Unknown'),
+		};
+	}
+
+	public function mapStepStatus(string $status): string
+	{
+		return match ($status) {
+			'open' => $this->l10n->t('Open'),
+			'done' => $this->l10n->t('Done'),
+			'blocked' => $this->l10n->t('Blocked'),
+			'skipped' => $this->l10n->t('Skipped'),
 			default => $status !== '' ? $status : $this->l10n->t('Unknown'),
 		};
 	}
@@ -130,6 +352,74 @@ final class DisplayLabelService
 		$out = [];
 		foreach (['call', 'email', 'meeting', 'todo'] as $type) {
 			$out[] = ['value' => $type, 'label' => $this->activityType($type)];
+		}
+		return $out;
+	}
+
+	public function buyingRole(string $role): string
+	{
+		return match ($role) {
+			'economic_buyer' => $this->l10n->t('Budget decision-maker'),
+			'champion' => $this->l10n->t('Champion'),
+			'day_to_day' => $this->l10n->t('Day-to-day contact'),
+			'technical' => $this->l10n->t('Technical contact'),
+			'blocker' => $this->l10n->t('Blocker'),
+			'other' => $this->l10n->t('Other'),
+			default => $role !== '' ? $role : $this->l10n->t('None'),
+		};
+	}
+
+	/** @return list<array{value: string, label: string}> */
+	public function buyingRoleOptions(): array
+	{
+		$out = [['value' => '', 'label' => $this->l10n->t('None')]];
+		foreach (\OCA\CustomerCheck\Constants::BUYING_ROLES as $role) {
+			$out[] = ['value' => $role, 'label' => $this->buyingRole($role)];
+		}
+		return $out;
+	}
+
+	public function forecastBucket(string $bucket): string
+	{
+		return match ($bucket) {
+			'commit' => $this->l10n->t('This month likely'),
+			'upside' => $this->l10n->t('Possible'),
+			'pipeline' => $this->l10n->t('Later'),
+			default => $bucket !== '' ? $bucket : $this->l10n->t('None'),
+		};
+	}
+
+	/** @return list<array{value: string, label: string}> */
+	public function forecastBucketOptions(): array
+	{
+		$out = [['value' => '', 'label' => $this->l10n->t('None')]];
+		foreach (\OCA\CustomerCheck\Constants::FORECAST_BUCKETS as $bucket) {
+			$out[] = ['value' => $bucket, 'label' => $this->forecastBucket($bucket)];
+		}
+		return $out;
+	}
+
+	public function lossReasonCode(string $code): string
+	{
+		return match ($code) {
+			'price' => $this->l10n->t('Price'),
+			'competitor' => $this->l10n->t('Competitor'),
+			'timing' => $this->l10n->t('Timing'),
+			'no_decision' => $this->l10n->t('No decision'),
+			'requirements' => $this->l10n->t('Requirements'),
+			'technical' => $this->l10n->t('Technical'),
+			'internal' => $this->l10n->t('Internal'),
+			'other' => $this->l10n->t('Other'),
+			default => $code !== '' ? $code : $this->l10n->t('Unknown'),
+		};
+	}
+
+	/** @return list<array{value: string, label: string}> */
+	public function lossReasonCodeOptions(): array
+	{
+		$out = [];
+		foreach (\OCA\CustomerCheck\Constants::LOSS_REASON_CODES as $code) {
+			$out[] = ['value' => $code, 'label' => $this->lossReasonCode($code)];
 		}
 		return $out;
 	}

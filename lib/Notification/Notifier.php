@@ -47,14 +47,30 @@ class Notifier implements INotifier
 				'New key generated for %s — review draft agreement.',
 				[(string)($p['companyName'] ?? $l->t('company'))],
 			),
+			Constants::NOTIFY_ACTIVITY_DUE => $this->activityDueSubject($l, $company, (string)($p['title'] ?? ''), (int)($p['daysLate'] ?? 0)),
 			default => $l->t('CustomerCheck'),
 		};
 		$companyId = (int)($p['companyId'] ?? 0);
+		$activityId = (int)($p['activityId'] ?? 0);
 		$link = $companyId > 0
 			? $this->url->linkToRouteAbsolute('customercheck.page.companyDetail', ['id' => $companyId])
 			: $this->url->linkToRouteAbsolute('customercheck.page.today');
+		if ($notification->getSubject() === Constants::NOTIFY_ACTIVITY_DUE && $activityId > 0) {
+			$link = $this->url->linkToRouteAbsolute('customercheck.page.today');
+		}
 		$notification->setParsedSubject($text)->setLink($link);
 		return $notification;
+	}
+
+	private function activityDueSubject(\OCP\IL10N $l, string $company, string $title, int $daysLate): string
+	{
+		$who = $company !== '' ? $company : $l->t('a customer');
+		$what = $title !== '' ? $title : $l->t('Activity');
+		if ($daysLate > 0) {
+			return $l->t('%1$s: %2$s is overdue (%3$d days)', [$who, $what, $daysLate]);
+		}
+
+		return $l->t('%1$s: %2$s is due today', [$who, $what]);
 	}
 
 	/**

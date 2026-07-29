@@ -1,20 +1,64 @@
 <?php
+
 declare(strict_types=1);
+
 namespace OCA\CustomerCheck\Controller;
+
 use OCA\CustomerCheck\Service\AccessControlService;
+use OCA\CustomerCheck\Service\CommandBoardService;
 use OCA\CustomerCheck\Service\TodayService;
+use OCA\CustomerCheck\Service\WorkspaceAccessService;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\IRequest;
 
-class TodayApiController extends Controller {
+class TodayApiController extends Controller
+{
 	use ApiControllerTrait;
-	public function __construct(string $appName, IRequest $request, private readonly AccessControlService $accessControl, private readonly TodayService $today) {
+
+	public function __construct(
+		string $appName,
+		IRequest $request,
+		private readonly AccessControlService $accessControl,
+		private readonly TodayService $today,
+		private readonly CommandBoardService $commandBoard,
+		private readonly WorkspaceAccessService $workspaces,
+	) {
 		parent::__construct($appName, $request);
 	}
-	#[NoAdminRequired] public function index(): JSONResponse {
-		try { $this->accessControl->requireCanUseApp(); $q=$this->today->build(); return $this->ok($q, 200, $q['meta']); }
-		catch (\Throwable $e) { return $this->fromThrowable($e); }
+
+	#[NoAdminRequired]
+	public function index(): JSONResponse
+	{
+		try {
+			$this->accessControl->requireCanUseApp();
+			$q = $this->today->build();
+
+			return $this->ok($q, 200, $q['meta']);
+		} catch (\Throwable $e) {
+			return $this->fromThrowable($e);
+		}
+	}
+
+	#[NoAdminRequired]
+	public function command(): JSONResponse
+	{
+		try {
+			$this->accessControl->requireCanUseApp();
+			$uid = $this->accessControl->currentUserId();
+			$ctx = $this->workspaces->resolveForUser($uid);
+			$board = $this->commandBoard->build(
+				null,
+				$uid,
+				(int)$ctx['workspace']->getId(),
+				$ctx['role'],
+				$ctx['isAppAdmin'],
+			);
+
+			return $this->ok($board, 200, $board['meta']);
+		} catch (\Throwable $e) {
+			return $this->fromThrowable($e);
+		}
 	}
 }

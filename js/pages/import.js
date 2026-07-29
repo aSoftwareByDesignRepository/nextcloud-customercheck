@@ -2,6 +2,7 @@
   'use strict';
   const C = window.CustomerCheckComponents || window.CrmComponents;
   const Api = window.CustomerCheckApi;
+  const t = (msg, args) => (window.t ? window.t('customercheck', msg, args || []) : msg);
   if (C && C.init) { C.init(); }
 
   let lastScan = null;
@@ -88,7 +89,7 @@
       const res = await Api.post('/import/scan', payload);
       renderProposals(res.data);
     } catch (e) {
-      await C.alertDialog({ title: 'Scan failed', message: (e.payload && e.payload.message) || e.message, variant: 'danger' });
+      await C.alertDialog({ title: t('Scan failed'), message: (e.payload && e.payload.message) || e.message, variant: 'danger' });
     }
   });
 
@@ -136,11 +137,16 @@
       const box = document.getElementById('crm-import-summary');
       const body = document.getElementById('crm-import-summary-body');
       box.hidden = false;
-      body.innerHTML = '<p>Created ' + summary.created + ', linked ' + summary.linked + ', agreements ' + summary.agreements + ', skipped ' + summary.skipped + '.</p>' +
-        (summary.errors && summary.errors.length ? '<div class="crm-callout crm-callout--warning" role="status"><p>' + summary.errors.length + ' row error(s).</p></div>' : '');
-      if (C && C.showToast) C.showToast({ type: 'success', message: 'Import applied' });
+      body.innerHTML = '<p>' + t('Created %s, linked %s, agreements %s, skipped %s.', [
+        String(summary.created),
+        String(summary.linked),
+        String(summary.agreements),
+        String(summary.skipped),
+      ]) + '</p>' +
+        (summary.errors && summary.errors.length ? '<div class="crm-callout crm-callout--warning" role="status"><p>' + t('%s row error(s).', [String(summary.errors.length)]) + '</p></div>' : '');
+      if (C && C.showToast) C.showToast({ type: 'success', message: t('Import applied') });
     } catch (e) {
-      await C.alertDialog({ title: 'Apply failed', message: (e.payload && e.payload.message) || e.message, variant: 'danger' });
+      await C.alertDialog({ title: t('Apply failed'), message: (e.payload && e.payload.message) || e.message, variant: 'danger' });
     }
   });
 })();

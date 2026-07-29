@@ -33,7 +33,7 @@ test.describe('CustomerCheck journeys smoke', () => {
     await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
     await expect(page.locator('#crm-main-content')).toBeVisible();
     await expect(page.locator('.crm-page-stack')).toBeVisible();
-    await expect(page.locator('#crm-agreements')).toBeVisible();
+    await expect(page.locator('#crm-contracts')).toBeVisible();
     await expect(page.locator('#crm-emails')).toBeVisible();
     // Progressive disclosure: empty linked apps stay in DOM under the bundle
     await expect(page.locator('#crm-invoices')).toHaveCount(1);
@@ -65,10 +65,10 @@ test.describe('CustomerCheck journeys smoke', () => {
     await expect(page.locator('#crm-pipeline-new-deal')).toBeVisible();
   });
 
-  test('settings documents ICS and lead webhook for app admins', async ({ page }) => {
+  test('app settings documents ICS and lead webhook for app admins', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await login(page, credsFromEnv('ADMIN'));
-    await page.goto('/apps/customercheck/settings');
+    await page.goto('/apps/customercheck/app-settings');
     await page.waitForSelector('#crm-main-content', { timeout: 30000 });
     await expect(page.locator('#section-access')).toBeVisible();
     await expect(page.locator('#section-tokens')).toBeVisible();

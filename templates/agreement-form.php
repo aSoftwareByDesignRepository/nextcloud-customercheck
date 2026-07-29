@@ -44,7 +44,25 @@ include __DIR__ . '/common/page-start.php';
 				</div>
 				<div class="form-group">
 					<label class="form-label" for="crm-ag-product"><?php p($l->t('Product code')); ?></label>
-					<input id="crm-ag-product" name="productCode" class="crm-input form-input" required value="<?php p($a ? $a->getProductCode() : 'azc'); ?>" />
+					<select id="crm-ag-product" name="productCode" class="crm-input form-select" required>
+						<?php
+						$currentCode = $a ? (string)$a->getProductCode() : 'azc';
+						$codes = $_['productCodes'] ?? [];
+						if ($codes === []) {
+							$codes = array_map(static fn (string $c): array => ['code' => $c, 'label' => $c, 'active' => true], \OCA\CustomerCheck\Constants::PRODUCT_CODES);
+						}
+						foreach ($codes as $row):
+							if (empty($row['active']) && ($row['code'] ?? '') !== $currentCode) {
+								continue;
+							}
+							$code = (string)($row['code'] ?? '');
+							$label = (string)($row['label'] ?? $code);
+							?>
+							<option value="<?php p($code); ?>" <?php if ($code === $currentCode): ?>selected<?php endif; ?>>
+								<?php p($label); ?> (<?php p($code); ?>)
+							</option>
+						<?php endforeach; ?>
+					</select>
 				</div>
 				<div class="form-group">
 					<label class="form-label" for="crm-ag-starts"><?php p($l->t('Starts')); ?></label>
@@ -70,10 +88,20 @@ include __DIR__ . '/common/page-start.php';
 				</div>
 				<div class="crm-form-actions">
 					<button type="submit" class="crm-btn crm-btn--primary crm-btn--lg"><?php p($l->t('Save')); ?></button>
-					<a class="crm-btn crm-btn--secondary" href="<?php p($cancelHref); ?>"><?php p($l->t('Cancel')); ?></a>
+					<a class="crm-btn crm-btn--secondary" href="<?php p($cancelHref); ?>"><?php p($l->t('Back')); ?></a>
 				</div>
 				<div id="crm-agreement-form-error" class="crm-callout crm-callout--danger" role="alert" hidden></div>
 			</form>
+			<?php
+			$agStatus = $a ? (string)$a->getStatus() : '';
+			$canLifecycle = $mode === 'edit' && in_array($agStatus, ['draft', 'active', 'expiring', 'expired'], true);
+			if ($canLifecycle):
+			?>
+			<div class="crm-inline-actions mt-4">
+				<button type="button" class="crm-btn crm-btn--primary" id="crm-agreement-renew" data-id="<?php p($a->getId()); ?>" data-updated-at="<?php p($a->getUpdatedAt() ? $a->getUpdatedAt()->format(\DateTimeInterface::ATOM) : ''); ?>" data-valid-until="<?php p($a->getValidUntil() ? $a->getValidUntil()->format('Y-m-d') : ''); ?>" data-amount-cents="<?php p((int)$a->getAmountCents()); ?>" data-label="<?php p($a->getLabel()); ?>"><?php p($l->t('Renew')); ?></button>
+				<button type="button" class="crm-btn crm-btn--danger" id="crm-agreement-cancel" data-id="<?php p($a->getId()); ?>" data-updated-at="<?php p($a->getUpdatedAt() ? $a->getUpdatedAt()->format(\DateTimeInterface::ATOM) : ''); ?>"><?php p($l->t('Cancel agreement')); ?></button>
+			</div>
+			<?php endif; ?>
 		</div>
 	</section>
 </div>

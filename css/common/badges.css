@@ -213,7 +213,7 @@
 /* Status pills — larger, touch-friendly, uppercase */
 #app-content.crm-app .crm-status-pill,
 #app-content.crm-app .auto-break-toggle__status {
-	min-height: 2.75rem;
+	min-height: 44px; /* WCAG 2.5.5: px, not rem — NC root font is 15px */
 	min-width: 5.5rem;
 	padding: 0.375rem 1rem;
 	font-size: 0.875rem;

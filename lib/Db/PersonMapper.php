@@ -142,4 +142,24 @@ class PersonMapper extends QBMapper
 
 		return $qb->executeStatement();
 	}
+
+	/**
+	 * Move every person from one company onto another (merge).
+	 *
+	 * Caller must already hold company locks and resolve primary-contact
+	 * collisions (at most one primary may remain on the target).
+	 */
+	public function reassignCompany(int $fromCompanyId, int $toCompanyId): int
+	{
+		if ($fromCompanyId === $toCompanyId) {
+			return 0;
+		}
+		$qb = $this->db->getQueryBuilder();
+		$qb->update($this->getTableName())
+			->set('company_id', $qb->createNamedParameter($toCompanyId, IQueryBuilder::PARAM_INT))
+			->where($qb->expr()->eq('company_id', $qb->createNamedParameter($fromCompanyId, IQueryBuilder::PARAM_INT)));
+
+		return $qb->executeStatement();
+	}
+
 }

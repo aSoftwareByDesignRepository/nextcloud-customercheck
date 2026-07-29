@@ -2,6 +2,7 @@
   'use strict';
   const C = window.CustomerCheckComponents || window.CrmComponents;
   const Api = window.CustomerCheckApi;
+  const t = (msg) => (window.t ? window.t('customercheck', msg) : msg);
   if (C && C.init) { C.init(); }
 
   const toggle = document.getElementById('crm-activities-filter-toggle');
@@ -19,10 +20,10 @@
     try {
       await Api.post('/activities/' + id + '/done', { done: done, updatedAt: updatedAt || null });
       const live = document.getElementById('crm-live-region');
-      if (live) live.textContent = done ? 'Activity marked done.' : 'Activity reopened.';
+      if (live) live.textContent = done ? t('Activity marked done.') : t('Activity reopened.');
       location.reload();
     } catch (e) {
-      if (C) await C.alertDialog({ title: 'Update failed', message: (e.payload && e.payload.message) || e.message, variant: 'danger' });
+      if (C) await C.alertDialog({ title: t('Update failed'), message: (e.payload && e.payload.message) || e.message, variant: 'danger' });
     }
   }
 

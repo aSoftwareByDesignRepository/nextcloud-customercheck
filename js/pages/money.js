@@ -2,6 +2,7 @@
   'use strict';
   const C = window.CustomerCheckComponents || window.CrmComponents;
   const Api = window.CustomerCheckApi;
+  const t = (msg) => (window.t ? window.t('customercheck', msg) : msg);
   if (C && C.init) { C.init(); }
 
   const toggle = document.getElementById('crm-money-filter-toggle');
@@ -28,9 +29,9 @@
         if (data.mailAppUrl) window.open(data.mailAppUrl, '_blank');
         else if (data.mailtoUrl) window.location.href = data.mailtoUrl;
         const live = document.getElementById('crm-live-region');
-        if (live) live.textContent = 'Payment reminder prepared.';
+        if (live) live.textContent = t('Payment reminder prepared.');
       } catch (e) {
-        if (C) await C.alertDialog({ title: 'Payment reminder', message: (e.payload && e.payload.message) || e.message, variant: 'danger' });
+        if (C) await C.alertDialog({ title: t('Payment reminder'), message: (e.payload && e.payload.message) || e.message, variant: 'danger' });
       }
     });
   });

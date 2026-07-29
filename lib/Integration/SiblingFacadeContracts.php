@@ -30,6 +30,15 @@ final class SiblingFacadeContracts
 	public const TICKET_CHECK_FACADE = 'OCA\\Ticketcheck\\Facade\\CrmHelpdeskReadFacade';
 	public const TICKET_CHECK_MIN_VERSION = 1;
 
+	/** Write facades (CHECK-SUITE F4/F5) — consumers tolerate class absence. */
+	public const PROJECT_CHECK_WRITE_FACADE = 'OCA\\ProjectCheck\\Public\\CrmCustomerWriteFacade';
+	public const PROJECT_CHECK_WRITE_REQUEST = 'OCA\\ProjectCheck\\Public\\CrmCustomerWriteRequest';
+	public const PROJECT_CHECK_WRITE_MIN_VERSION = 1;
+
+	public const TICKET_CHECK_WRITE_FACADE = 'OCA\\Ticketcheck\\Public\\CrmHelpdeskWriteFacade';
+	public const TICKET_CHECK_WRITE_REQUEST = 'OCA\\Ticketcheck\\Public\\CrmHelpdeskWriteRequest';
+	public const TICKET_CHECK_WRITE_MIN_VERSION = 1;
+
 	private function __construct()
 	{
 	}

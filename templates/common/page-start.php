@@ -26,10 +26,19 @@ $l = $_['l'] ?? $l;
 $urlGenerator = $_['urlGenerator'];
 
 $pageIcons = [
-	'today' => 'sun', 'companies' => 'building-2', 'company-detail' => 'building-2', 'company-form' => 'building-2',
+	'today' => 'sun',
+	'pulse' => 'activity',
+	'brief' => 'clipboard-list',
+	'my-accounts' => 'users',
+	'team' => 'user-cog',
+	'workload' => 'user-cog',
+	'strategy' => 'map',
+	'mail-triage' => 'scroll-text',
+	'prepare-meeting' => 'calendar',
+	'companies' => 'building-2', 'company-detail' => 'building-2', 'company-form' => 'building-2',
 	'pipeline' => 'kanban', 'agreements' => 'file-text', 'agreement-form' => 'file-text',
 	'money' => 'coins', 'activities' => 'check-square', 'import' => 'upload',
-	'settings' => 'settings', 'support-us' => 'heart-handshake', 'access-denied' => 'lock',
+	'settings' => 'settings', 'app-settings' => 'shield-check', 'support-us' => 'heart-handshake', 'access-denied' => 'lock',
 ];
 $headerIcon = $pageIcons[$pageId] ?? 'layout-grid';
 $urlsJson = htmlspecialchars(json_encode($urls, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8');
@@ -67,3 +76,4 @@ $urlsJson = htmlspecialchars(json_encode($urls, JSON_THROW_ON_ERROR | JSON_UNESC
 			</div>
 		</header>
 		<main id="crm-main-content" class="crm-main" tabindex="-1" aria-labelledby="crm-page-title">
+<?php include __DIR__ . '/crm-quickstart.php'; ?>

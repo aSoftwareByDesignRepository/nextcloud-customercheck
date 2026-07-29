@@ -11,6 +11,7 @@ const routes = [
   { path: '/apps/customercheck/activities', name: 'activities' },
   { path: '/apps/customercheck/import', name: 'import' },
   { path: '/apps/customercheck/settings', name: 'settings' },
+  { path: '/apps/customercheck/app-settings', name: 'app-settings' },
 ];
 
 for (const { path, name } of routes) {

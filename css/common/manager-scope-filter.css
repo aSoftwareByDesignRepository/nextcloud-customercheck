@@ -236,8 +236,8 @@
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	min-width: 2.75rem;
-	min-height: 2.75rem;
+	min-width: 44px; /* WCAG 2.5.5: px, not rem — NC root font is 15px */
+	min-height: 44px;
 	margin: 0;
 	padding: 0;
 	border: 0;

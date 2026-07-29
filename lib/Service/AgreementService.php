@@ -37,6 +37,7 @@ class AgreementService
 		private readonly CompanyService $companyService,
 		private readonly AgreementStatusService $statusService,
 		private readonly TimelineService $timelineService,
+		private readonly ProductCodeRegistry $productCodes,
 		private readonly IDBConnection $db,
 		private readonly ITimeFactory $timeFactory,
 		private readonly IL10N $l10n,
@@ -88,7 +89,7 @@ class AgreementService
 	 */
 	public function defaultKindFor(string $productCode): string
 	{
-		return Constants::PRODUCT_CODE_KINDS[$productCode] ?? 'onetime';
+		return $this->productCodes->kindFor($productCode);
 	}
 
 	public function isKindLockedFor(string $productCode): bool
@@ -270,13 +271,14 @@ class AgreementService
 	/**
 	 * Cancel with a mandatory reason (§4.7-B).
 	 *
+	 * Row lock + required optimistic lock prevent a cancel racing a concurrent
+	 * supersede (which would leave a cancelled predecessor pointing at a live
+	 * successor, or cancel after the row was already closed).
+	 *
 	 * @throws ValidationException `CANCEL_REASON_REQUIRED`
 	 */
 	public function cancel(int $id, string $reason, string $actor, ?string $updatedAtPrecondition): Agreement
 	{
-		$agreement = $this->get($id);
-		OptimisticLock::assertFresh($agreement->getUpdatedAt(), $updatedAtPrecondition, false);
-
 		$reason = trim($reason);
 		if ($reason === '') {
 			throw ValidationException::field(
@@ -289,12 +291,24 @@ class AgreementService
 			$reason = mb_substr($reason, 0, 255);
 		}
 
-		$this->statusService->assertTransitionAllowed((string)$agreement->getStatus(), 'cancelled');
+		$this->db->beginTransaction();
+		try {
+			if (!$this->agreementMapper->lockRow($id)) {
+				throw new NotFoundException($this->l10n->t('This agreement no longer exists.'));
+			}
+			$agreement = $this->agreementMapper->findById($id);
+			OptimisticLock::assertFresh($agreement->getUpdatedAt(), $updatedAtPrecondition, true);
+			$this->statusService->assertTransitionAllowed((string)$agreement->getStatus(), 'cancelled');
 
-		$agreement->setStatus('cancelled');
-		$agreement->setCancelReason($reason);
-		$agreement->setUpdatedAt($this->timeFactory->getDateTime());
-		$stored = $this->agreementMapper->update($agreement);
+			$agreement->setStatus('cancelled');
+			$agreement->setCancelReason($reason);
+			$agreement->setUpdatedAt($this->timeFactory->getDateTime());
+			$stored = $this->agreementMapper->update($agreement);
+			$this->db->commit();
+		} catch (\Throwable $e) {
+			$this->db->rollBack();
+			throw $e;
+		}
 
 		$this->timelineService->append((int)$stored->getCompanyId(), 'agreement.cancelled', $actor, [
 			'agreementId' => $id,
@@ -312,39 +326,45 @@ class AgreementService
 	 * its successor already runs. From the commit onwards the old agreement is
 	 * excluded from the reminder scan because `superseded` is terminal (§6.1).
 	 *
+	 * The predecessor is locked FOR UPDATE before the optimistic-lock check so
+	 * two parallel renewals cannot both insert an active successor (P0).
+	 * `updatedAt` is required from user-facing callers.
+	 *
 	 * @param array<string, mixed> $input fields of the *new* agreement
 	 * @return array{previous: Agreement, current: Agreement}
 	 * @throws ValidationException
 	 */
 	public function supersede(int $id, array $input, string $actor, ?string $updatedAtPrecondition): array
 	{
-		$previous = $this->get($id);
-		OptimisticLock::assertFresh($previous->getUpdatedAt(), $updatedAtPrecondition, false);
-
-		$this->statusService->assertTransitionAllowed((string)$previous->getStatus(), 'superseded');
-
-		// The successor inherits everything the caller did not override.
-		$input += [
-			'companyId' => (int)$previous->getCompanyId(),
-			'kind' => (string)$previous->getKind(),
-			'productCode' => (string)$previous->getProductCode(),
-			'label' => (string)$previous->getLabel(),
-			'limits' => $previous->decodedLimits(),
-			'amountCents' => (int)$previous->getAmountCents(),
-			'status' => 'active',
-		];
-
-		if (!isset($input['startsAt'])) {
-			$previousUntil = $previous->getValidUntil();
-			$input['startsAt'] = $previousUntil !== null
-				? DateMath::addDays($previousUntil, 1)->format('Y-m-d')
-				: $this->timeFactory->getDateTime()->format('Y-m-d');
-		}
-
 		$now = $this->timeFactory->getDateTime();
 
 		$this->db->beginTransaction();
 		try {
+			if (!$this->agreementMapper->lockRow($id)) {
+				throw new NotFoundException($this->l10n->t('This agreement no longer exists.'));
+			}
+			$previous = $this->agreementMapper->findById($id);
+			OptimisticLock::assertFresh($previous->getUpdatedAt(), $updatedAtPrecondition, true);
+			$this->statusService->assertTransitionAllowed((string)$previous->getStatus(), 'superseded');
+
+			// The successor inherits everything the caller did not override.
+			$input += [
+				'companyId' => (int)$previous->getCompanyId(),
+				'kind' => (string)$previous->getKind(),
+				'productCode' => (string)$previous->getProductCode(),
+				'label' => (string)$previous->getLabel(),
+				'limits' => $previous->decodedLimits(),
+				'amountCents' => (int)$previous->getAmountCents(),
+				'status' => 'active',
+			];
+
+			if (!isset($input['startsAt']) || $input['startsAt'] === '' || $input['startsAt'] === null) {
+				$previousUntil = $previous->getValidUntil();
+				$input['startsAt'] = $previousUntil !== null
+					? DateMath::addDays($previousUntil, 1)->format('Y-m-d')
+					: $now->format('Y-m-d');
+			}
+
 			$successor = new Agreement();
 			$successor->setCompanyId((int)$previous->getCompanyId());
 			$successor->setStatus('active');
@@ -446,7 +466,7 @@ class AgreementService
 
 		$productCode = (string)($input['productCode'] ?? $agreement->getProductCode() ?? '');
 		if ($isCreate || array_key_exists('productCode', $input)) {
-			if (!in_array($productCode, Constants::PRODUCT_CODES, true)) {
+			if (!$this->productCodes->isAllowed($productCode)) {
 				$fields['productCode'] = $this->l10n->t('Choose one of the known product codes.');
 			} else {
 				$agreement->setProductCode($productCode);

@@ -13,6 +13,7 @@ use OCA\CustomerCheck\Db\SeqLogMapper;
 use OCA\CustomerCheck\Support\DateMath;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\DB\Exception as DbException;
+use OCP\IDBConnection;
 use OCP\IL10N;
 
 /**
@@ -24,6 +25,9 @@ use OCP\IL10N;
  * (deal_id, sequence_id) is claimed *before* any activity is written: the
  * database decides who owns the sequence, not a read-then-write race.
  *
+ * Claim + activity inserts run in one transaction so a mid-flight failure
+ * rolls back the claim and a later retry can recreate the follow-ups.
+ *
  * Moving away from a stage deliberately leaves open follow-ups alone — the work
  * may still be owed. The deal view offers a bulk dismiss instead (§14.2).
  */
@@ -31,13 +35,16 @@ class StageSequenceService
 {
 	/** @var array<string, string> stage entered => sequence id */
 	private const STAGE_SEQUENCES = [
+		'contacted' => Constants::SEQUENCE_CONTACTED,
 		'quoted' => Constants::SEQUENCE_QUOTED,
+		'negotiation' => Constants::SEQUENCE_NEGOTIATION,
 		'won' => Constants::SEQUENCE_WON,
 	];
 
 	public function __construct(
 		private readonly SeqLogMapper $seqLogMapper,
 		private readonly ActivityMapper $activityMapper,
+		private readonly IDBConnection $db,
 		private readonly ITimeFactory $timeFactory,
 		private readonly IL10N $l10n,
 	) {
@@ -62,12 +69,20 @@ class StageSequenceService
 		}
 
 		$dealId = (int)$deal->getId();
-		if (!$this->claimSequence($dealId, $sequenceId)) {
-			return [];
-		}
+		$this->db->beginTransaction();
+		try {
+			if (!$this->claimSequence($dealId, $sequenceId)) {
+				$this->db->commit();
+				return [];
+			}
 
-		foreach ($this->stepsFor($sequenceId) as $step) {
-			$this->createActivity($deal, $sequenceId, $step['title'], $step['type'], $step['offsetDays'], $actor);
+			foreach ($this->stepsFor($sequenceId) as $step) {
+				$this->createActivity($deal, $sequenceId, $step['title'], $step['type'], $step['offsetDays'], $actor);
+			}
+			$this->db->commit();
+		} catch (\Throwable $e) {
+			$this->db->rollBack();
+			throw $e;
 		}
 
 		return [$sequenceId];
@@ -86,11 +101,25 @@ class StageSequenceService
 	 */
 	public function stepsFor(string $sequenceId): array
 	{
+		if ($sequenceId === Constants::SEQUENCE_CONTACTED) {
+			return [
+				['title' => $this->l10n->t('Qualify opportunity'), 'type' => 'call', 'offsetDays' => 1],
+				['title' => $this->l10n->t('Send materials'), 'type' => 'email', 'offsetDays' => 3],
+			];
+		}
+
 		if ($sequenceId === Constants::SEQUENCE_QUOTED) {
 			return [
 				['title' => $this->l10n->t('Follow up quote'), 'type' => 'call', 'offsetDays' => 3],
 				['title' => $this->l10n->t('Follow up quote'), 'type' => 'call', 'offsetDays' => 7],
 				['title' => $this->l10n->t('Follow up quote'), 'type' => 'call', 'offsetDays' => 14],
+			];
+		}
+
+		if ($sequenceId === Constants::SEQUENCE_NEGOTIATION) {
+			return [
+				['title' => $this->l10n->t('Negotiation check-in'), 'type' => 'call', 'offsetDays' => 2],
+				['title' => $this->l10n->t('Close or next step'), 'type' => 'call', 'offsetDays' => 5],
 			];
 		}
 
@@ -107,7 +136,12 @@ class StageSequenceService
 
 	public function originForSequence(string $sequenceId): string
 	{
-		return $sequenceId === Constants::SEQUENCE_WON ? 'sequence_won' : 'sequence_quoted';
+		return match ($sequenceId) {
+			Constants::SEQUENCE_WON => 'sequence_won',
+			Constants::SEQUENCE_CONTACTED => 'sequence_contacted',
+			Constants::SEQUENCE_NEGOTIATION => 'sequence_negotiation',
+			default => 'sequence_quoted',
+		};
 	}
 
 	/**

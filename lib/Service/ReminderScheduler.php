@@ -27,7 +27,9 @@ use Psr\Log\LoggerInterface;
  *     ledger row is inserted *before* the notification is dispatched. The unique
  *     index `crm_rl_uq` absorbs job reruns, restarts and parallel workers: a
  *     duplicate-key failure means "already sent", never "send again". If the
- *     dispatch then fails, the row is removed so the next run retries.
+ *     *notify* then fails, the row is removed so the next run retries. If
+ *     notify succeeded and only the timeline audit fails, the ledger stays
+ *     (releasing it would duplicate the Nextcloud notification — AC5).
  *  2. **Backfill collapses to the most urgent offset.** If the instance was down
  *     across −30 and −7, only −7 fires; the offsets that were skipped are still
  *     written to the ledger (so they cannot fire late) and recorded on the
@@ -236,6 +238,11 @@ class ReminderScheduler
 		if ((string)$agreement->getKind() === 'onetime') {
 			return ['statusChanged' => $statusChanged, 'fired' => null, 'skipped' => []];
 		}
+		// Website orders deliberately create drafts. They may have an end date,
+		// but must not enter the renewal cadence until explicitly activated.
+		if ((string)$agreement->getStatus() === 'draft') {
+			return ['statusChanged' => $statusChanged, 'fired' => null, 'skipped' => []];
+		}
 		if (in_array((string)$agreement->getStatus(), Constants::AGREEMENT_TERMINAL_STATUSES, true)) {
 			return ['statusChanged' => $statusChanged, 'fired' => null, 'skipped' => []];
 		}
@@ -320,6 +327,15 @@ class ReminderScheduler
 					'graceUntil' => $graceUntil,
 				],
 			);
+		} catch (\Throwable $e) {
+			// Notify failed — release so the next run retries this exact offset.
+			$this->reminderLogMapper->delete($row);
+			throw $e;
+		}
+
+		// Timeline is best-effort AFTER a successful notify. Never release the
+		// ledger here: that would re-fire the Nextcloud notification (AC5).
+		try {
 			$this->timelineService->append(
 				(int)$agreement->getCompanyId(),
 				'reminder.sent',
@@ -331,9 +347,12 @@ class ReminderScheduler
 				],
 			);
 		} catch (\Throwable $e) {
-			// Release the slot so the next run retries this exact offset.
-			$this->reminderLogMapper->delete($row);
-			throw $e;
+			$this->logger->warning('CustomerCheck: reminder.sent timeline failed after notify (ledger kept)', [
+				'app' => 'customercheck',
+				'agreementId' => (int)$agreement->getId(),
+				'offsetDays' => $offset,
+				'exception' => $e,
+			]);
 		}
 
 		// Grace end: the churn decision becomes an explicit, dated task (§6.2).

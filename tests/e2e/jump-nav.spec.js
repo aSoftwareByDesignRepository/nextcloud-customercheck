@@ -29,17 +29,18 @@ test.describe('Company detail jump nav', () => {
     await expect(nav).toHaveClass(/crm-jump-nav--bar/);
     await expect(nav.locator('.crm-jump-nav__label')).toHaveText(/On this page/i);
     await expect(nav.locator('.crm-jump-nav__list').first()).toBeVisible();
-    await expect(nav.locator('.crm-jump-nav__link')).toHaveCount(9);
+    // Command Center section inventory — primary 5 + More.
+    await expect(nav.locator('.crm-jump-nav__link')).toHaveCount(14);
 
     // Mid-page target can sit under the sticky bar; bottom sections may only max-scroll.
-    const activitiesLink = nav.locator('.crm-jump-nav__link[href="#crm-activities"]');
-    await activitiesLink.click();
-    await expect(activitiesLink).toHaveAttribute('aria-current', 'location');
-    await expect(page).toHaveURL(/#crm-activities$/);
+    const tasksLink = nav.locator('.crm-jump-nav__link[href="#crm-open-tasks"]');
+    await tasksLink.click();
+    await expect(tasksLink).toHaveAttribute('aria-current', 'location');
+    await expect(page).toHaveURL(/#crm-open-tasks$/);
 
     await page.waitForFunction(() => {
       const root = document.querySelector('#app-content');
-      const section = document.getElementById('crm-activities');
+      const section = document.getElementById('crm-open-tasks');
       if (!(root instanceof HTMLElement) || !(section instanceof HTMLElement)) {
         return false;
       }

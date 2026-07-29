@@ -22,6 +22,14 @@ use OCP\DB\Types;
  * @method void setIsPrimary(int $isPrimary)
  * @method string|null getNotes()
  * @method void setNotes(?string $notes)
+ * @method string|null getContactsUid()
+ * @method void setContactsUid(?string $contactsUid)
+ * @method string|null getBuyingRole()
+ * @method void setBuyingRole(?string $buyingRole)
+ * @method string getStatus()
+ * @method void setStatus(string $status)
+ * @method int|null getReportsToPersonId()
+ * @method void setReportsToPersonId(?int $reportsToPersonId)
  * @method string|null getCreatedBy()
  * @method void setCreatedBy(?string $createdBy)
  * @method \DateTime|null getCreatedAt()
@@ -38,6 +46,10 @@ class Person extends Entity
 	protected $phone = null;
 	protected $isPrimary = 0;
 	protected $notes = null;
+	protected $contactsUid = null;
+	protected $buyingRole = null;
+	protected $status = 'active';
+	protected $reportsToPersonId = null;
 	protected $createdBy = null;
 	protected $createdAt = null;
 	protected $updatedAt = null;
@@ -47,6 +59,7 @@ class Person extends Entity
 		$this->addType('id', Types::BIGINT);
 		$this->addType('companyId', Types::BIGINT);
 		$this->addType('isPrimary', Types::INTEGER);
+		$this->addType('reportsToPersonId', Types::BIGINT);
 		$this->addType('createdAt', Types::DATETIME);
 		$this->addType('updatedAt', Types::DATETIME);
 	}

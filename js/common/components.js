@@ -28,6 +28,57 @@ const CustomerCheckComponents = {
     this.initModals();
     this.initToasts();
     this.relocatePageActions();
+    this.wireAllDismissibleHints();
+  },
+
+  /**
+   * DutyCheck-style dismissible Quick start cards (localStorage per user).
+   */
+  wireDismissibleHint(button) {
+    if (!button || button.dataset.crmHintWired === '1') return;
+    button.dataset.crmHintWired = '1';
+    const key = button.getAttribute('data-crm-dismiss-hint');
+    if (!key) return;
+    const card = button.closest('.crm-quickstart, .crm-card');
+    if (!card) return;
+    const uid = this._currentUserId();
+    const storageKey = 'crm:hint:' + (uid || 'anon') + ':' + key;
+    let dismissed = false;
+    try {
+      dismissed = window.localStorage.getItem(storageKey) === '1';
+    } catch (_) { /* private mode */ }
+    if (dismissed) {
+      card.hidden = true;
+      return;
+    }
+    card.hidden = false;
+    button.addEventListener('click', () => {
+      try {
+        window.localStorage.setItem(storageKey, '1');
+      } catch (_) { /* ignore */ }
+      card.hidden = true;
+      const live = document.getElementById('crm-live-region');
+      if (live) {
+        live.textContent = (window.t
+          ? window.t('customercheck', 'Tips hidden for this page.')
+          : 'Tips hidden for this page.');
+      }
+    });
+  },
+
+  wireAllDismissibleHints(root) {
+    const scope = root || document;
+    scope.querySelectorAll('[data-crm-dismiss-hint]').forEach((btn) => this.wireDismissibleHint(btn));
+  },
+
+  _currentUserId() {
+    try {
+      if (window.OC && typeof OC.getCurrentUser === 'function') {
+        const user = OC.getCurrentUser();
+        if (user && user.uid) return String(user.uid);
+      }
+    } catch (_) { /* ignore */ }
+    return '';
   },
 
   // ===== MODAL COMPONENTS =====

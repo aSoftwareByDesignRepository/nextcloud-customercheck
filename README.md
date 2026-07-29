@@ -1,10 +1,35 @@
 # CustomerCheck
 
-Internal customer & revenue hub for the Software by Design Check family.
+Customer & revenue command center for Nextcloud: one place for a workspace’s
+customer book, shared mailbox, renewals, chase, coverage, Pulse, Brief, and
+Team coaching — joining ProjectCheck / InvoiceCheck / TicketCheck instead of
+replacing them.
 
-**Not for app-store publication** — contains sales data. Install manually like `sbdlicenseops`.
+Part of the Check app family by [Software by Design](https://nextcloud.software-by-design.de).
 
-Canonical product specification: `planning/app-ideas/customercheck/README.md` (PSD `1.0.0`).
+## Features
+
+- **Workspaces** — circles of responsibility with roles (viewer/member/manager); cross-workspace access returns 404
+- **Today Command Board** — chase, commitments, KAM touches, promises, renewals, unmatched mail, team stuck
+- **Business Pulse** — twelve book-health questions; unbilled never fakes €0 (`honesty_blocked`)
+- **Weekly Brief** — WIP-limited CEO commitments + cash calendar that excludes pipeline
+- **My Chase / Pipeline** — quote age, loss codes, forecast labels (not cash), contacted/negotiation/won sequences
+- **Coverage & My Accounts** — buying roles, next touch, customer promises, prepare-meeting pack
+- **Team Coaching** — stuck board, OOO cover (never steals ownership), bulk reassign
+- **Shared mailbox** — workspace IMAP index with unavoidable disclosure; personal Mail stays Private
+- **Companies & 360** — agreements, renewals (−60/−30/−7/0/+7 exactly once), partner hours, GDPR erase
+- **Mobile companion** — optional Android app with CUC2 seats (web app never gated)
+
+## Privacy & access
+
+- **All data stays on your Nextcloud instance.** No telemetry, no phone-home,
+  no external services are contacted by this app.
+- **Fail-closed access control:** access restriction is **ON by default** —
+  only app administrators and explicitly allowlisted users or groups can open
+  the app. Customer data is never exposed to every instance user by accident.
+- GDPR: user deletion frees companion seats automatically; company data export
+  includes merged history. Suite erase order (PC → IC → TC → CUC): see
+  [docs/SUITE-GDPR-ERASE.md](docs/SUITE-GDPR-ERASE.md).
 
 ## Requirements
 
@@ -24,9 +49,9 @@ Run from the host against the Docker Nextcloud service (`custom_apps` mount):
 
 ```bash
 # Unit + integration (Docker)
-docker compose exec nextcloud bash -lc \
+docker compose exec -u www-data nextcloud bash -lc \
   'cd /var/www/html/custom_apps/customercheck && php vendor/bin/phpunit --testsuite unit'
-docker compose exec nextcloud bash -lc \
+docker compose exec -u www-data nextcloud bash -lc \
   'cd /var/www/html/custom_apps/customercheck && php vendor/bin/phpunit --testsuite integration'
 
 # Frontend unit + critical mutation MSI
@@ -46,6 +71,14 @@ bash scripts/check-custom-apps-db.sh --gate=full --strict-warnings --app=custome
 php scripts/check-repair-step-di.php --app=customercheck
 ```
 
-## Version
+## Product bible status (v1.5.2)
 
-`1.0.0` — M1–M5 from the PSD (registry, renewals, pipeline, hub integrations, polish).
+Implements `planning/app-ideas/customercheck/CUSTOMERCHECK-PRODUCT.md` including workspaces,
+Pulse/Brief/Chase/Coverage/Team/Strategy, shared mail sync+send with Private-to-you badges,
+Brief done-evidence gate, Digest v2 Brief deep-links, Circles roll-call, OOO/escalation
+maintenance jobs, and workspace-scoped money (no cross-WS € blend).
+
+## License
+
+AGPL-3.0-or-later. Canonical product specification:
+`planning/app-ideas/customercheck/CUSTOMERCHECK-PRODUCT.md`.

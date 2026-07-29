@@ -28,10 +28,10 @@ final class JumpNavContractTest extends TestCase
 		$html = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/company-detail.php');
 		$this->assertStringContainsString('crm-jump-nav.php', $html);
 		$this->assertStringNotContainsString('<nav class="crm-jump-nav"', $html);
-		foreach (['#crm-agreements', '#crm-deals', '#crm-persons', '#crm-emails', '#crm-activities', '#crm-tickets', '#crm-invoices', '#crm-projects', '#crm-timeline'] as $href) {
+		foreach (['#crm-glance', '#crm-communication', '#crm-account-plan', '#crm-persons', '#crm-promises', '#crm-contracts', '#crm-open-tasks', '#crm-billing', '#crm-tickets', '#crm-deals', '#crm-projects', '#crm-documents', '#crm-prepare-meeting', '#crm-timeline'] as $href) {
 			$this->assertStringContainsString($href, $html);
 		}
-		$this->assertStringContainsString('Who wrote what', $html);
+		$this->assertStringContainsString('Talked', $html);
 	}
 
 	public function testBarCssIsChipStripNotSidebarColumn(): void
@@ -47,7 +47,7 @@ final class JumpNavContractTest extends TestCase
 	public function testJumpNavScriptIsRegisteredForCompanyDetail(): void
 	{
 		$controller = (string)file_get_contents(dirname(__DIR__, 2) . '/lib/Controller/PageController.php');
-		$this->assertStringContainsString("registerFrontEndAssets('pages/company-detail', null, [], ['common/jump-nav'])", $controller);
+		$this->assertStringContainsString("registerFrontEndAssets('pages/company-detail', null, [], ['common/jump-nav', 'common/folder-picker', 'pages/persona'])", $controller);
 		$js = (string)file_get_contents(dirname(__DIR__, 2) . '/js/common/jump-nav.js');
 		$this->assertStringContainsString('IntersectionObserver', $js);
 		$this->assertStringContainsString('aria-current', $js);

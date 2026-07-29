@@ -5,24 +5,34 @@ use OCA\CustomerCheck\Service\AccessControlService;
 use OCA\CustomerCheck\Service\ActivityService;
 use OCA\CustomerCheck\Service\AgreementService;
 use OCA\CustomerCheck\Service\AgreementStatusService;
+use OCA\CustomerCheck\Service\CommandBoardService;
+use OCA\CustomerCheck\Service\CompanyCommandService;
+use OCA\CustomerCheck\Service\CompanyHealthService;
+use OCA\CustomerCheck\Service\ContactsSuggestService;
 use OCA\CustomerCheck\Service\CompanyService;
 use OCA\CustomerCheck\Service\DealService;
 use OCA\CustomerCheck\Service\DirectoryOptionsService;
 use OCA\CustomerCheck\Service\DisplayLabelService;
 use OCA\CustomerCheck\Service\FacadeProbeService;
+use OCA\CustomerCheck\Service\LicenseService;
 use OCA\CustomerCheck\Service\MailRelatedService;
 use OCA\CustomerCheck\Service\MoneyService;
 use OCA\CustomerCheck\Service\PersonService;
+use OCA\CustomerCheck\Service\ProductCodeRegistry;
 use OCA\CustomerCheck\Service\QuotaService;
 use OCA\CustomerCheck\Service\SettingsService;
 use OCA\CustomerCheck\Service\TimelineService;
 use OCA\CustomerCheck\Service\TodayService;
+use OCA\CustomerCheck\Service\WorkspaceAccessService;
+use OCA\CustomerCheck\Support\DensityCounts;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
+use OCP\AppFramework\Http\RedirectResponse;
 use OCP\AppFramework\Http\TemplateResponse;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\IL10N;
+use OCP\L10N\IFactory;
 use OCP\IRequest;
 use OCP\IURLGenerator;
 
@@ -43,14 +53,22 @@ class PageController extends Controller
 		private readonly TimelineService $timeline,
 		private readonly MailRelatedService $mailRelated,
 		private readonly TodayService $today,
+		private readonly CommandBoardService $commandBoard,
+		private readonly CompanyCommandService $companyCommand,
+		private readonly ContactsSuggestService $contactsSuggest,
+		private readonly CompanyHealthService $companyHealth,
 		private readonly MoneyService $money,
 		private readonly SettingsService $settings,
 		private readonly DirectoryOptionsService $directory,
 		private readonly QuotaService $quota,
 		private readonly FacadeProbeService $facades,
 		private readonly DisplayLabelService $labels,
+		private readonly LicenseService $license,
+		private readonly ProductCodeRegistry $productCodes,
+		private readonly WorkspaceAccessService $workspaceAccess,
 		private readonly IURLGenerator $urlGenerator,
 		private readonly IL10N $l10n,
+		private readonly IFactory $l10nFactory,
 		private readonly ITimeFactory $timeFactory,
 	) {
 		parent::__construct($appName, $request);
@@ -68,15 +86,130 @@ class PageController extends Controller
 	public function today(): TemplateResponse
 	{
 		$this->registerFrontEndAssets('pages/today');
+		$uid = $this->accessControl->currentUserIdOrEmpty();
+		$wsId = 0;
+		$role = 'member';
+		$isAdmin = false;
+		if ($uid !== '') {
+			try {
+				$ctx = $this->workspaceAccess->resolveForUser($uid);
+				$wsId = (int)$ctx['workspace']->getId();
+				$role = $ctx['role'];
+				$isAdmin = $ctx['isAppAdmin'];
+			} catch (\Throwable) {
+			}
+		}
 		$queue = $this->today->build();
+		$board = $this->commandBoard->build(null, $uid !== '' ? $uid : null, $wsId > 0 ? $wsId : null, $role, $isAdmin);
 		return new TemplateResponse('customercheck', 'today', $this->mergeShellPageParams(
 			'today',
-			$this->l10n->t('Today'),
+			$this->l10n->t('Command Board'),
 			$this->l10n->t('What needs attention right now.'),
 			[
 				'queue' => $queue,
+				'commandBoard' => $board,
 				'companyCount' => $this->companies->count(['archived' => false]),
+				'workspaceId' => $wsId,
 			],
+		));
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function pulse(): TemplateResponse
+	{
+		$this->registerFrontEndAssets('pages/persona');
+		return new TemplateResponse('customercheck', 'pulse', $this->mergeShellPageParams(
+			'pulse',
+			$this->l10n->t('Business Pulse'),
+			$this->l10n->t('Companies, money, renewals and missing links — what needs attention.'),
+		));
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function brief(): TemplateResponse
+	{
+		$this->registerFrontEndAssets('pages/persona');
+		return new TemplateResponse('customercheck', 'brief', $this->mergeShellPageParams(
+			'brief',
+			$this->l10n->t('Weekly Brief'),
+			$this->l10n->t('Commit and verify this week’s owned promises.'),
+		));
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function myAccounts(): TemplateResponse
+	{
+		$this->registerFrontEndAssets('pages/persona');
+		return new TemplateResponse('customercheck', 'my-accounts', $this->mergeShellPageParams(
+			'my-accounts',
+			$this->l10n->t('My Accounts'),
+			$this->l10n->t('Accounts you own or plan.'),
+		));
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function team(): TemplateResponse
+	{
+		$this->registerFrontEndAssets('pages/persona');
+		return new TemplateResponse('customercheck', 'team', $this->mergeShellPageParams(
+			'team',
+			$this->l10n->t('Team'),
+			$this->l10n->t('See who needs help. Cover absences. Move work safely.'),
+		));
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function workload(): RedirectResponse
+	{
+		$params = [];
+		$ws = $this->request->getParam('workspaceId');
+		if ($ws !== null && $ws !== '') {
+			$params['workspaceId'] = $ws;
+		}
+		$url = $this->urlGenerator->linkToRoute('customercheck.page.team', $params);
+		return new RedirectResponse($url . '#capacity');
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function strategy(): TemplateResponse
+	{
+		$this->registerFrontEndAssets('pages/persona');
+		return new TemplateResponse('customercheck', 'strategy', $this->mergeShellPageParams(
+			'strategy',
+			$this->l10n->t('Strategy'),
+			$this->l10n->t('Account plans across the workspace.'),
+		));
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function mailTriage(): TemplateResponse
+	{
+		$this->registerFrontEndAssets('pages/persona');
+		return new TemplateResponse('customercheck', 'mail-triage', $this->mergeShellPageParams(
+			'mail-triage',
+			$this->l10n->t('Mail triage'),
+			$this->l10n->t('Assign unmatched shared mailbox messages.'),
+		));
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function prepareMeeting(int $id): TemplateResponse
+	{
+		$this->requireCompanyPage($id);
+		$this->registerFrontEndAssets('pages/persona');
+		return new TemplateResponse('customercheck', 'prepare-meeting', $this->mergeShellPageParams(
+			'prepare-meeting',
+			$this->l10n->t('Prepare meeting'),
+			$this->l10n->t('One stack for the next call or QBR.'),
+			['companyId' => $id],
 		));
 	}
 
@@ -85,10 +218,11 @@ class PageController extends Controller
 	public function companies(): TemplateResponse
 	{
 		$this->registerFrontEndAssets('pages/companies');
+		$wsId = $this->resolvedWorkspaceId();
 		$search = trim((string)$this->request->getParam('q', ''));
 		$status = trim((string)$this->request->getParam('status', ''));
 		$archived = $this->request->getParam('archived', '') === '1';
-		$filters = ['archived' => $archived];
+		$filters = ['archived' => $archived, 'workspaceId' => $wsId];
 		if ($search !== '') {
 			$filters['search'] = $search;
 		}
@@ -96,12 +230,14 @@ class PageController extends Controller
 			$filters['status'] = $status;
 		}
 		$list = $this->companies->search($filters, 200, 0);
+		$health = $this->companyHealth->enrich($list);
 		return new TemplateResponse('customercheck', 'companies', $this->mergeShellPageParams(
 			'companies',
 			$this->l10n->t('Companies'),
 			$this->l10n->t('Your customer registry.'),
 			[
 				'companies' => $list,
+				'health' => $health,
 				'filterQ' => $search,
 				'filterStatus' => $status,
 				'filterArchived' => $archived,
@@ -127,7 +263,7 @@ class PageController extends Controller
 	public function companyEdit(int $id): TemplateResponse
 	{
 		$this->registerFrontEndAssets('pages/company-form');
-		$company = $this->companies->get($id);
+		$company = $this->requireCompanyPage($id);
 		return new TemplateResponse('customercheck', 'company-form', $this->mergeShellPageParams(
 			'company-form',
 			$this->l10n->t('Edit company'),
@@ -146,7 +282,9 @@ class PageController extends Controller
 	 *   pcCustomerOptions: list<array{id:int,label:string}>,
 	 *   tcCustomerOptions: list<array{id:int,label:string}>,
 	 *   pcCustomersAvailable: bool,
-	 *   tcCustomersAvailable: bool
+	 *   tcCustomersAvailable: bool,
+	 *   pcWriteAvailable: bool,
+	 *   tcWriteAvailable: bool
 	 * }
 	 */
 	private function siblingLinkOptions(?int $pcLinked, ?int $tcLinked): array
@@ -164,6 +302,8 @@ class PageController extends Controller
 			'tcCustomerOptions' => $this->labels->ensureLinkedSiblingOption($tcOptions, $tcLinked),
 			'pcCustomersAvailable' => $pcAvailable,
 			'tcCustomersAvailable' => $tcAvailable,
+			'pcWriteAvailable' => $this->facades->projectcheckWriteAvailable(),
+			'tcWriteAvailable' => $this->facades->ticketcheckWriteAvailable(),
 		];
 	}
 
@@ -171,8 +311,8 @@ class PageController extends Controller
 	#[NoCSRFRequired]
 	public function companyDetail(int $id): TemplateResponse
 	{
-		$this->registerFrontEndAssets('pages/company-detail', null, [], ['common/jump-nav']);
-		$company = $this->companies->get($id);
+		$this->registerFrontEndAssets('pages/company-detail', null, [], ['common/jump-nav', 'common/folder-picker', 'pages/persona']);
+		$company = $this->requireCompanyPage($id);
 		$now = $this->timeFactory->getDateTime();
 		$agreements = [];
 		foreach ($this->agreements->listForCompany($id) as $a) {
@@ -189,6 +329,7 @@ class PageController extends Controller
 				'validUntil' => $a->getValidUntil()?->format('Y-m-d'),
 				'salesLogId' => $a->getSalesLogId(),
 				'keyFingerprint' => $a->getKeyFingerprint(),
+				'updatedAt' => $a->getUpdatedAt()?->format(\DateTimeInterface::ATOM),
 				'chip' => $chip,
 			];
 			if ((string)$a->getKind() === 'partner') {
@@ -196,17 +337,9 @@ class PageController extends Controller
 			}
 			$agreements[] = $row;
 		}
-		$persons = [];
-		foreach ($this->persons->listForCompany($id) as $p) {
-			$persons[] = [
-				'id' => (int)$p->getId(),
-				'name' => (string)$p->getName(),
-				'email' => $p->getEmail(),
-				'phone' => $p->getPhone(),
-				'role' => $p->getRole(),
-				'isPrimary' => (bool)$p->getIsPrimary(),
-			];
-		}
+		$persons = $this->companyCommand->peopleRoster($id);
+		$contactsAvailable = $this->contactsSuggest->isAvailable();
+		$contactsHomeUrl = $this->urlGenerator->getAbsoluteURL('/apps/contacts/');
 		$deals = array_map(fn ($d) => $this->deals->toArray($d), $this->deals->search(['companyId' => $id], 100));
 		$activities = [];
 		foreach ($this->activities->search(['companyId' => $id, 'openOnly' => true], 100) as $act) {
@@ -223,11 +356,17 @@ class PageController extends Controller
 		}
 		$timeline = [];
 		foreach ($this->timeline->listForCompany($id, 50) as $ev) {
+			$createdAt = $ev->getCreatedAt();
+			$type = (string)$ev->getEventType();
+			$actor = (string)$ev->getActor();
 			$timeline[] = [
 				'id' => (int)$ev->getId(),
-				'eventType' => (string)$ev->getEventType(),
-				'actor' => (string)$ev->getActor(),
-				'createdAt' => $ev->getCreatedAt()?->format(\DateTimeInterface::ATOM),
+				'eventType' => $type,
+				'eventTypeLabel' => $this->labels->timelineEventType($type),
+				'actor' => $actor,
+				'actorLabel' => $this->labels->timelineActor($actor),
+				'createdAt' => $createdAt?->format(\DateTimeInterface::ATOM),
+				'createdAtLabel' => $this->labels->timelineWhen($createdAt),
 				'payload' => json_decode((string)$ev->getPayloadJson(), true) ?: [],
 			];
 		}
@@ -273,6 +412,74 @@ class PageController extends Controller
 			}
 		}
 
+		$projects = array_map(function (array $proj): array {
+			$id = (int)($proj['id'] ?? 0);
+			if ($id > 0 && empty($proj['deepLink'])) {
+				try {
+					$proj['deepLink'] = $this->urlGenerator->linkToRouteAbsolute('projectcheck.project.show', ['id' => $id]);
+				} catch (\Throwable) {
+					$proj['deepLink'] = null;
+				}
+			}
+			return $proj;
+		}, $projects);
+
+		$openProjectCount = DensityCounts::openProjects($projects);
+		$unpaidInvoiceCount = DensityCounts::unpaidInvoices($invoices);
+		$openTicketCount = DensityCounts::openTickets($tickets);
+		$waitingTicketCount = DensityCounts::waitingTickets($tickets);
+
+		$density = [
+			'openProjects' => $openProjectCount,
+			'unpaidInvoices' => $unpaidInvoiceCount,
+			'openTickets' => $openTicketCount,
+			'waitingTickets' => $waitingTicketCount,
+			'projectcheck' => !empty($capabilities['projectcheck']),
+			'invoicecheck' => !empty($capabilities['invoicecheck']),
+			'ticketcheck' => !empty($capabilities['ticketcheck']),
+			'projectsHref' => '#crm-projects',
+			'invoicesHref' => '#crm-invoices',
+			'ticketsHref' => '#crm-tickets',
+		];
+		// Sibling deep links when the app is usable and we have a linked id
+		// (otherwise stay on-page so muted panels remain reachable).
+		try {
+			if ($density['projectcheck'] && $pcCustomerId > 0) {
+				$density['projectsHref'] = $this->urlGenerator->linkToRoute(
+					'projectcheck.customer.show',
+					['id' => $pcCustomerId],
+				);
+			}
+		} catch (\Throwable) {
+			// Route unavailable — keep on-page anchor.
+		}
+		try {
+			if ($density['invoicecheck']) {
+				$firstUnpaid = DensityCounts::firstUnpaidInvoiceId($invoices);
+				if ($firstUnpaid !== null) {
+					$density['invoicesHref'] = $this->urlGenerator->linkToRoute(
+						'invoicecheck.page.show',
+						['id' => $firstUnpaid],
+					);
+				} else {
+					$density['invoicesHref'] = $this->urlGenerator->linkToRoute(
+						'invoicecheck.page.receivables',
+						['bucket' => 'overdue'],
+					);
+				}
+			}
+		} catch (\Throwable) {
+		}
+		try {
+			if ($density['ticketcheck'] && $tcCustomerId > 0) {
+				$density['ticketsHref'] = $this->urlGenerator->linkToRoute(
+					'ticketcheck.customer.show',
+					['id' => $tcCustomerId],
+				);
+			}
+		} catch (\Throwable) {
+		}
+
 		return new TemplateResponse('customercheck', 'company-detail', $this->mergeShellPageParams(
 			'company-detail',
 			(string)$company->getName(),
@@ -281,6 +488,8 @@ class PageController extends Controller
 				'company' => $company,
 				'agreements' => $agreements,
 				'persons' => $persons,
+				'contactsAvailable' => $contactsAvailable,
+				'contactsHomeUrl' => $contactsHomeUrl,
 				'deals' => $deals,
 				'activities' => $activities,
 				'timeline' => $timeline,
@@ -294,6 +503,13 @@ class PageController extends Controller
 				'projectError' => $projectError,
 				'pcCustomerId' => $pcCustomerId,
 				'capabilities' => $capabilities,
+				'density' => $density,
+				'buyingRoleOptions' => $this->labels->buyingRoleOptions(),
+				'nextTouchOn' => $company->getNextTouchOn()?->format('Y-m-d'),
+				'prepareMeetingUrl' => $this->urlGenerator->linkToRoute(
+					'customercheck.page.prepareMeeting',
+					['id' => (int)$company->getId()],
+				) . '?workspaceId=' . (int)($company->getWorkspaceId() ?? 0),
 			],
 		));
 	}
@@ -304,8 +520,9 @@ class PageController extends Controller
 	{
 		$this->registerFrontEndAssets('pages/pipeline');
 		$uid = $this->accessControl->currentUserId();
+		$wsId = $this->resolvedWorkspaceId();
 		$settings = $this->settings->getForUser($uid);
-		$deals = $this->deals->search(['openOnly' => false], 500);
+		$deals = $this->deals->search(['openOnly' => false, 'workspaceId' => $wsId], 500);
 		$companyIds = array_map(static fn ($d): int => (int)$d->getCompanyId(), $deals);
 		$companyMap = $this->companies->mapByIds($companyIds);
 		$dealRows = [];
@@ -325,7 +542,7 @@ class PageController extends Controller
 			));
 		}
 		$companyOptions = [];
-		foreach ($this->companies->search([], 500, 0) as $company) {
+		foreach ($this->companies->search(['workspaceId' => $wsId], 500, 0) as $company) {
 			$companyOptions[] = [
 				'id' => (int)$company->getId(),
 				'name' => (string)$company->getName(),
@@ -341,6 +558,11 @@ class PageController extends Controller
 				'pipelineView' => $settings['pipelineView'] ?? 'table',
 				'stageFilter' => $stageFilter,
 				'companyOptions' => $companyOptions,
+				'forecastDisclaimer' => $this->l10n->t('Planning labels — not expected cash.'),
+				'lossReasonCodes' => \OCA\CustomerCheck\Constants::LOSS_REASON_CODES,
+				'forecastBuckets' => \OCA\CustomerCheck\Constants::FORECAST_BUCKETS,
+				'lossReasonCodeOptions' => $this->labels->lossReasonCodeOptions(),
+				'forecastBucketOptions' => $this->labels->forecastBucketOptions(),
 			],
 		));
 	}
@@ -368,6 +590,8 @@ class PageController extends Controller
 		}
 		$list = [];
 		$companyIds = [];
+		$wsId = $this->resolvedWorkspaceId();
+		$filters['workspaceId'] = $wsId;
 		foreach ($this->agreements->search($filters, 200) as $a) {
 			$companyIds[] = (int)$a->getCompanyId();
 			$list[] = [
@@ -414,12 +638,13 @@ class PageController extends Controller
 		return new TemplateResponse('customercheck', 'agreement-form', $this->mergeShellPageParams(
 			'agreement-form',
 			$this->l10n->t('New agreement'),
-			'',
+			$this->l10n->t('Add a license or partner package for a company.'),
 			[
 				'agreement' => null,
 				'mode' => 'create',
 				'companies' => $companies,
 				'preselectCompanyId' => $preselectCompanyId > 0 ? $preselectCompanyId : null,
+				'productCodes' => $this->productCodes->listAll(),
 			],
 		));
 	}
@@ -435,7 +660,12 @@ class PageController extends Controller
 			'agreement-form',
 			$this->l10n->t('Edit agreement'),
 			(string)$a->getLabel(),
-			['agreement' => $a, 'mode' => 'edit', 'companies' => $companies],
+			[
+				'agreement' => $a,
+				'mode' => 'edit',
+				'companies' => $companies,
+				'productCodes' => $this->productCodes->listAll(),
+			],
 		));
 	}
 
@@ -449,8 +679,11 @@ class PageController extends Controller
 		return new TemplateResponse('customercheck', 'money', $this->mergeShellPageParams(
 			'money',
 			$this->l10n->t('Money'),
-			$this->l10n->t('Unpaid, overdue and recently paid invoices.'),
-			['overview' => $overview, 'filterState' => $state],
+			$this->l10n->t('Overdue, unpaid, paid and unknown invoice states.'),
+			[
+				'overview' => $overview,
+				'filterState' => $state,
+			],
 		));
 	}
 
@@ -474,6 +707,7 @@ class PageController extends Controller
 		$groups = ['overdue' => [], 'today' => [], 'later' => [], 'done' => []];
 		$rows = [];
 		$companyIds = [];
+		$filters['workspaceId'] = $this->resolvedWorkspaceId();
 		foreach ($this->activities->search($filters, 200) as $act) {
 			$companyIds[] = (int)$act->getCompanyId();
 			$rows[] = [
@@ -528,7 +762,7 @@ class PageController extends Controller
 		return new TemplateResponse('customercheck', 'import', $this->mergeShellPageParams(
 			'import',
 			$this->l10n->t('Import'),
-			$this->l10n->t('Bring in customers from sales log, ProjectCheck, TicketCheck or CSV.'),
+			$this->l10n->t('Bring in customers from CSV, ProjectCheck, TicketCheck, or a license sales log when available.'),
 			['capabilities' => $this->facades->capabilityMatrix()],
 		));
 	}
@@ -541,13 +775,41 @@ class PageController extends Controller
 		$uid = $this->accessControl->currentUserId();
 		$settings = $this->settings->getForUser($uid);
 		$canManage = $this->accessControl->isAppAdmin($uid);
+		$shell = $this->mergeShellPageParams(
+			'settings',
+			$this->l10n->t('Workspace settings'),
+			$this->l10n->t('Preferences, members, mailbox, and integrations for this workspace.'),
+			[
+				'settings' => $settings,
+				'capabilities' => $this->facades->capabilityMatrix(),
+				'canManage' => $canManage,
+			],
+		);
+		$workspaceRole = (string)($shell['workspaceRole'] ?? 'viewer');
+		$shell['canManageWorkspace'] = \OCA\CustomerCheck\Service\WorkspaceCapability::allows(
+			$workspaceRole,
+			'members',
+			$canManage,
+		);
+
+		return new TemplateResponse('customercheck', 'settings', $shell);
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function appSettings(): TemplateResponse
+	{
+		$this->registerFrontEndAssets('pages/settings');
+		$uid = $this->accessControl->currentUserId();
+		$settings = $this->settings->getForUser($uid);
+		$canManage = $this->accessControl->isAppAdmin($uid);
 		$allowedUserIds = is_array($settings['access_allowed_user_ids'] ?? null)
 			? $settings['access_allowed_user_ids']
 			: [];
-		return new TemplateResponse('customercheck', 'settings', $this->mergeShellPageParams(
-			'settings',
-			$this->l10n->t('Settings'),
-			$this->l10n->t('Access control, reminders and integrations.'),
+		$shell = $this->mergeShellPageParams(
+			'app-settings',
+			$this->l10n->t('App settings'),
+			$this->l10n->t('Access control, reminders, tokens, mobile license, and the agreement catalogue.'),
 			[
 				'settings' => $settings,
 				'capabilities' => $this->facades->capabilityMatrix(),
@@ -555,8 +817,18 @@ class PageController extends Controller
 				'availableAppAdmins' => $canManage ? $this->directory->availableAppAdmins() : [],
 				'availableGroups' => $canManage ? $this->directory->availableGroups() : [],
 				'selectedAllowedUsers' => $canManage ? $this->directory->resolveUsers($allowedUserIds) : [],
+				'license' => $canManage ? $this->license->status() : null,
+				'licenseSeats' => $canManage ? $this->license->listSeats(200, 0) : null,
 			],
-		));
+		);
+		$workspaceRole = (string)($shell['workspaceRole'] ?? 'viewer');
+		$shell['canManageWorkspace'] = \OCA\CustomerCheck\Service\WorkspaceCapability::allows(
+			$workspaceRole,
+			'members',
+			$canManage,
+		);
+
+		return new TemplateResponse('customercheck', 'app-settings', $shell);
 	}
 
 	#[NoAdminRequired]
@@ -570,5 +842,33 @@ class PageController extends Controller
 			$this->l10n->t('Optional partner care — the app stays free under AGPL.'),
 			[],
 		));
+	}
+
+	/**
+	 * Resolve the caller's active workspace id (query → last-used → sole membership).
+	 */
+	private function resolvedWorkspaceId(): int
+	{
+		$uid = $this->accessControl->currentUserIdOrEmpty();
+		if ($uid === '') {
+			return 0;
+		}
+		$ctx = $this->workspaceAccess->resolveForUser($uid);
+		$this->workspaceAccess->assertCapability($uid, (int)$ctx['workspace']->getId(), 'read');
+
+		return (int)$ctx['workspace']->getId();
+	}
+
+	/**
+	 * Page-level company gate — cross-workspace → NotFoundException (HTTP 404).
+	 */
+	private function requireCompanyPage(int $id): \OCA\CustomerCheck\Db\Company
+	{
+		$company = $this->companies->get($id);
+		$uid = $this->accessControl->currentUserId();
+		$wsId = (int)($company->getWorkspaceId() ?? 0);
+		$this->workspaceAccess->assertUserCanAccessCompany($uid, $wsId, 'read');
+
+		return $company;
 	}
 }

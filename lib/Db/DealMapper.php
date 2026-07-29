@@ -15,6 +15,8 @@ use OCP\IDBConnection;
  */
 class DealMapper extends QBMapper
 {
+	use ExcludesArchivedCompaniesTrait;
+
 	public function __construct(IDBConnection $db)
 	{
 		parent::__construct($db, 'crm_deal', Deal::class);
@@ -102,6 +104,27 @@ class DealMapper extends QBMapper
 	}
 
 	/**
+	 * Find the currently open deal created for a website order id.
+	 *
+	 * @return Deal[]
+	 */
+	public function findOpenByTitle(string $title): array
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('*')
+			->from($this->getTableName())
+			->where($qb->expr()->eq('title', $qb->createNamedParameter($title)))
+			->andWhere($qb->expr()->notIn(
+				'stage',
+				$qb->createNamedParameter(Constants::DEAL_TERMINAL_STAGES, IQueryBuilder::PARAM_STR_ARRAY),
+			))
+			->orderBy('id', 'DESC')
+			->setMaxResults(1);
+
+		return $this->findEntities($qb);
+	}
+
+	/**
 	 * Open pipeline value per stage, used by the Today summary strip.
 	 *
 	 * @return array<string, array{count: int, valueCents: int}>
@@ -142,13 +165,21 @@ class DealMapper extends QBMapper
 	}
 
 	/**
-	 * @param array{companyId?: int, stage?: string, openOnly?: bool, search?: string, title?: string} $filters
+	 * @param array{companyId?: int, stage?: string, openOnly?: bool, search?: string, title?: string, workspaceId?: int} $filters
 	 */
 	private function applyFilters(IQueryBuilder $qb, array $filters): void
 	{
 		$companyId = (int)($filters['companyId'] ?? 0);
+		$workspaceId = (int)($filters['workspaceId'] ?? 0);
 		if ($companyId > 0) {
 			$qb->andWhere($qb->expr()->eq('company_id', $qb->createNamedParameter($companyId, IQueryBuilder::PARAM_INT)));
+		} else {
+			// Default pipeline never shows deals of archived companies (PSD §4.1);
+			// explicit company context (companyId) keeps history reachable.
+			$this->excludeArchivedCompanies($qb);
+		}
+		if ($workspaceId > 0) {
+			$this->restrictToWorkspace($qb, $workspaceId);
 		}
 
 		$stage = (string)($filters['stage'] ?? '');
@@ -169,4 +200,52 @@ class DealMapper extends QBMapper
 			$qb->andWhere($qb->expr()->iLike('title', $qb->createNamedParameter($like)));
 		}
 	}
+
+	/**
+	 * Open deals whose stage has not changed since before $changedBefore (Today stale queue).
+	 *
+	 * @return Deal[]
+	 */
+	public function findOpenStaleBefore(\DateTimeInterface $changedBefore, int $limit = 200): array
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('*')
+			->from($this->getTableName())
+			->where($qb->expr()->notIn(
+				'stage',
+				$qb->createNamedParameter(Constants::DEAL_TERMINAL_STAGES, IQueryBuilder::PARAM_STR_ARRAY)
+			))
+			->andWhere($qb->expr()->isNotNull('stage_changed_at'))
+			->andWhere($qb->expr()->lt(
+				'stage_changed_at',
+				$qb->createNamedParameter(
+					$changedBefore instanceof \DateTimeImmutable
+						? $changedBefore
+						: \DateTimeImmutable::createFromInterface($changedBefore),
+					IQueryBuilder::PARAM_DATE
+				)
+			))
+			->orderBy('stage_changed_at', 'ASC')
+			->addOrderBy('id', 'ASC')
+			->setMaxResults(max(1, min(500, $limit)));
+		// Archived companies stop generating stale-deal nudges (PSD §4.1).
+		$this->excludeArchivedCompanies($qb);
+
+		return $this->findEntities($qb);
+	}
+
+	/** Move deals during company merge. */
+	public function reassignCompany(int $fromCompanyId, int $toCompanyId): int
+	{
+		if ($fromCompanyId === $toCompanyId) {
+			return 0;
+		}
+		$qb = $this->db->getQueryBuilder();
+		$qb->update($this->getTableName())
+			->set('company_id', $qb->createNamedParameter($toCompanyId, IQueryBuilder::PARAM_INT))
+			->where($qb->expr()->eq('company_id', $qb->createNamedParameter($fromCompanyId, IQueryBuilder::PARAM_INT)));
+
+		return $qb->executeStatement();
+	}
+
 }

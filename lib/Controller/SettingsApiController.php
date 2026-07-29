@@ -22,6 +22,7 @@ class SettingsApiController extends Controller
 		private readonly AccessControlService $accessControl,
 		private readonly SettingsService $settings,
 		private readonly DirectoryOptionsService $directory,
+		private readonly \OCA\CustomerCheck\Service\ProductCodeRegistry $productCodes,
 	) {
 		parent::__construct($appName, $request);
 	}
@@ -69,6 +70,33 @@ class SettingsApiController extends Controller
 			$uid = $this->accessControl->requireCanUseApp();
 			$token = $this->settings->rotateToken($uid, $kind);
 			return $this->ok(['token' => $token, 'kind' => $kind]);
+		} catch (\Throwable $e) {
+			return $this->fromThrowable($e);
+		}
+	}
+
+	#[NoAdminRequired]
+	public function productCodes(): JSONResponse
+	{
+		try {
+			$this->accessControl->requireCanUseApp();
+			return $this->ok($this->productCodes->listAll());
+		} catch (\Throwable $e) {
+			return $this->fromThrowable($e);
+		}
+	}
+
+	#[NoAdminRequired]
+	public function saveProductCodes(): JSONResponse
+	{
+		try {
+			$uid = $this->accessControl->requireCanUseApp();
+			if (!$this->accessControl->canManageAppConfiguration($uid)) {
+				throw new \OCA\CustomerCheck\Exception\AccessDeniedException();
+			}
+			$body = json_decode(file_get_contents('php://input') ?: '{}', true) ?: [];
+			$custom = is_array($body['custom'] ?? null) ? $body['custom'] : [];
+			return $this->ok($this->productCodes->saveCustom($custom));
 		} catch (\Throwable $e) {
 			return $this->fromThrowable($e);
 		}

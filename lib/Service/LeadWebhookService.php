@@ -82,8 +82,14 @@ class LeadWebhookService
 		$company = null;
 		if ($emailOk) {
 			$matches = $this->personMapper->findByEmail($email);
-			if ($matches !== []) {
-				$company = $this->companyService->get((int)$matches[0]->getCompanyId());
+			// Prefer an active company. Archived matches must not swallow the
+			// follow-up activity (Today excludes archived companies).
+			foreach ($matches as $person) {
+				$candidate = $this->companyService->get((int)$person->getCompanyId());
+				if (!$candidate->isArchived()) {
+					$company = $candidate;
+					break;
+				}
 			}
 		}
 		if ($company === null) {

@@ -24,6 +24,8 @@ final class Constants
 	public const CONFIG_REMINDER_HOUR = 'reminder_hour';
 	public const CONFIG_ICS_TOKEN = 'ics_token';
 	public const CONFIG_LEAD_TOKEN = 'lead_token';
+	/** Website order intake token (§14.4 order path). */
+	public const CONFIG_ORDER_TOKEN = 'order_token';
 	public const CONFIG_CADENCE_ENABLED = 'cadence_enabled';
 	public const CONFIG_VTODO_CALENDAR_URI = 'vtodo_calendar_uri';
 	public const CONFIG_MAIL_RELATED_ENABLED = 'mail_related_enabled';
@@ -41,6 +43,7 @@ final class Constants
 		self::CONFIG_REMINDER_HOUR => '5',
 		self::CONFIG_ICS_TOKEN => '',
 		self::CONFIG_LEAD_TOKEN => '',
+		self::CONFIG_ORDER_TOKEN => '',
 		self::CONFIG_CADENCE_ENABLED => '1',
 		self::CONFIG_VTODO_CALENDAR_URI => '',
 		self::CONFIG_MAIL_RELATED_ENABLED => '1',
@@ -50,6 +53,7 @@ final class Constants
 	public const SECRET_CONFIG_KEYS = [
 		self::CONFIG_ICS_TOKEN,
 		self::CONFIG_LEAD_TOKEN,
+		self::CONFIG_ORDER_TOKEN,
 	];
 
 	/** User config key for the pipeline view preference (§4.9.3). */
@@ -75,7 +79,7 @@ final class Constants
 
 	/** @var list<string> §4.9.2 closed product-code set. */
 	public const PRODUCT_CODES = [
-		'azc', 'pc', 'mn', 'iv',
+		'azc', 'pc', 'mn', 'iv', 'dty', 'cuc', 'ic',
 		'cp-small', 'cp-std', 'cp-prem',
 		'cp-onb', 'cp-ws-half', 'cp-feat', 'custom',
 	];
@@ -86,6 +90,9 @@ final class Constants
 		'pc' => 'license',
 		'mn' => 'license',
 		'iv' => 'license',
+		'dty' => 'license',
+		'cuc' => 'license',
+		'ic' => 'license',
 		'cp-small' => 'partner',
 		'cp-std' => 'partner',
 		'cp-prem' => 'partner',
@@ -108,7 +115,10 @@ final class Constants
 	public const ACTIVITY_TYPES = ['call', 'email', 'meeting', 'todo'];
 
 	/** @var list<string> */
-	public const ACTIVITY_ORIGINS = ['user', 'sequence_quoted', 'sequence_won', 'system', 'webhook'];
+	public const ACTIVITY_ORIGINS = [
+		'user', 'sequence_contacted', 'sequence_quoted', 'sequence_negotiation',
+		'sequence_won', 'system', 'webhook',
+	];
 
 	/** @var list<string> */
 	public const INVOICE_STATUSES = ['none', 'sent', 'paid', 'overdue'];
@@ -120,14 +130,18 @@ final class Constants
 	public const EMAIL_SOURCES = ['manual', 'compose', 'mail_app'];
 
 	/** @var list<string> Timeline event types (§4.6). */
+	public const EVENT_COMPANY_MERGED = 'company.merged';
+
 	public const EVENT_TYPES = [
 		'company.created', 'company.updated', 'company.archived', 'company.restored',
+		self::EVENT_COMPANY_MERGED,
+		'company.pc_linked', 'company.tc_linked',
 		'agreement.created', 'agreement.status', 'agreement.cancelled', 'agreement.superseded',
 		'reminder.sent', 'reminder.skipped',
 		'deal.stage', 'hours.logged', 'import.linked',
-		'email.logged', 'email.composed',
+		'email.logged', 'email.composed', 'mail_sent',
 		'invoice.paid', 'invoice.paid.ambiguous',
-		'lead.webhook', 'digest.sent', 'quota.alert', 'gdpr.erased', 'note',
+		'lead.webhook', 'order.webhook', 'digest.sent', 'quota.alert', 'gdpr.erased', 'note',
 	];
 
 	// ── Renewal engine (§6.2) ───────────────────────────────────────────
@@ -155,9 +169,92 @@ final class Constants
 	/** Max items returned by GET /today (§10.3). */
 	public const TODAY_MAX_ITEMS = 100;
 
-	// ── Stage follow-up sequences (§14.2) ───────────────────────────────
+	// ── Stage follow-up sequences (§14.2 / product §11.4) ───────────────
+	public const SEQUENCE_CONTACTED = 'contacted_v1';
 	public const SEQUENCE_QUOTED = 'quoted_v1';
+	public const SEQUENCE_NEGOTIATION = 'negotiation_v1';
 	public const SEQUENCE_WON = 'won_v1';
+
+	/** @var list<string> Workspace roles (product §3.2). */
+	public const WS_ROLES = ['viewer', 'member', 'manager'];
+
+	/** @var list<string> */
+	public const KAM_TIERS = ['standard', 'key', 'partner'];
+
+	/** @var list<string> */
+	public const BUYING_ROLES = [
+		'economic_buyer', 'champion', 'day_to_day', 'technical', 'blocker', 'other',
+	];
+
+	/** @var list<string> */
+	public const PERSON_STATUSES = ['active', 'left', 'unknown'];
+
+	/** @var list<string> Loss reason codes (product §11.6). */
+	public const LOSS_REASON_CODES = [
+		'price', 'competitor', 'timing', 'no_decision', 'requirements', 'technical', 'internal', 'other',
+	];
+
+	/** @var list<string> Forecast buckets — planning labels, never cash (§11.7). */
+	public const FORECAST_BUCKETS = ['commit', 'upside', 'pipeline'];
+
+	/** @var list<string> CEO commitment kinds (§10.3). */
+	public const COMMIT_KINDS = [
+		'ar_chase', 'renewal_act', 'plan_push', 'link_debt', 'unbilled_review', 'custom',
+	];
+
+	/** @var list<string> */
+	public const COMMIT_STATUSES = [
+		'suggested', 'committed', 'done', 'missed', 'carried', 'abandoned',
+	];
+
+	/** @var list<string> */
+	public const PROMISE_STATUSES = ['open', 'done', 'cancelled'];
+
+	/** Default Brief WIP limit (product §10.2). */
+	public const WIP_LIMIT_DEFAULT = 5;
+	public const WIP_LIMIT_MIN = 3;
+	public const WIP_LIMIT_MAX = 15;
+
+	/** Max OOO cover duration in days (§13.4). */
+	public const OOO_MAX_DAYS = 60;
+
+	/** Max bulk reassign rows (§13.5). */
+	public const BULK_REASSIGN_MAX = 200;
+
+	/** Max open escalations per workspace (§13.3). */
+	public const ESCALATION_MAX_OPEN = 50;
+
+	/** Max shared mailboxes / folders (§14.1). */
+	public const MAILBOX_MAX_PER_WS = 3;
+	public const MAILBOX_MAX_FOLDERS = 20;
+	public const MAILBOX_SYNC_CAP = 500;
+	public const MAIL_PREVIEW_MAX_BYTES = 51200;
+
+	/** Mail send rate limits (§14.3 / §17.4). */
+	public const MAIL_SEND_USER_LIMIT = 30;
+	public const MAIL_SEND_USER_WINDOW = 3600;
+	public const MAIL_SEND_WS_LIMIT = 200;
+	public const MAIL_SEND_WS_WINDOW = 3600;
+
+	/** Lead SLA default hours (§11.8). */
+	public const LEAD_SLA_HOURS_DEFAULT = 24;
+
+	/** Max skip_until horizon in days (§11.2). */
+	public const NEXT_ACTION_SKIP_MAX_DAYS = 7;
+
+	/** Max workspaces / members (§6). */
+	public const WS_MAX_PER_INSTANCE = 100;
+	public const WS_MAX_MEMBERS = 200;
+
+	/** Freemail domains — never auto domain-match (§14.2 / §18.3). */
+	public const FREEMAIL_DOMAINS = [
+		'gmail.com', 'googlemail.com', 'yahoo.com', 'yahoo.de', 'hotmail.com',
+		'outlook.com', 'live.com', 'icloud.com', 'me.com', 'gmx.de', 'gmx.net',
+		'web.de', 'mail.de', 'aol.com', 'proton.me', 'protonmail.com',
+	];
+
+	/** User config: last-used workspace id. */
+	public const USER_CONFIG_LAST_WORKSPACE = 'crm_last_workspace_id';
 
 	// ── Lead webhook (§14.4) ────────────────────────────────────────────
 	public const HOOK_RATE_LIMIT = 30;
@@ -175,6 +272,8 @@ final class Constants
 	public const NOTIFY_LEAD = 'crm_lead';
 	public const NOTIFY_INVOICE_PAID = 'crm_invoice_paid';
 	public const NOTIFY_KEY_GENERATED = 'crm_key_generated';
+	/** Companion P2 — open activity due today / overdue (exactly-once ledger). */
+	public const NOTIFY_ACTIVITY_DUE = 'crm_activity_due';
 
 	/** @var list<string> */
 	public const NOTIFICATION_SUBJECTS = [
@@ -184,6 +283,7 @@ final class Constants
 		self::NOTIFY_LEAD,
 		self::NOTIFY_INVOICE_PAID,
 		self::NOTIFY_KEY_GENERATED,
+		self::NOTIFY_ACTIVITY_DUE,
 	];
 
 	// ── Error codes (§10.2, complete v1 set) ────────────────────────────
@@ -210,13 +310,52 @@ final class Constants
 	public const ERR_RATE_LIMITED = 'RATE_LIMITED';
 	public const ERR_NOT_FOUND = 'NOT_FOUND';
 	public const ERR_VALIDATION = 'VALIDATION';
+	public const ERR_LINK_CONFLICT = 'LINK_CONFLICT';
+	public const ERR_SIBLING_UNAVAILABLE = 'SIBLING_UNAVAILABLE';
+	public const ERR_MERGE_SAME = 'MERGE_SAME';
+	public const ERR_MERGE_TARGET_ARCHIVED = 'MERGE_TARGET_ARCHIVED';
+	public const ERR_MERGE_SOURCE_ARCHIVED = 'MERGE_SOURCE_ARCHIVED';
+	public const ERR_MERGE_LINK_CONFLICT = 'MERGE_LINK_CONFLICT';
 
-	/** @var list<string> Page ids (§16.4). */
+	/** Command Center (CUC-PLAN-CC Appendix B). */
+	public const ERR_CALLBACK_DUE_REQUIRED = 'CALLBACK_DUE_REQUIRED';
+	public const ERR_FILES_PERMISSION_DENIED = 'FILES_PERMISSION_DENIED';
+	public const ERR_FILES_NOT_FOUND = 'FILES_NOT_FOUND';
+	public const ERR_FILES_NOT_FOLDER = 'FILES_NOT_FOLDER';
+	public const ERR_TASKS_PUSH_FAILED = 'TASKS_PUSH_FAILED';
+	public const ERR_TASKS_UNAVAILABLE = 'TASKS_UNAVAILABLE';
+	public const ERR_CONTACTS_UNAVAILABLE = 'CONTACTS_UNAVAILABLE';
+	public const ERR_CONTACTS_UID_INVALID = 'CONTACTS_UID_INVALID';
+	public const ERR_FACADE_UNAVAILABLE = 'FACADE_UNAVAILABLE';
+
+	/** Human conversation lookback for “in conversation” chip (CC §6.4). */
+	public const CONVERSATION_LOOKBACK_DAYS = 14;
+
+	/** @var list<string> Page ids (product §4.1 / appendix). */
 	public const PAGE_IDS = [
-		'today', 'companies', 'company-detail', 'company-form', 'pipeline',
-		'agreements', 'agreement-form', 'money', 'activities', 'import',
-		'settings', 'support-us', 'access-denied',
+		'today', 'pulse', 'brief', 'my-accounts', 'team', 'companies',
+		'company-detail', 'company-form', 'prepare-meeting', 'strategy',
+		'pipeline', 'agreements', 'agreement-form', 'money', 'activities',
+		'mail-triage', 'import', 'settings', 'support-us', 'access-denied',
+		'workload',
 	];
+
+	public const ERR_WS_NOT_FOUND = 'WS_NOT_FOUND';
+	public const ERR_WS_ARCHIVED = 'WS_ARCHIVED';
+	public const ERR_WS_ROLE = 'WS_ROLE_DENIED';
+	public const ERR_WS_MEMBER_LIMIT = 'WS_MEMBER_LIMIT';
+	public const ERR_WS_LIMIT = 'WS_LIMIT';
+	public const ERR_WIP_FULL = 'WIP_FULL';
+	public const ERR_BUYER_DUP = 'BUYER_DUP';
+	public const ERR_OOO_OVERLAP = 'OOO_OVERLAP';
+	public const ERR_OOO_TOO_LONG = 'OOO_TOO_LONG';
+	public const ERR_BULK_TOO_LARGE = 'BULK_TOO_LARGE';
+	public const ERR_SKIP_TOO_FAR = 'SKIP_TOO_FAR';
+	public const ERR_LOSS_CODE_REQUIRED = 'LOSS_CODE_REQUIRED';
+	public const ERR_MAILBOX_LIMIT = 'MAILBOX_LIMIT';
+	public const ERR_MAIL_SEND_DENIED = 'MAIL_SEND_DENIED';
+	public const ERR_ESCALATION_LIMIT = 'ESCALATION_LIMIT';
+	public const ERR_FORECAST_AS_CASH = 'FORECAST_AS_CASH';
 
 	private function __construct()
 	{

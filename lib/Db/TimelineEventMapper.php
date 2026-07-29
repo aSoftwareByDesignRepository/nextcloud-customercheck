@@ -70,4 +70,19 @@ class TimelineEventMapper extends QBMapper
 
 		return $qb->executeStatement();
 	}
+
+	/** Move timeline events during company merge. */
+	public function reassignCompany(int $fromCompanyId, int $toCompanyId): int
+	{
+		if ($fromCompanyId === $toCompanyId) {
+			return 0;
+		}
+		$qb = $this->db->getQueryBuilder();
+		$qb->update($this->getTableName())
+			->set('company_id', $qb->createNamedParameter($toCompanyId, IQueryBuilder::PARAM_INT))
+			->where($qb->expr()->eq('company_id', $qb->createNamedParameter($fromCompanyId, IQueryBuilder::PARAM_INT)));
+
+		return $qb->executeStatement();
+	}
+
 }

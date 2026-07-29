@@ -79,9 +79,16 @@ final class CrmPageShellLayoutTest extends TestCase
 	public function testListPagesUseVerticalPageStack(): void
 	{
 		$root = dirname(__DIR__, 2) . '/templates';
-		foreach (['today.php', 'companies.php', 'pipeline.php', 'company-detail.php', 'import.php', 'settings.php', 'money.php', 'activities.php', 'agreements.php'] as $file) {
+		foreach ([
+			'today.php', 'companies.php', 'pipeline.php', 'company-detail.php', 'import.php', 'settings.php',
+			'app-settings.php',
+			'money.php', 'activities.php', 'agreements.php',
+			'pulse.php', 'brief.php', 'team.php', 'strategy.php', 'my-accounts.php', 'mail-triage.php', 'prepare-meeting.php',
+		] as $file) {
 			$html = (string)file_get_contents($root . '/' . $file);
 			$this->assertStringContainsString('crm-page-stack', $html, $file);
+			$this->assertStringContainsString('page-start.php', $html, $file);
+			$this->assertStringContainsString('page-end.php', $html, $file);
 			$this->assertStringNotContainsString('NcAppNavigation', $html, $file);
 			$this->assertStringNotContainsString('@nextcloud/vue', $html, $file);
 		}
@@ -90,7 +97,7 @@ final class CrmPageShellLayoutTest extends TestCase
 	public function testCompanyDetailHasRequired360Sections(): void
 	{
 		$html = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/company-detail.php');
-		foreach (['crm-agreements', 'crm-persons', 'crm-activities', 'crm-timeline', 'crm-tickets'] as $id) {
+		foreach (['crm-contracts', 'crm-persons', 'crm-activities', 'crm-timeline', 'crm-tickets', 'crm-glance', 'crm-communication', 'crm-documents', 'crm-open-tasks'] as $id) {
 			$this->assertStringContainsString('id="' . $id . '"', $html);
 		}
 		$this->assertStringContainsString('crm-emails-section.php', $html);
@@ -114,7 +121,29 @@ final class CrmPageShellLayoutTest extends TestCase
 	public function testAppVersionBumpedForCssCacheBust(): void
 	{
 		$info = (string)file_get_contents(dirname(__DIR__, 2) . '/appinfo/info.xml');
-		$this->assertMatchesRegularExpression('/<version>1\\.0\\.[1-9]\\d*<\\/version>/', $info);
+		$this->assertSame(1, preg_match('/<version>(\d+)\.(\d+)\.(\d+)<\/version>/', $info, $m));
+		$version = sprintf('%d.%d.%d', (int)$m[1], (int)$m[2], (int)$m[3]);
+		$this->assertTrue(
+			version_compare($version, '1.0.1', '>='),
+			'App version must stay above the 1.0.0 CSS-cache-bust floor, got ' . $version,
+		);
+	}
+
+	public function testLegacyVersionFileMatchesInfoXml(): void
+	{
+		$versionFile = dirname(__DIR__, 2) . '/appinfo/version';
+		if (!file_exists($versionFile)) {
+			$this->addToAssertionCount(1);
+			return;
+		}
+		$info = (string)file_get_contents(dirname(__DIR__, 2) . '/appinfo/info.xml');
+		$this->assertSame(1, preg_match('/<version>([\d.]+)<\/version>/', $info, $m));
+		$this->assertSame(
+			$m[1],
+			trim((string)file_get_contents($versionFile)),
+			'appinfo/version must match info.xml — a drifting version breaks the asset '
+			. 'cache-buster and lets browsers execute stale JS/CSS against new markup',
+		);
 	}
 
 	public function testContentLinksUsePrimaryElementForAaContrast(): void

@@ -1,6 +1,7 @@
 (function () {
   'use strict';
   const C = window.CustomerCheckComponents || window.CrmComponents;
+  const t = (msg) => (window.t ? window.t('customercheck', msg) : msg);
   if (C && C.init) { C.init(); }
 
   const toggle = document.getElementById('crm-agreements-filter-toggle');
@@ -22,12 +23,12 @@
     const today = new Date().toISOString().slice(0, 10);
     C.openDialog({
       id: id,
-      title: 'Log hours',
+      title: t('Log hours'),
       content: '<form id="' + id + '-form" class="crm-form">' +
-        '<div class="form-group"><label class="form-label">Date</label><input class="crm-input form-input" name="entryDate" type="date" value="' + today + '" required /></div>' +
-        '<div class="form-group"><label class="form-label">Minutes</label><input class="crm-input form-input" name="minutes" type="number" min="15" step="15" value="60" required /><p class="form-help">Steps of 15. Default is one hour.</p></div>' +
-        '<div class="form-group"><label class="form-label">Topic</label><input class="crm-input form-input" name="topic" required autofocus /></div>' +
-        '<div class="crm-form-actions"><button type="submit" class="crm-btn crm-btn--primary">Save</button> <button type="button" class="crm-btn crm-btn--secondary" data-cancel>Cancel</button></div></form>',
+        '<div class="form-group"><label class="form-label">' + t('Date') + '</label><input class="crm-input form-input" name="entryDate" type="date" value="' + today + '" required /></div>' +
+        '<div class="form-group"><label class="form-label">' + t('Minutes') + '</label><input class="crm-input form-input" name="minutes" type="number" min="15" step="15" value="60" required /><p class="form-help">' + t('Steps of 15. Default is one hour.') + '</p></div>' +
+        '<div class="form-group"><label class="form-label">' + t('Topic') + '</label><input class="crm-input form-input" name="topic" required autofocus /></div>' +
+        '<div class="crm-form-actions"><button type="submit" class="crm-btn crm-btn--primary">' + t('Save') + '</button> <button type="button" class="crm-btn crm-btn--secondary" data-cancel>' + t('Cancel') + '</button></div></form>',
     });
     const form = document.getElementById(id + '-form');
     const close = () => C.closeModal(document.getElementById(id));
@@ -46,7 +47,7 @@
         close();
         location.reload();
       } catch (e) {
-        await C.alertDialog({ title: 'Could not log hours', message: (e.payload && e.payload.message) || e.message, variant: 'danger' });
+        await C.alertDialog({ title: t('Could not log hours'), message: (e.payload && e.payload.message) || e.message, variant: 'danger' });
       }
     });
   }
@@ -61,23 +62,23 @@
         if (data.mailAppUrl) window.open(data.mailAppUrl, '_blank');
         else if (data.mailtoUrl) window.location.href = data.mailtoUrl;
         const live = document.getElementById('crm-live-region');
-        if (live) live.textContent = 'Partner mail prepared.';
+        if (live) live.textContent = t('Partner mail prepared.');
         if (data.promptHours) {
           if (skipConfirm) {
             await openLogHours(agreementId);
           } else if (C) {
             const log = await C.confirmDialog({
-              title: 'Log hours?',
-              message: 'Log hours for this Partner session?',
-              confirmLabel: 'Log hours',
-              cancelLabel: 'Not now',
+              title: t('Log hours?'),
+              message: t('Log hours for this Partner session?'),
+              confirmLabel: t('Log hours'),
+              cancelLabel: t('Not now'),
               variant: 'info',
             });
             if (log && log.confirmed) await openLogHours(agreementId);
           }
         }
       } catch (e) {
-        if (C) await C.alertDialog({ title: 'Partner mail', message: (e.payload && e.payload.message) || e.message, variant: 'danger' });
+        if (C) await C.alertDialog({ title: t('Partner mail'), message: (e.payload && e.payload.message) || e.message, variant: 'danger' });
       }
     });
   });
@@ -96,15 +97,15 @@
         if (!C) return;
         await C.openDialog({
           id: 'crm-delivery-pack',
-          title: 'Delivery pack',
+          title: t('Delivery pack'),
           content: '<p><strong>' + (pack.subject || '') + '</strong></p><pre class="crm-pre">' +
             String(pack.bodyText || '').replace(/[<>&]/g, (ch) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[ch])) +
             '</pre><div class="crm-form-actions">' +
-            '<a class="crm-btn crm-btn--primary" href="' + (pack.mailAppUrl || pack.mailtoUrl || '#') + '">Open mail</a></div>',
+            '<a class="crm-btn crm-btn--primary" href="' + (pack.mailAppUrl || pack.mailtoUrl || '#') + '">' + t('Open mail') + '</a></div>',
           size: 'md',
         });
       } catch (e) {
-        if (C) await C.alertDialog({ title: 'Delivery pack failed', message: (e.payload && e.payload.message) || e.message, variant: 'danger' });
+        if (C) await C.alertDialog({ title: t('Delivery pack failed'), message: (e.payload && e.payload.message) || e.message, variant: 'danger' });
       }
     });
   });

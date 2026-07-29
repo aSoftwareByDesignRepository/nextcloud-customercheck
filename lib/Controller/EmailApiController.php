@@ -1,12 +1,15 @@
 <?php
+
 declare(strict_types=1);
 
 namespace OCA\CustomerCheck\Controller;
 
 use OCA\CustomerCheck\Service\AccessControlService;
+use OCA\CustomerCheck\Service\CompanyService;
 use OCA\CustomerCheck\Service\EmailTouchService;
 use OCA\CustomerCheck\Service\MailRelatedService;
 use OCA\CustomerCheck\Service\MailTemplateService;
+use OCA\CustomerCheck\Service\WorkspaceAccessService;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
@@ -15,15 +18,19 @@ use OCP\IRequest;
 
 /**
  * Company email log + Related messages — PSD §14.8.
+ * Workspace-scoped.
  */
 class EmailApiController extends Controller
 {
 	use ApiControllerTrait;
+	use WorkspaceScopedTrait;
 
 	public function __construct(
 		string $appName,
 		IRequest $request,
 		private readonly AccessControlService $accessControl,
+		private readonly WorkspaceAccessService $workspaces,
+		private readonly CompanyService $companies,
 		private readonly EmailTouchService $emails,
 		private readonly MailRelatedService $mailRelated,
 		private readonly MailTemplateService $templates,
@@ -35,7 +42,8 @@ class EmailApiController extends Controller
 	public function index(int $id): JSONResponse
 	{
 		try {
-			$this->accessControl->requireCanUseApp();
+			$this->requireCompanyInResolvedWorkspace($id);
+
 			return $this->ok($this->mailRelated->forCompany($id));
 		} catch (\Throwable $e) {
 			return $this->fromThrowable($e);
@@ -46,9 +54,11 @@ class EmailApiController extends Controller
 	public function create(int $id): JSONResponse
 	{
 		try {
-			$uid = $this->accessControl->requireCanUseApp();
+			$company = $this->requireCompanyInResolvedWorkspace($id);
+			$ws = $this->assertLoadedCompanyInWorkspace($company, 'write');
 			$body = json_decode(file_get_contents('php://input') ?: '{}', true) ?: [];
-			$touch = $this->emails->createManual($id, is_array($body) ? $body : [], $uid);
+			$touch = $this->emails->createManual($id, is_array($body) ? $body : [], $ws['uid']);
+
 			return $this->ok([
 				'id' => (int)$touch->getId(),
 				'direction' => (string)$touch->getDirection(),
@@ -68,7 +78,8 @@ class EmailApiController extends Controller
 	public function composeTemplate(int $id): JSONResponse
 	{
 		try {
-			$uid = $this->accessControl->requireCanUseApp();
+			$company = $this->requireCompanyInResolvedWorkspace($id);
+			$ws = $this->assertLoadedCompanyInWorkspace($company, 'read');
 			$body = json_decode(file_get_contents('php://input') ?: '{}', true) ?: [];
 			$agreementId = isset($body['agreementId']) ? (int)$body['agreementId'] : null;
 			if ($agreementId !== null && $agreementId <= 0) {
@@ -79,11 +90,8 @@ class EmailApiController extends Controller
 				(string)($body['template'] ?? ''),
 				$id,
 				$agreementId,
-				$uid,
-				[
-					'personId' => (int)($body['personId'] ?? 0),
-					'toEmail' => isset($body['toEmail']) ? (string)$body['toEmail'] : null,
-				],
+				$ws['uid'],
+				is_array($body) ? $body : [],
 			));
 		} catch (\Throwable $e) {
 			return $this->fromThrowable($e);

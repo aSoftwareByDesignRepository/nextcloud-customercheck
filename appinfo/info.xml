@@ -7,29 +7,32 @@
 	<id>customercheck</id>
 	<name>CustomerCheck</name>
 	<name lang="de">CustomerCheck</name>
-	<summary>Internal customer and revenue hub for the Check app family</summary>
-	<summary lang="de">Interner Kunden- und Umsatz-Hub für die Check-App-Familie</summary>
+	<summary>Nextcloud-native command center for customer work — Today, Pulse, Brief, 360°, chase &amp; coaching</summary>
+	<summary lang="de">Nextcloud-natives Kommandozentrum für Kundenarbeit — Today, Pulse, Brief, 360°, Chase &amp; Coaching</summary>
 	<description><![CDATA[
 # CustomerCheck
 
-Internal customer & revenue hub: one 360° view per customer — who bought what, who paid,
-which licenses and Check Partner contracts expire when — with automated renewal reminders
-on top of the existing Check apps.
+The Nextcloud-native command center for customer work: one place where a workspace
+shares a customer book, shared mailbox, account plans, and operating rituals —
+so the team can see what’s going on, decide what’s next, chase deals and renewals,
+coach the team, and measure the book by joining Check apps and Groupware.
 
-**Internal distribution only.** This app holds sales data and is not published to the app store.
+Not Salesforce. Ledgers stay in ProjectCheck, InvoiceCheck, TicketCheck, Files, Mail, Tasks.
 
 ## Highlights
 
-- **Companies & contacts** — canonical slug-keyed customer registry with cross-app links
-- **Agreements** — licenses, Check Partner packages, one-time items with a full lifecycle
-- **Renewal engine** — reminders at 60/30/7/0/+7 days, guaranteed exactly once
-- **Pipeline** — deals as filterable table and kanban board with fixed stages
-- **Activities & Today** — one work queue for everything you owe a customer
-- **Check Partner hours** — 15-minute quota log with automatic 80 % alert
-- **Read-only integrations** — SbdLicenseOps, InvoicingCheck, ProjectCheck, TicketCheck
-- **Access control** — fail-closed allowlists, app administrators, group gating
-- **Accessibility** — WCAG 2.1 AA target; responsive from 320 px
-- **Bilingual** — German and English
+- **Today / Pulse / Brief** — act now, measure the book, weekly owned commitments
+- **Company 360** — Ten Command Questions with honest sibling mute reasons
+- **Workspaces** — roles, switcher, fail-closed directory allowlists
+- **My Chase & Pipeline** — next action, quote age, sequences, loss codes, forecast labels (not cash)
+- **KAM coverage** — buying roles, next touch, customer promises, prepare meeting
+- **Team coaching** — stuck board, OOO backup (non-stealing), bulk reassign
+- **Renewal engine** — 60/30/7/0/+7 exactly-once remlog + ICS
+- **Shared mailbox** — folder IMAP + SMTP send with unavoidable shared disclosure
+- **Check Partner hours** — 15-minute quota log with 80 % alert
+- **Integrations** — optional ProjectCheck, InvoiceCheck, TicketCheck, SbdLicenseOps
+- **Accessibility** — WCAG 2.1 AA; responsive from 320 px · EN + DE
+- **Web free (AGPL)** — companion seats never gate the web app
 
 ## Requirements
 
@@ -40,31 +43,35 @@ on top of the existing Check apps.
 	<description lang="de"><![CDATA[
 # CustomerCheck
 
-Interner Kunden- und Umsatz-Hub: eine 360°-Sicht pro Kunde — wer hat was gekauft, wer hat bezahlt,
-welche Lizenzen und Check-Partner-Verträge laufen wann aus — mit automatischen Verlängerungs­erinnerungen
-auf Basis der bestehenden Check-Apps.
+Das Nextcloud-native Kommandozentrum für Kundenarbeit: ein Arbeitsbereich teilt
+Kundenbuch, gemeinsames Postfach, Account-Pläne und Betriebsrituale —
+damit das Team sieht, was läuft, entscheidet was als Nächstes dran ist,
+Deals und Verlängerungen chase’t, coacht und das Buch misst, indem Check-Apps
+und Groupware verbunden werden statt sie zu ersetzen.
 
-**Nur interne Verteilung.** Diese App enthält Vertriebsdaten und wird nicht im App Store veröffentlicht.
+Kein Salesforce. Buchungen bleiben in ProjectCheck, InvoiceCheck, TicketCheck, Files, Mail, Tasks.
 
-## Funktionen
+## Highlights
 
-- **Firmen & Kontakte** — kanonisches, slug-basiertes Kundenverzeichnis mit App-übergreifenden Verknüpfungen
-- **Vereinbarungen** — Lizenzen, Check-Partner-Pakete, Einmalposten mit vollständigem Lebenszyklus
-- **Verlängerungs-Engine** — Erinnerungen bei 60/30/7/0/+7 Tagen, garantiert genau einmal
-- **Pipeline** — Deals als filterbare Tabelle und Kanban-Board mit festen Phasen
-- **Aktivitäten & Heute** — eine Arbeitsliste für alles, was Kunden offen haben
-- **Check-Partner-Stunden** — 15-Minuten-Kontingentprotokoll mit automatischer 80-%-Warnung
-- **Nur-Lese-Integrationen** — SbdLicenseOps, InvoicingCheck, ProjectCheck, TicketCheck
-- **Zugriffssteuerung** — restriktive Freigabelisten, App-Administratoren, Gruppensteuerung
-- **Barrierefreiheit** — WCAG 2.1 AA als Ziel; responsiv ab 320 px
-- **Zweisprachig** — Deutsch und Englisch
+- **Today / Pulse / Brief** — jetzt handeln, Buch messen, wöchentliche Zusagen
+- **Company 360** — Zehn Kommandfragen mit ehrlichen Mute-Gründen bei fehlenden Apps
+- **Arbeitsbereiche** — Rollen, Umschalter, restriktive Freigabelisten
+- **My Chase & Pipeline** — nächste Aktion, Angebotsalter, Sequenzen, Verlustcodes, Forecast-Labels (kein Cash)
+- **KAM-Coverage** — Buying Roles, Next Touch, Kundenversprechen, Meeting-Vorbereitung
+- **Team-Coaching** — Stuck-Board, OOO-Vertretung (ohne Ownership-Diebstahl), Bulk-Reassign
+- **Verlängerungs-Engine** — 60/30/7/0/+7 genau-einmal Remlog + ICS
+- **Gemeinsames Postfach** — Ordner-IMAP + SMTP mit unvermeidbarer Shared-Kennzeichnung
+- **Check-Partner-Stunden** — 15-Minuten-Kontingent mit 80-%-Warnung
+- **Integrationen** — optional ProjectCheck, InvoiceCheck, TicketCheck, SbdLicenseOps
+- **Barrierefreiheit** — WCAG 2.1 AA; responsiv ab 320 px · DE + EN
+- **Web frei (AGPL)** — Companion-Sitze sperren die Web-App nie
 	]]></description>
-	<version>1.0.7</version>
+	<version>1.5.17</version>
 	<licence>AGPL-3.0-or-later</licence>
-	<author mail="info@software-by-design.de" homepage="http://nextcloud.software-by-design.de">Alexander Mäule</author>
+	<author mail="info@software-by-design.de" homepage="https://nextcloud.software-by-design.de">Alexander Mäule</author>
 	<namespace>CustomerCheck</namespace>
 	<category>organization</category>
-	<website>http://nextcloud.software-by-design.de</website>
+	<website>https://nextcloud.software-by-design.de</website>
 	<bugs>https://github.com/aSoftwareByDesignRepository/nextcloud-customercheck/issues</bugs>
 	<dependencies>
 		<nextcloud min-version="32" max-version="34"/>
@@ -77,6 +84,8 @@ auf Basis der bestehenden Check-Apps.
 		<job>OCA\CustomerCheck\BackgroundJob\WeeklyDigestJob</job>
 		<job>OCA\CustomerCheck\BackgroundJob\InvoicePaidPollJob</job>
 		<job>OCA\CustomerCheck\BackgroundJob\AgreementStatusRecomputeJob</job>
+		<job>OCA\CustomerCheck\BackgroundJob\MailboxSyncJob</job>
+		<job>OCA\CustomerCheck\BackgroundJob\PersonaMaintenanceJob</job>
 	</background-jobs>
 	<commands>
 		<command>OCA\CustomerCheck\Command\UpgradeBackupCommand</command>
@@ -84,13 +93,14 @@ auf Basis der bestehenden Check-Apps.
 	<repair-steps>
 		<install>
 			<step>OCA\CustomerCheck\Repair\EnsureCustomerCheckSchema</step>
+			<step>OCA\CustomerCheck\Repair\BootstrapDefaultWorkspace</step>
 		</install>
 		<pre-migration>
 			<step>OCA\CustomerCheck\Repair\BackupBeforeUpdate</step>
 		</pre-migration>
-
 		<post-migration>
 			<step>OCA\CustomerCheck\Repair\EnsureCustomerCheckSchema</step>
+			<step>OCA\CustomerCheck\Repair\BootstrapDefaultWorkspace</step>
 		</post-migration>
 		<uninstall>
 			<step>OCA\CustomerCheck\Repair\UninstallDropTables</step>

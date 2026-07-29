@@ -14,6 +14,8 @@ use OCP\IDBConnection;
  */
 class ActivityMapper extends QBMapper
 {
+	use ExcludesArchivedCompaniesTrait;
+
 	public function __construct(IDBConnection $db)
 	{
 		parent::__construct($db, 'crm_activity', Activity::class);
@@ -33,7 +35,7 @@ class ActivityMapper extends QBMapper
 	}
 
 	/**
-	 * @param array{companyId?: int, dealId?: int, type?: string, openOnly?: bool, doneOnly?: bool, dueBefore?: \DateTimeInterface} $filters
+	 * @param array{companyId?: int, dealId?: int, type?: string, createdBy?: string, openOnly?: bool, doneOnly?: bool, dueBefore?: \DateTimeInterface} $filters
 	 * @return Activity[]
 	 */
 	public function search(array $filters = [], int $limit = 500, int $offset = 0): array
@@ -50,7 +52,7 @@ class ActivityMapper extends QBMapper
 	}
 
 	/**
-	 * @param array{companyId?: int, dealId?: int, type?: string, openOnly?: bool, doneOnly?: bool, dueBefore?: \DateTimeInterface} $filters
+	 * @param array{companyId?: int, dealId?: int, type?: string, createdBy?: string, openOnly?: bool, doneOnly?: bool, dueBefore?: \DateTimeInterface} $filters
 	 */
 	public function countSearch(array $filters = []): int
 	{
@@ -87,6 +89,8 @@ class ActivityMapper extends QBMapper
 			->orderBy('due_date', 'ASC')
 			->addOrderBy('id', 'ASC')
 			->setMaxResults(max(1, min(5000, $limit)));
+		// Archived companies stop generating open work (PSD §4.1).
+		$this->excludeArchivedCompanies($qb);
 
 		return $this->findEntities($qb);
 	}
@@ -99,6 +103,7 @@ class ActivityMapper extends QBMapper
 			->where($qb->expr()->isNull('done_at'))
 			->andWhere($qb->expr()->isNotNull('due_date'))
 			->andWhere($qb->expr()->lt('due_date', $qb->createNamedParameter($date->format('Y-m-d'))));
+		$this->excludeArchivedCompanies($qb);
 
 		$result = $qb->executeQuery();
 		$count = (int)$result->fetchOne();
@@ -138,11 +143,12 @@ class ActivityMapper extends QBMapper
 	}
 
 	/**
-	 * @param array{companyId?: int, dealId?: int, type?: string, openOnly?: bool, doneOnly?: bool, dueBefore?: \DateTimeInterface} $filters
+	 * @param array{companyId?: int, dealId?: int, type?: string, createdBy?: string, openOnly?: bool, doneOnly?: bool, dueBefore?: \DateTimeInterface, workspaceId?: int} $filters
 	 */
 	private function applyFilters(IQueryBuilder $qb, array $filters): void
 	{
 		$companyId = (int)($filters['companyId'] ?? 0);
+		$workspaceId = (int)($filters['workspaceId'] ?? 0);
 		if ($companyId > 0) {
 			$qb->andWhere($qb->expr()->eq('company_id', $qb->createNamedParameter($companyId, IQueryBuilder::PARAM_INT)));
 		}
@@ -152,9 +158,23 @@ class ActivityMapper extends QBMapper
 			$qb->andWhere($qb->expr()->eq('deal_id', $qb->createNamedParameter($dealId, IQueryBuilder::PARAM_INT)));
 		}
 
+		if ($companyId <= 0 && $dealId <= 0) {
+			// Default lists never show work of archived companies (PSD §4.1);
+			// explicit company/deal context keeps history reachable.
+			$this->excludeArchivedCompanies($qb);
+		}
+		if ($workspaceId > 0) {
+			$this->restrictToWorkspace($qb, $workspaceId);
+		}
+
 		$type = (string)($filters['type'] ?? '');
 		if ($type !== '') {
 			$qb->andWhere($qb->expr()->eq('type', $qb->createNamedParameter($type)));
+		}
+
+		$createdBy = trim((string)($filters['createdBy'] ?? ''));
+		if ($createdBy !== '') {
+			$qb->andWhere($qb->expr()->eq('created_by', $qb->createNamedParameter($createdBy)));
 		}
 
 		if (($filters['openOnly'] ?? false) === true) {
@@ -169,4 +189,19 @@ class ActivityMapper extends QBMapper
 			$qb->andWhere($qb->expr()->lte('due_date', $qb->createNamedParameter($dueBefore->format('Y-m-d'))));
 		}
 	}
+
+	/** Move activities during company merge. */
+	public function reassignCompany(int $fromCompanyId, int $toCompanyId): int
+	{
+		if ($fromCompanyId === $toCompanyId) {
+			return 0;
+		}
+		$qb = $this->db->getQueryBuilder();
+		$qb->update($this->getTableName())
+			->set('company_id', $qb->createNamedParameter($toCompanyId, IQueryBuilder::PARAM_INT))
+			->where($qb->expr()->eq('company_id', $qb->createNamedParameter($fromCompanyId, IQueryBuilder::PARAM_INT)));
+
+		return $qb->executeStatement();
+	}
+
 }

@@ -60,6 +60,12 @@ class SettingsService
 				['token' => (string)$data[Constants::CONFIG_LEAD_TOKEN]],
 			)
 			: null;
+		$data['orderWebhookUrl'] = $canManage
+			? $this->urlGenerator->linkToRouteAbsolute(
+				'customercheck.website_order_webhook.receive',
+				['token' => (string)$data[Constants::CONFIG_ORDER_TOKEN]],
+			)
+			: null;
 
 		return $data;
 	}
@@ -123,7 +129,11 @@ class SettingsService
 		if (!$this->accessControl->canManageAppConfiguration($userId)) {
 			throw new AccessDeniedException();
 		}
-		$key = $which === 'lead' ? Constants::CONFIG_LEAD_TOKEN : Constants::CONFIG_ICS_TOKEN;
+		$key = match ($which) {
+			'lead' => Constants::CONFIG_LEAD_TOKEN,
+			'order' => Constants::CONFIG_ORDER_TOKEN,
+			default => Constants::CONFIG_ICS_TOKEN,
+		};
 		$token = $this->generateSecretToken();
 		$this->config->setAppValue(Application::APP_ID, $key, $token);
 		return $token;
@@ -131,7 +141,7 @@ class SettingsService
 
 	public function ensureTokensExist(): void
 	{
-		foreach ([Constants::CONFIG_ICS_TOKEN, Constants::CONFIG_LEAD_TOKEN] as $key) {
+		foreach ([Constants::CONFIG_ICS_TOKEN, Constants::CONFIG_LEAD_TOKEN, Constants::CONFIG_ORDER_TOKEN] as $key) {
 			$existing = $this->config->getAppValue(Application::APP_ID, $key, '');
 			if ($existing === '') {
 				$this->config->setAppValue(

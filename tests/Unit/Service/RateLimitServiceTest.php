@@ -1,0 +1,60 @@
+<?php
+
+declare(strict_types=1);
+
+namespace OCA\CustomerCheck\Tests\Unit\Service;
+
+use OCA\CustomerCheck\AppInfo\Application;
+use OCA\CustomerCheck\Service\RateLimitService;
+use OCP\AppFramework\Utility\ITimeFactory;
+use OCP\IConfig;
+use OCP\Lock\ILockingProvider;
+use PHPUnit\Framework\TestCase;
+
+/**
+ * Rate-limit window arithmetic + exclusive lock acquisition.
+ */
+final class RateLimitServiceTest extends TestCase
+{
+	public function testAllowsUpToLimitThenBlocks(): void
+	{
+		$config = $this->createMock(IConfig::class);
+		$store = [];
+		$config->method('getAppValue')->willReturnCallback(
+			static function (string $app, string $key, string $default = '') use (&$store): string {
+				return $store[$key] ?? $default;
+			}
+		);
+		$config->method('setAppValue')->willReturnCallback(
+			static function (string $app, string $key, string $value) use (&$store): void {
+				self::assertSame(Application::APP_ID, $app);
+				$store[$key] = $value;
+			}
+		);
+
+		$time = $this->createMock(ITimeFactory::class);
+		$time->method('getTime')->willReturn(1_700_000_000);
+
+		$locking = $this->createMock(ILockingProvider::class);
+		$locking->expects($this->exactly(3))->method('acquireLock');
+		$locking->expects($this->exactly(3))->method('releaseLock');
+
+		$svc = new RateLimitService($config, $time, $locking);
+		$this->assertTrue($svc->allow('lead:1.2.3.4', 2, 600));
+		$this->assertTrue($svc->allow('lead:1.2.3.4', 2, 600));
+		$this->assertFalse($svc->allow('lead:1.2.3.4', 2, 600));
+	}
+
+	public function testContestedLockFailsClosed(): void
+	{
+		$config = $this->createMock(IConfig::class);
+		$config->expects($this->never())->method('getAppValue');
+
+		$time = $this->createMock(ITimeFactory::class);
+		$locking = $this->createMock(ILockingProvider::class);
+		$locking->method('acquireLock')->willThrowException(new \OCP\Lock\LockedException('busy'));
+
+		$svc = new RateLimitService($config, $time, $locking);
+		$this->assertFalse($svc->allow('lead:9.9.9.9', 30, 600));
+	}
+}

@@ -1,6 +1,6 @@
 {
 	"name": "software-by-design/nextcloud-customercheck",
-	"description": "Internal customer & revenue hub for the Software by Design Check app family",
+	"description": "Nextcloud-native command center for customer work — Check-suite CRM hub",
 	"type": "project",
 	"license": "AGPL-3.0-or-later",
 	"authors": [

@@ -71,6 +71,17 @@ class DealService
 		$deal->setProducts(isset($data['products']) ? trim((string)$data['products']) : null);
 		$close = DateMath::parseStrictDate((string)($data['expectedClose'] ?? ''));
 		$deal->setExpectedClose($close !== null ? new \DateTime($close->format('Y-m-d')) : null);
+		$owner = trim((string)($data['ownerUserId'] ?? $actor));
+		$deal->setOwnerUserId($owner !== '' ? $owner : null);
+		$bucket = isset($data['forecastBucket']) ? trim((string)$data['forecastBucket']) : null;
+		if ($bucket !== null && $bucket !== '' && !in_array($bucket, Constants::FORECAST_BUCKETS, true)) {
+			throw ValidationException::field(Constants::ERR_VALIDATION, 'forecastBucket', $this->l10n->t('Unknown forecast bucket.'));
+		}
+		$deal->setForecastBucket($bucket !== '' ? $bucket : null);
+		if ($stage === 'lead') {
+			$slaHours = max(1, (int)($data['leadSlaHours'] ?? Constants::LEAD_SLA_HOURS_DEFAULT));
+			$deal->setLeadSlaDueAt((clone $now)->modify('+' . $slaHours . ' hours'));
+		}
 		$deal->setStageChangedAt($now);
 		$deal->setCreatedBy($actor);
 		$deal->setCreatedAt($now);
@@ -112,15 +123,49 @@ class DealService
 		if (array_key_exists('agreementId', $data)) {
 			$deal->setAgreementId($data['agreementId'] === null ? null : (int)$data['agreementId']);
 		}
+		if (array_key_exists('ownerUserId', $data)) {
+			$owner = trim((string)($data['ownerUserId'] ?? ''));
+			$deal->setOwnerUserId($owner !== '' ? $owner : null);
+		}
+		if (array_key_exists('forecastBucket', $data)) {
+			$bucket = $data['forecastBucket'] === null ? null : trim((string)$data['forecastBucket']);
+			if ($bucket !== null && $bucket !== '' && !in_array($bucket, Constants::FORECAST_BUCKETS, true)) {
+				throw ValidationException::field(Constants::ERR_VALIDATION, 'forecastBucket', $this->l10n->t('Unknown forecast bucket.'));
+			}
+			$deal->setForecastBucket($bucket !== '' ? $bucket : null);
+		}
+		if (array_key_exists('quoteSentOn', $data)) {
+			$qs = DateMath::parseStrictDate((string)($data['quoteSentOn'] ?? ''));
+			$deal->setQuoteSentOn($qs !== null ? new \DateTime($qs->format('Y-m-d')) : null);
+		}
+		if (array_key_exists('quoteFileId', $data)) {
+			$deal->setQuoteFileId($data['quoteFileId'] === null ? null : (int)$data['quoteFileId']);
+		}
+		if (array_key_exists('nextActionSkipUntil', $data)) {
+			$skip = DateMath::parseStrictDate((string)($data['nextActionSkipUntil'] ?? ''));
+			$skipDt = $skip !== null ? new \DateTime($skip->format('Y-m-d')) : null;
+			if (!ChaseLogic::isSkipAllowed($skipDt, $this->timeFactory->getDateTime())) {
+				throw ValidationException::field(
+					Constants::ERR_SKIP_TOO_FAR,
+					'nextActionSkipUntil',
+					$this->l10n->t('Skip date cannot be more than 7 days ahead.'),
+				);
+			}
+			$deal->setNextActionSkipUntil($skipDt);
+		}
+		if (array_key_exists('leadFirstTouchAt', $data) && $data['leadFirstTouchAt']) {
+			$deal->setLeadFirstTouchAt($this->timeFactory->getDateTime());
+		}
 
 		$deal->setUpdatedAt($this->timeFactory->getDateTime());
 		return $this->dealMapper->update($deal);
 	}
 
 	/**
+	 * @param array<string, mixed> $extra lostReasonCode, wonReasonCode, lostReason detail
 	 * @return array{deal: Deal, sequencesFired: list<string>}
 	 */
-	public function changeStage(int $id, string $stage, ?string $lostReason, ?string $updatedAt, string $actor): array
+	public function changeStage(int $id, string $stage, ?string $lostReason, ?string $updatedAt, string $actor, array $extra = []): array
 	{
 		$deal = $this->get($id);
 		OptimisticLock::assertFresh($deal->getUpdatedAt(), $updatedAt);
@@ -137,15 +182,33 @@ class DealService
 			throw ValidationException::field(Constants::ERR_VALIDATION, 'stage', $this->l10n->t('Unknown pipeline stage.'));
 		}
 		if ($stage === 'lost') {
-			$reason = trim((string)($lostReason ?? ''));
-			if ($reason === '') {
+			$code = trim((string)($extra['lostReasonCode'] ?? ''));
+			$detail = trim((string)($extra['lostReason'] ?? $lostReason ?? ''));
+			// Free-text alone is never enough — always require a known loss code (§11.6 / §18.7).
+			if ($code === '' && $detail !== '' && in_array($detail, Constants::LOSS_REASON_CODES, true)) {
+				$code = $detail;
+				$detail = '';
+			}
+			if ($code === '' || !in_array($code, Constants::LOSS_REASON_CODES, true)) {
+				throw ValidationException::field(
+					Constants::ERR_LOSS_CODE_REQUIRED,
+					'lostReasonCode',
+					$this->l10n->t('Pick a loss reason code.'),
+				);
+			}
+			$deal->setLostReasonCode($code);
+			if ($code === 'other' && $detail === '') {
 				throw ValidationException::field(
 					Constants::ERR_LOST_REASON_REQUIRED,
 					'lostReason',
 					$this->l10n->t('Explain why the deal was lost.'),
 				);
 			}
-			$deal->setLostReason($reason);
+			$deal->setLostReason($detail !== '' ? $detail : $code);
+		}
+		if ($stage === 'won' && isset($extra['wonReasonCode'])) {
+			$w = trim((string)$extra['wonReasonCode']);
+			$deal->setWonReasonCode($w !== '' ? $w : null);
 		}
 
 		$now = $this->timeFactory->getDateTime();
@@ -189,9 +252,10 @@ class DealService
 		return DateMath::daysBetween($changed, $now) > $this->staleDealDays();
 	}
 
-	/** @return array{id:int,title:string,stage:string,companyId:int,valueCents:int,products:?string,expectedClose:?string,stageChangedAt:?string,lostReason:?string,agreementId:?int,stale:bool,updatedAt:?string} */
+	/** @return array<string, mixed> */
 	public function toArray(Deal $deal): array
 	{
+		$today = $this->timeFactory->getDateTime();
 		return [
 			'id' => (int)$deal->getId(),
 			'title' => (string)$deal->getTitle(),
@@ -202,7 +266,17 @@ class DealService
 			'expectedClose' => $deal->getExpectedClose()?->format('Y-m-d'),
 			'stageChangedAt' => OptimisticLock::format($deal->getStageChangedAt()),
 			'lostReason' => $deal->getLostReason(),
+			'lostReasonCode' => $deal->getLostReasonCode(),
+			'wonReasonCode' => $deal->getWonReasonCode(),
 			'agreementId' => $deal->getAgreementId(),
+			'ownerUserId' => $deal->getOwnerUserId(),
+			'quoteSentOn' => $deal->getQuoteSentOn()?->format('Y-m-d'),
+			'quoteAgeDays' => ChaseLogic::quoteAgeDays($deal->getQuoteSentOn(), $today),
+			'quoteFileId' => $deal->getQuoteFileId(),
+			'forecastBucket' => $deal->getForecastBucket(),
+			'leadFirstTouchAt' => OptimisticLock::format($deal->getLeadFirstTouchAt()),
+			'leadSlaDueAt' => OptimisticLock::format($deal->getLeadSlaDueAt()),
+			'nextActionSkipUntil' => $deal->getNextActionSkipUntil()?->format('Y-m-d'),
 			'stale' => $this->isStale($deal),
 			'updatedAt' => OptimisticLock::format($deal->getUpdatedAt()),
 		];

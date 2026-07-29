@@ -39,6 +39,7 @@ final class CrmBtnCascadeContractTest extends TestCase
 			'/background-color:\s*var\(--color-primary-element[^)]*\)\s*!important/',
 			$css,
 		);
-		$this->assertStringContainsString('min-height: 2.75rem', $css);
+		// WCAG 2.5.5 target size is defined in CSS px; 2.75rem shrank to 41.25px under NC's 15px root font.
+		$this->assertStringContainsString('min-height: 44px', $css);
 	}
 }

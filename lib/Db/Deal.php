@@ -26,6 +26,24 @@ use OCP\DB\Types;
  * @method void setLostReason(?string $lostReason)
  * @method int|null getAgreementId()
  * @method void setAgreementId(?int $agreementId)
+ * @method string|null getOwnerUserId()
+ * @method void setOwnerUserId(?string $ownerUserId)
+ * @method \DateTime|null getQuoteSentOn()
+ * @method void setQuoteSentOn(?\DateTime $quoteSentOn)
+ * @method int|null getQuoteFileId()
+ * @method void setQuoteFileId(?int $quoteFileId)
+ * @method string|null getForecastBucket()
+ * @method void setForecastBucket(?string $forecastBucket)
+ * @method string|null getLostReasonCode()
+ * @method void setLostReasonCode(?string $lostReasonCode)
+ * @method string|null getWonReasonCode()
+ * @method void setWonReasonCode(?string $wonReasonCode)
+ * @method \DateTime|null getLeadFirstTouchAt()
+ * @method void setLeadFirstTouchAt(?\DateTime $leadFirstTouchAt)
+ * @method \DateTime|null getLeadSlaDueAt()
+ * @method void setLeadSlaDueAt(?\DateTime $leadSlaDueAt)
+ * @method \DateTime|null getNextActionSkipUntil()
+ * @method void setNextActionSkipUntil(?\DateTime $nextActionSkipUntil)
  * @method string|null getCreatedBy()
  * @method void setCreatedBy(?string $createdBy)
  * @method \DateTime|null getCreatedAt()
@@ -44,6 +62,15 @@ class Deal extends Entity
 	protected $stageChangedAt = null;
 	protected $lostReason = null;
 	protected $agreementId = null;
+	protected $ownerUserId = null;
+	protected $quoteSentOn = null;
+	protected $quoteFileId = null;
+	protected $forecastBucket = null;
+	protected $lostReasonCode = null;
+	protected $wonReasonCode = null;
+	protected $leadFirstTouchAt = null;
+	protected $leadSlaDueAt = null;
+	protected $nextActionSkipUntil = null;
 	protected $createdBy = null;
 	protected $createdAt = null;
 	protected $updatedAt = null;
@@ -54,8 +81,13 @@ class Deal extends Entity
 		$this->addType('companyId', Types::BIGINT);
 		$this->addType('valueCents', Types::BIGINT);
 		$this->addType('agreementId', Types::BIGINT);
+		$this->addType('quoteFileId', Types::BIGINT);
 		$this->addType('expectedClose', Types::DATE);
+		$this->addType('quoteSentOn', Types::DATE);
+		$this->addType('nextActionSkipUntil', Types::DATE);
 		$this->addType('stageChangedAt', Types::DATETIME);
+		$this->addType('leadFirstTouchAt', Types::DATETIME);
+		$this->addType('leadSlaDueAt', Types::DATETIME);
 		$this->addType('createdAt', Types::DATETIME);
 		$this->addType('updatedAt', Types::DATETIME);
 	}

@@ -61,7 +61,13 @@ trait ApiControllerTrait
 			return $this->fail($e->getErrorCode(), $e->getMessage(), $e->getFields(), $status);
 		}
 		if ($e instanceof ConflictException) {
-			return $this->fail(Constants::ERR_CONFLICT_STALE, $e->getMessage() !== '' ? $e->getMessage() : 'Conflict', [], Http::STATUS_CONFLICT);
+			$code = $e->getErrorCode() !== '' ? $e->getErrorCode() : Constants::ERR_CONFLICT_STALE;
+			return $this->fail(
+				$code,
+				$e->getMessage() !== '' ? $e->getMessage() : 'Conflict',
+				$e->getFields(),
+				Http::STATUS_CONFLICT,
+			);
 		}
 		if ($e instanceof NotFoundException) {
 			return $this->fail($e->getErrorCode() ?: Constants::ERR_NOT_FOUND, $e->getMessage(), [], Http::STATUS_NOT_FOUND);

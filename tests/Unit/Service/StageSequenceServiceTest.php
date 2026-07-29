@@ -6,6 +6,7 @@ use OCA\CustomerCheck\Db\ActivityMapper;
 use OCA\CustomerCheck\Db\SeqLogMapper;
 use OCA\CustomerCheck\Service\StageSequenceService;
 use OCP\AppFramework\Utility\ITimeFactory;
+use OCP\IDBConnection;
 use OCP\IL10N;
 use PHPUnit\Framework\TestCase;
 
@@ -20,6 +21,7 @@ class StageSequenceServiceTest extends TestCase
 		$this->svc = new StageSequenceService(
 			$this->createMock(SeqLogMapper::class),
 			$this->createMock(ActivityMapper::class),
+			$this->createMock(IDBConnection::class),
 			$this->createMock(ITimeFactory::class),
 			$l,
 		);

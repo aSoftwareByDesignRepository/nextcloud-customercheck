@@ -174,4 +174,77 @@ class LeadWebhookServiceTest extends TestCase
 		$this->assertCount(1, $this->insertedActivities);
 		$this->assertSame('call', (string)$this->insertedActivities[0]->getType());
 	}
+
+	public function testArchivedEmailMatchCreatesFreshCompany(): void
+	{
+		$settings = $this->createMock(SettingsService::class);
+		$settings->method('tokenMatches')->willReturn(true);
+		$rate = $this->createMock(RateLimitService::class);
+		$rate->method('allow')->willReturn(true);
+
+		$archived = new Company();
+		$archived->setId(11);
+		$archived->setSlug('old-co');
+		$archived->setName('Old Co');
+		$archived->setArchivedAt(new \DateTime('2026-01-01'));
+
+		$fresh = new Company();
+		$fresh->setId(99);
+		$fresh->setSlug('fresh-co');
+		$fresh->setName('Fresh Co');
+
+		$person = new Person();
+		$person->setId(3);
+		$person->setCompanyId(11);
+		$person->setEmail('lead@example.com');
+
+		$persons = $this->createMock(PersonMapper::class);
+		$persons->method('findByEmail')->willReturn([$person]);
+
+		$companies = $this->createMock(CompanyService::class);
+		$companies->expects($this->once())->method('get')->with(11)->willReturn($archived);
+		$companies->expects($this->once())->method('create')->willReturn($fresh);
+
+		$slug = $this->createMock(SlugService::class);
+		$slug->method('suggestUnique')->willReturn('fresh-co');
+		$personService = $this->createMock(PersonService::class);
+		$personService->method('create')->willReturn(new Person());
+		$deals = $this->createMock(DealMapper::class);
+		$deals->method('findOpenByCompany')->willReturn([]);
+		$deals->method('insert')->willReturnCallback(static function ($d) {
+			$d->setId(1);
+			return $d;
+		});
+		$activities = $this->createMock(ActivityMapper::class);
+		$activities->method('insert')->willReturnCallback(static function ($a) {
+			$a->setId(2);
+			return $a;
+		});
+		$time = $this->createMock(ITimeFactory::class);
+		$time->method('getDateTime')->willReturn(new \DateTime('2026-07-20 12:00:00'));
+		$l10n = $this->createMock(IL10N::class);
+		$l10n->method('t')->willReturnCallback(static fn ($s) => $s);
+
+		$svc = new LeadWebhookService(
+			$settings,
+			$rate,
+			$companies,
+			$slug,
+			$personService,
+			$persons,
+			$deals,
+			$activities,
+			$this->createMock(TimelineService::class),
+			$this->createMock(NotificationService::class),
+			$time,
+			$l10n,
+		);
+
+		$result = $svc->handle('tok', '1.2.3.4', [
+			'companyName' => 'Fresh Co',
+			'email' => 'lead@example.com',
+		]);
+		$this->assertSame(99, $result['companyId']);
+		$this->assertSame('fresh-co', $result['slug']);
+	}
 }

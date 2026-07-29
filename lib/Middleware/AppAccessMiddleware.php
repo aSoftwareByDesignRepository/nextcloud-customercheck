@@ -3,6 +3,7 @@ declare(strict_types=1);
 namespace OCA\CustomerCheck\Middleware;
 use OCA\CustomerCheck\Exception\AccessDeniedException;
 use OCA\CustomerCheck\Exception\AppAccessDeniedException;
+use OCA\CustomerCheck\Exception\NotFoundException;
 use OCA\CustomerCheck\Service\AccessControlService;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\PublicPage;
@@ -50,6 +51,28 @@ class AppAccessMiddleware extends Middleware
 
 	public function afterException($controller, $methodName, \Exception $exception)
 	{
+		if ($exception instanceof NotFoundException) {
+			$path = (string)($this->request->getPathInfo() ?? '');
+			$wantsJson = str_contains($path, '/api/') || $this->request->getMethod() !== 'GET';
+			$message = $exception->getMessage() !== '' ? $exception->getMessage() : 'Not found';
+			if ($wantsJson) {
+				return new JSONResponse([
+					'success' => false,
+					'error' => $exception->getErrorCode() ?: 'NOT_FOUND',
+					'message' => $message,
+					'fields' => new \stdClass(),
+				], Http::STATUS_NOT_FOUND);
+			}
+			$l = $this->l10nFactory->get('customercheck');
+
+			return new TemplateResponse('customercheck', 'access-denied', [
+				'message' => $l->t('Not found.'),
+				'homeUrl' => $this->urlGenerator->linkToDefaultPageUrl(),
+				'todayUrl' => $this->urlGenerator->linkToRoute('customercheck.page.today'),
+				'showAppLink' => true,
+			], 'guest');
+		}
+
 		$isAppGate = $exception instanceof AppAccessDeniedException;
 		$isAdminGate = $exception instanceof AccessDeniedException;
 		if (!$isAppGate && !$isAdminGate) {

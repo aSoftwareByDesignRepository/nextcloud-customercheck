@@ -1,8 +1,14 @@
 <?php
+
 declare(strict_types=1);
+
 namespace OCA\CustomerCheck\Controller;
+
 use OCA\CustomerCheck\Service\AccessControlService;
+use OCA\CustomerCheck\Service\CompanyService;
+use OCA\CustomerCheck\Service\ContactsSuggestService;
 use OCA\CustomerCheck\Service\PersonService;
+use OCA\CustomerCheck\Service\WorkspaceAccessService;
 use OCA\CustomerCheck\Support\OptimisticLock;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
@@ -10,28 +16,122 @@ use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\IRequest;
 
-class PersonApiController extends Controller {
+/**
+ * Persons API — workspace-scoped; includes buying roles (product §5.4 / §12).
+ */
+class PersonApiController extends Controller
+{
 	use ApiControllerTrait;
-	public function __construct(string $appName, IRequest $request, private readonly AccessControlService $accessControl, private readonly PersonService $persons) {
+	use WorkspaceScopedTrait;
+
+	public function __construct(
+		string $appName,
+		IRequest $request,
+		private readonly AccessControlService $accessControl,
+		private readonly WorkspaceAccessService $workspaces,
+		private readonly CompanyService $companies,
+		private readonly PersonService $persons,
+		private readonly ContactsSuggestService $contactsSuggest,
+	) {
 		parent::__construct($appName, $request);
 	}
-	#[NoAdminRequired] public function index(int $id): JSONResponse {
-		try { $this->accessControl->requireCanUseApp(); return $this->ok(array_map([$this,'ser'], $this->persons->listForCompany($id))); }
-		catch (\Throwable $e) { return $this->fromThrowable($e); }
+
+	#[NoAdminRequired]
+	public function index(int $id): JSONResponse
+	{
+		try {
+			$this->requireCompanyInResolvedWorkspace($id);
+
+			return $this->ok(array_map([$this, 'ser'], $this->persons->listForCompany($id)));
+		} catch (\Throwable $e) {
+			return $this->fromThrowable($e);
+		}
 	}
-	#[NoAdminRequired] public function create(int $id): JSONResponse {
-		try { $uid=$this->accessControl->requireCanUseApp(); $body=json_decode(file_get_contents('php://input')?:'{}', true)?:[]; return $this->ok($this->ser($this->persons->create($id,$body,$uid)), Http::STATUS_CREATED); }
-		catch (\Throwable $e) { return $this->fromThrowable($e); }
+
+	#[NoAdminRequired]
+	public function create(int $id): JSONResponse
+	{
+		try {
+			$this->requireCompanyInResolvedWorkspace($id);
+			$ctx = $this->requireWorkspaceCapability('write');
+			$body = $this->jsonBody();
+
+			return $this->ok($this->ser($this->persons->create($id, $body, $ctx['uid'])), Http::STATUS_CREATED);
+		} catch (\Throwable $e) {
+			return $this->fromThrowable($e);
+		}
 	}
-	#[NoAdminRequired] public function update(int $id): JSONResponse {
-		try { $uid=$this->accessControl->requireCanUseApp(); $body=json_decode(file_get_contents('php://input')?:'{}', true)?:[]; return $this->ok($this->ser($this->persons->update($id,$body,$uid,$this->updatedAtPrecondition($body)))); }
-		catch (\Throwable $e) { return $this->fromThrowable($e); }
+
+	#[NoAdminRequired]
+	public function update(int $id): JSONResponse
+	{
+		try {
+			$person = $this->persons->get($id);
+			$this->requireCompanyInResolvedWorkspace((int)$person->getCompanyId());
+			$ctx = $this->requireWorkspaceCapability('write');
+			$body = $this->jsonBody();
+
+			return $this->ok($this->ser($this->persons->update($id, $body, $ctx['uid'], $this->updatedAtPrecondition($body))));
+		} catch (\Throwable $e) {
+			return $this->fromThrowable($e);
+		}
 	}
-	#[NoAdminRequired] public function destroy(int $id): JSONResponse {
-		try { $uid=$this->accessControl->requireCanUseApp(); $this->persons->delete($id,$uid); return $this->ok(['deleted'=>true]); }
-		catch (\Throwable $e) { return $this->fromThrowable($e); }
+
+	#[NoAdminRequired]
+	public function destroy(int $id): JSONResponse
+	{
+		try {
+			$person = $this->persons->get($id);
+			$this->requireCompanyInResolvedWorkspace((int)$person->getCompanyId());
+			$ctx = $this->requireWorkspaceCapability('write');
+			$body = $this->jsonBody();
+			$this->persons->delete($id, $ctx['uid'], $this->updatedAtPrecondition($body));
+
+			return $this->ok(['deleted' => true]);
+		} catch (\Throwable $e) {
+			return $this->fromThrowable($e);
+		}
 	}
-	private function ser($p): array {
-		return ['id'=>(int)$p->getId(),'companyId'=>(int)$p->getCompanyId(),'name'=>(string)$p->getName(),'role'=>$p->getRole(),'email'=>$p->getEmail(),'phone'=>$p->getPhone(),'isPrimary'=>(int)$p->getIsPrimary()===1,'updatedAt'=>OptimisticLock::format($p->getUpdatedAt())];
+
+	#[NoAdminRequired]
+	public function suggestContacts(string $q = '', int $limit = 8): JSONResponse
+	{
+		try {
+			$this->requireWorkspaceContext();
+
+			return $this->ok([
+				'available' => $this->contactsSuggest->isAvailable(),
+				'items' => $this->contactsSuggest->suggest($q, $limit),
+				'suggestions' => $this->contactsSuggest->suggest($q, $limit),
+			]);
+		} catch (\Throwable $e) {
+			return $this->fromThrowable($e);
+		}
+	}
+
+	/** @return array<string, mixed> */
+	private function jsonBody(): array
+	{
+		$decoded = json_decode(file_get_contents('php://input') ?: '{}', true);
+
+		return is_array($decoded) ? $decoded : [];
+	}
+
+	private function ser($p): array
+	{
+		return [
+			'id' => (int)$p->getId(),
+			'companyId' => (int)$p->getCompanyId(),
+			'name' => (string)$p->getName(),
+			'role' => $p->getRole(),
+			'buyingRole' => $p->getBuyingRole(),
+			'status' => method_exists($p, 'getStatus') ? $p->getStatus() : null,
+			'email' => $p->getEmail(),
+			'phone' => $p->getPhone(),
+			'isPrimary' => (int)$p->getIsPrimary() === 1,
+			'contactsUid' => $p->getContactsUid(),
+			'reportsToPersonId' => method_exists($p, 'getReportsToPersonId') ? $p->getReportsToPersonId() : null,
+			'updatedAt' => OptimisticLock::format($p->getUpdatedAt()),
+		];
 	}
 }

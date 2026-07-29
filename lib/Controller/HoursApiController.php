@@ -12,7 +12,9 @@ namespace OCA\CustomerCheck\Controller;
 use OCA\CustomerCheck\Exception\ValidationException;
 use OCA\CustomerCheck\Service\AccessControlService;
 use OCA\CustomerCheck\Service\AgreementService;
+use OCA\CustomerCheck\Service\CompanyService;
 use OCA\CustomerCheck\Service\QuotaService;
+use OCA\CustomerCheck\Service\WorkspaceAccessService;
 use OCA\CustomerCheck\Support\DateMath;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
@@ -23,22 +25,33 @@ use OCP\IRequest;
 class HoursApiController extends Controller
 {
 	use ApiControllerTrait;
+	use WorkspaceScopedTrait;
 
 	public function __construct(
 		string $appName,
 		IRequest $request,
 		private readonly AccessControlService $accessControl,
+		private readonly WorkspaceAccessService $workspaces,
+		private readonly CompanyService $companies,
 		private readonly AgreementService $agreements,
 		private readonly QuotaService $quota,
 	) {
 		parent::__construct($appName, $request);
 	}
 
+	private function gateAgreement(int $id, string $capability = 'read'): array
+	{
+		$agreement = $this->agreements->get($id);
+		$this->requireCompanyInResolvedWorkspace((int)$agreement->getCompanyId());
+
+		return $this->requireWorkspaceCapability($capability);
+	}
+
 	#[NoAdminRequired]
 	public function index(int $id): JSONResponse
 	{
 		try {
-			$this->accessControl->requireCanUseApp();
+			$this->gateAgreement($id, 'read');
 			$agreement = $this->agreements->get($id);
 			$entries = $this->quota->listEntries($id);
 
@@ -60,7 +73,7 @@ class HoursApiController extends Controller
 	public function create(int $id): JSONResponse
 	{
 		try {
-			$uid = $this->accessControl->requireCanUseApp();
+			$ctx = $this->gateAgreement($id, 'write');
 			$body = json_decode(file_get_contents('php://input') ?: '{}', true) ?: [];
 			$agreement = $this->agreements->get($id);
 			$date = DateMath::parseStrictDate((string)($body['entryDate'] ?? ''));
@@ -72,7 +85,7 @@ class HoursApiController extends Controller
 				$date,
 				(int)($body['minutes'] ?? 0),
 				(string)($body['topic'] ?? ''),
-				$uid,
+				$ctx['uid'],
 			);
 
 			return $this->ok([
@@ -88,9 +101,11 @@ class HoursApiController extends Controller
 	public function update(int $entryId): JSONResponse
 	{
 		try {
-			$uid = $this->accessControl->requireCanUseApp();
 			$body = json_decode(file_get_contents('php://input') ?: '{}', true) ?: [];
-			$entry = $this->quota->updateEntry($entryId, is_array($body) ? $body : [], $uid);
+			// Load entry → agreement → company for ACL before mutation.
+			$peek = $this->quota->getEntry($entryId);
+			$ctx = $this->gateAgreement((int)$peek->getAgreementId(), 'write');
+			$entry = $this->quota->updateEntry($entryId, is_array($body) ? $body : [], $ctx['uid']);
 			$agreement = $this->agreements->get((int)$entry->getAgreementId());
 
 			return $this->ok([

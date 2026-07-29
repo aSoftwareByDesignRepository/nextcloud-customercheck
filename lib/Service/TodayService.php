@@ -8,12 +8,18 @@ use OCA\CustomerCheck\Constants;
 use OCA\CustomerCheck\Db\ActivityMapper;
 use OCA\CustomerCheck\Db\AgreementMapper;
 use OCA\CustomerCheck\Db\CompanyMapper;
+use OCA\CustomerCheck\Db\DealMapper;
 use OCA\CustomerCheck\Support\DateMath;
+use OCA\CustomerCheck\Support\OptimisticLock;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\IL10N;
 
 /**
  * Today urgency queue — PSD §10.3 / §14.5.
+ *
+ * Sort: lower urgency number first, then dueDate ASC.
+ * Bands: agreement_expiry 10–18, ticket_waiting 20, activity_overdue 30,
+ * activity_due 40, deal_stale 50.
  */
 class TodayService
 {
@@ -21,6 +27,8 @@ class TodayService
 		private readonly AgreementMapper $agreementMapper,
 		private readonly ActivityMapper $activityMapper,
 		private readonly CompanyMapper $companyMapper,
+		private readonly DealMapper $dealMapper,
+		private readonly DealService $dealService,
 		private readonly FacadeProbeService $facades,
 		private readonly AgreementStatusService $statusService,
 		private readonly DisplayLabelService $labels,
@@ -94,9 +102,31 @@ class TodayService
 				'companyId' => $companyId,
 				'companyName' => $this->resolveCompanyName($companyId, $companyNames),
 				'activityId' => (int)$activity->getId(),
+				'updatedAt' => OptimisticLock::format($activity->getUpdatedAt()),
 				'label' => (string)$activity->getTitle(),
 				'dueDate' => $due?->format('Y-m-d'),
 				'type' => (string)$activity->getType(),
+			];
+		}
+
+		$staleDays = $this->dealService->staleDealDays();
+		$staleCutoff = DateMath::addDays($today, -$staleDays);
+		foreach ($this->dealMapper->findOpenStaleBefore($staleCutoff, 200) as $deal) {
+			// Double-check via DealService so settings/edge cases stay single-sourced.
+			if (!$this->dealService->isStale($deal, $today)) {
+				continue;
+			}
+			$companyId = (int)$deal->getCompanyId();
+			$changed = $deal->getStageChangedAt();
+			$items[] = [
+				'kind' => 'deal_stale',
+				'urgency' => 50,
+				'companyId' => $companyId,
+				'companyName' => $this->resolveCompanyName($companyId, $companyNames),
+				'dealId' => (int)$deal->getId(),
+				'label' => (string)$deal->getTitle(),
+				'dueDate' => $changed?->format('Y-m-d'),
+				'stage' => (string)$deal->getStage(),
 			];
 		}
 

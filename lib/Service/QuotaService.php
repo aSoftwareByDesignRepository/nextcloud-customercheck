@@ -11,8 +11,10 @@ use OCA\CustomerCheck\Db\HoursEntry;
 use OCA\CustomerCheck\Db\HoursMapper;
 use OCA\CustomerCheck\Db\ReminderLog;
 use OCA\CustomerCheck\Db\ReminderLogMapper;
+use OCA\CustomerCheck\Exception\NotFoundException;
 use OCA\CustomerCheck\Exception\ValidationException;
 use OCA\CustomerCheck\Support\DateMath;
+use OCP\AppFramework\Db\DoesNotExistException;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\DB\Exception as DbException;
 use OCP\IDBConnection;
@@ -147,6 +149,15 @@ class QuotaService
 	public function listEntries(int $agreementId, int $limit = 500): array
 	{
 		return $this->hoursMapper->findByAgreement($agreementId, $limit);
+	}
+
+	public function getEntry(int $entryId): HoursEntry
+	{
+		try {
+			return $this->hoursMapper->findById($entryId);
+		} catch (DoesNotExistException) {
+			throw new NotFoundException($this->l10n->t('Hours entry not found.'), Constants::ERR_NOT_FOUND);
+		}
 	}
 
 	/**
@@ -325,16 +336,23 @@ class QuotaService
 					'percent' => (int)floor($this->usedPercent($usedMinutes, $quotaMinutes)),
 				],
 			);
+		} catch (\Throwable $e) {
+			// Notify failed — release so the next entry retries.
+			$this->reminderLogMapper->delete($ledgerRow);
+			throw $e;
+		}
+
+		// Timeline is best-effort AFTER a successful notify. Never release the
+		// ledger here: that would duplicate the 80 % alert (AC5 / quota ledger).
+		try {
 			$this->timelineService->append(
 				(int)$agreement->getCompanyId(),
 				'quota.alert',
 				'system',
 				['agreementId' => $agreementId, 'usedMinutes' => $usedMinutes, 'quotaMinutes' => $quotaMinutes],
 			);
-		} catch (\Throwable $e) {
-			// Dispatch failed — release the ledger slot so the next run retries.
-			$this->reminderLogMapper->delete($ledgerRow);
-			throw $e;
+		} catch (\Throwable) {
+			// Audit trail failure must not re-arm the alert.
 		}
 
 		return true;

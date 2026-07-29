@@ -216,10 +216,10 @@ input[type="reset"] {
   padding: var(--space-3) var(--space-6);
 }
 
-/* Small buttons still accessible but can be smaller */
+/* Small buttons keep the compact padding but never drop below the AA target size */
 .btn--sm {
-  min-height: 36px;
-  min-width: 36px;
+  min-height: 44px;
+  min-width: 44px;
 }
 
 /* Ensure sufficient spacing between interactive elements */

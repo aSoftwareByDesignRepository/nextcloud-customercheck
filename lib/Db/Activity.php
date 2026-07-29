@@ -28,6 +28,10 @@ use OCP\DB\Types;
  * @method void setOrigin(string $origin)
  * @method string|null getTodoUri()
  * @method void setTodoUri(?string $todoUri)
+ * @method int getIsCallback()
+ * @method void setIsCallback(int $isCallback)
+ * @method int|null getPersonId()
+ * @method void setPersonId(?int $personId)
  * @method string|null getCreatedBy()
  * @method void setCreatedBy(?string $createdBy)
  * @method \DateTime|null getCreatedAt()
@@ -47,6 +51,8 @@ class Activity extends Entity
 	protected $doneAt = null;
 	protected $origin = 'user';
 	protected $todoUri = null;
+	protected $isCallback = 0;
+	protected $personId = null;
 	protected $createdBy = null;
 	protected $createdAt = null;
 	protected $updatedAt = null;
@@ -59,6 +65,8 @@ class Activity extends Entity
 		$this->addType('agreementId', Types::BIGINT);
 		$this->addType('dueDate', Types::DATE);
 		$this->addType('doneAt', Types::DATETIME);
+		$this->addType('isCallback', Types::INTEGER);
+		$this->addType('personId', Types::BIGINT);
 		$this->addType('createdAt', Types::DATETIME);
 		$this->addType('updatedAt', Types::DATETIME);
 	}
@@ -66,5 +74,10 @@ class Activity extends Entity
 	public function isOpen(): bool
 	{
 		return $this->doneAt === null;
+	}
+
+	public function isCallback(): bool
+	{
+		return (int)$this->isCallback === 1;
 	}
 }

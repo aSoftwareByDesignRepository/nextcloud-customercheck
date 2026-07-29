@@ -19,7 +19,26 @@ final class DisplayLabelServiceTest extends TestCase
 	{
 		parent::setUp();
 		$l10n = $this->createMock(IL10N::class);
-		$l10n->method('t')->willReturnCallback(static fn (string $s) => $s);
+		$l10n->method('t')->willReturnCallback(static function (string $s, array $args = []) {
+			if ($args === []) {
+				return $s;
+			}
+			// Mirror Nextcloud %s / %1$s substitution for tests that pass args.
+			$out = $s;
+			$i = 0;
+			foreach ($args as $arg) {
+				$i++;
+				$out = str_replace('%' . $i . '$s', (string)$arg, $out);
+				$out = preg_replace('/%s/', (string)$arg, $out, 1) ?? $out;
+			}
+			return $out;
+		});
+		$l10n->method('l')->willReturnCallback(static function (string $type, $data) {
+			if ($data instanceof \DateTimeInterface) {
+				return $data->format('Y-m-d H:i');
+			}
+			return (string)$data;
+		});
 		$this->labels = new DisplayLabelService($l10n);
 	}
 
@@ -47,6 +66,61 @@ final class DisplayLabelServiceTest extends TestCase
 		$this->assertSame('Overdue', $this->labels->invoiceStatus('overdue'));
 		$this->assertSame('Quoted', $this->labels->dealStage('quoted'));
 		$this->assertSame('Won', $this->labels->dealStage('won'));
+		$this->assertSame('Paid up', $this->labels->billingState('ok'));
+		$this->assertSame('Needs attention', $this->labels->billingState('attention'));
+		$this->assertSame('Overdue', $this->labels->billingState('critical'));
+		$this->assertSame('Unknown', $this->labels->billingState('unknown'));
+		$this->assertSame('No next action', $this->labels->chaseReason('no_next_action'));
+		$this->assertSame('Lead SLA overdue', $this->labels->chaseReason('lead_sla'));
+		$this->assertSame('Quote follow-up due', $this->labels->chaseReason('quote_followup_due'));
+		$this->assertSame('Renewal soon', $this->labels->pulseAttentionKind('renewal_hot'));
+		$this->assertSame('Overdue invoice', $this->labels->pulseAttentionKind('overdue_invoice'));
+		$this->assertSame('Plan stalled', $this->labels->pulseAttentionKind('plan_stalled'));
+		$this->assertSame('Plan at risk', $this->labels->pulseAttentionKind('plan_at_risk'));
+		$this->assertSame(
+			'Unbilled hours are not ready yet — we will not guess zero.',
+			$this->labels->unbilledHint('honesty_blocked')
+		);
+		$this->assertSame(
+			'ProjectCheck is off — unbilled hours cannot be shown.',
+			$this->labels->unbilledHint('unavailable')
+		);
+		$this->assertSame(
+			'Open billable hours from ProjectCheck that are not invoiced yet.',
+			$this->labels->unbilledHint('ok')
+		);
+		$this->assertStringNotContainsString('Not available yet', $this->labels->unbilledHint('honesty_blocked'));
+		$this->assertStringNotContainsString('honesty_blocked', $this->labels->unbilledHint('honesty_blocked'));
+		$this->assertSame('Stalled', $this->labels->planHealth('stalled'));
+		$this->assertSame('At risk', $this->labels->planHealth('at_risk'));
+		$this->assertSame('Committed', $this->labels->commitmentStatus('committed'));
+		$this->assertSame('Abandoned', $this->labels->commitmentStatus('abandoned'));
+		$this->assertSame('Missing champion', $this->labels->coverageFlag('champion_gap'));
+		$this->assertSame('Missing budget decision-maker', $this->labels->coverageFlag('buyer_gap'));
+		$this->assertSame('Follow-up overdue', $this->labels->coverageFlag('touch_overdue'));
+		$this->assertSame('Budget decision-maker', $this->labels->coverageMissing('economic_buyer'));
+		$this->assertSame('Day-to-day or technical contact', $this->labels->coverageMissing('day_to_day_or_technical'));
+		$this->assertSame('Budget decision-maker', $this->labels->buyingRole('economic_buyer'));
+		$this->assertSame('Day-to-day contact', $this->labels->buyingRole('day_to_day'));
+		$this->assertSame('Technical contact', $this->labels->buyingRole('technical'));
+		$this->assertSame('Email logged', $this->labels->timelineEventType('email.logged'));
+		$this->assertSame('Deal stage changed', $this->labels->timelineEventType('deal.stage'));
+		$this->assertSame('Company created', $this->labels->timelineEventType('company.created'));
+		$this->assertSame('Agreement created', $this->labels->timelineEventType('agreement.created'));
+		$this->assertSame('Update', $this->labels->timelineEventType('totally.unknown.event'));
+		$this->assertStringNotContainsString('.', $this->labels->timelineEventType('email.logged'));
+		$this->assertSame('System', $this->labels->timelineActor('system'));
+		$this->assertSame('System', $this->labels->timelineActor(''));
+		$this->assertSame('Webhook', $this->labels->timelineActor('webhook'));
+		$this->assertSame('admin', $this->labels->timelineActor('admin'));
+		$when = $this->labels->timelineWhen(new \DateTimeImmutable('2026-07-28T12:50:26+00:00'));
+		$this->assertNotSame('', $when);
+		$this->assertStringNotContainsString('T12:50', $when);
+		$this->assertSame('Left', $this->labels->personStatus('left'));
+		$this->assertSame('Logged email', $this->labels->communicationKind('email_touch'));
+		$this->assertSame('Inbound', $this->labels->mailDirection('inbound'));
+		$this->assertSame('Open', $this->labels->promiseStatus('open'));
+		$this->assertSame('Blocked', $this->labels->mapStepStatus('blocked'));
 		$opts = $this->labels->activityTypeOptions();
 		$this->assertCount(4, $opts);
 		$this->assertSame('todo', $opts[3]['value']);

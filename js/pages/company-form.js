@@ -10,6 +10,13 @@
   const nameInput = document.getElementById('crm-company-name');
   const slugInput = document.getElementById('crm-company-slug');
 
+  function t(key) {
+    if (typeof OC !== 'undefined' && OC.L10N && typeof OC.L10N.translate === 'function') {
+      return OC.L10N.translate('customercheck', key);
+    }
+    return key;
+  }
+
   /**
    * Filter sibling <select> options by name — keeps value=id under the hood.
    * @param {HTMLInputElement|null} filter
@@ -114,5 +121,94 @@
       errBox.hidden = false;
       errBox.textContent = (e.payload && e.payload.message) || e.message;
     }
+  });
+
+  /**
+   * Select an existing sibling id in the matching <select> (adds option if missing).
+   * @param {string} selectId
+   * @param {number} siblingId
+   * @param {string} label
+   */
+  function selectSiblingOption(selectId, siblingId, label) {
+    const select = document.getElementById(selectId);
+    if (!select || select.tagName !== 'SELECT') return;
+    const value = String(siblingId);
+    let opt = Array.from(select.options).find((o) => o.value === value);
+    if (!opt) {
+      opt = document.createElement('option');
+      opt.value = value;
+      opt.textContent = label || ('#' + value);
+      select.appendChild(opt);
+    }
+    select.value = value;
+  }
+
+  /**
+   * Create sibling customer from CRM company (write facade). On duplicate_name,
+   * offer one-click ensureLink with existingPcCustomerId / existingTcCustomerId.
+   * @param {string} pathSuffix
+   * @param {HTMLButtonElement|null} btn
+   * @param {{ fieldKey: string, selectId: string, bodyKey: string }} opts
+   */
+  function wireCreateSibling(pathSuffix, btn, opts) {
+    if (!btn || form.dataset.mode !== 'edit' || !form.dataset.id) return;
+
+    async function runCreate(extraBody) {
+      errBox.hidden = true;
+      while (errBox.firstChild) {
+        errBox.removeChild(errBox.firstChild);
+      }
+      btn.disabled = true;
+      try {
+        const body = Object.assign({
+          updatedAt: form.dataset.updatedAt || null,
+        }, extraBody || {});
+        const res = await Api.post('/companies/' + form.dataset.id + pathSuffix, body);
+        const company = res.data && (res.data.company || res.data);
+        if (company && company.updatedAt) {
+          form.dataset.updatedAt = company.updatedAt;
+        }
+        window.location.href = OC.generateUrl('/apps/customercheck/companies/' + form.dataset.id);
+      } catch (e) {
+        const fields = (e.payload && e.payload.fields) || {};
+        const existingId = parseInt(fields[opts.fieldKey], 10);
+        errBox.hidden = false;
+        const msg = document.createElement('p');
+        msg.textContent = (e.payload && e.payload.message) || e.message;
+        errBox.appendChild(msg);
+        if (Number.isFinite(existingId) && existingId > 0) {
+          selectSiblingOption(opts.selectId, existingId, t('Existing customer'));
+          const linkBtn = document.createElement('button');
+          linkBtn.type = 'button';
+          linkBtn.className = 'crm-btn crm-btn--primary';
+          linkBtn.style.minHeight = '44px';
+          linkBtn.style.marginTop = '0.5rem';
+          linkBtn.textContent = t('Link existing customer');
+          linkBtn.addEventListener('click', () => {
+            const payload = {};
+            payload[opts.bodyKey] = existingId;
+            runCreate(payload);
+          });
+          errBox.appendChild(linkBtn);
+        }
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    btn.addEventListener('click', () => {
+      runCreate({});
+    });
+  }
+
+  wireCreateSibling('/create-pc-customer', document.getElementById('crm-create-pc-customer'), {
+    fieldKey: 'existingPcCustomerId',
+    selectId: 'crm-company-pc',
+    bodyKey: 'existingPcCustomerId',
+  });
+  wireCreateSibling('/create-tc-customer', document.getElementById('crm-create-tc-customer'), {
+    fieldKey: 'existingTcCustomerId',
+    selectId: 'crm-company-tc',
+    bodyKey: 'existingTcCustomerId',
   });
 })();

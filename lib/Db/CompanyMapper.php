@@ -195,7 +195,7 @@ class CompanyMapper extends QBMapper
 	}
 
 	/**
-	 * @param array{status?: string, search?: string, archived?: bool} $filters
+	 * @param array{status?: string, search?: string, archived?: bool, workspaceId?: int} $filters
 	 */
 	private function applyFilters(IQueryBuilder $qb, array $filters): void
 	{
@@ -208,6 +208,11 @@ class CompanyMapper extends QBMapper
 		$status = (string)($filters['status'] ?? '');
 		if ($status !== '') {
 			$qb->andWhere($qb->expr()->eq('status', $qb->createNamedParameter($status)));
+		}
+
+		$workspaceId = (int)($filters['workspaceId'] ?? 0);
+		if ($workspaceId > 0) {
+			$qb->andWhere($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, IQueryBuilder::PARAM_INT)));
 		}
 
 		$search = trim((string)($filters['search'] ?? ''));

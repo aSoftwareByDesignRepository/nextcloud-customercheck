@@ -28,6 +28,7 @@ class ActivityService
 {
 	public function __construct(
 		private readonly ActivityMapper $activityMapper,
+		private readonly AccessControlService $accessControl,
 		private readonly TimelineService $timelineService,
 		private readonly VTodoService $vTodoService,
 		private readonly ITimeFactory $timeFactory,
@@ -61,6 +62,34 @@ class ActivityService
 	 */
 	public function count(array $filters = []): int
 	{
+		return $this->activityMapper->countSearch($filters);
+	}
+
+	/**
+	 * Mobile may only see its own activities unless the caller is an app admin.
+	 *
+	 * @param array{companyId?: int, dealId?: int, type?: string, createdBy?: string, openOnly?: bool, doneOnly?: bool, dueBefore?: \DateTimeInterface} $filters
+	 * @return Activity[]
+	 */
+	public function searchForMobile(string $userId, array $filters = [], int $limit = 500, int $offset = 0): array
+	{
+		if (!$this->accessControl->isAppAdmin($userId)) {
+			$filters['createdBy'] = $userId;
+		}
+
+		return $this->activityMapper->search($filters, $limit, $offset);
+	}
+
+	/**
+	 * Company 360 lite uses the same visibility as the mobile list to avoid
+	 * leaking counts for other users' open tasks.
+	 */
+	public function countForMobile(string $userId, array $filters = []): int
+	{
+		if (!$this->accessControl->isAppAdmin($userId)) {
+			$filters['createdBy'] = $userId;
+		}
+
 		return $this->activityMapper->countSearch($filters);
 	}
 
@@ -110,17 +139,38 @@ class ActivityService
 
 	/**
 	 * Toggle completion. Returns the stored entity so the UI can offer undo
-	 * with the fresh `updatedAt` (§9.6).
+	 * with the fresh `updatedAt` (§9.6). User-facing callers must echo `updatedAt`.
 	 */
 	public function setDone(int $id, bool $done, string $actor, ?string $updatedAtPrecondition): Activity
 	{
 		$activity = $this->get($id);
-		OptimisticLock::assertFresh($activity->getUpdatedAt(), $updatedAtPrecondition, false);
+		OptimisticLock::assertFresh($activity->getUpdatedAt(), $updatedAtPrecondition);
 
 		$activity->setDoneAt($done ? $this->timeFactory->getDateTime() : null);
 		$activity->setUpdatedAt($this->timeFactory->getDateTime());
 
 		return $this->activityMapper->update($activity);
+	}
+
+	/**
+	 * App admins may act on every activity. Regular mobile users may only act on
+	 * activities they created themselves.
+	 *
+	 * @throws \OCA\CustomerCheck\Exception\AccessDeniedException
+	 */
+	public function requireMobileAccess(int $activityId, string $userId): Activity
+	{
+		$activity = $this->get($activityId);
+		if ($this->accessControl->isAppAdmin($userId)) {
+			return $activity;
+		}
+		if ((string)$activity->getCreatedBy() !== $userId) {
+			throw new \OCA\CustomerCheck\Exception\AccessDeniedException(
+				$this->l10n->t('You may only change your own activities in the mobile app.')
+			);
+		}
+
+		return $activity;
 	}
 
 	/**
@@ -353,6 +403,17 @@ class ActivityService
 		if (array_key_exists('agreementId', $input)) {
 			$agreementId = (int)($input['agreementId'] ?? 0);
 			$activity->setAgreementId($agreementId > 0 ? $agreementId : null);
+		}
+
+		if (array_key_exists('personId', $input)) {
+			$personId = (int)($input['personId'] ?? 0);
+			$activity->setPersonId($personId > 0 ? $personId : null);
+		}
+
+		if (array_key_exists('isCallback', $input)) {
+			$flag = $input['isCallback'];
+			$on = $flag === true || $flag === 1 || $flag === '1' || $flag === 'true';
+			$activity->setIsCallback($on ? 1 : 0);
 		}
 
 		if ($activity->getDueDate() === null) {

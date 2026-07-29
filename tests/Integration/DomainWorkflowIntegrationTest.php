@@ -20,6 +20,7 @@ use OCA\CustomerCheck\Service\ReminderScheduler;
 use OCA\CustomerCheck\Service\SettingsService;
 use OCA\CustomerCheck\Service\StageSequenceService;
 use OCA\CustomerCheck\Service\WeeklyDigestService;
+use OCA\CustomerCheck\Support\OptimisticLock;
 use OCP\IConfig;
 use Test\TestCase;
 
@@ -134,7 +135,13 @@ class DomainWorkflowIntegrationTest extends TestCase
 			$this->assertSame(Constants::ERR_CANCEL_REASON_REQUIRED, $e->getErrorCode());
 		}
 
-		$cancelled = $agreements->cancel((int)$agreement->getId(), 'no renewal', 'admin', null);
+		$fresh = $agreements->get((int)$agreement->getId());
+		$cancelled = $agreements->cancel(
+			(int)$fresh->getId(),
+			'no renewal',
+			'admin',
+			OptimisticLock::format($fresh->getUpdatedAt()),
+		);
 		$this->assertSame('cancelled', (string)$cancelled->getStatus());
 
 		try {
@@ -352,13 +359,25 @@ class DomainWorkflowIntegrationTest extends TestCase
 		$digest = \OC::$server->get(WeeklyDigestService::class);
 		/** @var IConfig $config */
 		$config = \OC::$server->get(IConfig::class);
-		$config->setAppValue(Application::APP_ID, Constants::CONFIG_DIGEST_ENABLED, '1');
-		$config->setAppValue(Application::APP_ID, Constants::CONFIG_DIGEST_WEEKDAY, '1');
-		$config->setAppValue(Application::APP_ID, Constants::CONFIG_DIGEST_HOUR, '7');
+		$prevEnabled = $config->getAppValue(Application::APP_ID, Constants::CONFIG_DIGEST_ENABLED, '1');
+		$prevWeekday = $config->getAppValue(Application::APP_ID, Constants::CONFIG_DIGEST_WEEKDAY, '1');
+		$prevHour = $config->getAppValue(Application::APP_ID, Constants::CONFIG_DIGEST_HOUR, '7');
+		try {
+			$config->setAppValue(Application::APP_ID, Constants::CONFIG_DIGEST_ENABLED, '1');
+			$config->setAppValue(Application::APP_ID, Constants::CONFIG_DIGEST_WEEKDAY, '1');
+			$config->setAppValue(Application::APP_ID, Constants::CONFIG_DIGEST_HOUR, '7');
 
-		$mondayWrongHour = new \DateTimeImmutable('2026-07-20 03:00:00'); // Monday
-		$mondayRightHour = new \DateTimeImmutable('2026-07-20 07:15:00');
-		$this->assertFalse($digest->shouldRunNow($mondayWrongHour));
-		$this->assertTrue($digest->shouldRunNow($mondayRightHour));
+			$mondayWrongHour = new \DateTimeImmutable('2026-07-20 03:00:00'); // Monday
+			$mondayRightHour = new \DateTimeImmutable('2026-07-20 07:15:00');
+			$this->assertFalse(
+				$digest->shouldRunNow($mondayWrongHour),
+				'Digest must not run at hour 3 when configured for hour 7',
+			);
+			$this->assertTrue($digest->shouldRunNow($mondayRightHour));
+		} finally {
+			$config->setAppValue(Application::APP_ID, Constants::CONFIG_DIGEST_ENABLED, $prevEnabled);
+			$config->setAppValue(Application::APP_ID, Constants::CONFIG_DIGEST_WEEKDAY, $prevWeekday);
+			$config->setAppValue(Application::APP_ID, Constants::CONFIG_DIGEST_HOUR, $prevHour);
+		}
 	}
 }

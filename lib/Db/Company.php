@@ -34,6 +34,22 @@ use OCP\DB\Types;
  * @method void setPcCustomerId(?int $pcCustomerId)
  * @method int|null getTcCustomerId()
  * @method void setTcCustomerId(?int $tcCustomerId)
+ * @method int|null getFilesFolderId()
+ * @method void setFilesFolderId(?int $filesFolderId)
+ * @method string|null getFilesFolderPath()
+ * @method void setFilesFolderPath(?string $filesFolderPath)
+ * @method int|null getWorkspaceId()
+ * @method void setWorkspaceId(?int $workspaceId)
+ * @method string getKamTier()
+ * @method void setKamTier(string $kamTier)
+ * @method int getKamTierLock()
+ * @method void setKamTierLock(int $kamTierLock)
+ * @method string|null getAccountOwnerUserId()
+ * @method void setAccountOwnerUserId(?string $accountOwnerUserId)
+ * @method int|null getTouchIntervalDays()
+ * @method void setTouchIntervalDays(?int $touchIntervalDays)
+ * @method \DateTime|null getNextTouchOn()
+ * @method void setNextTouchOn(?\DateTime $nextTouchOn)
  * @method string|null getCreatedBy()
  * @method void setCreatedBy(?string $createdBy)
  * @method \DateTime|null getCreatedAt()
@@ -58,6 +74,14 @@ class Company extends Entity
 	protected $notes = null;
 	protected $pcCustomerId = null;
 	protected $tcCustomerId = null;
+	protected $filesFolderId = null;
+	protected $filesFolderPath = null;
+	protected $workspaceId = null;
+	protected $kamTier = 'standard';
+	protected $kamTierLock = 0;
+	protected $accountOwnerUserId = null;
+	protected $touchIntervalDays = null;
+	protected $nextTouchOn = null;
 	protected $createdBy = null;
 	protected $createdAt = null;
 	protected $updatedAt = null;
@@ -68,6 +92,11 @@ class Company extends Entity
 		$this->addType('id', Types::BIGINT);
 		$this->addType('pcCustomerId', Types::BIGINT);
 		$this->addType('tcCustomerId', Types::BIGINT);
+		$this->addType('filesFolderId', Types::BIGINT);
+		$this->addType('workspaceId', Types::BIGINT);
+		$this->addType('kamTierLock', Types::INTEGER);
+		$this->addType('touchIntervalDays', Types::INTEGER);
+		$this->addType('nextTouchOn', Types::DATE);
 		$this->addType('createdAt', Types::DATETIME);
 		$this->addType('updatedAt', Types::DATETIME);
 		$this->addType('archivedAt', Types::DATETIME);
@@ -76,5 +105,10 @@ class Company extends Entity
 	public function isArchived(): bool
 	{
 		return $this->archivedAt !== null;
+	}
+
+	public function isKamTierLocked(): bool
+	{
+		return (int)$this->kamTierLock === 1;
 	}
 }

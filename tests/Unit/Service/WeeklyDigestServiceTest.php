@@ -5,15 +5,20 @@ namespace OCA\CustomerCheck\Tests\Unit\Service;
 
 use OCA\CustomerCheck\Constants;
 use OCA\CustomerCheck\Db\DigestLogMapper;
+use OCA\CustomerCheck\Db\Workspace;
+use OCA\CustomerCheck\Db\WorkspaceMember;
+use OCA\CustomerCheck\Service\BriefService;
 use OCA\CustomerCheck\Service\MoneyService;
 use OCA\CustomerCheck\Service\NotificationService;
 use OCA\CustomerCheck\Service\QuotaService;
 use OCA\CustomerCheck\Service\TodayService;
 use OCA\CustomerCheck\Service\WeeklyDigestService;
+use OCA\CustomerCheck\Service\WorkspaceService;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\DB\Exception as DbException;
 use OCP\IConfig;
 use OCP\IL10N;
+use OCP\IURLGenerator;
 use PHPUnit\Framework\TestCase;
 
 class WeeklyDigestServiceTest extends TestCase
@@ -26,6 +31,7 @@ class WeeklyDigestServiceTest extends TestCase
 		bool $claimSucceeds = true,
 		int $unpaid = 0,
 		int $quota80 = 0,
+		array $workspaces = [],
 	): WeeklyDigestService {
 		$config = $this->createMock(IConfig::class);
 		$config->method('getAppValue')->willReturnCallback(
@@ -66,6 +72,27 @@ class WeeklyDigestServiceTest extends TestCase
 		$notifications = $this->createMock(NotificationService::class);
 		$time = $this->createMock(ITimeFactory::class);
 		$l10n = $this->createMock(IL10N::class);
+		$l10n->method('t')->willReturnCallback(static fn (string $s, array $a = []) => $s);
+
+		$wsService = $this->createMock(WorkspaceService::class);
+		$wsService->method('listAll')->willReturn($workspaces);
+		$wsService->method('getSettings')->willReturn(['digestEnabled' => true, 'wipLimit' => 5]);
+		$member = new WorkspaceMember();
+		$member->setUserId('alex');
+		$member->setRole('manager');
+		$wsService->method('listMembers')->willReturn($workspaces === [] ? [] : [$member]);
+
+		$brief = $this->createMock(BriefService::class);
+		$brief->method('build')->willReturn([
+			'wipUsed' => 1,
+			'wipLimit' => 5,
+			'cash' => ['expectedInThisMonthCents' => 10000],
+			'commitments' => [],
+			'lastWeek' => [],
+		]);
+
+		$url = $this->createMock(IURLGenerator::class);
+		$url->method('linkToRouteAbsolute')->willReturn('https://example.test/brief');
 
 		return new WeeklyDigestService(
 			$digest,
@@ -73,10 +100,23 @@ class WeeklyDigestServiceTest extends TestCase
 			$money,
 			$quota,
 			$notifications,
+			$wsService,
+			$brief,
 			$config,
 			$time,
+			$url,
 			$l10n,
 		);
+	}
+
+	private function sampleWorkspace(): Workspace
+	{
+		$ws = new Workspace();
+		$ws->setId(1);
+		$ws->setName('Partner Success');
+		$ws->setSlug('partner');
+		$ws->setArchivedAt(null);
+		return $ws;
 	}
 
 	public function testShouldRunOnlyOnConfiguredWeekdayAndHour(): void
@@ -96,36 +136,27 @@ class WeeklyDigestServiceTest extends TestCase
 		$this->assertFalse($s->shouldRunNow(new \DateTimeImmutable('2026-07-20 07:00:00')));
 	}
 
-	public function testEmptyCountsSkipsSend(): void
+	public function testEmptyWorkspacesSkipsSend(): void
 	{
-		$s = $this->make(true, 1, 7, []);
+		$s = $this->make(true, 1, 7, [], true, 0, 0, []);
 		$result = $s->run(new \DateTimeImmutable('2026-07-20 07:00:00'));
-		$this->assertFalse($result['sent']);
-		$this->assertSame(0, array_sum($result['counts']));
+		$this->assertSame(0, $result['sent']);
+		$this->assertSame([], $result['workspaces']);
 	}
 
 	public function testUniqueClaimPreventsDoubleSend(): void
 	{
-		$items = [['kind' => 'agreement_expiry', 'daysUntil' => 7]];
-		$s = $this->make(true, 1, 7, $items, false);
+		$s = $this->make(true, 1, 7, [], false, 0, 0, [$this->sampleWorkspace()]);
 		$result = $s->run(new \DateTimeImmutable('2026-07-20 07:00:00'));
-		$this->assertFalse($result['sent']);
-		$this->assertGreaterThan(0, $result['counts']['renewals']);
+		$this->assertSame(0, $result['sent']);
 	}
 
-	public function testSuccessfulClaimSends(): void
+	public function testSuccessfulClaimSendsPerWorkspace(): void
 	{
-		$items = [
-			['kind' => 'agreement_expiry', 'daysUntil' => 14],
-			['kind' => 'activity_overdue'],
-		];
-		$s = $this->make(true, 1, 7, $items, true, 2, 1);
+		$s = $this->make(true, 1, 7, [], true, 2, 1, [$this->sampleWorkspace()]);
 		$result = $s->run(new \DateTimeImmutable('2026-07-20 07:00:00'));
-		$this->assertTrue($result['sent']);
-		$this->assertSame(1, $result['counts']['renewals']);
-		$this->assertSame(1, $result['counts']['overdue']);
-		$this->assertSame(2, $result['counts']['unpaid']);
-		$this->assertSame(1, $result['counts']['quota80']);
+		$this->assertSame(1, $result['sent']);
+		$this->assertSame([1], $result['workspaces']);
 	}
 
 	public function testCollectCountsIncludesUnpaidAndQuota(): void

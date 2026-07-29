@@ -28,7 +28,8 @@ final class EmailsSectionContractTest extends TestCase
 		$html = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/company-detail.php');
 		$this->assertStringContainsString('crm-emails-section.php', $html);
 		$this->assertStringNotContainsString('<section class="crm-card" id="crm-emails"', $html);
-		$this->assertStringContainsString('Who wrote what', $html);
+		$partial = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/common/crm-emails-section.php');
+		$this->assertStringContainsString('Who wrote what', $partial);
 		$this->assertStringContainsString('Follow-ups you still owe', $html);
 		$this->assertStringContainsString('crm-more-menu', $html);
 		$this->assertStringContainsString('companyId=', $html);

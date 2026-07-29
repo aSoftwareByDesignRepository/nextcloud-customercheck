@@ -88,6 +88,7 @@ class PersonService
 		$person->setUpdatedAt($now);
 
 		$this->applyInput($person, $input, true);
+		$this->assertSingleEconomicBuyer($companyId, $person->getBuyingRole(), null);
 		$wantsPrimary = $this->readPrimaryFlag($input, false);
 
 		$stored = $this->persistWithPrimaryInvariant($person, $wantsPrimary, $companyId);
@@ -108,16 +109,37 @@ class PersonService
 	 */
 	public function update(int $id, array $input, string $actor, ?string $updatedAtPrecondition): Person
 	{
-		$person = $this->get($id);
-		OptimisticLock::assertFresh($person->getUpdatedAt(), $updatedAtPrecondition);
+		// Fail fast on missing precondition before taking locks (null stored skips time compare).
+		OptimisticLock::assertFresh(null, $updatedAtPrecondition);
 
-		$this->applyInput($person, $input, false);
-		$person->setUpdatedAt($this->timeFactory->getDateTime());
+		$this->db->beginTransaction();
+		try {
+			$person = $this->get($id);
+			$companyId = (int)$person->getCompanyId();
+			$this->companyService->lockRow($companyId);
 
-		$wantsPrimary = $this->readPrimaryFlag($input, $person->isPrimaryContact());
-		$stored = $this->persistWithPrimaryInvariant($person, $wantsPrimary, (int)$person->getCompanyId());
+			// Re-load under company lock and re-check — closes TOCTOU vs concurrent writers.
+			$person = $this->get($id);
+			OptimisticLock::assertFresh($person->getUpdatedAt(), $updatedAtPrecondition);
 
-		$this->timelineService->append((int)$person->getCompanyId(), 'company.updated', $actor, [
+			$this->applyInput($person, $input, false);
+			$this->assertSingleEconomicBuyer($companyId, $person->getBuyingRole(), (int)$person->getId());
+			$person->setUpdatedAt($this->timeFactory->getDateTime());
+
+			$wantsPrimary = $this->readPrimaryFlag($input, $person->isPrimaryContact());
+			if ($wantsPrimary) {
+				$this->personMapper->clearPrimaryFor($companyId, null);
+			}
+			$person->setIsPrimary($wantsPrimary ? 1 : 0);
+			$stored = $this->personMapper->update($person);
+
+			$this->db->commit();
+		} catch (\Throwable $e) {
+			$this->db->rollBack();
+			throw $e;
+		}
+
+		$this->timelineService->append((int)$stored->getCompanyId(), 'company.updated', $actor, [
 			'contactUpdated' => (string)$stored->getName(),
 			'primary' => $stored->isPrimaryContact(),
 		]);
@@ -127,10 +149,12 @@ class PersonService
 
 	/**
 	 * @throws NotFoundException
+	 * @throws \OCA\CustomerCheck\Exception\ConflictException
 	 */
-	public function delete(int $id, string $actor): void
+	public function delete(int $id, string $actor, ?string $updatedAtPrecondition = null): void
 	{
 		$person = $this->get($id);
+		OptimisticLock::assertFresh($person->getUpdatedAt(), $updatedAtPrecondition);
 		$companyId = (int)$person->getCompanyId();
 		$name = (string)$person->getName();
 
@@ -262,6 +286,45 @@ class PersonService
 			}
 		}
 
+		if (array_key_exists('contactsUid', $input)) {
+			try {
+				$validator = new ContactsUidValidator();
+				$person->setContactsUid($validator->normalize(
+					is_string($input['contactsUid']) || $input['contactsUid'] === null
+						? ($input['contactsUid'] === null ? null : (string)$input['contactsUid'])
+						: (string)$input['contactsUid'],
+					$this->l10n,
+				));
+			} catch (ValidationException $e) {
+				$fields['contactsUid'] = $e->getMessage();
+			}
+		}
+
+		if (array_key_exists('buyingRole', $input)) {
+			$br = trim((string)($input['buyingRole'] ?? ''));
+			if ($br === '') {
+				$person->setBuyingRole(null);
+			} elseif (!in_array($br, Constants::BUYING_ROLES, true)) {
+				$fields['buyingRole'] = $this->l10n->t('Unknown buying role.');
+			} else {
+				$person->setBuyingRole($br);
+			}
+		}
+
+		if (array_key_exists('status', $input)) {
+			$st = trim((string)($input['status'] ?? 'active'));
+			if (!in_array($st, Constants::PERSON_STATUSES, true)) {
+				$fields['status'] = $this->l10n->t('Choose active, left or unknown.');
+			} else {
+				$person->setStatus($st);
+			}
+		}
+
+		if (array_key_exists('reportsToPersonId', $input)) {
+			$rid = (int)($input['reportsToPersonId'] ?? 0);
+			$person->setReportsToPersonId($rid > 0 ? $rid : null);
+		}
+
 		if ((string)$person->getName() === '' && !isset($fields['name'])) {
 			$fields['name'] = $this->l10n->t('Enter the contact name.');
 		}
@@ -272,6 +335,26 @@ class PersonService
 				$this->l10n->t('Please correct the highlighted fields.'),
 				$fields,
 			);
+		}
+	}
+
+	private function assertSingleEconomicBuyer(int $companyId, ?string $buyingRole, ?int $excludePersonId): void
+	{
+		if ($buyingRole !== 'economic_buyer') {
+			return;
+		}
+		foreach ($this->personMapper->findByCompany($companyId) as $p) {
+			if ($excludePersonId !== null && (int)$p->getId() === $excludePersonId) {
+				continue;
+			}
+			if ((string)($p->getBuyingRole() ?? '') === 'economic_buyer'
+				&& (string)($p->getStatus() ?? 'active') === 'active') {
+				throw ValidationException::field(
+					Constants::ERR_BUYER_DUP,
+					'buyingRole',
+					$this->l10n->t('This company already has an active budget decision-maker.'),
+				);
+			}
 		}
 	}
 }

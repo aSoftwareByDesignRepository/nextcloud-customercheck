@@ -97,6 +97,24 @@ class FacadeProbeService
 		)['usable'];
 	}
 
+	public function projectcheckWriteAvailable(): bool
+	{
+		return $this->probeApp(
+			SiblingFacadeContracts::PROJECT_CHECK_APP,
+			SiblingFacadeContracts::PROJECT_CHECK_WRITE_FACADE,
+			SiblingFacadeContracts::PROJECT_CHECK_WRITE_MIN_VERSION,
+		)['usable'];
+	}
+
+	public function ticketcheckWriteAvailable(): bool
+	{
+		return $this->probeApp(
+			SiblingFacadeContracts::TICKET_CHECK_APP,
+			SiblingFacadeContracts::TICKET_CHECK_WRITE_FACADE,
+			SiblingFacadeContracts::TICKET_CHECK_WRITE_MIN_VERSION,
+		)['usable'];
+	}
+
 	public function mailAvailable(): bool
 	{
 		return $this->appManager->isEnabledForUser('mail');
@@ -130,6 +148,16 @@ class FacadeProbeService
 			SiblingFacadeContracts::TICKET_CHECK_FACADE,
 			SiblingFacadeContracts::TICKET_CHECK_MIN_VERSION,
 		);
+		$pcWrite = $this->probeApp(
+			SiblingFacadeContracts::PROJECT_CHECK_APP,
+			SiblingFacadeContracts::PROJECT_CHECK_WRITE_FACADE,
+			SiblingFacadeContracts::PROJECT_CHECK_WRITE_MIN_VERSION,
+		);
+		$tcWrite = $this->probeApp(
+			SiblingFacadeContracts::TICKET_CHECK_APP,
+			SiblingFacadeContracts::TICKET_CHECK_WRITE_FACADE,
+			SiblingFacadeContracts::TICKET_CHECK_WRITE_MIN_VERSION,
+		);
 		$mailOn = $this->mailAvailable();
 
 		return [
@@ -137,11 +165,15 @@ class FacadeProbeService
 			'invoicecheck' => $inv['usable'],
 			'projectcheck' => $pc['usable'],
 			'ticketcheck' => $tc['usable'],
+			'projectcheckWrite' => $pcWrite['usable'],
+			'ticketcheckWrite' => $tcWrite['usable'],
 			'mail' => $mailOn,
 			'sbdlicenseops_detail' => $sbd,
 			'invoicecheck_detail' => $inv,
 			'projectcheck_detail' => $pc,
 			'ticketcheck_detail' => $tc,
+			'projectcheckWrite_detail' => $pcWrite,
+			'ticketcheckWrite_detail' => $tcWrite,
 			'mail_detail' => [
 				'available' => $mailOn,
 				'usable' => $mailOn,
@@ -291,6 +323,29 @@ class FacadeProbeService
 	}
 
 	/**
+	 * Overdue receivables from InvoicingCheck (Money overdue bucket).
+	 *
+	 * @return list<array<string,mixed>>
+	 */
+	public function listOverdueInvoices(int $limit = 200): array
+	{
+		if (!$this->invoicecheckAvailable()) {
+			return [];
+		}
+		try {
+			$facade = \OC::$server->get(SiblingFacadeContracts::INVOICE_CHECK_FACADE);
+			if (!method_exists($facade, 'listOverdue')) {
+				return [];
+			}
+			$result = $facade->listOverdue($limit);
+			return is_array($result) ? $result : [];
+		} catch (\Throwable $e) {
+			$this->warnOnce('invoice_overdue', 'CustomerCheck invoice overdue facade failed', $e);
+			return [];
+		}
+	}
+
+	/**
 	 * Preferred: probe Mail searchable API. Fallback returns [] so callers
 	 * show deep-link buttons (§14.8). Never stores message bodies.
 	 *
@@ -316,6 +371,61 @@ class FacadeProbeService
 		} catch (\Throwable $e) {
 			$this->warnOnce('mail_related', 'CustomerCheck Mail related search failed', $e);
 			return [];
+		}
+	}
+
+	/**
+	 * Honest open billable minutes across linked PC customers.
+	 *
+	 * Requires CrmCustomerReadFacade FACADE_VERSION ≥ 2 (settlement openHours).
+	 * Older stub facades (hardcoded openHours=0.0) → known=false / honesty_blocked.
+	 *
+	 * @param list<int> $pcCustomerIds Linked ProjectCheck customer ids for this workspace
+	 * @return array{known: bool, minutes: int}|null null when ProjectCheck is not available
+	 */
+	public function honestOpenBillableMinutes(array $pcCustomerIds = []): ?array
+	{
+		if (!$this->projectcheckAvailable()) {
+			return null;
+		}
+		try {
+			$facade = \OC::$server->get(SiblingFacadeContracts::PROJECT_CHECK_FACADE);
+			if (!is_object($facade) || !method_exists($facade, 'sumOpenBillableMinutes')) {
+				return ['known' => false, 'minutes' => 0];
+			}
+
+			$version = 1;
+			$ref = new \ReflectionClass($facade);
+			if ($ref->hasConstant('FACADE_VERSION')) {
+				$version = (int)$ref->getConstant('FACADE_VERSION');
+			}
+			// v1 hardcoded openHours=0.0 — never treat as truth.
+			if ($version < 2) {
+				return ['known' => false, 'minutes' => 0];
+			}
+
+			$ids = [];
+			foreach ($pcCustomerIds as $rawId) {
+				$id = (int)$rawId;
+				if ($id > 0) {
+					$ids[$id] = $id;
+				}
+			}
+			$ids = array_values($ids);
+
+			// No linked PC customers → zero open billable is an honest empty book.
+			if ($ids === []) {
+				return ['known' => true, 'minutes' => 0];
+			}
+
+			$minutes = 0;
+			foreach ($ids as $id) {
+				$minutes += max(0, (int)$facade->sumOpenBillableMinutes($id));
+			}
+			return ['known' => true, 'minutes' => max(0, $minutes)];
+		} catch (\Throwable $e) {
+			$this->warnOnce('pc_billable', 'CustomerCheck ProjectCheck billable probe failed', $e);
+			return ['known' => false, 'minutes' => 0];
 		}
 	}
 

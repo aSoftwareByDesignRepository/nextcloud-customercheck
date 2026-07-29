@@ -1,0 +1,148 @@
+// @ts-check
+/**
+ * Static design-token compliance gauntlet.
+ *
+ * Design-system rule (planning/design-system/DESIGN-SYSTEM.md §0.1):
+ * "Never hard-code hex colours in feature CSS. Read Nextcloud --color-*
+ *  (…) and derive tints with color-mix()." Raw colour literals are only
+ * allowed as *fallbacks* inside var(--token, <fallback>), so the value
+ * always follows the active Nextcloud theme when the variable exists.
+ *
+ * This test parses every shipped stylesheet, strips comments and var()
+ * fallback arguments, and fails on any remaining raw colour literal.
+ * It is the regression guard behind the "no hardcoded colors" contract.
+ */
+import { describe, it, expect } from 'vitest';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { join, dirname, relative } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const appRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
+const cssRoot = join(appRoot, 'css');
+
+/** Recursively collect all .css files under css/. */
+function collectCssFiles(dir) {
+  const out = [];
+  for (const entry of readdirSync(dir)) {
+    const full = join(dir, entry);
+    if (statSync(full).isDirectory()) {
+      out.push(...collectCssFiles(full));
+    } else if (entry.endsWith('.css')) {
+      out.push(full);
+    }
+  }
+  return out.sort();
+}
+
+/** Remove CSS comments. */
+function stripComments(css) {
+  return css.replace(/\/\*[\s\S]*?\*\//g, ' ');
+}
+
+/**
+ * Remove the fallback argument of every var() call (nesting-safe).
+ * var(--x, #fff)          -> var(--x)
+ * var(--x, var(--y, #f00)) -> var(--x)
+ */
+function stripVarFallbacks(css) {
+  let out = '';
+  let i = 0;
+  while (i < css.length) {
+    const idx = css.indexOf('var(', i);
+    if (idx === -1) {
+      out += css.slice(i);
+      break;
+    }
+    out += css.slice(i, idx);
+    let depth = 0;
+    let j = idx + 4;
+    let commaAt = -1;
+    for (; j < css.length; j++) {
+      const c = css[j];
+      if (c === '(') {
+        depth++;
+      } else if (c === ')') {
+        if (depth === 0) break;
+        depth--;
+      } else if (c === ',' && depth === 0 && commaAt === -1) {
+        commaAt = j;
+      }
+    }
+    const name = commaAt === -1 ? css.slice(idx + 4, j) : css.slice(idx + 4, commaAt);
+    out += `var(${name})`;
+    i = j + 1;
+  }
+  return out;
+}
+
+/** Extract declaration values only (skips selectors, so #ids never false-positive). */
+function declarationValues(css) {
+  const values = [];
+  const re = /:\s*([^;{}]+)(?=[;}])/g;
+  let m;
+  while ((m = re.exec(css)) !== null) {
+    values.push({ value: m[1], offset: m.index });
+  }
+  return values;
+}
+
+const RAW_COLOR = /#[0-9a-fA-F]{3,8}\b|(?:rgb|rgba|hsl|hsla)\(\s*[\d.]/;
+
+describe('CSS design-token compliance (no hardcoded colors)', () => {
+  const files = collectCssFiles(cssRoot);
+
+  it('finds the stylesheet tree', () => {
+    expect(files.length).toBeGreaterThan(10);
+  });
+
+  for (const file of files) {
+    const rel = relative(appRoot, file);
+    it(`${rel}: raw colours only appear as var() fallbacks`, () => {
+      const css = stripComments(readFileSync(file, 'utf8'));
+      const offenders = [];
+      for (const { value } of declarationValues(css)) {
+        const cleaned = stripVarFallbacks(value);
+        const match = cleaned.match(RAW_COLOR);
+        if (match) {
+          offenders.push(`${value.trim().slice(0, 120)}  →  offending literal: ${match[0]}`);
+        }
+      }
+      expect(offenders, `Hardcoded colour(s) outside var() fallback in ${rel}:\n${offenders.join('\n')}`).toEqual([]);
+    });
+  }
+
+  it('theme-bound tokens are defined on body (Nextcloud sets --color-* on body)', () => {
+    const tokens = stripComments(readFileSync(join(cssRoot, 'common', 'tokens.css'), 'utf8'));
+    const bodyBlocks = [...tokens.matchAll(/(^|\})\s*body\s*\{([\s\S]*?)\}/g)].map((m) => m[2]).join('\n');
+    for (const token of [
+      '--crm-bg-soft',
+      '--crm-bg-card',
+      '--crm-text',
+      '--crm-muted',
+      '--crm-border',
+      '--crm-tint-success',
+      '--crm-tint-warning',
+      '--crm-tint-danger',
+      '--crm-tint-info',
+      '--crm-shadow-sm',
+      '--crm-shadow-md',
+    ]) {
+      expect(bodyBlocks, `${token} must be defined inside body {}`).toContain(`${token}:`);
+    }
+  });
+
+  it('theme-bound tokens derive from Nextcloud --color-* variables', () => {
+    const tokens = stripComments(readFileSync(join(cssRoot, 'common', 'tokens.css'), 'utf8'));
+    for (const ncVar of [
+      '--color-main-background',
+      '--color-main-text',
+      '--color-text-maxcontrast',
+      '--color-success',
+      '--color-warning',
+      '--color-error',
+      '--color-primary-element',
+    ]) {
+      expect(tokens, `tokens.css must consume ${ncVar}`).toContain(`var(${ncVar}`);
+    }
+  });
+});

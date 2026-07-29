@@ -78,28 +78,32 @@ include __DIR__ . '/common/page-start.php';
 			<?php if (($_['agreements'] ?? []) === []): ?>
 				<div class="crm-empty-state" role="status">
 					<h3 class="crm-empty-state__title"><?php p($l->t('No agreements yet')); ?></h3>
-					<p class="crm-empty-state__text"><?php p($l->t('Create one or import from the sales log.')); ?></p>
+					<p class="crm-empty-state__text"><?php p($l->t('Create one or import from CSV / ProjectCheck.')); ?></p>
 					<a class="crm-btn crm-btn--primary" href="<?php p($urlGenerator->linkToRoute('customercheck.page.agreementNew')); ?>"><?php p($l->t('New agreement')); ?></a>
 				</div>
 			<?php else: ?>
 			<div class="table-container crm-table--responsive">
 				<table class="table table--hover">
 					<thead><tr>
-						<th><?php p($l->t('Label')); ?></th>
-						<th><?php p($l->t('Company')); ?></th>
-						<th><?php p($l->t('Product')); ?></th>
-						<th><?php p($l->t('Status')); ?></th>
-						<th><?php p($l->t('Expiry')); ?></th>
-						<th><?php p($l->t('Invoice')); ?></th>
-						<th><?php p($l->t('Amount')); ?></th>
-						<th class="crm-table-actions-col"><?php p($l->t('Actions')); ?></th>
+						<th scope="col"><?php p($l->t('Label')); ?></th>
+						<th scope="col"><?php p($l->t('Company')); ?></th>
+						<th scope="col"><?php p($l->t('Product')); ?></th>
+						<th scope="col"><?php p($l->t('Status')); ?></th>
+						<th scope="col"><?php p($l->t('Expiry')); ?></th>
+						<th scope="col"><?php p($l->t('Invoice')); ?></th>
+						<th scope="col"><?php p($l->t('Amount')); ?></th>
+						<th scope="col" class="crm-table-actions-col"><?php p($l->t('Actions')); ?></th>
 					</tr></thead>
 					<tbody>
 					<?php foreach ($_['agreements'] as $a): ?>
 						<tr>
 							<td data-label="<?php p($l->t('Label')); ?>"><a href="<?php p($urlGenerator->linkToRoute('customercheck.page.agreementEdit', ['id' => $a['id']])); ?>"><?php p($a['label']); ?></a></td>
 							<td data-label="<?php p($l->t('Company')); ?>">
-								<a href="<?php p($urlGenerator->linkToRoute('customercheck.page.companyDetail', ['id' => $a['companyId']])); ?>"><?php p($a['companyName'] ?? $l->t('Unknown company')); ?></a>
+								<?php
+								$crmCompanyLinkId = (int)($a['companyId'] ?? 0);
+								$crmCompanyLinkLabel = (string)($a['companyName'] ?? '');
+								include __DIR__ . '/common/crm-company-link.php';
+								?>
 							</td>
 							<td data-label="<?php p($l->t('Product')); ?>"><code><?php p($a['productCode']); ?></code></td>
 							<td data-label="<?php p($l->t('Status')); ?>"><span class="crm-badge"><?php

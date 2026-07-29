@@ -96,11 +96,11 @@
 	align-items: center;
 	justify-content: center;
 	max-width: 100%;
-	padding: 0.65rem 0.95rem;
+	padding: var(--crm-space-3) var(--crm-space-3);
 	border-radius: var(--crm-radius-md, 12px);
 	border: 1px solid color-mix(in srgb, var(--color-main-text) 12%, transparent);
-	/* Solid light plate — logo fills are dark; must beat link resets. */
-	background-color: #ffffff !important;
+	/* Solid light plate — logo fills are dark; token with hex fallback only. */
+	background-color: var(--crm-support-brand-plate, #ffffff) !important;
 	box-shadow: var(--crm-shadow-sm);
 	text-decoration: none !important;
 	color: inherit !important;
@@ -111,7 +111,7 @@
 }
 
 #app-content.crm-app--support-us a.crm-support-us-page__brand-link {
-	background-color: #ffffff !important;
+	background-color: var(--crm-support-brand-plate, #ffffff) !important;
 	text-decoration: none !important;
 }
 
@@ -156,7 +156,7 @@
 	font-weight: 700;
 	letter-spacing: 0.04em;
 	line-height: 1.05;
-	color: #29235c;
+	color: var(--crm-support-brand-ink, #29235c);
 	white-space: nowrap;
 }
 
@@ -167,7 +167,7 @@
 	font-style: italic;
 	letter-spacing: 0.06em;
 	line-height: 1.1;
-	color: #3c3c3b;
+	color: var(--crm-support-brand-muted, #3c3c3b);
 	white-space: nowrap;
 }
 
@@ -499,7 +499,7 @@
 }
 
 .crm-support-us__cta {
-	min-height: 2.75rem;
+	min-height: 44px; /* WCAG 2.5.5: px, not rem — NC root font is 15px */
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;

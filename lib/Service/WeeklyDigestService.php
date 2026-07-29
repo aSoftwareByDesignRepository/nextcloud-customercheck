@@ -13,9 +13,13 @@ use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\DB\Exception as DbException;
 use OCP\IConfig;
 use OCP\IL10N;
+use OCP\IURLGenerator;
 
 /**
- * Weekly digest — PSD §14.1. Exactly-once via crm_digest_log.week_key.
+ * Weekly digest v2 — product §10.5.
+ *
+ * Per workspace, deep-link to Brief (not raw count spam), ≤1500 chars,
+ * up to 3 workspaces per user notification, exactly-once per (week_key, workspace).
  */
 class WeeklyDigestService
 {
@@ -25,8 +29,11 @@ class WeeklyDigestService
 		private readonly MoneyService $moneyService,
 		private readonly QuotaService $quotaService,
 		private readonly NotificationService $notificationService,
+		private readonly WorkspaceService $workspaces,
+		private readonly BriefService $brief,
 		private readonly IConfig $config,
 		private readonly ITimeFactory $timeFactory,
+		private readonly IURLGenerator $url,
 		private readonly IL10N $l10n,
 	) {
 	}
@@ -61,39 +68,90 @@ class WeeklyDigestService
 	}
 
 	/**
-	 * @return array{sent: bool, weekKey: string, counts: array<string,int>}
+	 * @return array{sent: int, weekKey: string, workspaces: list<int>}
 	 */
 	public function run(?\DateTimeInterface $now = null): array
 	{
 		$now = $now ?? $this->timeFactory->getDateTime();
 		$weekKey = DateMath::isoWeekKey($now);
-		$counts = $this->collectCounts($now);
+		$sent = 0;
+		$wsIds = [];
 
-		if (array_sum($counts) === 0) {
-			return ['sent' => false, 'weekKey' => $weekKey, 'counts' => $counts];
+		/** @var array<string, list<array{workspaceId:int,name:string,url:string,snippet:string}>> $byUser */
+		$byUser = [];
+
+		foreach ($this->workspaces->listAll() as $ws) {
+			if ($ws->isArchived()) {
+				continue;
+			}
+			$wsId = (int)$ws->getId();
+			$settings = $this->workspaces->getSettings($wsId);
+			if (empty($settings['digestEnabled'])) {
+				continue;
+			}
+
+			$brief = $this->brief->build($wsId, $now);
+			$snippet = $this->buildSnippet($ws->getName(), $brief, $weekKey);
+			$briefUrl = $this->url->linkToRouteAbsolute('customercheck.page.brief', ['workspaceId' => $wsId]);
+
+			if (!$this->claimWeek($weekKey, $wsId, [
+				'wipUsed' => $brief['wipUsed'] ?? 0,
+				'wipLimit' => $brief['wipLimit'] ?? 5,
+				'url' => $briefUrl,
+			], $now)) {
+				continue;
+			}
+
+			$sent++;
+			$wsIds[] = $wsId;
+			foreach ($this->workspaces->listMembers($wsId) as $m) {
+				$role = (string)$m->getRole();
+				if (!in_array($role, ['manager', 'member'], true)) {
+					continue;
+				}
+				$uid = (string)$m->getUserId();
+				$byUser[$uid][] = [
+					'workspaceId' => $wsId,
+					'name' => (string)$ws->getName(),
+					'url' => $briefUrl,
+					'snippet' => $snippet,
+				];
+			}
 		}
 
-		if (!$this->claimWeek($weekKey, $counts, $now)) {
-			return ['sent' => false, 'weekKey' => $weekKey, 'counts' => $counts];
+		foreach ($byUser as $uid => $entries) {
+			$slice = array_slice($entries, 0, 3);
+			$body = '';
+			foreach ($slice as $e) {
+				$line = $e['name'] . ': ' . $e['url'] . "\n" . $e['snippet'] . "\n";
+				if (strlen($body) + strlen($line) > 1500) {
+					break;
+				}
+				$body .= $line;
+			}
+			$this->notificationService->notifyUser(
+				$uid,
+				Constants::NOTIFY_DIGEST,
+				'digest_brief',
+				$weekKey . ':' . $uid,
+				[
+					'weekKey' => $weekKey,
+					'body' => $body,
+					'workspaceCount' => count($slice),
+					'openBrief' => true,
+				],
+			);
 		}
 
-		$this->notificationService->notifyCrmUsers(
-			Constants::NOTIFY_DIGEST,
-			'digest',
-			$weekKey,
-			[
-				'renewals' => $counts['renewals'],
-				'overdue' => $counts['overdue'],
-				'unpaid' => $counts['unpaid'],
-				'quota80' => $counts['quota80'],
-			],
-		);
-
-		return ['sent' => true, 'weekKey' => $weekKey, 'counts' => $counts];
+		return ['sent' => $sent, 'weekKey' => $weekKey, 'workspaces' => $wsIds];
 	}
 
-	/** @return array{renewals:int,overdue:int,unpaid:int,quota80:int} */
-	public function collectCounts(\DateTimeInterface $now): array
+	/**
+	 * Legacy counts helper (tests / mutation). Prefer Brief deep-link path in run().
+	 *
+	 * @return array{renewals:int,overdue:int,unpaid:int,quota80:int}
+	 */
+	public function collectCounts(\DateTimeInterface $now, ?int $workspaceId = null): array
 	{
 		$today = $this->todayService->build($now);
 		$renewals = 0;
@@ -107,7 +165,7 @@ class WeeklyDigestService
 			}
 		}
 
-		$money = $this->moneyService->overview(500);
+		$money = $this->moneyService->overview(500, null, $workspaceId);
 		$unpaid = (int)($money['meta']['total'] ?? count($money['items'] ?? []));
 
 		$quota80 = 0;
@@ -125,13 +183,27 @@ class WeeklyDigestService
 		];
 	}
 
-	/** @param array<string,int> $counts */
-	private function claimWeek(string $weekKey, array $counts, \DateTimeInterface $now): bool
+	/** @param array<string, mixed> $brief */
+	private function buildSnippet(string $wsName, array $brief, string $weekKey): string
+	{
+		$wip = (int)($brief['wipUsed'] ?? 0);
+		$limit = (int)($brief['wipLimit'] ?? 5);
+		$cash = (int)(($brief['cash']['expectedInThisMonthCents'] ?? 0));
+		$euros = number_format($cash / 100, 2, '.', '');
+		return $this->l10n->t(
+			'%1$s · %2$s · WIP %3$d/%4$d · expected cash €%5$s (pipeline excluded). Open Weekly Brief.',
+			[$wsName, $weekKey, $wip, $limit, $euros],
+		);
+	}
+
+	/** @param array<string, mixed> $payload */
+	private function claimWeek(string $weekKey, int $workspaceId, array $payload, \DateTimeInterface $now): bool
 	{
 		$row = new DigestLog();
 		$row->setWeekKey($weekKey);
+		$row->setWorkspaceId($workspaceId);
 		$row->setSentAt($now instanceof \DateTime ? $now : new \DateTime($now->format('c')));
-		$row->setPayloadJson(json_encode($counts, JSON_THROW_ON_ERROR));
+		$row->setPayloadJson(json_encode($payload, JSON_THROW_ON_ERROR));
 		try {
 			$this->digestLogMapper->insert($row);
 			return true;

@@ -28,9 +28,9 @@ final class FrontEndAssetService
 		Util::addStyle(Application::APP_ID, 'app');
 		Util::addStyle(Application::APP_ID, 'navigation');
 		Util::addScript(Application::APP_ID, 'common/components');
+		Util::addScript(Application::APP_ID, 'common/api');
 		Util::addScript(Application::APP_ID, 'common/navigation');
 		Util::addScript(Application::APP_ID, 'common/navigation-icons');
-		Util::addScript(Application::APP_ID, 'common/api');
 		Util::addScript(Application::APP_ID, 'common/filter-live');
 	}
 

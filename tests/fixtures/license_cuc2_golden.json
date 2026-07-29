@@ -1,0 +1,14 @@
+{
+    "publicKeyB64": "uN44HovcxzCcPQqdbygGj_FdR9xLsxkh7AXApMgCPUY",
+    "payload": {
+        "v": 2,
+        "product": "customercheck",
+        "customerId": "golden-acme",
+        "issuedAt": "2026-07-01",
+        "validUntil": "2028-06-30",
+        "mobileSeats": 7
+    },
+    "payloadB64": "eyJ2IjoyLCJwcm9kdWN0IjoiY3VzdG9tZXJjaGVjayIsImN1c3RvbWVySWQiOiJnb2xkZW4tYWNtZSIsImlzc3VlZEF0IjoiMjAyNi0wNy0wMSIsInZhbGlkVW50aWwiOiIyMDI4LTA2LTMwIiwibW9iaWxlU2VhdHMiOjd9",
+    "signatureB64": "R8AJ5zgRKefKan_aFsBNfXWy4Ctidj4J3_Q3kPEkWf0nHih413INidp35uMXCzDvDJItmrJMH5QK9GB71CKvAg",
+    "wireKey": "CUC2.eyJ2IjoyLCJwcm9kdWN0IjoiY3VzdG9tZXJjaGVjayIsImN1c3RvbWVySWQiOiJnb2xkZW4tYWNtZSIsImlzc3VlZEF0IjoiMjAyNi0wNy0wMSIsInZhbGlkVW50aWwiOiIyMDI4LTA2LTMwIiwibW9iaWxlU2VhdHMiOjd9.R8AJ5zgRKefKan_aFsBNfXWy4Ctidj4J3_Q3kPEkWf0nHih413INidp35uMXCzDvDJItmrJMH5QK9GB71CKvAg"
+}
