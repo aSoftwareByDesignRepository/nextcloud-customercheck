@@ -85,6 +85,8 @@ class MobileGateService
 				'projectcheck' => $this->facades->projectcheckAvailable(),
 				'invoicecheck' => $this->facades->invoicecheckAvailable(),
 				'ticketcheck' => $this->facades->ticketcheckAvailable(),
+				// Companion API floor — clients fail closed to app_outdated when missing/mismatched.
+				'customercheck.companion.min' => 1,
 			],
 			'licensing' => $licensing,
 			// Raw seat membership (not the enabled composite). Clients must also honour
