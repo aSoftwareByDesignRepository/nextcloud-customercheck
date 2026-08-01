@@ -221,7 +221,8 @@ class CompanyService
 				$newOwner = trim((string)($input['accountOwnerUserId'] ?? ''));
 				$current = trim((string)($company->getAccountOwnerUserId() ?? ''));
 				if ($newOwner !== $current) {
-					$mayReassign = $current === ''
+					$mayReassign = $canReassignOwners
+						|| $current === ''
 						|| $current === $actor;
 					if (!$mayReassign) {
 						throw ValidationException::field(
