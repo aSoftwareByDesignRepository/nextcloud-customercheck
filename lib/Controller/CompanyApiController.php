@@ -12,6 +12,7 @@ use OCA\CustomerCheck\Service\SiblingCustomerWriteService;
 use OCA\CustomerCheck\Service\SlugService;
 use OCA\CustomerCheck\Service\TimelineService;
 use OCA\CustomerCheck\Service\WorkspaceAccessService;
+use OCA\CustomerCheck\Service\WorkspaceCapability;
 use OCA\CustomerCheck\Support\OptimisticLock;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
@@ -119,7 +120,17 @@ class CompanyApiController extends Controller
 			$body = $this->jsonBody();
 			// Prevent silent workspace escape via body.
 			unset($body['workspaceId']);
-			$updated = $this->companies->update($id, $body, $ctx['uid'], $this->updatedAtPrecondition($body));
+			// Files folder must go through CompanyDocumentsService (actor ACL).
+			unset($body['filesFolderId'], $body['filesFolderPath']);
+			$canReassign = $ctx['isAppAdmin']
+				|| WorkspaceCapability::allows($ctx['role'], 'bulk', false);
+			$updated = $this->companies->update(
+				$id,
+				$body,
+				$ctx['uid'],
+				$this->updatedAtPrecondition($body),
+				$canReassign,
+			);
 
 			return $this->ok($this->serialize($updated));
 		} catch (\Throwable $e) {
@@ -149,7 +160,13 @@ class CompanyApiController extends Controller
 			$company = $this->requireCompanyInResolvedWorkspace($id);
 			$ctx = $this->assertLoadedCompanyInWorkspace($company, 'delete');
 
-			return $this->ok($this->serialize($this->companies->archive($id, $ctx['uid'])));
+			$body = $this->jsonBody();
+
+			return $this->ok($this->serialize($this->companies->archive(
+				$id,
+				$ctx['uid'],
+				$this->updatedAtPrecondition($body),
+			)));
 		} catch (\Throwable $e) {
 			return $this->fromThrowable($e);
 		}
@@ -161,8 +178,13 @@ class CompanyApiController extends Controller
 		try {
 			$company = $this->requireCompanyInResolvedWorkspace($id);
 			$ctx = $this->assertLoadedCompanyInWorkspace($company, 'delete');
+			$body = $this->jsonBody();
 
-			return $this->ok($this->serialize($this->companies->restore($id, $ctx['uid'])));
+			return $this->ok($this->serialize($this->companies->restore(
+				$id,
+				$ctx['uid'],
+				$this->updatedAtPrecondition($body),
+			)));
 		} catch (\Throwable $e) {
 			return $this->fromThrowable($e);
 		}

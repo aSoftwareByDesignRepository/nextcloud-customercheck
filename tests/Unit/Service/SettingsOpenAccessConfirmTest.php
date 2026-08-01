@@ -11,6 +11,7 @@ use OCA\CustomerCheck\Service\AccessControlService;
 use OCA\CustomerCheck\Service\SettingsService;
 use OCP\IConfig;
 use OCP\IURLGenerator;
+use OCP\IUserManager;
 use OCP\Security\ISecureRandom;
 use PHPUnit\Framework\TestCase;
 
@@ -35,6 +36,7 @@ class SettingsOpenAccessConfirmTest extends TestCase
 			$access,
 			$this->createMock(ISecureRandom::class),
 			$this->createMock(IURLGenerator::class),
+			$this->createMock(IUserManager::class),
 		);
 
 		$this->expectException(ValidationException::class);
@@ -70,7 +72,7 @@ class SettingsOpenAccessConfirmTest extends TestCase
 		$url = $this->createMock(IURLGenerator::class);
 		$url->method('linkToRouteAbsolute')->willReturn('https://example.test/feed');
 
-		$svc = new SettingsService($config, $access, $this->createMock(ISecureRandom::class), $url);
+		$svc = new SettingsService($config, $access, $this->createMock(ISecureRandom::class), $url, $this->createMock(IUserManager::class));
 		$result = $svc->update('admin', [
 			Constants::CONFIG_ACCESS_RESTRICTION_ENABLED => false,
 			'confirmOpenAccess' => true,

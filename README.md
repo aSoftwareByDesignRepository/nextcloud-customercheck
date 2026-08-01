@@ -58,8 +58,17 @@ docker compose exec -u www-data nextcloud bash -lc \
 cd apps/customercheck
 npm run test:js
 npm run test:mutation   # ≥ 85% MSI gate (critical service mutators; 100% killed)
-# Full Infection (infection.json) needs pcov/xdebug in the PHP runtime;
-# the Docker nextcloud:34 image does not ship them — use the mutator suite above.
+# Scoped Infection (pcov required in the PHP runtime):
+#   docker compose exec -u www-data nextcloud bash -lc \
+#     'cd /var/www/html/custom_apps/customercheck && \
+#      php vendor/bin/phpunit -c phpunit.infection-critical.xml \
+#        --coverage-xml=/tmp/crm-infection-critical/coverage-xml \
+#        --log-junit=/tmp/crm-infection-critical/junit.xml && \
+#      php vendor/bin/infection run -c infection-critical.json \
+#        --coverage=/tmp/crm-infection-critical --skip-initial-tests --threads=2 \
+#        --filter=lib/Service/MailboxSyncService.php,lib/Service/MailMatchLogic.php,lib/Service/WorkspaceAccessService.php,lib/Service/MobileGateService.php,lib/Service/AccessControlService.php \
+#        --only-covering-test-cases'
+# Full Infection (infection.json) on all lib/Service can OOM in Docker — prefer the mutator suite + scoped config above.
 
 # E2E (Playwright — needs tests/e2e/.env credentials)
 set -a && source tests/e2e/.env && set +a
@@ -71,7 +80,7 @@ bash scripts/check-custom-apps-db.sh --gate=full --strict-warnings --app=custome
 php scripts/check-repair-step-di.php --app=customercheck
 ```
 
-## Product bible status (v1.5.2)
+## Product bible status (v1.5.22)
 
 Implements `planning/app-ideas/customercheck/CUSTOMERCHECK-PRODUCT.md` including workspaces,
 Pulse/Brief/Chase/Coverage/Team/Strategy, shared mail sync+send with Private-to-you badges,

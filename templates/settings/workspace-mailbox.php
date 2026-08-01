@@ -41,11 +41,36 @@ $canManageWorkspace = !empty($_['canManageWorkspace']);
 					<div class="form-group">
 						<label class="form-label" for="crm-ws-wip"><?php p($l->t('Weekly WIP limit')); ?></label>
 						<input type="number" id="crm-ws-wip" name="wipLimit" class="form-input crm-input" min="3" max="15" step="1" required>
+						<p class="form-help"><?php p($l->t('How many new commitments the team may take on each week.')); ?></p>
+					</div>
+					<div class="form-group">
+						<label class="form-label" for="crm-ws-lead-sla"><?php p($l->t('Lead reply SLA (hours)')); ?></label>
+						<input type="number" id="crm-ws-lead-sla" name="leadSlaHours" class="form-input crm-input" min="1" max="168" step="1" required>
+						<p class="form-help"><?php p($l->t('Website leads must get a first touch within this many hours.')); ?></p>
+					</div>
+					<div class="form-group">
+						<label class="form-label" for="crm-ws-stuck"><?php p($l->t('Quote follow-up after (days)')); ?></label>
+						<input type="number" id="crm-ws-stuck" name="stuckChaseDays" class="form-input crm-input" min="1" max="90" step="1" required>
+						<p class="form-help"><?php p($l->t('Quoted deals without a follow-up show in Chase after this many days.')); ?></p>
+					</div>
+					<div class="form-group">
+						<label class="form-label" for="crm-ws-mail-retention"><?php p($l->t('Shared mail retention (days)')); ?></label>
+						<input type="number" id="crm-ws-mail-retention" name="mailRetentionDays" class="form-input crm-input" min="30" max="3650" step="1" required>
+						<p class="form-help"><?php p($l->t('Indexed shared-mailbox messages older than this are deleted from CustomerCheck (minimum 30 days). The mailbox itself is unchanged.')); ?></p>
 					</div>
 					<label class="crm-switch">
 						<input type="checkbox" id="crm-ws-digest" name="digestEnabled" value="1">
 						<span><?php p($l->t('Enable workspace digest')); ?></span>
 					</label>
+					<div class="form-group" id="crm-ws-ics-wrap" hidden>
+						<label class="form-label" for="crm-ws-ics-url"><?php p($l->t('ICS renewal feed (this workspace)')); ?></label>
+						<div class="crm-token-row">
+							<input id="crm-ws-ics-url" class="form-input crm-input" type="text" readonly value="">
+							<button type="button" class="crm-btn crm-btn--secondary" data-copy-target="crm-ws-ics-url"><?php p($l->t('Copy')); ?></button>
+							<button type="button" class="crm-btn crm-btn--danger" id="crm-ws-ics-rotate"><?php p($l->t('Rotate')); ?></button>
+						</div>
+						<p class="form-help"><?php p($l->t('Calendar feed for renewals and open due dates in this book only. Separate from the Default-workspace feed under Public feeds.')); ?></p>
+					</div>
 					<div class="crm-form-actions">
 						<button type="submit" class="crm-btn crm-btn--secondary"><?php p($l->t('Save workspace settings')); ?></button>
 					</div>
@@ -55,8 +80,21 @@ $canManageWorkspace = !empty($_['canManageWorkspace']);
 				<ul id="crm-ws-members" class="crm-ws-members" aria-label="<?php p($l->t('Workspace members')); ?>"></ul>
 				<form id="crm-ws-member-form" class="crm-form" novalidate>
 					<div class="form-group">
-						<label class="form-label" for="crm-ws-member-uid"><?php p($l->t('User id')); ?></label>
-						<input type="text" id="crm-ws-member-uid" name="userId" class="form-input crm-input" required autocomplete="username">
+						<label class="form-label" for="crm-ws-member-search"><?php p($l->t('Colleague')); ?></label>
+						<div class="user-picker" id="crm-ws-member-picker">
+							<div class="user-picker__control">
+								<input type="search" id="crm-ws-member-search" class="form-input crm-input user-picker__search"
+									role="combobox" aria-autocomplete="list" aria-expanded="false"
+									aria-controls="crm-ws-member-suggest"
+									placeholder="<?php p($l->t('Search by name or login…')); ?>"
+									autocomplete="off" spellcheck="false">
+								<button type="button" class="user-picker__clear" id="crm-ws-member-clear" hidden
+									aria-label="<?php p($l->t('Clear selected colleague')); ?>">×</button>
+								<input type="hidden" id="crm-ws-member-uid" name="userId" value="" required>
+							</div>
+							<ul id="crm-ws-member-suggest" class="user-picker__list" role="listbox" hidden></ul>
+						</div>
+						<p class="form-help"><?php p($l->t('Search by name or login, then pick a colleague. Never type a raw user id.')); ?></p>
 					</div>
 					<div class="form-group">
 						<label class="form-label" for="crm-ws-member-role"><?php p($l->t('Role')); ?></label>

@@ -83,14 +83,14 @@ final class DisplayLabelService
 	public function chaseReason(string $reason): string
 	{
 		return match ($reason) {
-			'lead_sla' => $this->l10n->t('Lead SLA overdue'),
+			'lead_sla' => $this->l10n->t('New lead waiting too long'),
 			'close_overdue' => $this->l10n->t('Close date overdue'),
 			'no_next_action' => $this->l10n->t('No next action'),
 			'quote_followup_due' => $this->l10n->t('Quote follow-up due'),
 			'close_this_week' => $this->l10n->t('Closing this week'),
 			'stale_stage' => $this->l10n->t('Stage went stale'),
 			'unowned' => $this->l10n->t('No owner'),
-			default => $reason !== '' ? $reason : $this->l10n->t('Needs chase'),
+			default => $reason !== '' ? $reason : $this->l10n->t('Needs attention'),
 		};
 	}
 
@@ -121,13 +121,30 @@ final class DisplayLabelService
 		};
 	}
 
+	/**
+	 * Today urgency kind — never show snake_case in the UI (§19).
+	 */
+	public function todayKind(string $kind): string
+	{
+		return match ($kind) {
+			'agreement_expiry' => $this->l10n->t('Renewal'),
+			'ticket_waiting' => $this->l10n->t('Waiting ticket'),
+			'activity_overdue' => $this->l10n->t('Overdue activity'),
+			'activity_due' => $this->l10n->t('Due today'),
+			'deal_stale' => $this->l10n->t('Stale deal'),
+			default => $kind !== '' ? $kind : $this->l10n->t('Today item'),
+		};
+	}
+
 	public function planHealth(string $health): string
 	{
 		return match ($health) {
 			'healthy' => $this->l10n->t('Healthy'),
+			'on_track' => $this->l10n->t('On track'),
 			'stalled' => $this->l10n->t('Stalled'),
 			'at_risk' => $this->l10n->t('At risk'),
 			'ok' => $this->l10n->t('OK'),
+			'unknown' => $this->l10n->t('Unknown'),
 			default => $health !== '' ? $health : $this->l10n->t('Unknown'),
 		};
 	}

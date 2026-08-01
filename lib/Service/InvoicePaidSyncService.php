@@ -6,6 +6,7 @@ namespace OCA\CustomerCheck\Service;
 use OCA\CustomerCheck\Constants;
 use OCA\CustomerCheck\Db\Agreement;
 use OCA\CustomerCheck\Db\AgreementMapper;
+use OCA\CustomerCheck\Db\CompanyMapper;
 use OCA\CustomerCheck\Db\PayWatch;
 use OCA\CustomerCheck\Db\PayWatchMapper;
 use OCP\AppFramework\Utility\ITimeFactory;
@@ -26,6 +27,7 @@ class InvoicePaidSyncService
 		private readonly ActivityService $activities,
 		private readonly TimelineService $timeline,
 		private readonly NotificationService $notifications,
+		private readonly CompanyMapper $companies,
 		private readonly FacadeProbeService $facades,
 		private readonly IDBConnection $db,
 		private readonly ITimeFactory $timeFactory,
@@ -57,7 +59,10 @@ class InvoicePaidSyncService
 	/**
 	 * Apply one paid signal (from poll or domain event).
 	 *
-	 * @param array{icInvoiceId?:int|null,invoiceRef?:string|null,paidTotalCents?:int,status?:string,companyId?:int|null} $signal
+	 * Ref-only matches require a PC/CRM company pin — a globally unique
+	 * invoice_ref must never mutate another workspace’s agreement (§14.3).
+	 *
+	 * @param array{icInvoiceId?:int|null,invoiceRef?:string|null,paidTotalCents?:int,status?:string,pcCustomerId?:int|null,companyId?:int|null} $signal
 	 * @return 'paid'|'ambiguous'|'noop'
 	 */
 	public function applySignal(array $signal): string
@@ -66,12 +71,19 @@ class InvoicePaidSyncService
 		$ref = trim((string)($signal['invoiceRef'] ?? ''));
 		$paidTotal = max(0, (int)($signal['paidTotalCents'] ?? 0));
 		$status = (string)($signal['status'] ?? 'paid');
+		$pcCustomerId = isset($signal['pcCustomerId']) ? (int)$signal['pcCustomerId'] : 0;
+		$crmCompanyId = isset($signal['companyId']) ? (int)$signal['companyId'] : 0;
 
 		$targets = [];
 		if ($icId > 0) {
 			$targets = $this->agreements->findByIcInvoiceId($icId);
 		} elseif ($ref !== '') {
-			$targets = $this->agreements->findByInvoiceRef($ref);
+			$candidates = $this->agreements->findByInvoiceRef($ref);
+			$targets = $this->scopeInvoiceRefMatches($candidates, $pcCustomerId, $crmCompanyId);
+			if ($targets === [] && $candidates !== []) {
+				// Signal named a ref we know, but no safe company pin — fail closed.
+				return 'noop';
+			}
 			if (count($targets) > 1) {
 				$this->recordAmbiguous($targets, $ref);
 				return 'ambiguous';
@@ -90,6 +102,36 @@ class InvoicePaidSyncService
 		}
 
 		return $changed ? 'paid' : 'noop';
+	}
+
+	/**
+	 * @param Agreement[] $candidates
+	 * @return Agreement[]
+	 */
+	private function scopeInvoiceRefMatches(array $candidates, int $pcCustomerId, int $crmCompanyId): array
+	{
+		if ($candidates === []) {
+			return [];
+		}
+
+		$allowedCompanyId = 0;
+		if ($pcCustomerId > 0) {
+			$company = $this->companies->findByPcCustomerId($pcCustomerId);
+			if ($company === null) {
+				return [];
+			}
+			$allowedCompanyId = (int)$company->getId();
+		} elseif ($crmCompanyId > 0) {
+			$allowedCompanyId = $crmCompanyId;
+		} else {
+			// No pin from InvoicingCheck — never trust a bare invoice_ref across books.
+			return [];
+		}
+
+		return array_values(array_filter(
+			$candidates,
+			static fn (Agreement $a): bool => (int)$a->getCompanyId() === $allowedCompanyId,
+		));
 	}
 
 	/**
@@ -141,7 +183,8 @@ class InvoicePaidSyncService
 			throw $e;
 		}
 
-		$this->notifications->notifyCrmUsers(
+		$this->notifyAgreementWorkspace(
+			(int)$agreement->getCompanyId(),
 			Constants::NOTIFY_INVOICE_PAID,
 			'agreement',
 			(string)$agreement->getId(),
@@ -160,12 +203,34 @@ class InvoicePaidSyncService
 			'invoiceRef' => $ref,
 			'agreementIds' => $ids,
 		]);
-		$this->notifications->notifyCrmUsers(
+		$this->notifyAgreementWorkspace(
+			$companyId,
 			Constants::NOTIFY_INVOICE_PAID,
 			'invoice_ref',
 			$ref,
 			['ambiguous' => 1, 'invoiceRef' => $ref],
 		);
+	}
+
+	/**
+	 * @param array<string, mixed> $params
+	 */
+	private function notifyAgreementWorkspace(
+		int $companyId,
+		string $subject,
+		string $objectType,
+		string $objectId,
+		array $params,
+	): void {
+		$workspaceId = 0;
+		try {
+			$workspaceId = (int)($this->companies->findById($companyId)->getWorkspaceId() ?? 0);
+		} catch (\Throwable) {
+			// Fail closed — never fan out company payment signals instance-wide.
+		}
+		if ($workspaceId > 0) {
+			$this->notifications->notifyWorkspaceUsers($workspaceId, $subject, $objectType, $objectId, $params);
+		}
 	}
 
 	private function upsertWatch(int $agreementId, string $status, int $paidTotal, ?PayWatch $existing): void

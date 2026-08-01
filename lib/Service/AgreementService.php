@@ -220,52 +220,63 @@ class AgreementService
 	 */
 	public function update(int $id, array $input, string $actor, ?string $updatedAtPrecondition): Agreement
 	{
-		$agreement = $this->get($id);
-		OptimisticLock::assertFresh($agreement->getUpdatedAt(), $updatedAtPrecondition);
+		$this->db->beginTransaction();
+		try {
+			// Serialize vs cancel/supersede — stamp alone can resurrect a closed row.
+			if (!$this->agreementMapper->lockRow($id)) {
+				throw new NotFoundException($this->l10n->t('This agreement no longer exists.'));
+			}
+			$agreement = $this->agreementMapper->findById($id);
+			OptimisticLock::assertFresh($agreement->getUpdatedAt(), $updatedAtPrecondition);
 
-		$previousStatus = (string)$agreement->getStatus();
-		if (in_array($previousStatus, Constants::AGREEMENT_TERMINAL_STATUSES, true)) {
-			throw ValidationException::field(
-				Constants::ERR_AGREEMENT_ILLEGAL_TRANSITION,
-				'status',
-				$this->l10n->t('This agreement is closed. Create a new agreement instead of editing it.'),
-			);
-		}
-
-		$previousValidUntil = $agreement->getValidUntil()?->format('Y-m-d');
-
-		$this->applyInput($agreement, $input, false);
-
-		$requestedStatus = trim((string)($input['status'] ?? ''));
-		if ($requestedStatus !== '' && $requestedStatus !== $previousStatus) {
-			$this->statusService->assertTransitionAllowed($previousStatus, $requestedStatus);
-			if ($requestedStatus === 'cancelled') {
+			$previousStatus = (string)$agreement->getStatus();
+			if (in_array($previousStatus, Constants::AGREEMENT_TERMINAL_STATUSES, true)) {
 				throw ValidationException::field(
-					Constants::ERR_CANCEL_REASON_REQUIRED,
-					'cancelReason',
-					$this->l10n->t('Use the cancel action so the cancellation reason is recorded.'),
+					Constants::ERR_AGREEMENT_ILLEGAL_TRANSITION,
+					'status',
+					$this->l10n->t('This agreement is closed. Create a new agreement instead of editing it.'),
 				);
 			}
-			$agreement->setStatus($requestedStatus);
+
+			$previousValidUntil = $agreement->getValidUntil()?->format('Y-m-d');
+
+			$this->applyInput($agreement, $input, false);
+
+			$requestedStatus = trim((string)($input['status'] ?? ''));
+			if ($requestedStatus !== '' && $requestedStatus !== $previousStatus) {
+				$this->statusService->assertTransitionAllowed($previousStatus, $requestedStatus);
+				if ($requestedStatus === 'cancelled') {
+					throw ValidationException::field(
+						Constants::ERR_CANCEL_REASON_REQUIRED,
+						'cancelReason',
+						$this->l10n->t('Use the cancel action so the cancellation reason is recorded.'),
+					);
+				}
+				$agreement->setStatus($requestedStatus);
+			}
+
+			$this->statusService->recompute($agreement, $this->timeFactory->getDateTime());
+			$agreement->setUpdatedAt($this->timeFactory->getDateTime());
+			$stored = $this->agreementMapper->update($agreement);
+			$this->db->commit();
+
+			$newValidUntil = $stored->getValidUntil()?->format('Y-m-d');
+			if ($newValidUntil !== $previousValidUntil) {
+				// The reminder ledger is keyed on the snapshot, so the cadence
+				// re-arms by itself — record why for the audit trail.
+				$this->timelineService->append((int)$stored->getCompanyId(), 'agreement.status', $actor, [
+					'agreementId' => $id,
+					'validUntilFrom' => $previousValidUntil,
+					'validUntilTo' => $newValidUntil,
+					'status' => (string)$stored->getStatus(),
+				]);
+			}
+
+			return $stored;
+		} catch (\Throwable $e) {
+			$this->db->rollBack();
+			throw $e;
 		}
-
-		$this->statusService->recompute($agreement, $this->timeFactory->getDateTime());
-		$agreement->setUpdatedAt($this->timeFactory->getDateTime());
-		$stored = $this->agreementMapper->update($agreement);
-
-		$newValidUntil = $stored->getValidUntil()?->format('Y-m-d');
-		if ($newValidUntil !== $previousValidUntil) {
-			// The reminder ledger is keyed on the snapshot, so the cadence
-			// re-arms by itself — record why for the audit trail.
-			$this->timelineService->append((int)$stored->getCompanyId(), 'agreement.status', $actor, [
-				'agreementId' => $id,
-				'validUntilFrom' => $previousValidUntil,
-				'validUntilTo' => $newValidUntil,
-				'status' => (string)$stored->getStatus(),
-			]);
-		}
-
-		return $stored;
 	}
 
 	/**

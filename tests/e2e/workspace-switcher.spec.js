@@ -20,7 +20,7 @@ test.describe('CustomerCheck workspace switcher', () => {
     await expect(switcher).toBeVisible();
     await expect(page.locator('#crm-workspace-switch-label')).toHaveText(/Workspace|Arbeitsbereich/i);
     await expect(page.locator('select[data-crm-workspace-switch]')).toHaveCount(0);
-    await expect(page.locator('.app-brand__subtitle')).toContainText(/Customers & renewals|Kunden & Verlängerungen/i);
+    await expect(page.locator('.app-brand__subtitle')).toContainText(/Deals, customers & money|Deals, Kunden & Geld|Geschäfte, Kunden & Geld/i);
 
     const active = await switcher.getAttribute('data-crm-active-workspace');
     expect(Number(active)).toBeGreaterThan(0);

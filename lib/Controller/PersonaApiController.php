@@ -12,16 +12,21 @@ use OCA\CustomerCheck\Service\CirclesRollCallService;
 use OCA\CustomerCheck\Service\CoachingService;
 use OCA\CustomerCheck\Service\CompanyService;
 use OCA\CustomerCheck\Service\CoverageService;
+use OCA\CustomerCheck\Service\DirectoryOptionsService;
 use OCA\CustomerCheck\Service\EscalationService;
 use OCA\CustomerCheck\Service\MailboxService;
 use OCA\CustomerCheck\Service\MailboxSyncService;
+use OCA\CustomerCheck\Service\MailDraftService;
 use OCA\CustomerCheck\Service\MailSendService;
 use OCA\CustomerCheck\Service\PrepareMeetingService;
 use OCA\CustomerCheck\Service\PromiseService;
 use OCA\CustomerCheck\Service\PulseService;
+use OCA\CustomerCheck\Service\SettingsService;
 use OCA\CustomerCheck\Service\WorkspaceAccessService;
 use OCA\CustomerCheck\Service\WorkspaceCapability;
 use OCA\CustomerCheck\Service\WorkspaceService;
+use OCA\CustomerCheck\Constants;
+use OCA\CustomerCheck\Exception\ValidationException;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\JSONResponse;
@@ -46,12 +51,15 @@ class PersonaApiController extends Controller
 		private readonly MailboxService $mailbox,
 		private readonly MailboxSyncService $mailboxSync,
 		private readonly MailSendService $mailSend,
+		private readonly MailDraftService $mailDrafts,
 		private readonly PrepareMeetingService $prepare,
 		private readonly AccountPlanService $plans,
 		private readonly EscalationService $escalations,
 		private readonly CirclesRollCallService $circles,
 		private readonly CompanyService $companies,
 		private readonly \OCA\CustomerCheck\Service\OneOnOneService $oneOnOne,
+		private readonly DirectoryOptionsService $directory,
+		private readonly SettingsService $settings,
 	) {
 		parent::__construct($appName, $request);
 	}
@@ -116,12 +124,26 @@ class PersonaApiController extends Controller
 		try {
 			$uid = $this->access->currentUserId();
 			$this->workspaces->assertCapability($uid, $workspaceId, 'members');
-			$items = [];
+			$raw = [];
+			$uids = [];
 			foreach ($this->workspaceService->listMembers($workspaceId) as $m) {
-				$items[] = [
-					'userId' => (string)$m->getUserId(),
+				$memberUid = (string)$m->getUserId();
+				$uids[] = $memberUid;
+				$raw[] = [
+					'userId' => $memberUid,
 					'role' => (string)$m->getRole(),
 					'canMailSend' => method_exists($m, 'canMailSend') ? $m->canMailSend() : ((int)$m->getCanMailSend() === 1),
+				];
+			}
+			$labels = [];
+			foreach ($this->directory->resolveUsers($uids) as $row) {
+				$labels[(string)$row['id']] = (string)$row['displayName'];
+			}
+			$items = [];
+			foreach ($raw as $row) {
+				$memberUid = (string)$row['userId'];
+				$items[] = $row + [
+					'displayName' => $labels[$memberUid] ?? $memberUid,
 				];
 			}
 
@@ -176,8 +198,18 @@ class PersonaApiController extends Controller
 		try {
 			$uid = $this->access->currentUserId();
 			$this->workspaces->assertCapability($uid, $workspaceId, 'read');
+			$data = $this->workspaceService->getSettings($workspaceId);
+			// Managers see/rotate the per-book ICS URL; viewers only see policy fields.
+			try {
+				$this->workspaces->assertCapability($uid, $workspaceId, 'members');
+				$data['icsFeedUrl'] = $this->settings->workspaceIcsFeedUrl($workspaceId);
+				$data['icsFeedEditable'] = true;
+			} catch (\Throwable) {
+				$data['icsFeedUrl'] = null;
+				$data['icsFeedEditable'] = false;
+			}
 
-			return $this->ok($this->workspaceService->getSettings($workspaceId));
+			return $this->ok($data);
 		} catch (\Throwable $e) {
 			return $this->fromThrowable($e);
 		}
@@ -353,7 +385,7 @@ class PersonaApiController extends Controller
 			$uid = $this->access->currentUserId();
 			$company = $this->companies->get($companyId);
 			$wsId = (int)($company->getWorkspaceId() ?? 0);
-			$this->workspaces->assertCapability($uid, $wsId, 'write');
+			$this->workspaces->assertUserCanAccessCompany($uid, $wsId, 'write');
 			return $this->ok($this->plans->upsert($companyId, $this->requestBody(), $uid));
 		} catch (\Throwable $e) {
 			return $this->fromThrowable($e);
@@ -407,7 +439,7 @@ class PersonaApiController extends Controller
 			$uid = $this->access->currentUserId();
 			$company = $this->companies->get($companyId);
 			$wsId = (int)($company->getWorkspaceId() ?? 0);
-			$this->workspaces->assertCapability($uid, $wsId, 'write');
+			$this->workspaces->assertUserCanAccessCompany($uid, $wsId, 'write');
 			$plan = $this->plans->forCompany($companyId);
 			if ($plan === null) {
 				$plan = $this->plans->upsert($companyId, [
@@ -454,17 +486,23 @@ class PersonaApiController extends Controller
 			$body = $this->requestBody();
 			$toWs = (int)($body['workspaceId'] ?? 0);
 			$confirm = trim((string)($body['confirmSlug'] ?? ''));
+			$updatedAt = isset($body['updatedAt']) ? trim((string)$body['updatedAt']) : null;
+			if ($updatedAt === '') {
+				$updatedAt = null;
+			}
 			$company = $this->companies->get($companyId);
 			$fromWs = (int)($company->getWorkspaceId() ?? 0);
-			$this->workspaces->assertCapability($uid, $fromWs, 'move');
+			$this->workspaces->assertUserCanAccessCompany($uid, $fromWs, 'move');
 			$this->workspaces->assertCapability($uid, $toWs, 'move');
-			if ($confirm !== (string)$company->getSlug()) {
-				return $this->fail('VALIDATION', 'Type the company slug to confirm the move. Files ACL is not auto-moved.', [], 422);
-			}
-			$updated = $this->companies->update($companyId, ['workspaceId' => $toWs], $uid, null);
+			$result = $this->companies->moveToWorkspace($companyId, $toWs, $confirm, $uid, $updatedAt);
+			$updated = $result['company'];
 			return $this->ok([
 				'id' => (int)$updated->getId(),
 				'workspaceId' => (int)$updated->getWorkspaceId(),
+				'fromWorkspaceId' => $result['fromWorkspaceId'],
+				'toWorkspaceId' => $result['toWorkspaceId'],
+				'mailUnmatched' => $result['mailUnmatched'],
+				'draftsDetached' => $result['draftsDetached'],
 				'filesAclWarning' => true,
 				'message' => 'Company moved. Files folder ACL was not changed — review sharing manually.',
 			]);
@@ -495,7 +533,7 @@ class PersonaApiController extends Controller
 			$uid = $this->access->currentUserId();
 			$company = $this->companies->get($companyId);
 			$wsId = (int)($company->getWorkspaceId() ?? 0);
-			$this->workspaces->assertCapability($uid, $wsId, 'write');
+			$this->workspaces->assertUserCanAccessCompany($uid, $wsId, 'write');
 
 			return $this->ok($this->promises->create($companyId, $this->requestBody(), $uid));
 		} catch (\Throwable $e) {
@@ -510,12 +548,28 @@ class PersonaApiController extends Controller
 			$uid = $this->access->currentUserId();
 			$company = $this->companies->get($companyId);
 			$wsId = (int)($company->getWorkspaceId() ?? 0);
-			$this->workspaces->assertCapability($uid, $wsId, 'write');
+			$this->workspaces->assertUserCanAccessCompany($uid, $wsId, 'write');
 			$body = $this->requestBody();
 			$evidence = trim((string)($body['evidence'] ?? ''));
-			$this->promises->complete($id, $wsId, $evidence, $uid);
+			$this->promises->complete($id, $wsId, $evidence, $uid, $companyId);
 
 			return $this->ok(['id' => $id, 'status' => 'done']);
+		} catch (\Throwable $e) {
+			return $this->fromThrowable($e);
+		}
+	}
+
+	#[NoAdminRequired]
+	public function cancelPromise(int $companyId, int $id): JSONResponse
+	{
+		try {
+			$uid = $this->access->currentUserId();
+			$company = $this->companies->get($companyId);
+			$wsId = (int)($company->getWorkspaceId() ?? 0);
+			$this->workspaces->assertUserCanAccessCompany($uid, $wsId, 'write');
+			$this->promises->cancel($id, $wsId, $uid, $companyId);
+
+			return $this->ok(['id' => $id, 'status' => 'cancelled']);
 		} catch (\Throwable $e) {
 			return $this->fromThrowable($e);
 		}
@@ -528,7 +582,7 @@ class PersonaApiController extends Controller
 			$uid = $this->access->currentUserId();
 			$company = $this->companies->get($companyId);
 			$wsId = (int)($company->getWorkspaceId() ?? 0);
-			$this->workspaces->assertCapability($uid, $wsId, 'read');
+			$this->workspaces->assertUserCanAccessCompany($uid, $wsId, 'read');
 
 			return $this->ok($this->prepare->build($companyId, $uid));
 		} catch (\Throwable $e) {
@@ -591,6 +645,91 @@ class PersonaApiController extends Controller
 				$canSend = $canSend && ($ctx['isAppAdmin'] || $ctx['member']->canMailSend());
 			}
 			return $this->ok($this->mailSend->send($workspaceId, $this->requestBody(), $uid, $canSend));
+		} catch (\Throwable $e) {
+			return $this->fromThrowable($e);
+		}
+	}
+
+	#[NoAdminRequired]
+	public function listMailDrafts(int $workspaceId): JSONResponse
+	{
+		try {
+			$uid = $this->access->currentUserId();
+			$this->workspaces->assertCapability($uid, $workspaceId, 'mail.read');
+			$ctx = $this->workspaces->resolveForUser($uid, $workspaceId);
+			$canSend = $ctx['isAppAdmin']
+				|| WorkspaceCapability::allows($ctx['role'], 'mail.send', false);
+			if ($ctx['member'] !== null && method_exists($ctx['member'], 'canMailSend')) {
+				$canSend = $canSend && ($ctx['isAppAdmin'] || $ctx['member']->canMailSend());
+			}
+			$result = $this->mailDrafts->listFailed(
+				$workspaceId,
+				(string)$ctx['workspace']->getName(),
+			);
+			$result['canMailSend'] = $canSend;
+
+			return $this->ok($result);
+		} catch (\Throwable $e) {
+			return $this->fromThrowable($e);
+		}
+	}
+
+	#[NoAdminRequired]
+	public function getMailDraft(int $workspaceId, int $id): JSONResponse
+	{
+		try {
+			$uid = $this->access->currentUserId();
+			$this->workspaces->assertCapability($uid, $workspaceId, 'mail.read');
+
+			return $this->ok($this->mailDrafts->getFailed($workspaceId, $id));
+		} catch (\Throwable $e) {
+			return $this->fromThrowable($e);
+		}
+	}
+
+	#[NoAdminRequired]
+	public function sendMailDraft(int $workspaceId, int $id): JSONResponse
+	{
+		try {
+			$uid = $this->access->currentUserId();
+			$this->workspaces->assertCapability($uid, $workspaceId, 'mail.send');
+			$ctx = $this->workspaces->resolveForUser($uid, $workspaceId);
+			$canSend = $ctx['isAppAdmin']
+				|| WorkspaceCapability::allows($ctx['role'], 'mail.send', false);
+			if ($ctx['member'] !== null && method_exists($ctx['member'], 'canMailSend')) {
+				$canSend = $canSend && ($ctx['isAppAdmin'] || $ctx['member']->canMailSend());
+			}
+			$body = $this->requestBody();
+			$key = trim((string)($body['idempotencyKey'] ?? ''));
+
+			return $this->ok($this->mailDrafts->resendFailed($workspaceId, $id, $uid, $canSend, $key));
+		} catch (\Throwable $e) {
+			return $this->fromThrowable($e);
+		}
+	}
+
+	#[NoAdminRequired]
+	public function deleteMailDraft(int $workspaceId, int $id): JSONResponse
+	{
+		try {
+			$uid = $this->access->currentUserId();
+			$this->workspaces->assertCapability($uid, $workspaceId, 'mail.send');
+			$ctx = $this->workspaces->resolveForUser($uid, $workspaceId);
+			$canSend = $ctx['isAppAdmin']
+				|| WorkspaceCapability::allows($ctx['role'], 'mail.send', false);
+			if ($ctx['member'] !== null && method_exists($ctx['member'], 'canMailSend')) {
+				$canSend = $canSend && ($ctx['isAppAdmin'] || $ctx['member']->canMailSend());
+			}
+			if (!$canSend) {
+				throw ValidationException::field(
+					Constants::ERR_MAIL_SEND_DENIED,
+					'mail.send',
+					'You do not have permission to send from the shared mailbox.',
+				);
+			}
+			$this->mailDrafts->deleteFailed($workspaceId, $id);
+
+			return $this->ok(['deleted' => true]);
 		} catch (\Throwable $e) {
 			return $this->fromThrowable($e);
 		}

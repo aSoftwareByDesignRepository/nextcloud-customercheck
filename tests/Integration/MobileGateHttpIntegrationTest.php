@@ -19,10 +19,13 @@ use OCA\CustomerCheck\Service\MobileApiService;
 use OCA\CustomerCheck\Service\MobileGateService;
 use OCA\CustomerCheck\Service\MobileIdempotencyService;
 use OCA\CustomerCheck\Service\MobilePushService;
+use OCA\CustomerCheck\Service\WorkspaceAccessService;
+use OCA\CustomerCheck\Service\WorkspaceService;
 use OCA\CustomerCheck\Tests\Support\Cuc2TestSigning;
 use OCP\App\IAppManager;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\IConfig;
+use OCP\IDBConnection;
 use OCP\IRequest;
 use OCP\IUserManager;
 use OCP\IUserSession;
@@ -51,6 +54,12 @@ final class MobileGateHttpIntegrationTest extends TestCase
 
 	private string $admin = '';
 
+	/** Peer mobile user — not an app admin (app admins bypass activity ownership). */
+	private string $peer = '';
+
+	/** Isolated workspace for this run — never the polluted default book. */
+	private ?int $runWorkspaceId = null;
+
 	protected function setUp(): void
 	{
 		if (!class_exists(\OC::class) || !isset(\OC::$server)) {
@@ -63,6 +72,7 @@ final class MobileGateHttpIntegrationTest extends TestCase
 		// Nextcloud uid max length is tight; keep under 64 and unique per setUp.
 		$this->uid = 'cuc_mu_' . $this->suffix;
 		$this->admin = 'cuc_ma_' . $this->suffix;
+		$this->peer = 'cuc_mp_' . $this->suffix;
 
 		$config = \OC::$server->get(IConfig::class);
 		foreach ([Constants::CONFIG_ACCESS_RESTRICTION_ENABLED, Constants::CONFIG_APP_ADMIN_USER_IDS] as $key) {
@@ -74,6 +84,17 @@ final class MobileGateHttpIntegrationTest extends TestCase
 		$this->wipeLicense();
 		$this->ensureUser($this->uid);
 		$this->ensureUser($this->admin);
+		$this->ensureUser($this->peer);
+		// App admin so WorkspaceService::create / addMember work in helpers.
+		$config->setAppValue(
+			Application::APP_ID,
+			Constants::CONFIG_APP_ADMIN_USER_IDS,
+			json_encode([$this->admin], JSON_THROW_ON_ERROR),
+		);
+		// Default org workspace is often at the 200-member cap from prior runs —
+		// pin every company into a fresh book so addMember cannot fail closed.
+		$this->runWorkspaceId = null;
+		$this->isolatedWorkspaceId();
 	}
 
 	protected function tearDown(): void
@@ -81,6 +102,7 @@ final class MobileGateHttpIntegrationTest extends TestCase
 		if (!isset(\OC::$server)) {
 			return;
 		}
+		$this->purgeRunWorkspace();
 		\OC::$server->get(IUserSession::class)->setUser(null);
 		$this->wipeLicense();
 		$config = \OC::$server->get(IConfig::class);
@@ -118,7 +140,7 @@ final class MobileGateHttpIntegrationTest extends TestCase
 	public function testTodayWithoutSessionReturns401(): void
 	{
 		\OC::$server->get(IUserSession::class)->setUser(null);
-		$response = $this->controller()->today();
+		$response = $this->controller()->today(1);
 
 		self::assertSame(401, $response->getStatus());
 		self::assertSame('AUTH_REQUIRED', $response->getData()['error']);
@@ -134,7 +156,7 @@ final class MobileGateHttpIntegrationTest extends TestCase
 			'1',
 		);
 		$this->loginAs($this->uid);
-		$response = $this->controller()->today();
+		$response = $this->controller()->today(1);
 
 		self::assertSame(403, $response->getStatus());
 		self::assertSame('ACCESS_DENIED', $response->getData()['error']);
@@ -145,7 +167,7 @@ final class MobileGateHttpIntegrationTest extends TestCase
 	public function testTodayWithoutLicenseReturns402LicenseRequired(): void
 	{
 		$this->loginAs($this->uid);
-		$this->assertGate402('LICENSE_REQUIRED', $this->controller()->today());
+		$this->assertGate402('LICENSE_REQUIRED', $this->controller()->today(1));
 	}
 
 	public function testTodayWithExpiredLicenseReturns402LicenseExpired(): void
@@ -153,14 +175,14 @@ final class MobileGateHttpIntegrationTest extends TestCase
 		$this->applyLicense(5, '2020-01-01', '2020-12-31');
 		$this->assignSeat($this->uid);
 		$this->loginAs($this->uid);
-		$this->assertGate402('LICENSE_EXPIRED', $this->controller()->today());
+		$this->assertGate402('LICENSE_EXPIRED', $this->controller()->today(1));
 	}
 
 	public function testTodayWithoutSeatReturns402NoMobileSeat(): void
 	{
 		$this->applyLicense(5);
 		$this->loginAs($this->uid);
-		$this->assertGate402('NO_MOBILE_SEAT', $this->controller()->today());
+		$this->assertGate402('NO_MOBILE_SEAT', $this->controller()->today(1));
 	}
 
 	public function testSeatBeyondDowngradedLimitReturns402NoMobileSeat(): void
@@ -171,7 +193,7 @@ final class MobileGateHttpIntegrationTest extends TestCase
 		// Downgrade to 1 seat: UID (newer assignment) falls out of limit.
 		$this->applyLicense(1);
 		$this->loginAs($this->uid);
-		$this->assertGate402('NO_MOBILE_SEAT', $this->controller()->today());
+		$this->assertGate402('NO_MOBILE_SEAT', $this->controller()->today(1));
 	}
 
 	// ── Bootstrap payload (never license-gated) ─────────────────────────
@@ -184,7 +206,7 @@ final class MobileGateHttpIntegrationTest extends TestCase
 		self::assertSame(200, $response->getStatus());
 		$data = $response->getData();
 		self::assertSame('customercheck', $data['appId']);
-		self::assertSame(1, $data['companionApi']);
+		self::assertSame(MobileGateService::COMPANION_API_VERSION, $data['companionApi']);
 		self::assertSame(MobileGateService::MIN_APP_VERSION, $data['minAppVersion']);
 		self::assertSame(MobileGateService::MIN_APP_VERSION, $data['minApp']);
 		self::assertNull($data['licensing']);
@@ -211,6 +233,77 @@ final class MobileGateHttpIntegrationTest extends TestCase
 		self::assertTrue($data['seatWithinLimit']);
 	}
 
+	// ── Workspace ACL ───────────────────────────────────────────────────
+
+	public function testWorkspaceIdZeroReturns404(): void
+	{
+		$this->applyLicense(5);
+		$this->assignSeat($this->uid);
+		$this->loginAs($this->uid);
+
+		$response = $this->controller()->today(0);
+		self::assertSame(404, $response->getStatus());
+		self::assertSame('NOT_FOUND', $response->getData()['error']);
+	}
+
+	public function testForeignWorkspaceCompanyReturns404(): void
+	{
+		$this->applyLicense(5);
+		$this->assignSeat($this->uid);
+		$this->loginAs($this->uid);
+
+		$companyA = $this->createCompany();
+		$wsA = $this->workspaceIdForCompany($companyA);
+
+		$wsB = \OC::$server->get(WorkspaceService::class)->create(
+			'Foreign WS ' . $this->suffix,
+			'foreign-ws-' . $this->suffix,
+			$this->admin,
+		);
+		$wsBId = (int)$wsB->getId();
+		$companyB = \OC::$server->get(CompanyService::class)->create([
+			'name' => 'Foreign Co ' . $this->suffix,
+			'slug' => 'foreign-co-' . $this->suffix,
+			'lang' => 'de',
+			'country' => 'DE',
+			'status' => 'active',
+			'workspaceId' => $wsBId,
+		], $this->admin);
+
+		// Path-scoped under wsA but company lives in wsB → 404 (no existence leak).
+		$detail = $this->controller()->companyDetail($wsA, (int)$companyB->getId());
+		self::assertSame(404, $detail->getStatus());
+		self::assertSame('NOT_FOUND', $detail->getData()['error']);
+
+		// Listing a book the user is not a member of → 404.
+		$list = $this->controller()->companies($wsBId);
+		self::assertSame(404, $list->getStatus());
+		self::assertSame('NOT_FOUND', $list->getData()['error']);
+	}
+
+	public function testViewerCannotCreateActivity(): void
+	{
+		$this->applyLicense(5);
+		$this->assignSeat($this->uid);
+		$company = $this->createCompany();
+		$wsId = $this->workspaceIdForCompany($company);
+		$this->ensureMember($wsId, $this->uid, 'viewer');
+		$this->loginAs($this->uid);
+
+		$response = $this->controller([
+			'companyId' => (int)$company->getId(),
+			'type' => 'todo',
+			'summary' => 'Viewer write probe',
+			'dueOn' => '2099-01-15',
+		])->createActivity($wsId);
+
+		self::assertSame(422, $response->getStatus());
+		$body = $response->getData();
+		self::assertFalse($body['success']);
+		self::assertSame('VALIDATION', $body['error']);
+		self::assertSame(Constants::ERR_WS_ROLE, $body['detail']);
+	}
+
 	// ── Data endpoints through the full gate ────────────────────────────
 
 	public function testTodayCompaniesAndDetailWithSeatReturn200(): void
@@ -221,22 +314,23 @@ final class MobileGateHttpIntegrationTest extends TestCase
 		$this->loginAs($this->uid);
 
 		$company = $this->createCompany();
+		$wsId = $this->workspaceIdForCompany($company);
 
-		$today = $this->controller()->today();
+		$today = $this->controller()->today($wsId);
 		self::assertSame(200, $today->getStatus());
 		$todayBody = $today->getData();
 		self::assertTrue($todayBody['success']);
 		self::assertIsArray($todayBody['data']['items']);
 		self::assertArrayHasKey('meta', $todayBody);
 
-		$list = $this->controller()->companies('Mobile Co ' . $this->suffix);
+		$list = $this->controller()->companies($wsId, 'Mobile Co ' . $this->suffix);
 		self::assertSame(200, $list->getStatus());
 		$rows = $list->getData()['data'];
 		self::assertCount(1, $rows);
 		self::assertSame((int)$company->getId(), $rows[0]['id']);
 		self::assertArrayNotHasKey('notes', $rows[0], 'Mobile list row must stay lite');
 
-		$detail = $this->controller()->companyDetail((int)$company->getId());
+		$detail = $this->controller()->companyDetail($wsId, (int)$company->getId());
 		self::assertSame(200, $detail->getStatus());
 		$lite = $detail->getData()['data'];
 		self::assertSame((int)$company->getId(), $lite['id']);
@@ -251,8 +345,10 @@ final class MobileGateHttpIntegrationTest extends TestCase
 		$this->applyLicense(5);
 		$this->assignSeat($this->uid);
 		$this->loginAs($this->uid);
+		$wsId = $this->isolatedWorkspaceId();
+		$this->ensureMember($wsId, $this->uid);
 
-		$response = $this->controller()->companyDetail(99999999);
+		$response = $this->controller()->companyDetail($wsId, 99999999);
 		self::assertSame(404, $response->getStatus());
 		self::assertSame('NOT_FOUND', $response->getData()['error']);
 	}
@@ -265,6 +361,7 @@ final class MobileGateHttpIntegrationTest extends TestCase
 		$this->assignSeat($this->uid);
 		$this->loginAs($this->uid);
 		$company = $this->createCompany();
+		$wsId = $this->workspaceIdForCompany($company);
 
 		// Companion aliases (summary/dueOn) must be accepted.
 		$create = $this->controller([
@@ -272,7 +369,7 @@ final class MobileGateHttpIntegrationTest extends TestCase
 			'type' => 'todo',
 			'summary' => 'Call from the road',
 			'dueOn' => '2099-01-15',
-		])->createActivity();
+		])->createActivity($wsId);
 		self::assertSame(201, $create->getStatus());
 		$created = $create->getData()['data'];
 		self::assertSame('Call from the road', $created['title']);
@@ -282,7 +379,7 @@ final class MobileGateHttpIntegrationTest extends TestCase
 		$update = $this->controller([
 			'title' => 'Call done from the road',
 			'updatedAt' => $created['updatedAt'],
-		])->updateActivity($id);
+		])->updateActivity($wsId, $id);
 		self::assertSame(200, $update->getStatus());
 		$updated = $update->getData()['data'];
 		self::assertSame('Call done from the road', $updated['title']);
@@ -290,11 +387,11 @@ final class MobileGateHttpIntegrationTest extends TestCase
 		$done = $this->controller([
 			'done' => true,
 			'updatedAt' => $updated['updatedAt'],
-		])->doneActivity($id);
+		])->doneActivity($wsId, $id);
 		self::assertSame(200, $done->getStatus());
 		self::assertNotNull($done->getData()['data']['doneAt']);
 
-		$open = $this->controller()->activities(1, (int)$company->getId());
+		$open = $this->controller()->activities($wsId, 1, (int)$company->getId());
 		self::assertSame(200, $open->getStatus());
 		self::assertCount(0, $open->getData()['data'], 'Done activity must leave the open list');
 	}
@@ -305,20 +402,21 @@ final class MobileGateHttpIntegrationTest extends TestCase
 		$this->assignSeat($this->uid);
 		$this->loginAs($this->uid);
 		$company = $this->createCompany();
+		$wsId = $this->workspaceIdForCompany($company);
 
 		$create = $this->controller([
 			'companyId' => (int)$company->getId(),
 			'type' => 'todo',
 			'title' => 'Race me',
 			'dueDate' => '2099-02-01',
-		])->createActivity();
+		])->createActivity($wsId);
 		self::assertSame(201, $create->getStatus());
 		$created = $create->getData()['data'];
 
 		$stale = $this->controller([
 			'title' => 'Stale write',
 			'updatedAt' => '2001-01-01T00:00:00+00:00',
-		])->updateActivity((int)$created['id']);
+		])->updateActivity($wsId, (int)$created['id']);
 
 		self::assertSame(409, $stale->getStatus());
 		self::assertSame(Constants::ERR_CONFLICT_STALE, $stale->getData()['error']);
@@ -330,11 +428,12 @@ final class MobileGateHttpIntegrationTest extends TestCase
 		$this->assignSeat($this->uid);
 		$this->loginAs($this->uid);
 		$company = $this->createCompany();
+		$wsId = $this->workspaceIdForCompany($company);
 
 		$response = $this->controller(
 			['companyId' => (int)$company->getId(), 'type' => 'todo', 'title' => 'CSRF probe'],
 			authorization: '',
-		)->createActivity();
+		)->createActivity($wsId);
 
 		self::assertSame(403, $response->getStatus());
 		self::assertSame(Constants::ERR_ACCESS_DENIED, $response->getData()['error']);
@@ -344,8 +443,12 @@ final class MobileGateHttpIntegrationTest extends TestCase
 	{
 		$this->applyLicense(5);
 		$this->assignSeat($this->uid);
-		$this->assignSeat($this->admin);
+		$this->assignSeat($this->peer);
 		$company = $this->createCompany();
+		$wsId = $this->workspaceIdForCompany($company);
+		// Peer must be a workspace member, but must not be an app admin
+		// (app admins bypass createdBy filtering in searchForMobile / requireMobileAccess).
+		$this->ensureMember($wsId, $this->peer);
 
 		$this->loginAs($this->uid);
 		$create = $this->controller([
@@ -353,19 +456,19 @@ final class MobileGateHttpIntegrationTest extends TestCase
 			'type' => 'todo',
 			'title' => 'Owner only',
 			'dueDate' => '2099-02-02',
-		])->createActivity();
+		])->createActivity($wsId);
 		self::assertSame(201, $create->getStatus());
 		$created = $create->getData()['data'];
 
-		$this->loginAs($this->admin);
-		$list = $this->controller()->activities(1, (int)$company->getId());
+		$this->loginAs($this->peer);
+		$list = $this->controller()->activities($wsId, 1, (int)$company->getId());
 		self::assertSame(200, $list->getStatus());
 		self::assertCount(0, $list->getData()['data']);
 
 		$update = $this->controller([
 			'title' => 'Cross-user write',
 			'updatedAt' => $created['updatedAt'],
-		])->updateActivity((int)$created['id']);
+		])->updateActivity($wsId, (int)$created['id']);
 		self::assertSame(403, $update->getStatus());
 		self::assertSame(Constants::ERR_ACCESS_DENIED, $update->getData()['error']);
 	}
@@ -375,12 +478,15 @@ final class MobileGateHttpIntegrationTest extends TestCase
 		$this->applyLicense(5);
 		$this->assignSeat($this->uid);
 		$this->loginAs($this->uid);
+		$company = $this->createCompany();
+		$wsId = $this->workspaceIdForCompany($company);
 
+		// companyId must resolve in-workspace before field validation runs.
 		$response = $this->controller([
-			'companyId' => 0,
+			'companyId' => (int)$company->getId(),
 			'type' => 'todo',
 			'title' => '',
-		])->createActivity();
+		])->createActivity($wsId);
 
 		self::assertSame(422, $response->getStatus());
 		$body = $response->getData();
@@ -395,6 +501,7 @@ final class MobileGateHttpIntegrationTest extends TestCase
 		$this->assignSeat($this->uid);
 		$this->loginAs($this->uid);
 		$company = $this->createCompany();
+		$wsId = $this->workspaceIdForCompany($company);
 		$key = 'outbox-' . $this->suffix . '-1';
 
 		$first = $this->controller(
@@ -405,7 +512,7 @@ final class MobileGateHttpIntegrationTest extends TestCase
 				'dueOn' => '2099-03-01',
 			],
 			extraHeaders: ['Idempotency-Key' => $key],
-		)->createActivity();
+		)->createActivity($wsId);
 		self::assertSame(201, $first->getStatus());
 		$firstId = (int)$first->getData()['data']['id'];
 
@@ -417,7 +524,7 @@ final class MobileGateHttpIntegrationTest extends TestCase
 				'dueOn' => '2099-03-01',
 			],
 			extraHeaders: ['Idempotency-Key' => $key],
-		)->createActivity();
+		)->createActivity($wsId);
 		self::assertSame(201, $replay->getStatus());
 		self::assertSame($firstId, (int)$replay->getData()['data']['id']);
 		self::assertSame('Idempotent call', $replay->getData()['data']['title']);
@@ -449,6 +556,7 @@ final class MobileGateHttpIntegrationTest extends TestCase
 		$this->assignSeat($this->uid);
 		$this->loginAs($this->uid);
 		$company = $this->createCompany();
+		$wsId = $this->workspaceIdForCompany($company);
 
 		$deal = \OC::$server->get(DealService::class)->create([
 			'companyId' => (int)$company->getId(),
@@ -457,7 +565,7 @@ final class MobileGateHttpIntegrationTest extends TestCase
 			'valueCents' => 250000,
 		], $this->uid);
 
-		$list = $this->controller()->deals((int)$company->getId());
+		$list = $this->controller()->deals($wsId, (int)$company->getId());
 		self::assertSame(200, $list->getStatus());
 		$rows = $list->getData()['data'];
 		self::assertCount(1, $rows);
@@ -467,11 +575,27 @@ final class MobileGateHttpIntegrationTest extends TestCase
 		$change = $this->controller([
 			'stage' => 'contacted',
 			'updatedAt' => $rows[0]['updatedAt'],
-		])->dealStage((int)$deal->getId());
+		])->dealStage($wsId, (int)$deal->getId());
 		self::assertSame(200, $change->getStatus());
 		$changed = $change->getData()['data'];
 		self::assertSame('contacted', $changed['stage']);
 		self::assertArrayHasKey('sequencesFired', $changed);
+
+		$lostWithoutCode = $this->controller([
+			'stage' => 'lost',
+			'lostReason' => 'free text alone is not enough',
+			'updatedAt' => $changed['updatedAt'],
+		])->dealStage($wsId, (int)$deal->getId());
+		self::assertSame(422, $lostWithoutCode->getStatus());
+
+		$lost = $this->controller([
+			'stage' => 'lost',
+			'lostReasonCode' => 'competitor',
+			'updatedAt' => $changed['updatedAt'],
+		])->dealStage($wsId, (int)$deal->getId());
+		self::assertSame(200, $lost->getStatus());
+		self::assertSame('lost', $lost->getData()['data']['stage']);
+		self::assertSame('competitor', $lost->getData()['data']['lostReasonCode'] ?? null);
 	}
 
 	public function testAgreementsExpiryWindowFilter(): void
@@ -480,6 +604,7 @@ final class MobileGateHttpIntegrationTest extends TestCase
 		$this->assignSeat($this->uid);
 		$this->loginAs($this->uid);
 		$company = $this->createCompany();
+		$wsId = $this->workspaceIdForCompany($company);
 
 		$agreements = \OC::$server->get(AgreementService::class);
 		$today = new \DateTimeImmutable('today');
@@ -506,7 +631,7 @@ final class MobileGateHttpIntegrationTest extends TestCase
 			'status' => 'active',
 		], $this->uid);
 
-		$response = $this->controller()->agreements(60, (int)$company->getId());
+		$response = $this->controller()->agreements($wsId, 60, (int)$company->getId());
 		self::assertSame(200, $response->getStatus());
 		$rows = $response->getData()['data'];
 		self::assertCount(1, $rows);
@@ -519,9 +644,6 @@ final class MobileGateHttpIntegrationTest extends TestCase
 	 * Builds the controller with a scripted request: params act as the JSON
 	 * body fallback and the Authorization header selects the mutation channel.
 	 *
-	 * @param array<string, mixed> $params
-	 */
-	/**
 	 * @param array<string, mixed> $params
 	 * @param array<string, string> $extraHeaders
 	 */
@@ -556,6 +678,7 @@ final class MobileGateHttpIntegrationTest extends TestCase
 			$request,
 			\OC::$server->get(IUserSession::class),
 			\OC::$server->get(AccessControlService::class),
+			\OC::$server->get(WorkspaceAccessService::class),
 			\OC::$server->get(MobileGateService::class),
 			\OC::$server->get(MobileApiService::class),
 			\OC::$server->get(CompanyService::class),
@@ -577,15 +700,114 @@ final class MobileGateHttpIntegrationTest extends TestCase
 		self::assertNotSame('', $body['message']);
 	}
 
-	private function createCompany(): \OCA\CustomerCheck\Db\Company
+	private function isolatedWorkspaceId(): int
 	{
-		return \OC::$server->get(CompanyService::class)->create([
+		if ($this->runWorkspaceId !== null && $this->runWorkspaceId > 0) {
+			return $this->runWorkspaceId;
+		}
+		$svc = \OC::$server->get(WorkspaceService::class);
+		try {
+			$ws = $svc->create(
+				'Mobile Gate ' . $this->suffix,
+				'mg-' . $this->suffix,
+				$this->admin,
+			);
+		} catch (\OCA\CustomerCheck\Exception\ValidationException $e) {
+			if ($e->getErrorCode() !== Constants::ERR_WS_LIMIT) {
+				throw $e;
+			}
+			// Prior runs left mg-* books up to the instance cap — reclaim room.
+			$this->purgeStaleMobileGateWorkspaces();
+			$ws = $svc->create(
+				'Mobile Gate ' . $this->suffix,
+				'mg-' . $this->suffix,
+				$this->admin,
+			);
+		}
+		$this->runWorkspaceId = (int)$ws->getId();
+		return $this->runWorkspaceId;
+	}
+
+	/** Drop this run’s isolated book (best-effort). */
+	private function purgeRunWorkspace(): void
+	{
+		if ($this->runWorkspaceId === null || $this->runWorkspaceId <= 0) {
+			return;
+		}
+		$this->deleteWorkspaceCascade($this->runWorkspaceId);
+		$this->runWorkspaceId = null;
+	}
+
+	/**
+	 * Delete leftover MobileGate integration books so WS_MAX_PER_INSTANCE does not flake.
+	 */
+	private function purgeStaleMobileGateWorkspaces(): void
+	{
+		$db = \OC::$server->get(IDBConnection::class);
+		$qb = $db->getQueryBuilder();
+		$qb->select('id')->from('crm_workspace')
+			->where($qb->expr()->like('slug', $qb->createNamedParameter('mg-%')))
+			->setMaxResults(200);
+		$r = $qb->executeQuery();
+		$ids = [];
+		while ($row = $r->fetch()) {
+			$ids[] = (int)$row['id'];
+		}
+		$r->closeCursor();
+		foreach ($ids as $id) {
+			$this->deleteWorkspaceCascade($id);
+		}
+	}
+
+	private function deleteWorkspaceCascade(int $workspaceId): void
+	{
+		if ($workspaceId <= 0) {
+			return;
+		}
+		$db = \OC::$server->get(IDBConnection::class);
+		foreach (['crm_ws_member', 'crm_ws_settings', 'crm_mailbox', 'crm_workspace'] as $table) {
+			if (!$db->tableExists($table)) {
+				continue;
+			}
+			$col = $table === 'crm_workspace' ? 'id' : 'workspace_id';
+			$qb = $db->getQueryBuilder();
+			$qb->delete($table)
+				->where($qb->expr()->eq($col, $qb->createNamedParameter($workspaceId)))
+				->executeStatement();
+		}
+	}
+
+	private function ensureMember(int $workspaceId, string $uid, string $role = 'member'): void
+	{
+		\OC::$server->get(WorkspaceService::class)->addMember(
+			$workspaceId,
+			$uid,
+			$role,
+			true,
+			$this->admin,
+		);
+	}
+
+	private function workspaceIdForCompany(\OCA\CustomerCheck\Db\Company $company): int
+	{
+		return (int)$company->getWorkspaceId();
+	}
+
+	private function createCompany(?int $workspaceId = null): \OCA\CustomerCheck\Db\Company
+	{
+		$ws = ($workspaceId !== null && $workspaceId > 0)
+			? $workspaceId
+			: $this->isolatedWorkspaceId();
+		$this->ensureMember($ws, $this->uid);
+		$input = [
 			'name' => 'Mobile Co ' . $this->suffix,
 			'slug' => 'mobile-co-' . $this->suffix,
 			'lang' => 'de',
 			'country' => 'DE',
 			'status' => 'active',
-		], $this->uid);
+			'workspaceId' => $ws,
+		];
+		return \OC::$server->get(CompanyService::class)->create($input, $this->uid);
 	}
 
 	private function applyLicense(int $seats, string $issuedAt = '2026-01-01', string $validUntil = '2099-12-31'): void

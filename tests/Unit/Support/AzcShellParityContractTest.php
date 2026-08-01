@@ -100,7 +100,11 @@ final class AzcShellParityContractTest extends TestCase
 	{
 		$layout = (string)file_get_contents($this->root . '/css/common/app-layout.css');
 		$this->assertStringContainsString('#content.app-customercheck', $layout);
-		$this->assertMatchesRegularExpression('/flex:\s*0 0 (240|280)px/', $layout);
+		// Token-backed nav width (design-system → Nextcloud theme), with 280px fallback.
+		$this->assertMatchesRegularExpression(
+			'/flex:\s*0 0 var\(--crm-nav-width(?:,\s*280px)?\)/',
+			$layout,
+		);
 	}
 
 	public function testSkipLinkIsAbsolutelyPositionedOffscreen(): void

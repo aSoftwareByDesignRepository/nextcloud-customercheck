@@ -11,6 +11,9 @@ tests/e2e/.env
 tests/e2e/.auth/
 infection.log
 infection.html
+infection-critical.log
+infection-critical.html
+.mutation.lock
 
 # IDE / OS
 .vscode/

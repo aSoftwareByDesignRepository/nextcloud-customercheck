@@ -11,6 +11,15 @@
     return (root || document).querySelector(sel);
   }
 
+  /** Capability flags from PageShellTrait → #app-content data-crm-can-* */
+  function shellCan(flag) {
+    if (typeof window.CustomerCheckShellCan === 'function') {
+      return window.CustomerCheckShellCan(flag);
+    }
+    const el = document.getElementById('app-content');
+    return !!(el && el.getAttribute('data-crm-can-' + flag) === '1');
+  }
+
 
   function escapeHtml(value) {
     return String(value == null ? '' : value)
@@ -25,7 +34,7 @@
   function chaseReasonLabel(code) {
     const key = String(code || '');
     const map = {
-      lead_sla: t('Lead SLA overdue'),
+      lead_sla: t('New lead waiting too long'),
       close_overdue: t('Close date overdue'),
       no_next_action: t('No next action'),
       quote_followup_due: t('Quote follow-up due'),
@@ -33,7 +42,7 @@
       stale_stage: t('Stage went stale'),
       unowned: t('No owner'),
     };
-    return map[key] || (key ? key : t('Needs chase'));
+    return map[key] || (key ? key : t('Needs attention'));
   }
 
   /** Commitment status — never show raw API codes. */
@@ -176,6 +185,34 @@
       throw new Error(json.message || 'Request failed');
     }
     return json.data;
+  }
+
+  async function apiDelete(path) {
+    const res = await fetch(OC.generateUrl('/apps/customercheck' + path), {
+      method: 'DELETE',
+      credentials: 'same-origin',
+      headers: { requesttoken: OC.requestToken },
+    });
+    const json = await res.json();
+    if (!json.success) {
+      throw new Error(json.message || 'Request failed');
+    }
+    return json.data;
+  }
+
+  function makeDraftSendKey() {
+    var rand = '';
+    try {
+      if (window.crypto && typeof window.crypto.getRandomValues === 'function') {
+        var buf = new Uint8Array(8);
+        window.crypto.getRandomValues(buf);
+        rand = Array.from(buf, function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+      }
+    } catch (e) { /* fall through */ }
+    if (!rand) {
+      rand = Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6);
+    }
+    return 'crm-draft-' + Date.now() + '-' + rand;
   }
 
   function euros(cents) {
@@ -399,19 +436,22 @@
     return '<div class="crm-brief-verify" role="group" aria-label="' + escapeHtml(t('Check this promise')) + '">' +
       '<label class="crm-sr-only" for="crm-evidence-' + id + '">' + t('Evidence') + '</label>' +
       '<select id="crm-evidence-' + id + '" class="crm-input crm-input--sm" data-evidence-for="' + id + '" aria-label="' + escapeHtml(t('Evidence for done')) + '">' +
-      '<option value="">' + t('Evidence for done…') + '</option>' +
+      '<option value="activity_done" selected>' + t('Activity done') + '</option>' +
       '<option value="invoice_paid">' + t('Invoice paid') + '</option>' +
-      '<option value="activity_done">' + t('Activity done') + '</option>' +
       '<option value="links_fixed">' + t('Links fixed') + '</option>' +
       '<option value="plan_healthy">' + t('Plan healthy') + '</option>' +
       '<option value="manager_override">' + t('Manager override') + '</option>' +
       '</select>' +
       '<label class="crm-sr-only" for="crm-evidence-note-' + id + '">' + t('Reason for manager override') + '</label>' +
-      '<input id="crm-evidence-note-' + id + '" type="text" class="crm-input crm-input--sm" data-evidence-note-for="' + id + '" placeholder="' + escapeHtml(t('Reason for manager override')) + '" autocomplete="off" />' +
-      '<button type="button" class="crm-btn crm-btn--secondary" data-verify="' + id + '" data-action="done">' + t('Done') + '</button>' +
+      '<input id="crm-evidence-note-' + id + '" type="text" class="crm-input crm-input--sm crm-brief-verify__note" data-evidence-note-for="' + id + '" placeholder="' + escapeHtml(t('Reason for manager override')) + '" autocomplete="off" hidden />' +
+      '<button type="button" class="crm-btn crm-btn--primary" data-verify="' + id + '" data-action="done">' + t('Done') + '</button>' +
+      '<details class="crm-more-menu crm-brief-verify__more">' +
+      '<summary class="crm-btn crm-btn--ghost crm-btn--sm">' + t('More') + '</summary>' +
+      '<div class="crm-more-menu__panel" role="group" aria-label="' + escapeHtml(t('Other outcomes')) + '">' +
       '<button type="button" class="crm-btn crm-btn--secondary" data-verify="' + id + '" data-action="missed">' + t('Missed') + '</button>' +
       '<button type="button" class="crm-btn crm-btn--secondary" data-verify="' + id + '" data-action="carry">' + t('Carry') + '</button>' +
       '<button type="button" class="crm-btn crm-btn--ghost" data-verify="' + id + '" data-action="abandon">' + t('Abandon') + '</button>' +
+      '</div></details>' +
       '</div>';
   }
 
@@ -424,7 +464,8 @@
       '<section class="crm-card crm-today-role" aria-labelledby="crm-brief-wip-title">' +
       '<header class="crm-card__header"><div class="crm-card__header-text">' +
       '<h2 id="crm-brief-wip-title" class="crm-card__title">' + escapeHtml(t('Weekly Brief')) + '</h2>' +
-      '<p class="crm-card__lead">' + escapeHtml(t('WIP')) + ' ' + (data.wipUsed || 0) + '/' + (data.wipLimit || 5) +
+      '<p class="crm-card__lead">' + escapeHtml(t('This week')) + ': ' + (data.wipUsed || 0) + ' ' +
+      escapeHtml(t('of')) + ' ' + (data.wipLimit || 5) + ' ' + escapeHtml(t('promises')) +
       (data.weekKey ? ' · ' + escapeHtml(data.weekKey) : '') + '</p></div></header>' +
       (data.forecastDisclaimer
         ? '<div class="crm-card__body"><p class="crm-muted">' + escapeHtml(data.forecastDisclaimer) + '</p></div>'
@@ -434,15 +475,15 @@
       '<header class="crm-card__header"><h2 id="crm-brief-cash-title" class="crm-card__title">' +
       escapeHtml(t('Cash calendar')) + '</h2></header>' +
       '<div class="crm-card__body">' +
-      '<div class="crm-today-role__stats" role="group" aria-label="' + escapeHtml(t('Cash calendar')) + '">' +
-      pulseStat(euros(cash.overdueArCents), t('Overdue AR')) +
-      pulseStat(euros(cash.arDueThisMonthCents), t('AR due this month')) +
-      pulseStat(euros(cash.arDueNextMonthCents), t('AR due next month')) +
+      '<div class="crm-today-role__stats" role="list" aria-label="' + escapeHtml(t('Cash calendar')) + '">' +
+      pulseStat(euros(cash.overdueArCents), t('Money customers still owe')) +
+      pulseStat(euros(cash.arDueThisMonthCents), t('Due this month')) +
+      pulseStat(euros(cash.arDueNextMonthCents), t('Due next month')) +
       pulseStat(euros(cash.renewalsThisMonthCents), t('Renewals this month')) +
       pulseStat(euros(cash.renewalsNextMonthCents), t('Renewals next month')) +
       pulseStat(euros(cash.expectedInThisMonthCents), t('Expected cash this month')) +
       '</div>' +
-      '<p class="crm-muted" role="status">' + escapeHtml(t('pipeline excluded')) + ': ' + euros(cash.pipelineExcludedCents) +
+      '<p class="crm-muted" role="status">' + escapeHtml(t('Open deals not counted')) + ': ' + euros(cash.pipelineExcludedCents) +
       ' · ' + escapeHtml(t('Never multiply pipeline by hope.')) + '</p>' +
       '</div></section>' +
       '<section class="crm-card" aria-labelledby="crm-brief-last-title">' +
@@ -461,7 +502,7 @@
         return {
           title: c.title || t('Commitment'),
           meta: metaParts.join(' · '),
-          actionHtml: needsVerify && c.id
+          actionHtml: needsVerify && c.id && shellCan('brief')
             ? verifyActionsHtml(c.id)
             : '<span class="crm-muted">—</span>',
         };
@@ -470,6 +511,18 @@
       t('Last week'),
     );
     if (lastItems.length) {
+      last.addEventListener('change', function (ev) {
+        const sel = ev.target.closest('[data-evidence-for]');
+        if (!sel) return;
+        const id = sel.getAttribute('data-evidence-for');
+        const note = last.querySelector('[data-evidence-note-for="' + id + '"]');
+        if (!note) return;
+        const isOverride = String(sel.value || '') === 'manager_override';
+        note.hidden = !isOverride;
+        if (!isOverride) {
+          note.value = '';
+        }
+      });
       last.addEventListener('click', async function (ev) {
         const btn = ev.target.closest('[data-verify][data-action]');
         if (!btn) return;
@@ -521,7 +574,8 @@
     const wipUsed = Number(data.wipUsed) || 0;
     const wipLimit = Number(data.wipLimit) || 5;
     const wipLeft = Math.max(0, wipLimit - wipUsed);
-    const canConfirm = wipLeft > 0;
+    const canBrief = shellCan('brief');
+    const canConfirm = canBrief && wipLeft > 0;
     const suggestedKinds = (data.suggestedKinds || []).filter(function (k) {
       return k && k !== 'custom';
     });
@@ -531,14 +585,27 @@
     formCard.id = 'crm-brief-add';
     formCard.setAttribute('aria-labelledby', 'crm-brief-add-title');
 
+    if (!canBrief) {
+      formCard.innerHTML =
+        '<header class="crm-card__header"><div class="crm-card__header-text">' +
+        '<h2 id="crm-brief-add-title" class="crm-card__title">' + escapeHtml(t('Add a commitment')) + '</h2>' +
+        '<p class="crm-card__lead">' + escapeHtml(t('View only')) + '</p></div></header>' +
+        '<div class="crm-card__body">' +
+        '<div class="crm-callout" role="status"><p>' +
+        escapeHtml(t('You can read the weekly Brief here. Ask a workspace member to add commitments.')) +
+        '</p></div></div>';
+      mount.appendChild(formCard);
+      return;
+    }
+
     if (!canConfirm) {
       formCard.innerHTML =
         '<header class="crm-card__header"><div class="crm-card__header-text">' +
-        '<h2 id="crm-brief-add-title" class="crm-card__title">' + escapeHtml(t('Add a promise')) + '</h2>' +
+        '<h2 id="crm-brief-add-title" class="crm-card__title">' + escapeHtml(t('Add a commitment')) + '</h2>' +
         '<p class="crm-card__lead">' + escapeHtml(t('Your week is full.')) + '</p></div></header>' +
         '<div class="crm-card__body">' +
         '<div class="crm-callout" role="status"><p>' +
-        escapeHtml(t('Weekly WIP limit reached. Finish or abandon a commitment first.')) +
+        escapeHtml(t('Your week is full. Finish or drop a promise first.')) +
         '</p></div></div>';
       mount.appendChild(formCard);
       return;
@@ -563,7 +630,7 @@
 
     formCard.innerHTML =
       '<header class="crm-card__header"><div class="crm-card__header-text">' +
-      '<h2 id="crm-brief-add-title" class="crm-card__title">' + escapeHtml(t('Add a promise')) + '</h2>' +
+      '<h2 id="crm-brief-add-title" class="crm-card__title">' + escapeHtml(t('Add a commitment')) + '</h2>' +
       '<p class="crm-card__lead">' + escapeHtml(slotsLead) + '</p></div></header>' +
       '<div class="crm-card__body">' +
       suggestHtml +
@@ -624,26 +691,166 @@
       const cover = a.covering
         ? (' · ' + t('Covering') + (a.coveringPrimary ? ' ' + a.coveringPrimary : ''))
         : '';
+      const flags = (a.flagLabels && a.flagLabels.length)
+        ? (' · ' + a.flagLabels.join(' · '))
+        : '';
       return {
         title: a.name,
         meta: (a.gap ? t('Gap') : t('Covered')) +
-          (a.nextTouchOn ? ' · ' + a.nextTouchOn : '') + cover,
+          (a.nextTouchOn ? ' · ' + a.nextTouchOn : '') + flags + cover,
         href: OC.generateUrl('/apps/customercheck/companies/' + a.id) + '?workspaceId=' + ws,
       };
     }), t('No accounts assigned to you yet.'));
   }
 
-  function teamFormsHtml() {
+  function userPickerFieldHtml(opts) {
+    const id = opts.id;
+    const name = opts.name;
+    const label = opts.label;
+    const required = opts.required ? ' required' : '';
+    return (
+      '<div class="form-group">' +
+      '<label class="form-label" for="' + id + '-search">' + escapeHtml(label) + '</label>' +
+      '<div class="user-picker" id="' + id + '-picker" data-crm-user-picker="1">' +
+      '<div class="user-picker__control">' +
+      '<input type="search" id="' + id + '-search" class="form-input crm-input user-picker__search" ' +
+      'role="combobox" aria-autocomplete="list" aria-controls="' + id + '-suggest" aria-expanded="false" ' +
+      'autocomplete="off" placeholder="' + escapeHtml(t('Search by name or login…')) + '"' + required + ' />' +
+      '<button type="button" class="user-picker__clear" id="' + id + '-clear" hidden aria-label="' +
+      escapeHtml(t('Clear')) + '">×</button></div>' +
+      '<ul id="' + id + '-suggest" class="user-picker__list" role="listbox" hidden></ul>' +
+      '<input type="hidden" id="' + id + '" name="' + name + '" value=""' + required + ' />' +
+      '</div>' +
+      '<p class="form-help">' + escapeHtml(t('Search and pick. Never type a raw user id.')) + '</p></div>'
+    );
+  }
+
+  /**
+   * Bind a single-select directory combobox. Commits only a picked uid into the hidden field.
+   */
+  function bindPersonaUserPicker(opts) {
+    const search = document.getElementById(opts.searchId);
+    const suggest = document.getElementById(opts.suggestId);
+    const hidden = document.getElementById(opts.hiddenId);
+    const clearBtn = opts.clearId ? document.getElementById(opts.clearId) : null;
+    if (!search || !suggest || !hidden) {
+      return;
+    }
+    let timer = null;
+    const nav = (window.CustomerCheckUserPickerNav && window.CustomerCheckUserPickerNav.bindListboxKeyboard)
+      ? window.CustomerCheckUserPickerNav.bindListboxKeyboard(search, suggest)
+      : { reset: function () {} };
+    const syncClear = function () {
+      if (clearBtn) clearBtn.hidden = !hidden.value;
+    };
+    if (clearBtn) {
+      clearBtn.addEventListener('click', function () {
+        hidden.value = '';
+        search.value = '';
+        suggest.innerHTML = '';
+        suggest.hidden = true;
+        search.setAttribute('aria-expanded', 'false');
+        nav.reset();
+        syncClear();
+        search.focus();
+      });
+    }
+    search.addEventListener('input', function () {
+      if (hidden.value) {
+        hidden.value = '';
+        syncClear();
+      }
+      clearTimeout(timer);
+      const q = search.value.trim();
+      if (q.length < 2) {
+        suggest.hidden = true;
+        suggest.innerHTML = '';
+        search.setAttribute('aria-expanded', 'false');
+        nav.reset();
+        return;
+      }
+      timer = setTimeout(async function () {
+        try {
+          const ws = typeof opts.workspaceIdFn === 'function' ? opts.workspaceIdFn() : 0;
+          let path = '/api/v1/settings/users?q=' + encodeURIComponent(q);
+          if (ws > 0) {
+            path += '&workspaceId=' + encodeURIComponent(String(ws));
+          }
+          const data = await apiGet(path);
+          const users = (data && data.users) || [];
+          suggest.innerHTML = '';
+          users.forEach(function (u) {
+            const opt = document.createElement('li');
+            opt.className = 'user-picker__item';
+            opt.setAttribute('role', 'option');
+            opt.setAttribute('aria-selected', 'false');
+            const nameEl = document.createElement('span');
+            nameEl.className = 'user-picker__name';
+            nameEl.textContent = u.displayName || u.id;
+            const meta = document.createElement('span');
+            meta.className = 'user-picker__meta';
+            meta.textContent = u.id || '';
+            opt.appendChild(nameEl);
+            opt.appendChild(meta);
+            opt.addEventListener('click', function () {
+              hidden.value = String(u.id || '');
+              search.value = (u.displayName || u.id || '') + (u.id ? ' (' + u.id + ')' : '');
+              suggest.innerHTML = '';
+              suggest.hidden = true;
+              search.setAttribute('aria-expanded', 'false');
+              nav.reset();
+              syncClear();
+            });
+            suggest.appendChild(opt);
+          });
+          suggest.hidden = users.length === 0;
+          search.setAttribute('aria-expanded', users.length === 0 ? 'false' : 'true');
+          nav.reset();
+        } catch (e) {
+          suggest.hidden = true;
+          search.setAttribute('aria-expanded', 'false');
+          nav.reset();
+        }
+      }, 250);
+    });
+    syncClear();
+  }
+
+  function teamFormsHtml(opts) {
+    opts = opts || {};
+    const showBulk = opts.showBulk !== false;
+    let bulkCard = '';
+    if (showBulk) {
+      bulkCard =
+      '<article class="crm-team-capacity__card">' +
+      '<h3 class="crm-team-capacity__title" id="crm-bulk-title">' + escapeHtml(t('Move work to someone else')) + '</h3>' +
+      '<p class="crm-team-capacity__lead">' + escapeHtml(t('Reassign deals, accounts, and promises in one safe step.')) + '</p>' +
+      '<form class="crm-form crm-form--stack" data-crm-bulk-form aria-labelledby="crm-bulk-title">' +
+      userPickerFieldHtml({ id: 'crm-bulk-from', name: 'fromUser', label: t('From colleague'), required: true }) +
+      userPickerFieldHtml({ id: 'crm-bulk-to', name: 'toUser', label: t('To colleague'), required: true }) +
+      '<div class="form-group"><label class="crm-check" for="crm-bulk-confirm">' +
+      '<input type="checkbox" id="crm-bulk-confirm" name="confirmReassign" value="1" required /> ' +
+      escapeHtml(t('I confirm reassigning work from the selected “from” colleague')) +
+      '</label>' +
+      '<p class="form-help">' + escapeHtml(t('Confirmation uses the person you picked above — never type a raw user id.')) + '</p></div>' +
+      '<fieldset class="crm-fieldset">' +
+      '<legend>' + escapeHtml(t('What to move')) + '</legend>' +
+      '<label class="crm-check"><input type="checkbox" name="entityTypes" value="deals" checked> ' + escapeHtml(t('Deals')) + '</label>' +
+      '<label class="crm-check"><input type="checkbox" name="entityTypes" value="accounts" checked> ' + escapeHtml(t('Account owners')) + '</label>' +
+      '<label class="crm-check"><input type="checkbox" name="entityTypes" value="promises" checked> ' + escapeHtml(t('Open promises')) + '</label>' +
+      '<label class="crm-check"><input type="checkbox" name="entityTypes" value="commitments"> ' + escapeHtml(t('Commitments')) + '</label>' +
+      '</fieldset>' +
+      '<div class="crm-form-actions"><button type="submit" class="crm-btn crm-btn--primary">' + escapeHtml(t('Reassign')) + '</button></div>' +
+      '</form></article>';
+    }
     return '' +
       '<div class="crm-team-capacity__grid">' +
       '<article class="crm-team-capacity__card">' +
       '<h3 class="crm-team-capacity__title" id="crm-ooo-title">' + escapeHtml(t('Cover while away')) + '</h3>' +
       '<p class="crm-team-capacity__lead">' + escapeHtml(t('Pick who is out and who covers them. Ownership stays with the primary.')) + '</p>' +
       '<form class="crm-form crm-form--stack" data-crm-ooo-form aria-labelledby="crm-ooo-title">' +
-      '<div class="form-group"><label class="form-label" for="crm-ooo-primary">' + escapeHtml(t('Person away')) + '</label>' +
-      '<input id="crm-ooo-primary" name="primaryUserId" required class="crm-input form-input" autocomplete="username" /></div>' +
-      '<div class="form-group"><label class="form-label" for="crm-ooo-backup">' + escapeHtml(t('Covering colleague')) + '</label>' +
-      '<input id="crm-ooo-backup" name="backupUserId" required class="crm-input form-input" autocomplete="username" /></div>' +
+      userPickerFieldHtml({ id: 'crm-ooo-primary', name: 'primaryUserId', label: t('Person away'), required: true }) +
+      userPickerFieldHtml({ id: 'crm-ooo-backup', name: 'backupUserId', label: t('Covering colleague'), required: true }) +
       '<div class="crm-form-row-2">' +
       '<div class="form-group"><label class="form-label" for="crm-ooo-from">' + escapeHtml(t('From')) + '</label>' +
       '<input id="crm-ooo-from" name="from" type="date" required class="crm-input form-input" /></div>' +
@@ -653,31 +860,12 @@
       '<p class="form-help">' + escapeHtml(t('Cover lasts at most 60 days.')) + '</p>' +
       '<div class="crm-form-actions"><button type="submit" class="crm-btn crm-btn--primary">' + escapeHtml(t('Save cover')) + '</button></div>' +
       '</form></article>' +
-      '<article class="crm-team-capacity__card">' +
-      '<h3 class="crm-team-capacity__title" id="crm-bulk-title">' + escapeHtml(t('Move work to someone else')) + '</h3>' +
-      '<p class="crm-team-capacity__lead">' + escapeHtml(t('Reassign deals, accounts, and promises in one safe step.')) + '</p>' +
-      '<form class="crm-form crm-form--stack" data-crm-bulk-form aria-labelledby="crm-bulk-title">' +
-      '<div class="form-group"><label class="form-label" for="crm-bulk-from">' + escapeHtml(t('From user')) + '</label>' +
-      '<input id="crm-bulk-from" name="fromUser" required class="crm-input form-input" autocomplete="username" /></div>' +
-      '<div class="form-group"><label class="form-label" for="crm-bulk-to">' + escapeHtml(t('To user')) + '</label>' +
-      '<input id="crm-bulk-to" name="toUser" required class="crm-input form-input" autocomplete="username" /></div>' +
-      '<div class="form-group"><label class="form-label" for="crm-bulk-confirm">' + escapeHtml(t('Type the from-user name to confirm')) + '</label>' +
-      '<input id="crm-bulk-confirm" name="confirmFromUserName" required class="crm-input form-input" autocomplete="off" /></div>' +
-      '<fieldset class="crm-fieldset">' +
-      '<legend>' + escapeHtml(t('What to move')) + '</legend>' +
-      '<label class="crm-check"><input type="checkbox" name="entityTypes" value="deals" checked> ' + escapeHtml(t('Deals')) + '</label>' +
-      '<label class="crm-check"><input type="checkbox" name="entityTypes" value="accounts" checked> ' + escapeHtml(t('Account owners')) + '</label>' +
-      '<label class="crm-check"><input type="checkbox" name="entityTypes" value="promises" checked> ' + escapeHtml(t('Open promises')) + '</label>' +
-      '<label class="crm-check"><input type="checkbox" name="entityTypes" value="commitments"> ' + escapeHtml(t('Commitments')) + '</label>' +
-      '</fieldset>' +
-      '<div class="crm-form-actions"><button type="submit" class="crm-btn crm-btn--primary">' + escapeHtml(t('Reassign')) + '</button></div>' +
-      '</form></article>' +
+      bulkCard +
       '<article class="crm-team-capacity__card crm-team-capacity__card--wide">' +
       '<h3 class="crm-team-capacity__title" id="crm-esc-title">' + escapeHtml(t('Escalate for help')) + '</h3>' +
       '<p class="crm-team-capacity__lead">' + escapeHtml(t('Flag a teammate who needs a manager’s attention.')) + '</p>' +
       '<form class="crm-form crm-form--stack" data-crm-escalate-form aria-labelledby="crm-esc-title">' +
-      '<div class="form-group"><label class="form-label" for="crm-esc-subject">' + escapeHtml(t('Teammate')) + '</label>' +
-      '<input id="crm-esc-subject" name="subjectUserId" required class="crm-input form-input" autocomplete="username" /></div>' +
+      userPickerFieldHtml({ id: 'crm-esc-subject', name: 'subjectUserId', label: t('Teammate'), required: true }) +
       '<div class="form-group"><label class="form-label" for="crm-esc-reason">' + escapeHtml(t('Why')) + '</label>' +
       '<textarea id="crm-esc-reason" name="reason" required class="crm-input form-input" rows="3" maxlength="2000"></textarea></div>' +
       '<div class="crm-form-actions"><button type="submit" class="crm-btn crm-btn--primary">' + escapeHtml(t('Create escalation')) + '</button></div>' +
@@ -699,7 +887,7 @@
 
     const stats = document.createElement('div');
     stats.className = 'crm-today-role__stats';
-    stats.setAttribute('role', 'group');
+    stats.setAttribute('role', 'list');
     stats.setAttribute('aria-label', t('Team snapshot'));
     stats.innerHTML =
       pulseStat(people, t('People')) +
@@ -797,9 +985,14 @@
     }
 
     if (capacityHost) {
-      if (!data.selfOnly) {
-        capacityHost.innerHTML = teamFormsHtml();
+      if (!data.selfOnly && shellCan('coach')) {
+        capacityHost.innerHTML = teamFormsHtml({ showBulk: shellCan('bulk') });
         wireTeamCapacityForms(mount, capacityHost, ws);
+      } else if (!data.selfOnly) {
+        capacityHost.innerHTML =
+          '<div class="crm-callout crm-callout--info" role="status"><p>' +
+          escapeHtml(t('Team coaching tools need a manager role in this workspace.')) +
+          '</p></div>';
       } else {
         capacityHost.innerHTML =
           '<div class="crm-callout crm-callout--info" role="status"><p>' +
@@ -812,6 +1005,17 @@
   }
 
   function wireTeamCapacityForms(mount, capacityHost, ws) {
+    const wsFn = function () { return ws; };
+    [
+      { searchId: 'crm-ooo-primary-search', suggestId: 'crm-ooo-primary-suggest', hiddenId: 'crm-ooo-primary', clearId: 'crm-ooo-primary-clear' },
+      { searchId: 'crm-ooo-backup-search', suggestId: 'crm-ooo-backup-suggest', hiddenId: 'crm-ooo-backup', clearId: 'crm-ooo-backup-clear' },
+      { searchId: 'crm-bulk-from-search', suggestId: 'crm-bulk-from-suggest', hiddenId: 'crm-bulk-from', clearId: 'crm-bulk-from-clear' },
+      { searchId: 'crm-bulk-to-search', suggestId: 'crm-bulk-to-suggest', hiddenId: 'crm-bulk-to', clearId: 'crm-bulk-to-clear' },
+      { searchId: 'crm-esc-subject-search', suggestId: 'crm-esc-subject-suggest', hiddenId: 'crm-esc-subject', clearId: 'crm-esc-subject-clear' },
+    ].forEach(function (cfg) {
+      bindPersonaUserPicker(Object.assign({ workspaceIdFn: wsFn }, cfg));
+    });
+
     const oooForm = capacityHost.querySelector('[data-crm-ooo-form]');
     if (oooForm) {
       oooForm.addEventListener('submit', async function (ev) {
@@ -819,10 +1023,16 @@
         const fd = new FormData(oooForm);
         const from = String(fd.get('from') || '');
         const until = String(fd.get('until') || '');
+        const primary = String(fd.get('primaryUserId') || '').trim();
+        const backup = String(fd.get('backupUserId') || '').trim();
+        if (!primary || !backup) {
+          showAlert(oooForm, t('Select a colleague from the directory first.'));
+          return;
+        }
         try {
           await apiPost('/api/v1/workspaces/' + ws + '/ooo', {
-            primaryUserId: String(fd.get('primaryUserId') || '').trim(),
-            backupUserId: String(fd.get('backupUserId') || '').trim(),
+            primaryUserId: primary,
+            backupUserId: backup,
             from: from,
             until: until,
             startsOn: from,
@@ -845,15 +1055,23 @@
           .map(function (el) { return el.value; });
         const fromUser = String(fd.get('fromUser') || '').trim();
         const toUser = String(fd.get('toUser') || '').trim();
-        const confirmName = String(fd.get('confirmFromUserName') || '').trim();
+        const confirmed = !!bulkForm.querySelector('#crm-bulk-confirm:checked');
+        if (!fromUser || !toUser) {
+          showAlert(bulkForm, t('Select a colleague from the directory first.'));
+          return;
+        }
+        if (!confirmed) {
+          showAlert(bulkForm, t('Confirm the reassignment before continuing.'));
+          return;
+        }
         try {
           await apiPost('/api/v1/workspaces/' + ws + '/bulk-reassign', {
             fromUser: fromUser,
             toUser: toUser,
-            confirmFromUserName: confirmName,
+            confirmFromUserName: fromUser,
             fromUserId: fromUser,
             toUserId: toUser,
-            confirmName: confirmName,
+            confirmName: fromUser,
             entityTypes: entityTypes,
           });
           await loadTeam(mount);
@@ -868,9 +1086,14 @@
       escForm.addEventListener('submit', async function (ev) {
         ev.preventDefault();
         const fd = new FormData(escForm);
+        const subject = String(fd.get('subjectUserId') || '').trim();
+        if (!subject) {
+          showAlert(escForm, t('Select a colleague from the directory first.'));
+          return;
+        }
         try {
           await apiPost('/api/v1/workspaces/' + ws + '/escalations', {
-            subjectUserId: String(fd.get('subjectUserId') || '').trim(),
+            subjectUserId: subject,
             reason: String(fd.get('reason') || '').trim(),
           });
           await loadTeam(mount);
@@ -978,14 +1201,18 @@
       const li = document.createElement('li');
       li.className = 'crm-list__item crm-list__item--stack';
       const companyHref = OC.generateUrl('/apps/customercheck/companies/' + p.companyId) + '?workspaceId=' + ws;
+      const companyLabel = p.companyName ? String(p.companyName) : t('Unknown company');
+      const editBtn = shellCan('write')
+        ? ('<button type="button" class="crm-btn crm-btn--secondary" data-edit-plan="' +
+          escapeHtml(String(p.companyId)) + '">' + t('Edit') + '</button>')
+        : '';
       li.innerHTML =
         '<div class="crm-list__main">' +
         '<strong><a href="' + escapeHtml(companyHref) + '">' +
-        escapeHtml(p.companyName || ('#' + p.companyId)) + '</a></strong>' +
+        escapeHtml(companyLabel) + '</a></strong>' +
         '<span class="crm-muted"> · ' + escapeHtml((p.health || '') + ' · ' + (p.priority || '') +
           (p.nextReviewOn ? ' · ' + p.nextReviewOn : '')) + '</span></div>' +
-        '<button type="button" class="crm-btn crm-btn--secondary" data-edit-plan="' +
-        escapeHtml(String(p.companyId)) + '">' + t('Edit') + '</button>' +
+        editBtn +
         '<form class="crm-form crm-form--inline" hidden data-plan-form="' +
         escapeHtml(String(p.companyId)) + '" aria-label="' + escapeHtml(t('Edit account plan')) + '">' +
         '<label>' + t('Goal') + '<textarea name="goal" class="crm-input" rows="2" maxlength="2000">' +
@@ -1085,15 +1312,25 @@
       body,
       items.map(function (m) {
         const mid = m.id;
-        const inputId = 'crm-triage-' + mid;
+        const searchId = 'crm-triage-search-' + mid;
+        const suggestId = 'crm-triage-suggest-' + mid;
+        const hiddenId = 'crm-triage-company-' + mid;
         return {
           title: m.subject || m.from || t('Shared mail'),
           meta: t('Shared') + (m.sentAt ? ' · ' + m.sentAt : '') + (m.from && m.subject ? ' · ' + m.from : ''),
           actionHtml:
-            '<form class="crm-form crm-form--inline crm-form--row" data-triage-id="' + escapeHtml(String(mid)) + '">' +
-            '<label for="' + escapeHtml(inputId) + '">' + t('Company ID') + '</label>' +
-            '<input id="' + escapeHtml(inputId) + '" name="companyId" type="number" min="1" required class="crm-input" inputmode="numeric" autocomplete="off" />' +
-            '<button type="submit" class="crm-btn crm-btn--primary">' + t('Assign') + '</button>' +
+            '<form class="crm-form crm-form--inline crm-form--row crm-triage-assign" data-triage-id="' + escapeHtml(String(mid)) + '">' +
+            '<label class="form-label" for="' + escapeHtml(searchId) + '">' + escapeHtml(t('Company')) + '</label>' +
+            '<div class="user-picker crm-triage-company-picker">' +
+            '<div class="user-picker__control">' +
+            '<input type="search" id="' + escapeHtml(searchId) + '" class="form-input crm-input user-picker__search" ' +
+            'role="combobox" aria-autocomplete="list" aria-controls="' + escapeHtml(suggestId) + '" aria-expanded="false" ' +
+            'autocomplete="off" placeholder="' + escapeHtml(t('Search by company name…')) + '" />' +
+            '</div>' +
+            '<ul id="' + escapeHtml(suggestId) + '" class="user-picker__list" role="listbox" hidden></ul>' +
+            '<input type="hidden" id="' + escapeHtml(hiddenId) + '" name="companyId" value="" required />' +
+            '</div>' +
+            '<button type="submit" class="crm-btn crm-btn--primary">' + escapeHtml(t('Assign')) + '</button>' +
             '</form>',
         };
       }),
@@ -1101,12 +1338,73 @@
       t('Mail triage'),
     );
     body.querySelectorAll('[data-triage-id]').forEach(function (form) {
+      const mid = form.getAttribute('data-triage-id');
+      const search = form.querySelector('.user-picker__search');
+      const suggest = form.querySelector('.user-picker__list');
+      const hidden = form.querySelector('[name="companyId"]');
+      if (search && suggest && hidden) {
+        const nav = (window.CustomerCheckUserPickerNav && window.CustomerCheckUserPickerNav.bindListboxKeyboard)
+          ? window.CustomerCheckUserPickerNav.bindListboxKeyboard(search, suggest)
+          : { reset: function () {} };
+        let timer = null;
+        search.addEventListener('input', function () {
+          if (hidden.value) {
+            hidden.value = '';
+          }
+          clearTimeout(timer);
+          const q = search.value.trim();
+          if (q.length < 2) {
+            suggest.hidden = true;
+            suggest.innerHTML = '';
+            search.setAttribute('aria-expanded', 'false');
+            nav.reset();
+            return;
+          }
+          timer = setTimeout(async function () {
+            try {
+              const data = await apiGet('/api/v1/companies?q=' + encodeURIComponent(q) + '&limit=20&workspaceId=' + encodeURIComponent(String(ws)));
+              const list = Array.isArray(data) ? data : [];
+              suggest.innerHTML = '';
+              list.forEach(function (c) {
+                const opt = document.createElement('li');
+                opt.className = 'user-picker__item';
+                opt.setAttribute('role', 'option');
+                opt.setAttribute('aria-selected', 'false');
+                const nameEl = document.createElement('span');
+                nameEl.className = 'user-picker__name';
+                nameEl.textContent = c.name || c.slug || String(c.id);
+                const meta = document.createElement('span');
+                meta.className = 'user-picker__meta';
+                meta.textContent = c.slug || '';
+                opt.appendChild(nameEl);
+                opt.appendChild(meta);
+                opt.addEventListener('click', function () {
+                  hidden.value = String(c.id || '');
+                  search.value = (c.name || c.slug || '') + (c.slug ? ' (' + c.slug + ')' : '');
+                  suggest.innerHTML = '';
+                  suggest.hidden = true;
+                  search.setAttribute('aria-expanded', 'false');
+                  nav.reset();
+                });
+                suggest.appendChild(opt);
+              });
+              suggest.hidden = list.length === 0;
+              search.setAttribute('aria-expanded', list.length === 0 ? 'false' : 'true');
+              nav.reset();
+            } catch (e) {
+              suggest.hidden = true;
+              search.setAttribute('aria-expanded', 'false');
+              nav.reset();
+            }
+          }, 250);
+        });
+      }
       form.addEventListener('submit', async function (ev) {
         ev.preventDefault();
         const id = form.getAttribute('data-triage-id');
-        const companyId = parseInt(form.querySelector('[name="companyId"]').value, 10);
+        const companyId = parseInt(hidden ? hidden.value : '0', 10);
         if (!companyId || companyId < 1) {
-          showAlert(mount, t('Enter a valid company ID.'));
+          showAlert(mount, t('Pick a company from the search results first.'));
           return;
         }
         try {
@@ -1117,6 +1415,111 @@
         }
       });
     });
+
+    // §14.4 — failed shared sends (workspace-visible to mail.read)
+    let drafts = { items: [], canMailSend: false };
+    try {
+      drafts = await apiGet('/api/v1/workspaces/' + ws + '/mail/drafts');
+    } catch (e) {
+      drafts = { items: [], canMailSend: false, error: e.message || String(e) };
+    }
+    const draftsHost = document.createElement('section');
+    draftsHost.className = 'crm-card';
+    draftsHost.setAttribute('aria-labelledby', 'crm-mail-drafts-title');
+    draftsHost.innerHTML =
+      '<header class="crm-card__header"><h2 id="crm-mail-drafts-title" class="crm-card__title">' +
+      escapeHtml(t('Failed sends')) + '</h2></header>' +
+      '<div class="crm-card__body">' +
+      '<p class="crm-muted" role="status">' +
+      escapeHtml(t('Messages that could not leave the shared mailbox. Everyone who can read mail in this workspace can see them.')) +
+      '</p>' +
+      '<div data-crm-mail-drafts-body></div></div>';
+    mount.appendChild(draftsHost);
+    const draftsBody = draftsHost.querySelector('[data-crm-mail-drafts-body]');
+    const draftItems = drafts.items || [];
+    const canSendDrafts = !!drafts.canMailSend;
+    if (drafts.error) {
+      draftsBody.innerHTML = '<p class="crm-muted" role="alert">' + escapeHtml(drafts.error) + '</p>';
+    } else {
+      renderSuiteTable(
+        draftsBody,
+        draftItems.map(function (d) {
+          const did = d.id;
+          let actions = '';
+          if (canSendDrafts) {
+            actions =
+              '<div class="crm-form-actions" style="justify-content:flex-start;gap:0.5rem;flex-wrap:wrap">' +
+              '<button type="button" class="crm-btn crm-btn--primary" data-crm-draft-resend="' + escapeHtml(String(did)) + '">' +
+              escapeHtml(t('Send again')) + '</button>' +
+              '<button type="button" class="crm-btn crm-btn--secondary" data-crm-draft-delete="' + escapeHtml(String(did)) + '">' +
+              escapeHtml(t('Discard')) + '</button></div>';
+          } else {
+            actions = '<p class="crm-muted">' + escapeHtml(t('Ask a teammate with send permission to retry or discard.')) + '</p>';
+          }
+          return {
+            title: d.subject || t('Failed send'),
+            meta: (d.to ? d.to : '') + (d.updatedAt ? ' · ' + d.updatedAt : ''),
+            actionHtml: actions,
+          };
+        }),
+        t('No failed sends waiting.'),
+        t('Failed sends'),
+      );
+      draftsBody.querySelectorAll('[data-crm-draft-resend]').forEach(function (btn) {
+        btn.addEventListener('click', async function () {
+          if (btn.disabled) return;
+          const C = window.CustomerCheckComponents || window.CrmComponents;
+          const id = btn.getAttribute('data-crm-draft-resend');
+          const ok = C && typeof C.confirmDialog === 'function'
+            ? await C.confirmDialog({
+              title: t('Send again?'),
+              message: t('This sends from the shared mailbox. Everyone who can read mail can see it.'),
+              confirmLabel: t('Send'),
+              cancelLabel: t('Cancel'),
+              variant: 'info',
+            })
+            : null;
+          if (!ok || !ok.confirmed) return;
+          btn.disabled = true;
+          try {
+            await apiPost('/api/v1/workspaces/' + ws + '/mail/drafts/' + id + '/send', {
+              idempotencyKey: makeDraftSendKey(),
+            });
+            const live = document.getElementById('crm-live-region');
+            if (live) live.textContent = t('Message sent from the shared mailbox.');
+            await loadMail(mount);
+          } catch (e) {
+            btn.disabled = false;
+            showAlert(draftsHost, e.message || String(e));
+          }
+        });
+      });
+      draftsBody.querySelectorAll('[data-crm-draft-delete]').forEach(function (btn) {
+        btn.addEventListener('click', async function () {
+          if (btn.disabled) return;
+          const C = window.CustomerCheckComponents || window.CrmComponents;
+          const id = btn.getAttribute('data-crm-draft-delete');
+          const ok = C && typeof C.confirmDialog === 'function'
+            ? await C.confirmDialog({
+              title: t('Discard this failed send?'),
+              message: t('The message will be removed from this workspace inbox. This cannot be undone.'),
+              confirmLabel: t('Discard'),
+              cancelLabel: t('Cancel'),
+              variant: 'danger',
+            })
+            : null;
+          if (!ok || !ok.confirmed) return;
+          btn.disabled = true;
+          try {
+            await apiDelete('/api/v1/workspaces/' + ws + '/mail/drafts/' + id);
+            await loadMail(mount);
+          } catch (e) {
+            btn.disabled = false;
+            showAlert(draftsHost, e.message || String(e));
+          }
+        });
+      });
+    }
   }
 
   function sectionList(title, items, emptyMsg, mapFn) {
@@ -1204,7 +1607,7 @@
       };
     }));
 
-    mount.appendChild(sectionList(t('Action plan'), data.map || [], t('No MAP steps yet.'), function (s) {
+    mount.appendChild(sectionList(t('Action plan'), data.map || [], t('No next steps yet.'), function (s) {
       return { title: s.title, meta: s.statusLabel || s.status || '' };
     }));
 

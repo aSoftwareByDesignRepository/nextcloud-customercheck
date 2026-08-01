@@ -7,6 +7,7 @@ namespace OCA\CustomerCheck\Service;
 use OCA\CustomerCheck\Constants;
 use OCA\CustomerCheck\Db\Agreement;
 use OCA\CustomerCheck\Db\AgreementMapper;
+use OCA\CustomerCheck\Db\CompanyMapper;
 use OCA\CustomerCheck\Db\HoursEntry;
 use OCA\CustomerCheck\Db\HoursMapper;
 use OCA\CustomerCheck\Db\ReminderLog;
@@ -38,6 +39,7 @@ class QuotaService
 	public function __construct(
 		private readonly HoursMapper $hoursMapper,
 		private readonly AgreementMapper $agreementMapper,
+		private readonly CompanyMapper $companyMapper,
 		private readonly ReminderLogMapper $reminderLogMapper,
 		private readonly NotificationService $notificationService,
 		private readonly TimelineService $timelineService,
@@ -252,38 +254,53 @@ class QuotaService
 	 * Edit an hours entry within the 7-day window (§4.6 / S5).
 	 * Older entries must use a compensating (negative) logHours call instead.
 	 *
+	 * Serialises concurrent edits with FOR UPDATE so billing minutes cannot
+	 * last-write-wins past the lock window check.
+	 *
 	 * @param array{minutes?:int,topic?:string,entryDate?:string} $input
 	 */
 	public function updateEntry(int $entryId, array $input, string $actor): HoursEntry
 	{
-		$entry = $this->hoursMapper->findById($entryId);
-		$now = $this->timeFactory->getDateTime();
-		$this->assertEntryEditable($entry, $now);
-
-		if (array_key_exists('minutes', $input)) {
-			$this->assertQuarterHour((int)$input['minutes']);
-			$entry->setMinutes((int)$input['minutes']);
-		}
-		if (array_key_exists('topic', $input)) {
-			$topic = trim((string)$input['topic']);
-			if ($topic === '') {
-				throw ValidationException::field(
-					Constants::ERR_VALIDATION,
-					'topic',
-					$this->l10n->t('Describe what the time was spent on.'),
-				);
+		$this->db->beginTransaction();
+		try {
+			if (!$this->hoursMapper->lockRow($entryId)) {
+				throw new NotFoundException($this->l10n->t('Hours entry not found.'), Constants::ERR_NOT_FOUND);
 			}
-			$entry->setTopic(mb_substr($topic, 0, 255));
-		}
-		if (array_key_exists('entryDate', $input) && $input['entryDate'] !== null && $input['entryDate'] !== '') {
-			$date = DateMath::parseStrictDate((string)$input['entryDate']);
-			if ($date === null) {
-				throw ValidationException::field(Constants::ERR_VALIDATION, 'entryDate', $this->l10n->t('Use YYYY-MM-DD.'));
+			$entry = $this->hoursMapper->findById($entryId);
+			$now = $this->timeFactory->getDateTime();
+			$this->assertEntryEditable($entry, $now);
+
+			if (array_key_exists('minutes', $input)) {
+				$this->assertQuarterHour((int)$input['minutes']);
+				$entry->setMinutes((int)$input['minutes']);
 			}
-			$entry->setEntryDate(new \DateTime($date->format('Y-m-d')));
+			if (array_key_exists('topic', $input)) {
+				$topic = trim((string)$input['topic']);
+				if ($topic === '') {
+					throw ValidationException::field(
+						Constants::ERR_VALIDATION,
+						'topic',
+						$this->l10n->t('Describe what the time was spent on.'),
+					);
+				}
+				$entry->setTopic(mb_substr($topic, 0, 255));
+			}
+			if (array_key_exists('entryDate', $input) && $input['entryDate'] !== null && $input['entryDate'] !== '') {
+				$date = DateMath::parseStrictDate((string)$input['entryDate']);
+				if ($date === null) {
+					throw ValidationException::field(Constants::ERR_VALIDATION, 'entryDate', $this->l10n->t('Use YYYY-MM-DD.'));
+				}
+				$entry->setEntryDate(new \DateTime($date->format('Y-m-d')));
+			}
+
+			$entry = $this->hoursMapper->update($entry);
+			$this->db->commit();
+		} catch (\Throwable $e) {
+			$this->db->rollBack();
+			throw $e;
 		}
 
-		return $this->hoursMapper->update($entry);
+		return $entry;
 	}
 
 	/**
@@ -325,17 +342,24 @@ class QuotaService
 		}
 
 		try {
-			$this->notificationService->notifyCrmUsers(
-				Constants::NOTIFY_QUOTA80,
-				'agreement',
-				(string)$agreementId,
-				[
-					'agreementId' => $agreementId,
-					'companyId' => (int)$agreement->getCompanyId(),
-					'label' => (string)$agreement->getLabel(),
-					'percent' => (int)floor($this->usedPercent($usedMinutes, $quotaMinutes)),
-				],
-			);
+			$company = $this->companyMapper->findById((int)$agreement->getCompanyId());
+			$workspaceId = (int)($company->getWorkspaceId() ?? 0);
+			$params = [
+				'agreementId' => $agreementId,
+				'companyId' => (int)$agreement->getCompanyId(),
+				'label' => (string)$agreement->getLabel(),
+				'percent' => (int)floor($this->usedPercent($usedMinutes, $quotaMinutes)),
+			];
+			if ($workspaceId > 0) {
+				$this->notificationService->notifyWorkspaceUsers(
+					$workspaceId,
+					Constants::NOTIFY_QUOTA80,
+					'agreement',
+					(string)$agreementId,
+					$params,
+				);
+			}
+			// Orphan agreements without a workspace stay silent (fail closed).
 		} catch (\Throwable $e) {
 			// Notify failed — release so the next entry retries.
 			$this->reminderLogMapper->delete($ledgerRow);
@@ -373,13 +397,18 @@ class QuotaService
 	}
 
 	/**
-	 * All partner agreements with their quota state — Today strip and digest.
+	 * Partner agreements with quota state for one workspace — digest / Today.
+	 * Fail closed without a workspace (never blend books).
 	 *
 	 * @return list<array{agreement: Agreement, quotaMinutes: int, usedMinutes: int, percent: float, alert: bool}>
 	 */
-	public function partnerQuotaOverview(int $limit = 500): array
+	public function partnerQuotaOverview(int $workspaceId, int $limit = 500): array
 	{
-		$agreements = $this->agreementMapper->findPartnerAgreements($limit);
+		if ($workspaceId <= 0) {
+			return [];
+		}
+
+		$agreements = $this->agreementMapper->findPartnerAgreements($workspaceId, $limit);
 		if ($agreements === []) {
 			return [];
 		}

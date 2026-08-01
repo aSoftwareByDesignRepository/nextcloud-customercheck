@@ -254,6 +254,29 @@ final class MobileApiServiceTest extends TestCase
 		$this->assertSame('2026-10-01', $row['expectedClose']);
 		$this->assertTrue($row['stale']);
 		$this->assertNull($row['lostReason']);
+		$this->assertArrayHasKey('lostReasonCode', $row);
+		$this->assertNull($row['lostReasonCode']);
+	}
+
+	public function testSerialiseDealIncludesLostReasonCode(): void
+	{
+		$deal = new Deal();
+		$deal->setId(8);
+		$deal->setTitle('Lost deal');
+		$deal->setStage('lost');
+		$deal->setCompanyId(1);
+		$deal->setValueCents(0);
+		$deal->setProducts(null);
+		$deal->setExpectedClose(null);
+		$deal->setStageChangedAt(new \DateTime('2026-08-01 12:00:00'));
+		$deal->setLostReason('competitor');
+		$deal->setLostReasonCode('competitor');
+		$deal->setUpdatedAt(new \DateTime('2026-08-01 12:00:00'));
+
+		$row = MobileApiService::serialiseDeal($deal, static fn (): bool => false);
+
+		$this->assertSame('competitor', $row['lostReasonCode']);
+		$this->assertSame('competitor', $row['lostReason']);
 	}
 
 	public function testSerialiseCompanyRow(): void

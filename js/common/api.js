@@ -15,6 +15,25 @@
 		return meta ? meta.getAttribute('content') : '';
 	}
 
+	/** Active book from the page URL — defense in depth for classic CRM APIs. */
+	function activeWorkspaceId() {
+		try {
+			const q = new URLSearchParams(window.location.search).get('workspaceId');
+			const id = parseInt(String(q || '0'), 10);
+			return Number.isFinite(id) && id > 0 ? id : 0;
+		} catch (e) {
+			return 0;
+		}
+	}
+
+	function withWorkspace(path) {
+		const ws = activeWorkspaceId();
+		if (ws <= 0 || /[?&]workspaceId=/.test(path)) {
+			return path;
+		}
+		return path + (path.indexOf('?') >= 0 ? '&' : '?') + 'workspaceId=' + encodeURIComponent(String(ws));
+	}
+
 	async function request(method, path, body) {
 		const headers = {
 			'Accept': 'application/json',
@@ -25,7 +44,7 @@
 			headers['Content-Type'] = 'application/json';
 			opts.body = JSON.stringify(body);
 		}
-		const response = await fetch(BASE + path, opts);
+		const response = await fetch(BASE + withWorkspace(path), opts);
 		let payload = null;
 		const text = await response.text();
 		if (text) {
@@ -50,5 +69,6 @@
 		put: (path, body) => request('PUT', path, body),
 		del: (path, body) => request('DELETE', path, body),
 		base: BASE,
+		activeWorkspaceId: activeWorkspaceId,
 	};
 })();

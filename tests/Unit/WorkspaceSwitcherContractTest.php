@@ -39,7 +39,7 @@ final class WorkspaceSwitcherContractTest extends TestCase
 		$this->assertStringContainsString('workspaceSwitchUrls', $html);
 		$this->assertStringContainsString('count($workspaces) > 1', $html);
 		$this->assertStringNotContainsString('<select', $html);
-		$this->assertStringContainsString("\$l->t('Customers & renewals')", $html);
+		$this->assertStringContainsString("\$l->t('Deals, customers & money')", $html);
 		$this->assertStringContainsString("\$l->t('Workspace')", $html);
 		$this->assertStringContainsString("\$l->t('Your role: %s'", $html);
 		$this->assertStringContainsString("\$l->t('Pick which customer book you are working in.')", $html);

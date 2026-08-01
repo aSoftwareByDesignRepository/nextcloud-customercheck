@@ -21,10 +21,68 @@ class ChaseService
 		private readonly ActivityMapper $activityMapper,
 		private readonly CompanyMapper $companyMapper,
 		private readonly DealService $dealService,
+		private readonly WorkspaceService $workspaces,
 		private readonly OooCoverService $oooCover,
 		private readonly ITimeFactory $timeFactory,
 		private readonly IL10N $l10n,
 	) {
+	}
+
+	/**
+	 * One-pass chase index for a workspace — keyed by deal owner uid.
+	 * Unowned open chase deals land under '' (claimable).
+	 *
+	 * Used by Team Coaching so the board is O(deals) not O(members × deals).
+	 *
+	 * @return array<string, list<array<string, mixed>>>
+	 */
+	public function chaseByOwnerForWorkspace(
+		int $workspaceId,
+		?\DateTimeInterface $today = null,
+	): array {
+		$today = $today ?? $this->timeFactory->getDateTime();
+		$stuckChaseDays = max(1, (int)$this->workspaces->getSettings($workspaceId)['stuckChaseDays']);
+		$deals = $this->dealMapper->search(['openOnly' => true, 'workspaceId' => $workspaceId], 500);
+		$byOwner = [];
+		foreach ($deals as $deal) {
+			try {
+				$company = $this->companyMapper->findById((int)$deal->getCompanyId());
+			} catch (\Throwable) {
+				continue;
+			}
+			// Defense in depth — mapper already scoped; keep filter if join drifts.
+			if ((int)($company->getWorkspaceId() ?? 0) !== $workspaceId) {
+				continue;
+			}
+			$owner = (string)($deal->getOwnerUserId() ?? '');
+			$openDated = $this->hasOpenDatedActivity((int)$deal->getId());
+			$healthy = ChaseLogic::isHealthy($openDated, $deal->getNextActionSkipUntil(), $today);
+			$payload = [
+				'stage' => (string)$deal->getStage(),
+				'ownerUserId' => $deal->getOwnerUserId(),
+				'leadSlaDueAt' => $deal->getLeadSlaDueAt(),
+				'leadFirstTouchAt' => $deal->getLeadFirstTouchAt(),
+				'expectedClose' => $deal->getExpectedClose(),
+				'quoteSentOn' => $deal->getQuoteSentOn(),
+				'stageChangedAt' => $deal->getStageChangedAt(),
+				'healthy' => $healthy,
+				'staleDays' => $this->dealService->staleDealDays(),
+				'stuckChaseDays' => $stuckChaseDays,
+			];
+			$reasons = ChaseLogic::reasons($payload, $today);
+			if ($reasons === []) {
+				continue;
+			}
+			$row = $this->dealService->toArray($deal);
+			$row['companyName'] = (string)$company->getName();
+			$row['companySlug'] = (string)$company->getSlug();
+			$row['chaseReasons'] = $reasons;
+			$row['primaryReason'] = $reasons[0];
+			$row['healthy'] = $healthy;
+			$byOwner[$owner][] = $row;
+		}
+
+		return $byOwner;
 	}
 
 	/**
@@ -40,53 +98,29 @@ class ChaseService
 		$mineOwners = $includeOooCover
 			? $this->oooCover->mineOwnerIds($workspaceId, $userId, $today)
 			: [trim($userId)];
-		$deals = $this->dealMapper->search(['openOnly' => true], 500);
+		$byOwner = $this->chaseByOwnerForWorkspace($workspaceId, $today);
 		$out = [];
-		foreach ($deals as $deal) {
-			$company = null;
-			try {
-				$company = $this->companyMapper->findById((int)$deal->getCompanyId());
-			} catch (\Throwable) {
-				continue;
+		foreach ($mineOwners as $ownerUid) {
+			foreach ($byOwner[$ownerUid] ?? [] as $row) {
+				$owner = (string)($row['ownerUserId'] ?? '');
+				$covering = $owner !== '' && $owner !== $userId;
+				$row['covering'] = $covering;
+				$row['coveringPrimary'] = $covering ? $owner : null;
+				$row['coveringBadge'] = $covering
+					? $this->l10n->t('Covering')
+					: null;
+				$out[] = $row;
 			}
-			if ((int)($company->getWorkspaceId() ?? 0) !== $workspaceId) {
-				continue;
+		}
+		// Unowned claimable chase (owner '') — only on the personal queue when includeOooCover
+		// semantics treat them as mine; match prior behaviour: empty owner always included.
+		if ($includeOooCover || in_array(trim($userId), $mineOwners, true)) {
+			foreach ($byOwner[''] ?? [] as $row) {
+				$row['covering'] = false;
+				$row['coveringPrimary'] = null;
+				$row['coveringBadge'] = null;
+				$out[] = $row;
 			}
-			$owner = (string)($deal->getOwnerUserId() ?? '');
-			// Mine: owned by user / covered primary, OR unowned (claimable).
-			if ($owner !== '' && !in_array($owner, $mineOwners, true)) {
-				continue;
-			}
-			$openDated = $this->hasOpenDatedActivity((int)$deal->getId());
-			$healthy = ChaseLogic::isHealthy($openDated, $deal->getNextActionSkipUntil(), $today);
-			$payload = [
-				'stage' => (string)$deal->getStage(),
-				'ownerUserId' => $deal->getOwnerUserId(),
-				'leadSlaDueAt' => $deal->getLeadSlaDueAt(),
-				'leadFirstTouchAt' => $deal->getLeadFirstTouchAt(),
-				'expectedClose' => $deal->getExpectedClose(),
-				'quoteSentOn' => $deal->getQuoteSentOn(),
-				'stageChangedAt' => $deal->getStageChangedAt(),
-				'healthy' => $healthy,
-				'staleDays' => $this->dealService->staleDealDays(),
-			];
-			$reasons = ChaseLogic::reasons($payload, $today);
-			if ($reasons === []) {
-				continue;
-			}
-			$row = $this->dealService->toArray($deal);
-			$row['companyName'] = (string)$company->getName();
-			$row['companySlug'] = (string)$company->getSlug();
-			$row['chaseReasons'] = $reasons;
-			$row['primaryReason'] = $reasons[0];
-			$row['healthy'] = $healthy;
-			$covering = $owner !== '' && $owner !== $userId;
-			$row['covering'] = $covering;
-			$row['coveringPrimary'] = $covering ? $owner : null;
-			$row['coveringBadge'] = $covering
-				? $this->l10n->t('Covering')
-				: null;
-			$out[] = $row;
 		}
 		usort($out, static function (array $a, array $b): int {
 			$order = array_flip(ChaseLogic::REASON_SEVERITY);

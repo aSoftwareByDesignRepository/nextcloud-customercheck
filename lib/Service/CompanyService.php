@@ -165,6 +165,10 @@ class CompanyService
 
 		$this->applyInput($company, $input, true);
 
+		if (trim((string)($company->getAccountOwnerUserId() ?? '')) === '') {
+			$company->setAccountOwnerUserId($actor);
+		}
+
 		$requestedSlug = trim((string)($input['slug'] ?? ''));
 		if ($requestedSlug !== '') {
 			$company->setSlug($this->slugService->validateForCreate($requestedSlug));
@@ -187,34 +191,71 @@ class CompanyService
 	 * @throws ValidationException
 	 * @throws \OCA\CustomerCheck\Exception\ConflictException
 	 */
-	public function update(int $id, array $input, string $actor, ?string $updatedAtPrecondition): Company
+	public function update(
+		int $id,
+		array $input,
+		string $actor,
+		?string $updatedAtPrecondition,
+		bool $canReassignOwners = false,
+	): Company
 	{
-		$company = $this->get($id);
-		OptimisticLock::assertFresh($company->getUpdatedAt(), $updatedAtPrecondition);
-
-		$before = [
-			'name' => (string)$company->getName(),
-			'status' => (string)$company->getStatus(),
-			'slug' => (string)$company->getSlug(),
-		];
-
-		$this->applyInput($company, $input, false);
-
-		// The slug is the cross-app key (§4.9.1) — renaming a company never moves it.
-		$requestedSlug = trim((string)($input['slug'] ?? ''));
-		if ($requestedSlug !== '' && $requestedSlug !== $before['slug']) {
-			throw ValidationException::field(
-				Constants::ERR_SLUG_INVALID,
-				'slug',
-				$this->l10n->t('The slug is the permanent key for this company and cannot be changed.'),
-			);
-		}
-
-		$company->setUpdatedAt($this->timeFactory->getDateTime());
+		// Serialize vs archive/restore/move/erase — stamp alone last-write-wins.
+		$this->db->beginTransaction();
 		try {
-			$stored = $this->companyMapper->update($company);
-		} catch (DbException $e) {
-			$this->rethrowMappedUniqueViolation($e, (string)$company->getSlug());
+			if (!$this->companyMapper->lockRow($id)) {
+				throw new NotFoundException(
+					$this->l10n->t('This company no longer exists.'),
+					Constants::ERR_COMPANY_NOT_FOUND,
+				);
+			}
+			$company = $this->companyMapper->findById($id);
+			OptimisticLock::assertFresh($company->getUpdatedAt(), $updatedAtPrecondition);
+
+			$before = [
+				'name' => (string)$company->getName(),
+				'status' => (string)$company->getStatus(),
+				'slug' => (string)$company->getSlug(),
+			];
+
+			if (array_key_exists('accountOwnerUserId', $input)) {
+				$newOwner = trim((string)($input['accountOwnerUserId'] ?? ''));
+				$current = trim((string)($company->getAccountOwnerUserId() ?? ''));
+				if ($newOwner !== $current) {
+					$mayReassign = $current === ''
+						|| $current === $actor;
+					if (!$mayReassign) {
+						throw ValidationException::field(
+							Constants::ERR_DEAL_OWNED,
+							'accountOwnerUserId',
+							$this->l10n->t('This account already has an owner. Ask them or a manager to reassign it.'),
+						);
+					}
+				}
+			}
+
+			$this->applyInput($company, $input, false);
+
+			// The slug is the cross-app key (§4.9.1) — renaming a company never moves it.
+			$requestedSlug = trim((string)($input['slug'] ?? ''));
+			if ($requestedSlug !== '' && $requestedSlug !== $before['slug']) {
+				throw ValidationException::field(
+					Constants::ERR_SLUG_INVALID,
+					'slug',
+					$this->l10n->t('The slug is the permanent key for this company and cannot be changed.'),
+				);
+			}
+
+			$company->setUpdatedAt($this->timeFactory->getDateTime());
+			try {
+				$stored = $this->companyMapper->update($company);
+			} catch (DbException $e) {
+				$this->rethrowMappedUniqueViolation($e, (string)$company->getSlug());
+			}
+
+			$this->db->commit();
+		} catch (\Throwable $e) {
+			$this->db->rollBack();
+			throw $e;
 		}
 
 		$this->timelineService->append($id, 'company.updated', $actor, [
@@ -229,22 +270,219 @@ class CompanyService
 	}
 
 	/**
+	 * Move a company between workspaces (§6).
+	 *
+	 * Requires slug confirmation and an optimistic lock. Shared-mail matches are
+	 * re-triaged to unmatched so the old book’s mailbox never points at a company
+	 * that left. Files folder ACL is intentionally not changed (caller warns).
+	 *
+	 * @return array{company: Company, fromWorkspaceId: int, toWorkspaceId: int, mailUnmatched: int, draftsDetached: int}
+	 * @throws ValidationException
+	 * @throws ConflictException
+	 * @throws NotFoundException
+	 */
+	public function moveToWorkspace(
+		int $id,
+		int $toWorkspaceId,
+		string $confirmSlug,
+		string $actor,
+		?string $updatedAtPrecondition,
+	): array {
+		$company = $this->get($id);
+		OptimisticLock::assertFresh($company->getUpdatedAt(), $updatedAtPrecondition);
+
+		$slug = (string)$company->getSlug();
+		if (!hash_equals($slug, trim($confirmSlug))) {
+			throw ValidationException::field(
+				Constants::ERR_VALIDATION,
+				'confirmSlug',
+				$this->l10n->t('Type the company slug "%s" exactly to confirm the move.', [$slug]),
+			);
+		}
+
+		$fromWorkspaceId = (int)($company->getWorkspaceId() ?? 0);
+		if ($toWorkspaceId <= 0) {
+			throw ValidationException::field(
+				Constants::ERR_VALIDATION,
+				'workspaceId',
+				$this->l10n->t('Choose a destination workspace.'),
+			);
+		}
+		if ($toWorkspaceId === $fromWorkspaceId) {
+			throw ValidationException::field(
+				Constants::ERR_VALIDATION,
+				'workspaceId',
+				$this->l10n->t('This company is already in that workspace.'),
+			);
+		}
+		if (!$this->workspaceExists($toWorkspaceId)) {
+			throw new NotFoundException(
+				$this->l10n->t('The destination workspace was not found.'),
+				Constants::ERR_NOT_FOUND,
+			);
+		}
+
+		$mailUnmatched = 0;
+		$draftsDetached = 0;
+		$promisesRestamped = 0;
+		$plansRestamped = 0;
+		$escalationsRestamped = 0;
+		$commitsRestamped = 0;
+		$this->db->beginTransaction();
+		try {
+			// Serialize concurrent moves (parity with merge lockRow) — two writers
+			// with the same updatedAt token must not both restamp ledgers.
+			if (!$this->companyMapper->lockRow($id)) {
+				throw new NotFoundException(
+					$this->l10n->t('This company no longer exists.'),
+					Constants::ERR_COMPANY_NOT_FOUND,
+				);
+			}
+			$company = $this->companyMapper->findById($id);
+			OptimisticLock::assertFresh($company->getUpdatedAt(), $updatedAtPrecondition);
+			$fromWorkspaceId = (int)($company->getWorkspaceId() ?? 0);
+			if ($toWorkspaceId === $fromWorkspaceId) {
+				throw ValidationException::field(
+					Constants::ERR_VALIDATION,
+					'workspaceId',
+					$this->l10n->t('This company is already in that workspace.'),
+				);
+			}
+
+			$now = $this->timeFactory->getDateTime();
+			$company->setWorkspaceId($toWorkspaceId);
+			$company->setUpdatedAt($now);
+			$stored = $this->companyMapper->update($company);
+
+			// Old book mailbox must not keep a match to a company that left.
+			if ($this->db->tableExists('crm_mail_msg')) {
+				$qb = $this->db->getQueryBuilder();
+				$mailUnmatched = $qb->update('crm_mail_msg')
+					->set('company_id', $qb->createNamedParameter(null, IQueryBuilder::PARAM_NULL))
+					->set('matched_how', $qb->createNamedParameter(null, IQueryBuilder::PARAM_NULL))
+					->set('triage_status', $qb->createNamedParameter('open'))
+					->where($qb->expr()->eq('company_id', $qb->createNamedParameter($id)))
+					->executeStatement();
+			}
+
+			// Drafts are workspace-scoped — clear the company pointer so old WS
+			// drafts do not reference a company that now lives elsewhere.
+			if ($this->db->tableExists('crm_mail_dft')) {
+				$qb = $this->db->getQueryBuilder();
+				$draftsDetached = $qb->update('crm_mail_dft')
+					->set('company_id', $qb->createNamedParameter(null, IQueryBuilder::PARAM_NULL))
+					->where($qb->expr()->eq('company_id', $qb->createNamedParameter($id)))
+					->andWhere($qb->expr()->eq('workspace_id', $qb->createNamedParameter($fromWorkspaceId)))
+					->executeStatement();
+			}
+
+			// Denormalised ledger workspace_id must follow the company — otherwise
+			// Today/Strategy keep listing the row on the old book while complete()
+			// looks up the new book and 404s (§3.3).
+			if ($this->db->tableExists('crm_cust_prm')) {
+				$qb = $this->db->getQueryBuilder();
+				$promisesRestamped = $qb->update('crm_cust_prm')
+					->set('workspace_id', $qb->createNamedParameter($toWorkspaceId, IQueryBuilder::PARAM_INT))
+					->where($qb->expr()->eq('company_id', $qb->createNamedParameter($id, IQueryBuilder::PARAM_INT)))
+					->executeStatement();
+			}
+			if ($this->db->tableExists('crm_acct_plan')) {
+				$qb = $this->db->getQueryBuilder();
+				$plansRestamped = $qb->update('crm_acct_plan')
+					->set('workspace_id', $qb->createNamedParameter($toWorkspaceId, IQueryBuilder::PARAM_INT))
+					->where($qb->expr()->eq('company_id', $qb->createNamedParameter($id, IQueryBuilder::PARAM_INT)))
+					->executeStatement();
+			}
+			if ($this->db->tableExists('crm_escal')) {
+				$qb = $this->db->getQueryBuilder();
+				$escalationsRestamped = $qb->update('crm_escal')
+					->set('workspace_id', $qb->createNamedParameter($toWorkspaceId, IQueryBuilder::PARAM_INT))
+					->where($qb->expr()->eq('company_id', $qb->createNamedParameter($id, IQueryBuilder::PARAM_INT)))
+					->executeStatement();
+			}
+			if ($this->db->tableExists('crm_commit')) {
+				$qb = $this->db->getQueryBuilder();
+				$commitsRestamped = $qb->update('crm_commit')
+					->set('workspace_id', $qb->createNamedParameter($toWorkspaceId, IQueryBuilder::PARAM_INT))
+					->where($qb->expr()->eq('company_id', $qb->createNamedParameter($id, IQueryBuilder::PARAM_INT)))
+					->executeStatement();
+			}
+
+			$this->db->commit();
+		} catch (\Throwable $e) {
+			$this->db->rollBack();
+			throw $e;
+		}
+
+		$this->timelineService->append($id, 'company.moved', $actor, [
+			'fromWorkspaceId' => $fromWorkspaceId,
+			'toWorkspaceId' => $toWorkspaceId,
+			'mailUnmatched' => $mailUnmatched,
+			'draftsDetached' => $draftsDetached,
+			'promisesRestamped' => $promisesRestamped,
+			'plansRestamped' => $plansRestamped,
+			'escalationsRestamped' => $escalationsRestamped,
+			'commitsRestamped' => $commitsRestamped,
+		]);
+
+		return [
+			'company' => $stored,
+			'fromWorkspaceId' => $fromWorkspaceId,
+			'toWorkspaceId' => $toWorkspaceId,
+			'mailUnmatched' => $mailUnmatched,
+			'draftsDetached' => $draftsDetached,
+			'promisesRestamped' => $promisesRestamped,
+			'plansRestamped' => $plansRestamped,
+		];
+	}
+
+	private function workspaceExists(int $workspaceId): bool
+	{
+		if ($workspaceId <= 0 || !$this->db->tableExists('crm_workspace')) {
+			return false;
+		}
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('id')->from('crm_workspace')
+			->where($qb->expr()->eq('id', $qb->createNamedParameter($workspaceId)))
+			->setMaxResults(1);
+		$r = $qb->executeQuery();
+		$row = $r->fetch();
+		$r->closeCursor();
+
+		return $row !== false;
+	}
+
+	/**
 	 * Soft delete (§4.1): archived companies drop out of every default list but
 	 * keep their history, agreements and revenue.
 	 */
 	public function archive(int $id, string $actor, ?string $updatedAtPrecondition): Company
 	{
-		$company = $this->get($id);
-		OptimisticLock::assertFresh($company->getUpdatedAt(), $updatedAtPrecondition, false);
+		$this->db->beginTransaction();
+		try {
+			if (!$this->companyMapper->lockRow($id)) {
+				throw new NotFoundException(
+					$this->l10n->t('This company no longer exists.'),
+					Constants::ERR_COMPANY_NOT_FOUND,
+				);
+			}
+			$company = $this->companyMapper->findById($id);
+			OptimisticLock::assertFresh($company->getUpdatedAt(), $updatedAtPrecondition, false);
 
-		if ($company->isArchived()) {
-			return $company;
+			if ($company->isArchived()) {
+				$this->db->commit();
+				return $company;
+			}
+
+			$now = $this->timeFactory->getDateTime();
+			$company->setArchivedAt($now);
+			$company->setUpdatedAt($now);
+			$stored = $this->companyMapper->update($company);
+			$this->db->commit();
+		} catch (\Throwable $e) {
+			$this->db->rollBack();
+			throw $e;
 		}
-
-		$now = $this->timeFactory->getDateTime();
-		$company->setArchivedAt($now);
-		$company->setUpdatedAt($now);
-		$stored = $this->companyMapper->update($company);
 
 		$this->timelineService->append($id, 'company.archived', $actor, []);
 
@@ -253,16 +491,30 @@ class CompanyService
 
 	public function restore(int $id, string $actor, ?string $updatedAtPrecondition): Company
 	{
-		$company = $this->get($id);
-		OptimisticLock::assertFresh($company->getUpdatedAt(), $updatedAtPrecondition, false);
+		$this->db->beginTransaction();
+		try {
+			if (!$this->companyMapper->lockRow($id)) {
+				throw new NotFoundException(
+					$this->l10n->t('This company no longer exists.'),
+					Constants::ERR_COMPANY_NOT_FOUND,
+				);
+			}
+			$company = $this->companyMapper->findById($id);
+			OptimisticLock::assertFresh($company->getUpdatedAt(), $updatedAtPrecondition, false);
 
-		if (!$company->isArchived()) {
-			return $company;
+			if (!$company->isArchived()) {
+				$this->db->commit();
+				return $company;
+			}
+
+			$company->setArchivedAt(null);
+			$company->setUpdatedAt($this->timeFactory->getDateTime());
+			$stored = $this->companyMapper->update($company);
+			$this->db->commit();
+		} catch (\Throwable $e) {
+			$this->db->rollBack();
+			throw $e;
 		}
-
-		$company->setArchivedAt(null);
-		$company->setUpdatedAt($this->timeFactory->getDateTime());
-		$stored = $this->companyMapper->update($company);
 
 		$this->timelineService->append($id, 'company.restored', $actor, []);
 
@@ -305,6 +557,9 @@ class CompanyService
 					'id' => (int)$p->getId(),
 					'name' => (string)$p->getName(),
 					'role' => $p->getRole(),
+					'buyingRole' => $p->getBuyingRole(),
+					'status' => method_exists($p, 'getStatus') ? (string)$p->getStatus() : 'active',
+					'reportsToPersonId' => method_exists($p, 'getReportsToPersonId') ? $p->getReportsToPersonId() : null,
 					'email' => $p->getEmail(),
 					'phone' => $p->getPhone(),
 					'isPrimary' => $p->isPrimaryContact(),
@@ -337,7 +592,10 @@ class CompanyService
 					'stage' => (string)$d->getStage(),
 					'valueCents' => (int)$d->getValueCents(),
 					'expectedClose' => $d->getExpectedClose()?->format('Y-m-d'),
+					'ownerUserId' => $d->getOwnerUserId(),
+					'forecastBucket' => $d->getForecastBucket(),
 					'lostReason' => $d->getLostReason(),
+					'lostReasonCode' => $d->getLostReasonCode(),
 				],
 				$this->dealMapper->findByCompany($id),
 			),
@@ -379,6 +637,10 @@ class CompanyService
 			),
 			'customerPromises' => $this->exportPromises($id),
 			'accountPlans' => $this->exportPlans($id),
+			'sharedMail' => $this->exportSharedMail($id),
+			'mailDrafts' => $this->exportMailDrafts($id),
+			'escalations' => $this->exportEscalations($id),
+			'commitments' => $this->exportCommitments($id),
 		];
 	}
 
@@ -387,9 +649,9 @@ class CompanyService
 	 *
 	 * Hard-deleted: persons, deals, activities, email touches, customer promises,
 	 * account plans + MAP steps, and free-text timeline notes. Shared mail rows
-	 * are re-triaged to unmatched (company_id cleared). Retained but blanked:
-	 * agreements and hours (ten-year tax/GoBD retention), plus remaining timeline
-	 * events (`{"gdpr":"erased"}`).
+	 * are re-triaged to unmatched and PII fields scrubbed (subject/from/snippet/
+	 * preview). Retained but blanked: agreements and hours (ten-year tax/GoBD
+	 * retention), plus remaining timeline events (`{"gdpr":"erased"}`).
 	 *
 	 * The confirmation is the typed slug, so a mis-click cannot destroy data.
 	 *
@@ -402,19 +664,6 @@ class CompanyService
 	 */
 	public function gdprErase(int $id, string $typedSlug, string $actor): array
 	{
-		$company = $this->get($id);
-		$slug = (string)$company->getSlug();
-
-		if (!hash_equals($slug, trim($typedSlug))) {
-			throw ValidationException::field(
-				Constants::ERR_VALIDATION,
-				'confirmSlug',
-				$this->l10n->t('Type the company slug "%s" exactly to confirm the deletion.', [$slug]),
-			);
-		}
-
-		$agreementIds = $this->agreementMapper->findIdsByCompany($id);
-
 		$personsDeleted = 0;
 		$activitiesDeleted = 0;
 		$emailsDeleted = 0;
@@ -432,6 +681,24 @@ class CompanyService
 		// Lock order: company → deal → agreement → activity/hours → event.
 		$this->db->beginTransaction();
 		try {
+			if (!$this->companyMapper->lockRow($id)) {
+				throw new NotFoundException(
+					$this->l10n->t('This company no longer exists.'),
+					Constants::ERR_COMPANY_NOT_FOUND,
+				);
+			}
+			$company = $this->companyMapper->findById($id);
+			$slug = (string)$company->getSlug();
+			if (!hash_equals($slug, trim($typedSlug))) {
+				throw ValidationException::field(
+					Constants::ERR_VALIDATION,
+					'confirmSlug',
+					$this->l10n->t('Type the company slug "%s" exactly to confirm the deletion.', [$slug]),
+				);
+			}
+
+			$agreementIds = $this->agreementMapper->findIdsByCompany($id);
+
 			$now = $this->timeFactory->getDateTime();
 			$company->setVatId(null);
 			$company->setAddrStreet(null);
@@ -440,6 +707,26 @@ class CompanyService
 			$company->setWebsite(null);
 			$company->setNotes(null);
 			$company->setStatus('churned');
+			// Anonymise the shell — name/slug remain unique but no longer identify the customer (§18.9).
+			$company->setName($this->l10n->t('Erased company %s', [(string)$id]));
+			$company->setSlug('erased-' . $id);
+			if (method_exists($company, 'setAccountOwnerUserId')) {
+				$company->setAccountOwnerUserId(null);
+			}
+			if (method_exists($company, 'setPcCustomerId')) {
+				$company->setPcCustomerId(null);
+			}
+			if (method_exists($company, 'setTcCustomerId')) {
+				$company->setTcCustomerId(null);
+			}
+			// Detach Files folder pointers — CRM must not keep deep-links into personal docs (§18.9).
+			// Nodes stay in Nextcloud Files (platform SoR); only the CRM link is cleared.
+			if (method_exists($company, 'setFilesFolderId')) {
+				$company->setFilesFolderId(null);
+			}
+			if (method_exists($company, 'setFilesFolderPath')) {
+				$company->setFilesFolderPath(null);
+			}
 			$company->setArchivedAt($now);
 			$company->setUpdatedAt($now);
 			$this->companyMapper->update($company);
@@ -489,7 +776,7 @@ class CompanyService
 	/**
 	 * Cascade customer promises, account plans/MAP, and re-triage shared mail (§18.9).
 	 *
-	 * @return array{promisesDeleted: int, plansDeleted: int, mapStepsDeleted: int, mailUnmatched: int}
+	 * @return array{promisesDeleted: int, plansDeleted: int, mapStepsDeleted: int, mailUnmatched: int, draftsScrubbed: int, commitsCleared: int, escalationsCleared: int}
 	 */
 	private function erasePersonaLedgers(int $companyId): array
 	{
@@ -497,6 +784,8 @@ class CompanyService
 		$plansDeleted = 0;
 		$mapStepsDeleted = 0;
 		$mailUnmatched = 0;
+		$commitsCleared = 0;
+		$escalationsCleared = 0;
 
 		if ($this->db->tableExists('crm_cust_prm')) {
 			$qb = $this->db->getQueryBuilder();
@@ -528,6 +817,18 @@ class CompanyService
 				->executeStatement();
 		}
 
+		// Milestones carry free-text titles — delete before the parent plan (§18.9).
+		if ($planIds !== [] && $this->db->tableExists('crm_plan_ms')) {
+			$qb = $this->db->getQueryBuilder();
+			$params = [];
+			foreach ($planIds as $i => $pid) {
+				$params[] = $qb->createNamedParameter($pid, null, 'pmid' . $i);
+			}
+			$qb->delete('crm_plan_ms')
+				->where($qb->expr()->in('plan_id', $params))
+				->executeStatement();
+		}
+
 		if ($this->db->tableExists('crm_acct_plan')) {
 			$qb = $this->db->getQueryBuilder();
 			$plansDeleted = $qb->delete('crm_acct_plan')
@@ -535,13 +836,56 @@ class CompanyService
 				->executeStatement();
 		}
 
-		// Shared mail: re-triage to unmatched (never leave PII match to an erased company).
+		// Shared mail: re-triage + scrub PII so Unmatched triage cannot resurface
+		// erased company content (§18.9 — purge fields; keep message_uid for sync).
 		if ($this->db->tableExists('crm_mail_msg')) {
 			$qb = $this->db->getQueryBuilder();
 			$mailUnmatched = $qb->update('crm_mail_msg')
 				->set('company_id', $qb->createNamedParameter(null, IQueryBuilder::PARAM_NULL))
 				->set('matched_how', $qb->createNamedParameter(null, IQueryBuilder::PARAM_NULL))
 				->set('triage_status', $qb->createNamedParameter('open'))
+				->set('from_addr', $qb->createNamedParameter('[erased]'))
+				->set('to_addrs', $qb->createNamedParameter(''))
+				->set('subject', $qb->createNamedParameter('[erased]'))
+				->set('snippet', $qb->createNamedParameter(''))
+				->set('preview', $qb->createNamedParameter(''))
+				->where($qb->expr()->eq('company_id', $qb->createNamedParameter($companyId)))
+				->executeStatement();
+		}
+
+		// Failed/claim drafts: scrub bodies — never leave recipient/subject/body after erase (§18.9).
+		$draftsScrubbed = 0;
+		if ($this->db->tableExists('crm_mail_dft')) {
+			$now = $this->timeFactory->getDateTime()->format('Y-m-d H:i:s');
+			$qb = $this->db->getQueryBuilder();
+			$draftsScrubbed = $qb->update('crm_mail_dft')
+				->set('to_addrs', $qb->createNamedParameter(''))
+				->set('subject', $qb->createNamedParameter('[erased]'))
+				->set('body_text', $qb->createNamedParameter(''))
+				->set('company_id', $qb->createNamedParameter(null, IQueryBuilder::PARAM_NULL))
+				->set('updated_at', $qb->createNamedParameter($now))
+				->where($qb->expr()->eq('company_id', $qb->createNamedParameter($companyId)))
+				->executeStatement();
+		}
+
+		// Weekly commitments: drop company link and scrub free-text titles/notes (§18.9).
+		if ($this->db->tableExists('crm_commit')) {
+			$qb = $this->db->getQueryBuilder();
+			$commitsCleared = $qb->update('crm_commit')
+				->set('company_id', $qb->createNamedParameter(null, IQueryBuilder::PARAM_NULL))
+				->set('title', $qb->createNamedParameter('[erased]'))
+				->set('verify_note', $qb->createNamedParameter(null, IQueryBuilder::PARAM_NULL))
+				->set('evidence', $qb->createNamedParameter(null, IQueryBuilder::PARAM_NULL))
+				->where($qb->expr()->eq('company_id', $qb->createNamedParameter($companyId)))
+				->executeStatement();
+		}
+
+		if ($this->db->tableExists('crm_escal')) {
+			$qb = $this->db->getQueryBuilder();
+			$escalationsCleared = $qb->update('crm_escal')
+				->set('company_id', $qb->createNamedParameter(null, IQueryBuilder::PARAM_NULL))
+				->set('deal_id', $qb->createNamedParameter(null, IQueryBuilder::PARAM_NULL))
+				->set('reason', $qb->createNamedParameter('[erased]'))
 				->where($qb->expr()->eq('company_id', $qb->createNamedParameter($companyId)))
 				->executeStatement();
 		}
@@ -551,6 +895,9 @@ class CompanyService
 			'plansDeleted' => $plansDeleted,
 			'mapStepsDeleted' => $mapStepsDeleted,
 			'mailUnmatched' => $mailUnmatched,
+			'draftsScrubbed' => $draftsScrubbed,
+			'commitsCleared' => $commitsCleared,
+			'escalationsCleared' => $escalationsCleared,
 		];
 	}
 
@@ -572,8 +919,16 @@ class CompanyService
 			'status' => (string)$company->getStatus(),
 			'website' => $company->getWebsite(),
 			'notes' => $company->getNotes(),
+			'workspaceId' => $company->getWorkspaceId(),
+			'kamTier' => method_exists($company, 'getKamTier') ? (string)$company->getKamTier() : 'standard',
+			'kamTierLock' => method_exists($company, 'getKamTierLock') ? (int)$company->getKamTierLock() : 0,
+			'accountOwnerUserId' => method_exists($company, 'getAccountOwnerUserId') ? $company->getAccountOwnerUserId() : null,
+			'touchIntervalDays' => method_exists($company, 'getTouchIntervalDays') ? $company->getTouchIntervalDays() : null,
+			'nextTouchOn' => method_exists($company, 'getNextTouchOn') ? $company->getNextTouchOn()?->format('Y-m-d') : null,
 			'pcCustomerId' => $company->getPcCustomerId(),
 			'tcCustomerId' => $company->getTcCustomerId(),
+			'filesFolderId' => $company->getFilesFolderId(),
+			'filesFolderPath' => $company->getFilesFolderPath(),
 			'archived' => $company->isArchived(),
 			'createdAt' => $company->getCreatedAt()?->format(\DateTimeInterface::ATOM),
 			'updatedAt' => OptimisticLock::format($company->getUpdatedAt()),
@@ -667,6 +1022,154 @@ class CompanyService
 				'status' => (string)($row['status'] ?? ''),
 				'ownerUserId' => $row['owner_user_id'] !== null ? (string)$row['owner_user_id'] : null,
 				'mapSteps' => $map,
+			];
+		}
+		$r->closeCursor();
+		return $out;
+	}
+
+	/**
+	 * Shared mailbox index rows matched to this company (DSAR completeness).
+	 *
+	 * @return list<array<string, mixed>>
+	 */
+	private function exportSharedMail(int $companyId): array
+	{
+		if (!$this->db->tableExists('crm_mail_msg')) {
+			return [];
+		}
+		$qb = $this->db->getQueryBuilder();
+		$qb->select(
+			'id',
+			'mailbox_id',
+			'direction',
+			'from_addr',
+			'to_addrs',
+			'subject',
+			'snippet',
+			'sent_at',
+			'matched_how',
+			'triage_status',
+		)->from('crm_mail_msg')
+			->where($qb->expr()->eq('company_id', $qb->createNamedParameter($companyId)))
+			->orderBy('id', 'ASC')
+			->setMaxResults(5000);
+		$r = $qb->executeQuery();
+		$out = [];
+		while ($row = $r->fetch()) {
+			$out[] = [
+				'id' => (int)$row['id'],
+				'mailboxId' => (int)$row['mailbox_id'],
+				'direction' => (string)($row['direction'] ?? ''),
+				'from' => $row['from_addr'] !== null ? (string)$row['from_addr'] : null,
+				'to' => $row['to_addrs'] !== null ? (string)$row['to_addrs'] : null,
+				'subject' => $row['subject'] !== null ? (string)$row['subject'] : null,
+				'snippet' => $row['snippet'] !== null ? (string)$row['snippet'] : null,
+				'sentAt' => $row['sent_at'] !== null ? (string)$row['sent_at'] : null,
+				'matchedHow' => $row['matched_how'] !== null ? (string)$row['matched_how'] : null,
+				'triageStatus' => (string)($row['triage_status'] ?? ''),
+			];
+		}
+		$r->closeCursor();
+		return $out;
+	}
+
+	/**
+	 * Failed/claim drafts attached to this company (DSAR completeness).
+	 *
+	 * @return list<array<string, mixed>>
+	 */
+	private function exportMailDrafts(int $companyId): array
+	{
+		if (!$this->db->tableExists('crm_mail_dft')) {
+			return [];
+		}
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('id', 'mailbox_id', 'to_addrs', 'subject', 'body_text', 'created_by', 'created_at', 'updated_at')
+			->from('crm_mail_dft')
+			->where($qb->expr()->eq('company_id', $qb->createNamedParameter($companyId)))
+			->orderBy('id', 'ASC')
+			->setMaxResults(500);
+		$r = $qb->executeQuery();
+		$out = [];
+		while ($row = $r->fetch()) {
+			$out[] = [
+				'id' => (int)$row['id'],
+				'mailboxId' => (int)$row['mailbox_id'],
+				'to' => $row['to_addrs'] !== null ? (string)$row['to_addrs'] : null,
+				'subject' => $row['subject'] !== null ? (string)$row['subject'] : null,
+				'body' => $row['body_text'] !== null ? (string)$row['body_text'] : null,
+				'createdBy' => $row['created_by'] !== null ? (string)$row['created_by'] : null,
+				'createdAt' => $row['created_at'] !== null ? (string)$row['created_at'] : null,
+				'updatedAt' => $row['updated_at'] !== null ? (string)$row['updated_at'] : null,
+			];
+		}
+		$r->closeCursor();
+		return $out;
+	}
+
+	/**
+	 * Open escalations linked to this company (DSAR completeness).
+	 *
+	 * @return list<array<string, mixed>>
+	 */
+	private function exportEscalations(int $companyId): array
+	{
+		if (!$this->db->tableExists('crm_escal')) {
+			return [];
+		}
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('*')->from('crm_escal')
+			->where($qb->expr()->eq('company_id', $qb->createNamedParameter($companyId)))
+			->orderBy('id', 'ASC')
+			->setMaxResults(500);
+		$r = $qb->executeQuery();
+		$out = [];
+		while ($row = $r->fetch()) {
+			$out[] = [
+				'id' => (int)$row['id'],
+				'reason' => isset($row['reason']) ? (string)$row['reason'] : null,
+				'status' => isset($row['status']) ? (string)$row['status'] : null,
+				'ownerUserId' => isset($row['owner_user_id']) && $row['owner_user_id'] !== null
+					? (string)$row['owner_user_id'] : null,
+				'createdAt' => isset($row['created_at']) && $row['created_at'] !== null
+					? (string)$row['created_at'] : null,
+			];
+		}
+		$r->closeCursor();
+		return $out;
+	}
+
+	/**
+	 * Weekly Brief commitments linked to this company (DSAR completeness — erase
+	 * scrubs these titles, so export must include them while they still exist).
+	 *
+	 * @return list<array<string, mixed>>
+	 */
+	private function exportCommitments(int $companyId): array
+	{
+		if (!$this->db->tableExists('crm_commit')) {
+			return [];
+		}
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('*')->from('crm_commit')
+			->where($qb->expr()->eq('company_id', $qb->createNamedParameter($companyId)))
+			->orderBy('id', 'ASC')
+			->setMaxResults(500);
+		$r = $qb->executeQuery();
+		$out = [];
+		while ($row = $r->fetch()) {
+			$out[] = [
+				'id' => (int)$row['id'],
+				'weekKey' => isset($row['week_key']) ? (string)$row['week_key'] : null,
+				'kind' => isset($row['kind']) ? (string)$row['kind'] : null,
+				'title' => isset($row['title']) ? (string)$row['title'] : null,
+				'status' => isset($row['status']) ? (string)$row['status'] : null,
+				'ownerUserId' => isset($row['owner_user_id']) ? (string)$row['owner_user_id'] : null,
+				'dueOn' => isset($row['due_on']) && $row['due_on'] !== null ? (string)$row['due_on'] : null,
+				'evidence' => isset($row['evidence']) && $row['evidence'] !== null ? (string)$row['evidence'] : null,
+				'createdAt' => isset($row['created_at']) && $row['created_at'] !== null
+					? (string)$row['created_at'] : null,
 			];
 		}
 		$r->closeCursor();
@@ -900,8 +1403,13 @@ class CompanyService
 
 		if (array_key_exists('workspaceId', $input)) {
 			$ws = (int)($input['workspaceId'] ?? 0);
-			if ($ws > 0) {
-				$company->setWorkspaceId($ws);
+			if ($isCreate) {
+				if ($ws > 0) {
+					$company->setWorkspaceId($ws);
+				}
+			} elseif ($ws > 0 && $ws !== (int)($company->getWorkspaceId() ?? 0)) {
+				// Moves require confirm slug + mail rematch — never via generic PUT.
+				$fields['workspaceId'] = $this->l10n->t('Use Move to workspace to change the book. Files sharing is not moved automatically.');
 			}
 		}
 

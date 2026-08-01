@@ -140,6 +140,7 @@ class CompanyMergeServiceTest extends TestCase
 		$this->db->expects($this->once())->method('beginTransaction');
 		$this->db->expects($this->once())->method('commit');
 		$this->db->expects($this->never())->method('rollBack');
+		$this->db->method('tableExists')->willReturn(false);
 
 		// Ascending lock order: 1 then 3
 		$locked = [];
@@ -192,6 +193,54 @@ class CompanyMergeServiceTest extends TestCase
 		$this->assertNotNull($source->getArchivedAt());
 		$this->assertNull($source->getPcCustomerId());
 		$this->assertSame(42, $keeper->getPcCustomerId());
+	}
+
+	public function testHappyPathRehomesSharedMailWhenTablesExist(): void
+	{
+		$source = $this->company(3, 'Dup Co');
+		$keeper = $this->company(1, 'Keep Co');
+
+		$this->db->expects($this->once())->method('beginTransaction');
+		$this->db->expects($this->once())->method('commit');
+		$this->db->method('tableExists')->willReturnCallback(
+			static fn (string $table): bool => in_array($table, ['crm_mail_msg', 'crm_mail_dft'], true),
+		);
+
+		$msgQb = $this->createMock(\OCP\DB\QueryBuilder\IQueryBuilder::class);
+		$dftQb = $this->createMock(\OCP\DB\QueryBuilder\IQueryBuilder::class);
+		$expr = $this->createMock(\OCP\DB\QueryBuilder\IExpressionBuilder::class);
+		$expr->method('eq')->willReturn('eq');
+
+		foreach ([$msgQb, $dftQb] as $qb) {
+			$qb->method('expr')->willReturn($expr);
+			$qb->method('createNamedParameter')->willReturnArgument(0);
+			$qb->method('update')->willReturnSelf();
+			$qb->method('set')->willReturnSelf();
+			$qb->method('where')->willReturnSelf();
+		}
+		$msgQb->expects($this->once())->method('executeStatement')->willReturn(4);
+		$dftQb->expects($this->once())->method('executeStatement')->willReturn(1);
+
+		$this->db->method('getQueryBuilder')->willReturnOnConsecutiveCalls($msgQb, $dftQb);
+
+		$this->companies->method('lockRow')->willReturn(true);
+		$this->companies->method('findById')->willReturnCallback(
+			static fn (int $id): Company => $id === 3 ? $source : $keeper,
+		);
+		$this->persons->method('findPrimary')->willReturn(null);
+		$this->persons->method('reassignCompany')->willReturn(0);
+		$this->agreements->method('reassignCompany')->willReturn(0);
+		$this->deals->method('reassignCompany')->willReturn(0);
+		$this->activities->method('reassignCompany')->willReturn(0);
+		$this->emails->method('reassignCompany')->willReturn(0);
+		$this->events->method('reassignCompany')->willReturn(0);
+		$this->companies->method('update')->willReturnCallback(static fn (Company $c): Company => $c);
+		$this->timeline->expects($this->once())->method('append');
+
+		$result = $this->service()->merge(3, 1, 'alice', '2026-07-26T12:00:00+00:00', '2026-07-26T12:00:00+00:00');
+
+		$this->assertSame(4, $result['moved']['sharedMailMessages']);
+		$this->assertSame(1, $result['moved']['sharedMailDrafts']);
 	}
 
 	public function testRejectsStaleKeeperPrecondition(): void

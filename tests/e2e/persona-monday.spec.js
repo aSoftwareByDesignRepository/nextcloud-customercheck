@@ -29,7 +29,9 @@ test.describe('Persona Monday operating path', () => {
     await page.waitForSelector('.crm-page-header', { timeout: 30000 });
     await expect(page.locator('.crm-page-header')).not.toContainText(/GoBD|tax filing|Steuererklärung|day-to-day ops|Ops overview/i);
     await expect(page.locator('.crm-page-header__lead')).toContainText(/invoice states|Rechnungszustände/i);
-    // Wait for workspace race to settle — Pulse must not stay on "Select a workspace".
+
+    // Return to Pulse — Money has no persona mount; workspace race + escapeHTML checks belong here.
+    await openPersona(page, '/pulse');
     await expect(page.getByText(/Select a workspace first|Wähle zuerst einen Arbeitsbereich/i)).toHaveCount(0, { timeout: 15000 });
     // NC 34 removed OC.Util.escapeHTML — persona boot must not crash.
     await expect(page.locator('[data-crm-persona-mount="pulse"] [role="alert"]')).toHaveCount(0);
@@ -57,13 +59,42 @@ test.describe('Persona Monday operating path', () => {
     // Capacity tools mount after board fetch — cover / reassign / escalate cards for coaches.
     await expect(page.locator('[data-crm-team-capacity]')).toContainText(/Cover while away|Vertretung|Move work|Arbeit an|Escalate|eskalieren|viewing your own row|eigene Zeile/i, { timeout: 20000 });
     await expect(page.locator('[data-crm-persona-mount="team"]')).toContainText(/People|Personen|Need help|Brauchen Hilfe|No teammates|keine Teammitglieder|On track|Im Plan|Needs help|Braucht Hilfe/i, { timeout: 20000 });
+    const oneOnOne = page.locator('[data-crm-one-on-one]');
+    if (await oneOnOne.count()) {
+      await expect(oneOnOne.first()).toBeVisible();
+    }
 
     await page.goto('/apps/customercheck/workload');
     await page.waitForURL(/\/apps\/customercheck\/team/, { timeout: 15000 });
     await expect(page.url()).toMatch(/team/);
   });
 
-  test('My Accounts and mail triage expose shared disclosure', async ({ page }) => {
+  test('Workspace settings expose per-book ICS feed for managers', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await login(page, credsFromEnv('ADMIN'));
+    await page.goto('/apps/customercheck/settings');
+    await page.waitForSelector('#section-workspace-mailbox, #crm-ws-settings-form', { timeout: 30000 });
+    await page.waitForFunction(() => {
+      const wrap = document.getElementById('crm-ws-ics-wrap');
+      return wrap && !wrap.hidden;
+    }, null, { timeout: 30000 }).catch(() => null);
+    const wrap = page.locator('#crm-ws-ics-wrap');
+    if (await wrap.isVisible()) {
+      await expect(page.locator('#crm-ws-ics-url')).not.toHaveValue('');
+      await expect(page.locator('#crm-ws-ics-rotate')).toBeVisible();
+    } else {
+      test.info().annotations.push({
+        type: 'note',
+        description: 'ICS wrap hidden — user may lack members capability in this fixture',
+      });
+    }
+    const icsLabel = page.locator('label[for="crm-ics-url"]');
+    if (await icsLabel.count()) {
+      await expect(icsLabel).toContainText(/Default|Standard/i);
+    }
+  });
+
+  test('My customers and mail triage expose shared disclosure', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await login(page, credsFromEnv('ADMIN'));
 

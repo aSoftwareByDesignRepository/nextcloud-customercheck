@@ -20,6 +20,7 @@ $icon = static fn(string $n): string => IconCatalog::render($n, 'crm-nav__icon-s
 $is = static fn(string ...$ids): bool => in_array($pageId, $ids, true);
 $toolsOpen = $is('import', 'settings', 'app-settings', 'support-us', 'mail-triage');
 $canManageNav = !empty($_['canManage']);
+$canWriteNav = !empty($_['canWrite']);
 $wsQ = $workspaceId > 0 ? ('?workspaceId=' . $workspaceId) : '';
 $u = static function (string $key) use ($urls, $wsQ): string {
 	$base = $urls[$key] ?? '#';
@@ -30,6 +31,22 @@ $u = static function (string $key) use ($urls, $wsQ): string {
 };
 $switchable = count($workspaces) > 1;
 $currentLabel = $workspaceName !== '' ? $workspaceName : $l->t('Current workspace');
+$navItem = static function (
+	bool $active,
+	string $href,
+	string $iconName,
+	string $label,
+	string $jobTitle,
+) use ($icon): void {
+	?>
+	<li class="<?php p($active ? 'active' : ''); ?>" <?php if ($active): ?>aria-current="page"<?php endif; ?>>
+		<a href="<?php p($href); ?>" title="<?php p($jobTitle); ?>">
+			<span class="crm-nav__icon" aria-hidden="true"><?php print_unescaped($icon($iconName)); ?></span>
+			<span><?php p($label); ?></span>
+		</a>
+	</li>
+	<?php
+};
 ?>
 <div id="app-navigation" class="crm-nav" role="navigation" aria-label="<?php p($l->t('CustomerCheck')); ?>">
 	<div class="sidebar-header">
@@ -37,7 +54,7 @@ $currentLabel = $workspaceName !== '' ? $workspaceName : $l->t('Current workspac
 			<span class="app-brand__icon" aria-hidden="true"><?php print_unescaped($icon('building-2')); ?></span>
 			<div class="app-brand__text">
 				<h3><?php p($l->t('CustomerCheck')); ?></h3>
-				<p class="app-brand__subtitle"><?php p($l->t('Customers & renewals')); ?></p>
+				<p class="app-brand__subtitle"><?php p($l->t('Deals, customers & money')); ?></p>
 			</div>
 		</div>
 
@@ -124,41 +141,37 @@ $currentLabel = $workspaceName !== '' ? $workspaceName : $l->t('Current workspac
 		</section>
 	</div>
 	<ul class="nav-menu">
-		<li class="<?php p($is('today') ? 'active' : ''); ?>" <?php if ($is('today')): ?>aria-current="page"<?php endif; ?>>
-			<a href="<?php p($u('today')); ?>"><span class="crm-nav__icon" aria-hidden="true"><?php print_unescaped($icon('sun')); ?></span><span><?php p($l->t('Today')); ?></span></a>
+		<li class="crm-nav__group">
+			<span class="crm-nav__group-label" id="crm-nav-group-now"><?php p($l->t('Do now')); ?></span>
 		</li>
-		<li class="<?php p($is('pulse') ? 'active' : ''); ?>">
-			<a href="<?php p($u('pulse')); ?>"><span class="crm-nav__icon" aria-hidden="true"><?php print_unescaped($icon('activity')); ?></span><span><?php p($l->t('Pulse')); ?></span></a>
+		<?php
+		$navItem($is('today'), $u('today'), 'sun', $l->t('Today'), $l->t('Clear what needs you now'));
+		$navItem($is('pulse'), $u('pulse'), 'activity', $l->t('Pulse'), $l->t('See how the book is doing'));
+		$navItem($is('brief'), $u('brief'), 'clipboard-list', $l->t('Brief'), $l->t('This week’s owned promises'));
+		?>
+
+		<li class="crm-nav__group">
+			<span class="crm-nav__group-label" id="crm-nav-group-customers"><?php p($l->t('Customers')); ?></span>
 		</li>
-		<li class="<?php p($is('brief') ? 'active' : ''); ?>">
-			<a href="<?php p($u('brief')); ?>"><span class="crm-nav__icon" aria-hidden="true"><?php print_unescaped($icon('clipboard-list')); ?></span><span><?php p($l->t('Brief')); ?></span></a>
+		<?php
+		$navItem($is('my-accounts'), $u('myAccounts'), 'users', $l->t('My customers'), $l->t('Companies you own or plan'));
+		$navItem($is('companies', 'company-detail', 'company-form', 'prepare-meeting'), $u('companies'), 'building-2', $l->t('Companies'), $l->t('Full customer registry'));
+		$navItem($is('strategy'), $u('strategy'), 'map', $l->t('Plans'), $l->t('Account plans for the book'));
+		if (!empty($_['showTeamNav'])) {
+			$navItem($is('team', 'workload'), $u('team'), 'user-cog', $l->t('Team'), $l->t('Who is stuck — managers only'));
+		}
+		?>
+
+		<li class="crm-nav__group">
+			<span class="crm-nav__group-label" id="crm-nav-group-deals"><?php p($l->t('Deals & money')); ?></span>
 		</li>
-		<li class="<?php p($is('my-accounts') ? 'active' : ''); ?>">
-			<a href="<?php p($u('myAccounts')); ?>"><span class="crm-nav__icon" aria-hidden="true"><?php print_unescaped($icon('users')); ?></span><span><?php p($l->t('My Accounts')); ?></span></a>
-		</li>
-		<?php if (!empty($_['showTeamNav'])): ?>
-		<li class="<?php p($is('team', 'workload') ? 'active' : ''); ?>">
-			<a href="<?php p($u('team')); ?>"><span class="crm-nav__icon" aria-hidden="true"><?php print_unescaped($icon('user-cog')); ?></span><span><?php p($l->t('Team')); ?></span></a>
-		</li>
-		<?php endif; ?>
-		<li class="<?php p($is('companies','company-detail','company-form','prepare-meeting') ? 'active' : ''); ?>">
-			<a href="<?php p($u('companies')); ?>"><span class="crm-nav__icon" aria-hidden="true"><?php print_unescaped($icon('building-2')); ?></span><span><?php p($l->t('Companies')); ?></span></a>
-		</li>
-		<li class="<?php p($is('strategy') ? 'active' : ''); ?>">
-			<a href="<?php p($u('strategy')); ?>"><span class="crm-nav__icon" aria-hidden="true"><?php print_unescaped($icon('map')); ?></span><span><?php p($l->t('Strategy')); ?></span></a>
-		</li>
-		<li class="<?php p($is('pipeline') ? 'active' : ''); ?>">
-			<a href="<?php p($u('pipeline')); ?>"><span class="crm-nav__icon" aria-hidden="true"><?php print_unescaped($icon('kanban')); ?></span><span><?php p($l->t('Pipeline')); ?></span></a>
-		</li>
-		<li class="<?php p($is('agreements','agreement-form') ? 'active' : ''); ?>">
-			<a href="<?php p($u('agreements')); ?>"><span class="crm-nav__icon" aria-hidden="true"><?php print_unescaped($icon('file-text')); ?></span><span><?php p($l->t('Agreements')); ?></span></a>
-		</li>
-		<li class="<?php p($is('money') ? 'active' : ''); ?>">
-			<a href="<?php p($u('money')); ?>"><span class="crm-nav__icon" aria-hidden="true"><?php print_unescaped($icon('coins')); ?></span><span><?php p($l->t('Money')); ?></span></a>
-		</li>
-		<li class="<?php p($is('activities') ? 'active' : ''); ?>">
-			<a href="<?php p($u('activities')); ?>"><span class="crm-nav__icon" aria-hidden="true"><?php print_unescaped($icon('check-square')); ?></span><span><?php p($l->t('Activities')); ?></span></a>
-		</li>
+		<?php
+		$navItem($is('pipeline'), $u('pipeline'), 'kanban', $l->t('Pipeline'), $l->t('All deals — table or board'));
+		$navItem($is('agreements', 'agreement-form'), $u('agreements'), 'file-text', $l->t('Agreements'), $l->t('Licenses and renewals'));
+		$navItem($is('money'), $u('money'), 'coins', $l->t('Money'), $l->t('Invoices and overdue cash'));
+		$navItem($is('activities'), $u('activities'), 'check-square', $l->t('Activities'), $l->t('Logged calls and to-dos'));
+		?>
+
 		<li class="nav-section-divider" role="separator" aria-hidden="true"></li>
 		<li class="nav-item-has-children <?php p($toolsOpen ? 'is-open' : ''); ?>">
 			<button type="button" class="nav-parent-toggle app-navigation-entry-button" aria-expanded="<?php p($toolsOpen ? 'true' : 'false'); ?>" aria-controls="tools-subnav">
@@ -167,13 +180,15 @@ $currentLabel = $workspaceName !== '' ? $workspaceName : $l->t('Current workspac
 				<span class="nav-parent-chevron" aria-hidden="true"></span>
 			</button>
 			<ul id="tools-subnav" class="nav-submenu" <?php if (!$toolsOpen): ?>hidden<?php endif; ?>>
-				<li class="<?php p($is('mail-triage') ? 'active' : ''); ?>"><a href="<?php p($u('mailTriage')); ?>"><?php p($l->t('Mail triage')); ?></a></li>
-				<li class="<?php p($is('import') ? 'active' : ''); ?>"><a href="<?php p($u('import')); ?>"><?php p($l->t('Import')); ?></a></li>
-				<li class="<?php p($is('settings') ? 'active' : ''); ?>"><a href="<?php p($u('settings')); ?>"><?php p($l->t('Workspace settings')); ?></a></li>
-				<?php if ($canManageNav): ?>
-				<li class="<?php p($is('app-settings') ? 'active' : ''); ?>"><a href="<?php p($u('appSettings')); ?>"><?php p($l->t('App settings')); ?></a></li>
+				<li class="<?php p($is('mail-triage') ? 'active' : ''); ?>"><a href="<?php p($u('mailTriage')); ?>" title="<?php p($l->t('Assign unmatched shared mail')); ?>"><?php p($l->t('Mail triage')); ?></a></li>
+				<?php if ($canWriteNav): ?>
+				<li class="<?php p($is('import') ? 'active' : ''); ?>"><a href="<?php p($u('import')); ?>" title="<?php p($l->t('Import companies and deals')); ?>"><?php p($l->t('Import')); ?></a></li>
 				<?php endif; ?>
-				<li class="<?php p($is('support-us') ? 'active' : ''); ?>"><a href="<?php p($u('supportUs')); ?>"><?php p($l->t('Support & us')); ?></a></li>
+				<li class="<?php p($is('settings') ? 'active' : ''); ?>"><a href="<?php p($u('settings')); ?>" title="<?php p($l->t('Members and mailbox for this book')); ?>"><?php p($l->t('Workspace settings')); ?></a></li>
+				<?php if ($canManageNav): ?>
+				<li class="<?php p($is('app-settings') ? 'active' : ''); ?>"><a href="<?php p($u('appSettings')); ?>" title="<?php p($l->t('Access, seats, and tokens')); ?>"><?php p($l->t('App settings')); ?></a></li>
+				<?php endif; ?>
+				<li class="<?php p($is('support-us') ? 'active' : ''); ?>"><a href="<?php p($u('supportUs')); ?>" title="<?php p($l->t('Optional project support')); ?>"><?php p($l->t('Support & us')); ?></a></li>
 			</ul>
 		</li>
 	</ul>

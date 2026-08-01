@@ -29,6 +29,7 @@ class WebsiteOrderWebhookService
 		private readonly SettingsService $settings,
 		private readonly RateLimitService $rateLimit,
 		private readonly CompanyService $companyService,
+		private readonly WorkspaceService $workspaces,
 		private readonly SlugService $slugService,
 		private readonly PersonService $personService,
 		private readonly PersonMapper $personMapper,
@@ -84,7 +85,13 @@ class WebsiteOrderWebhookService
 		$this->locking->acquireLock($lockKey, ILockingProvider::LOCK_EXCLUSIVE);
 		try {
 			$dealTitle = 'Website order ' . $orderId;
-			$existingDeals = $this->dealMapper->findOpenByTitle($dealTitle);
+			// Title idempotency is scoped to the default workspace — never reclaim
+			// an open deal from another book that happens to share the same order id.
+			$defaultWs = $this->workspaces->findDefault();
+			$orderWorkspaceId = $defaultWs !== null ? (int)$defaultWs->getId() : 0;
+			$existingDeals = $orderWorkspaceId > 0
+				? $this->dealMapper->findOpenByTitle($dealTitle, $orderWorkspaceId)
+				: [];
 			if ($existingDeals !== []) {
 				$deal = $existingDeals[0];
 				$company = $this->companyService->get((int)$deal->getCompanyId());
@@ -120,12 +127,21 @@ class WebsiteOrderWebhookService
 				'orderId' => $orderId,
 				'source' => (string)($payload['source'] ?? 'website-order'),
 			]);
-			$this->notificationService->notifyCrmUsers(
-				Constants::NOTIFY_LEAD,
-				'company',
-				(string)$company->getId(),
-				['slug' => (string)$company->getSlug(), 'name' => (string)$company->getName(), 'type' => 'website-order'],
-			);
+			$notifyWs = (int)($company->getWorkspaceId() ?? 0);
+			$leadParams = [
+				'slug' => (string)$company->getSlug(),
+				'name' => (string)$company->getName(),
+				'type' => 'website-order',
+			];
+			if ($notifyWs > 0) {
+				$this->notificationService->notifyWorkspaceUsers(
+					$notifyWs,
+					Constants::NOTIFY_LEAD,
+					'company',
+					(string)$company->getId(),
+					$leadParams,
+				);
+			}
 
 			return ['companyId' => (int)$company->getId(), 'dealId' => (int)$deal->getId(), 'slug' => (string)$company->getSlug()];
 		} finally {
@@ -135,19 +151,28 @@ class WebsiteOrderWebhookService
 
 	private function findOrCreateCompany(string $companyName, string $email, string $phone, string $contactName, string $lang): Company
 	{
-		foreach ($this->personMapper->findByEmail($email) as $person) {
+		$defaultWs = $this->workspaces->findDefault();
+		$workspaceId = $defaultWs !== null ? (int)$defaultWs->getId() : 0;
+		$matches = $workspaceId > 0
+			? $this->personMapper->findByEmail($email, $workspaceId)
+			: [];
+		foreach ($matches as $person) {
 			$company = $this->companyService->get((int)$person->getCompanyId());
 			if (!$company->isArchived()) {
 				return $company;
 			}
 		}
 
-		$company = $this->companyService->create([
+		$create = [
 			'name' => $companyName,
 			'slug' => $this->slugService->suggestUnique($companyName),
 			'lang' => $lang,
 			'status' => 'lead',
-		], 'webhook');
+		];
+		if ($workspaceId > 0) {
+			$create['workspaceId'] = $workspaceId;
+		}
+		$company = $this->companyService->create($create, 'webhook');
 		$this->personService->create((int)$company->getId(), [
 			'name' => $contactName !== '' ? $contactName : $companyName,
 			'email' => $email,

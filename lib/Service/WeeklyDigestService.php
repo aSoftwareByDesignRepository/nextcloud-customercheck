@@ -169,9 +169,11 @@ class WeeklyDigestService
 		$unpaid = (int)($money['meta']['total'] ?? count($money['items'] ?? []));
 
 		$quota80 = 0;
-		foreach ($this->quotaService->partnerQuotaOverview(500) as $row) {
-			if (!empty($row['alert'])) {
-				$quota80++;
+		if ($workspaceId !== null && $workspaceId > 0) {
+			foreach ($this->quotaService->partnerQuotaOverview($workspaceId, 500) as $row) {
+				if (!empty($row['alert'])) {
+					$quota80++;
+				}
 			}
 		}
 

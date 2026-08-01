@@ -1658,6 +1658,44 @@ dialog.entitlement-explain-dialog::backdrop {
 	padding: 0.5rem;
 	min-height: 8rem;
 }
+#app-content.crm-app .crm-kanban__column-head {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 0.5rem;
+	margin: 0 0 0.35rem;
+	padding: 0.15rem 0.2rem;
+}
+#app-content.crm-app .crm-kanban__column-title {
+	margin: 0;
+	font-size: 0.95rem;
+	font-weight: 700;
+	line-height: 1.25;
+	min-width: 0;
+}
+#app-content.crm-app .crm-kanban__column-meta {
+	margin: 0;
+	display: inline-flex;
+	align-items: baseline;
+	gap: 0.4rem;
+	flex-shrink: 0;
+	font-variant-numeric: tabular-nums;
+}
+#app-content.crm-app .crm-kanban__column-count {
+	min-width: 1.4rem;
+	padding: 0.1rem 0.45rem;
+	border-radius: 999px;
+	background: var(--color-primary-element, #0082c9);
+	color: var(--color-primary-element-text, #fff);
+	font-size: 0.75rem;
+	font-weight: 700;
+	text-align: center;
+}
+#app-content.crm-app .crm-kanban__column-sum {
+	font-size: 0.78rem;
+	font-weight: 600;
+	color: var(--color-main-text);
+}
 #app-content.crm-app .crm-kanban__list {
 	list-style: none;
 	margin: 0;
@@ -1667,6 +1705,39 @@ dialog.entitlement-explain-dialog::backdrop {
 	padding: 0.5rem;
 	margin: 0.35rem 0;
 	cursor: grab;
+	display: flex;
+	flex-direction: column;
+	gap: 0.35rem;
+}
+#app-content.crm-app .crm-kanban__card:focus-visible {
+	outline: 2px solid var(--color-primary-element, #0082c9);
+	outline-offset: 2px;
+}
+#app-content.crm-app .crm-kanban__stage-control {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+	margin-top: 0.15rem;
+}
+#app-content.crm-app .crm-kanban__stage-label {
+	font-size: 0.85rem;
+	font-weight: 600;
+	color: var(--color-text-maxcontrast, #666);
+}
+#app-content.crm-app .crm-kanban__stage-select {
+	min-height: 44px;
+	min-width: 44px;
+	width: 100%;
+}
+#app-content.crm-app .crm-kanban__card-value {
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+}
+#app-content.crm-app .crm-kanban__card-owner {
+	font-size: 0.85rem;
+}
+#app-content.crm-app .crm-owner {
+	font-weight: 600;
 }
 
 /* Settings access checklists (AZC parity) */
@@ -1771,6 +1842,23 @@ dialog.entitlement-explain-dialog::backdrop {
 	flex: 1 1 16rem;
 	min-width: 12rem;
 }
+#app-content.crm-app #section-license .user-picker,
+#app-content.crm-app #section-workspace-mailbox .user-picker {
+	position: relative;
+	max-width: 100%;
+}
+#app-content.crm-app #section-license .user-picker__control,
+#app-content.crm-app #section-workspace-mailbox .user-picker__control {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	align-items: stretch;
+}
+#app-content.crm-app #section-license .user-picker__search,
+#app-content.crm-app #section-workspace-mailbox .user-picker__search {
+	flex: 1 1 12rem;
+	min-width: 0;
+}
 #app-content.crm-app .crm-switch {
 	display: flex;
 	align-items: center;
@@ -1842,10 +1930,10 @@ dialog.entitlement-explain-dialog::backdrop {
 	}
 
 	#content.app-customercheck #app-navigation.crm-nav {
-		flex: 0 0 280px !important;
-		width: 280px !important;
-		min-width: 280px !important;
-		max-width: 280px !important;
+		flex: 0 0 var(--crm-nav-width, 280px) !important;
+		width: var(--crm-nav-width, 280px) !important;
+		min-width: var(--crm-nav-width, 280px) !important;
+		max-width: var(--crm-nav-width, 280px) !important;
 	}
 
 	#content.app-customercheck #app-content.crm-app {
@@ -2345,6 +2433,67 @@ dialog.entitlement-explain-dialog::backdrop {
 #app-content.crm-app .crm-table--team .crm-btn {
 	min-height: 44px;
 	min-width: 44px;
+}
+#app-content.crm-app .crm-brief-verify {
+	align-items: center;
+}
+#app-content.crm-app .crm-brief-verify__note:not([hidden]) {
+	flex: 1 1 12rem;
+	min-width: 10rem;
+}
+#app-content.crm-app .crm-brief-verify__more {
+	margin: 0;
+}
+#app-content.crm-app .crm-brief-verify__more > summary {
+	list-style: none;
+}
+#app-content.crm-app .crm-brief-verify__more > summary:focus-visible,
+#app-content.crm-app .crm-card--collapsible > summary:focus-visible,
+#app-content.crm-app .crm-more-menu > summary:focus-visible {
+	outline: 3px solid var(--color-primary-element, #0082c9);
+	outline-offset: 2px;
+}
+#app-content.crm-app .crm-card--collapsible {
+	padding: 0;
+	background: var(--crm-bg-card, var(--color-main-background));
+	border: 1px solid var(--crm-border, var(--color-border));
+	border-radius: var(--crm-radius-md, 12px);
+	color: var(--crm-text, var(--color-main-text));
+}
+#app-content.crm-app .crm-card--collapsible > summary.crm-card__header--summary {
+	list-style: none;
+	cursor: pointer;
+	padding: var(--crm-space-4, 16px) var(--crm-space-4, 16px) 0;
+	display: block;
+	min-height: 44px;
+	box-sizing: border-box;
+}
+#app-content.crm-app .crm-card--collapsible > summary.crm-card__header--summary::-webkit-details-marker {
+	display: none;
+}
+#app-content.crm-app .crm-card--collapsible > summary.crm-card__header--summary::after {
+	content: '▸';
+	float: right;
+	font-size: var(--crm-fs-lg, 1.125rem);
+	line-height: var(--crm-line-tight, 1.2);
+	color: var(--crm-muted, var(--color-text-maxcontrast));
+}
+#app-content.crm-app .crm-card--collapsible[open] > summary.crm-card__header--summary::after {
+	content: '▾';
+}
+#app-content.crm-app .crm-card--collapsible > .crm-card__body {
+	padding: var(--crm-space-3, 12px) var(--crm-space-4, 16px) var(--crm-space-4, 16px);
+}
+#app-content.crm-app .crm-person-meta {
+	margin: var(--crm-space-1, 4px) 0 0;
+	font-size: var(--crm-fs-sm, 0.875rem);
+	color: var(--crm-muted, var(--color-text-maxcontrast));
+}
+#app-content.crm-app .crm-emails__log-hint {
+	margin: 0;
+	max-width: 16rem;
+	text-align: end;
+	color: var(--crm-muted, var(--color-text-maxcontrast));
 }
 #app-content.crm-app .crm-table--team th,
 #app-content.crm-app .crm-table--team td {

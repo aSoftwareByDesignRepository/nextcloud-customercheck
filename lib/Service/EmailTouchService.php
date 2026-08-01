@@ -6,6 +6,7 @@ use OCA\CustomerCheck\Db\EmailTouch;
 use OCA\CustomerCheck\Db\EmailTouchMapper;
 use OCA\CustomerCheck\Exception\NotFoundException;
 use OCA\CustomerCheck\Exception\ValidationException;
+use OCA\CustomerCheck\Support\CompanyScopedFk;
 use OCA\CustomerCheck\Support\DateMath;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\IL10N;
@@ -40,27 +41,37 @@ class EmailTouchService
 		$from = trim((string)($data['fromAddr'] ?? ''));
 		$to = trim((string)($data['toAddr'] ?? ''));
 		$personId = isset($data['personId']) ? (int)$data['personId'] : 0;
+		$boundPersonId = null;
 
-		// Simplified UX: personId + subject fills addresses (from/to optional).
-		if ($personId > 0 && ($from === '' || $to === '')) {
+		// Always bind personId to this company — even when addresses are supplied.
+		if ($personId > 0) {
 			try {
 				$person = $this->personService->get($personId);
 			} catch (NotFoundException $e) {
 				throw ValidationException::field(Constants::ERR_VALIDATION, 'personId', $this->l10n->t('Pick a person on this company.'));
 			}
-			if ((int)$person->getCompanyId() !== $companyId) {
-				throw ValidationException::field(Constants::ERR_VALIDATION, 'personId', $this->l10n->t('Pick a person on this company.'));
-			}
-			$personEmail = trim((string)($person->getEmail() ?? ''));
-			if ($personEmail === '' || !filter_var($personEmail, FILTER_VALIDATE_EMAIL)) {
-				throw ValidationException::field(Constants::ERR_EMAIL_INVALID, 'personId', $this->l10n->t('That person needs an email address first.'));
-			}
-			if ($direction === 'inbound') {
-				$from = $from !== '' ? $from : $personEmail;
-				$to = $to !== '' ? $to : 'crm@local';
-			} else {
-				$from = $from !== '' ? $from : 'crm@local';
-				$to = $to !== '' ? $to : $personEmail;
+			CompanyScopedFk::assertSameCompany(
+				$companyId,
+				(int)$person->getCompanyId(),
+				'personId',
+				$this->l10n,
+				$this->l10n->t('Pick a person on this company.'),
+			);
+			$boundPersonId = $personId;
+
+			// Simplified UX: personId + subject fills addresses (from/to optional).
+			if ($from === '' || $to === '') {
+				$personEmail = trim((string)($person->getEmail() ?? ''));
+				if ($personEmail === '' || !filter_var($personEmail, FILTER_VALIDATE_EMAIL)) {
+					throw ValidationException::field(Constants::ERR_EMAIL_INVALID, 'personId', $this->l10n->t('That person needs an email address first.'));
+				}
+				if ($direction === 'inbound') {
+					$from = $from !== '' ? $from : $personEmail;
+					$to = $to !== '' ? $to : 'crm@local';
+				} else {
+					$from = $from !== '' ? $from : 'crm@local';
+					$to = $to !== '' ? $to : $personEmail;
+				}
 			}
 		}
 
@@ -82,8 +93,8 @@ class EmailTouchService
 		$touch->setOccurredAt($occurred !== null ? new \DateTime($occurred->format('Y-m-d') . ' 12:00:00') : $now);
 		$touch->setSource('manual');
 		$touch->setSnippet(isset($data['snippet']) ? mb_substr(trim((string)$data['snippet']), 0, 500) : null);
-		if ($personId > 0) {
-			$touch->setPersonId($personId);
+		if ($boundPersonId !== null) {
+			$touch->setPersonId($boundPersonId);
 		}
 		$touch->setCreatedBy($actor);
 		$touch->setCreatedAt($now);

@@ -81,6 +81,52 @@ final class AppAccessMiddlewareTest extends TestCase
 		$this->assertSame('guest', $response->getRenderAs());
 	}
 
+	public function testAppGateRestrictionRendersAllowlistHint(): void
+	{
+		$middleware = $this->middleware(
+			path: '/apps/customercheck/today',
+			method: 'GET',
+			canUseApp: false,
+		);
+		$response = $middleware->afterException(
+			$this->createMock(PageController::class),
+			'today',
+			new AppAccessDeniedException(AccessControlService::DENIAL_RESTRICTION),
+		);
+		$this->assertInstanceOf(TemplateResponse::class, $response);
+		$params = $response->getParams();
+		$this->assertStringContainsString('restricts CustomerCheck access', (string)($params['message'] ?? ''));
+		$this->assertStringContainsString('Access mode', (string)($params['hint'] ?? ''));
+	}
+
+	public function testBeforeControllerThrowsRestrictionReason(): void
+	{
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('outsider');
+
+		$session = $this->createMock(IUserSession::class);
+		$session->method('getUser')->willReturn($user);
+
+		$access = $this->createMock(AccessControlService::class);
+		$access->method('canUseApp')->with('outsider')->willReturn(false);
+		$access->method('denialReasonWhenCannotUseApp')->with('outsider')
+			->willReturn(AccessControlService::DENIAL_RESTRICTION);
+
+		$request = $this->createMock(IRequest::class);
+		$middleware = new AppAccessMiddleware(
+			$session,
+			$access,
+			$request,
+			$this->createMock(IURLGenerator::class),
+			$this->createMock(IFactory::class),
+			$this->createMock(LoggerInterface::class),
+		);
+
+		$this->expectException(AppAccessDeniedException::class);
+		$this->expectExceptionMessage(AccessControlService::DENIAL_RESTRICTION);
+		$middleware->beforeController($this->createMock(PageController::class), 'today');
+	}
+
 	private function middleware(string $path, string $method, bool $canUseApp): AppAccessMiddleware
 	{
 		$session = $this->createMock(IUserSession::class);

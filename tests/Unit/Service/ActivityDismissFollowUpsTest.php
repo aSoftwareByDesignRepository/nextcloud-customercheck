@@ -6,11 +6,15 @@ namespace OCA\CustomerCheck\Tests\Unit\Service;
 
 use OCA\CustomerCheck\Db\Activity;
 use OCA\CustomerCheck\Db\ActivityMapper;
+use OCA\CustomerCheck\Db\PersonMapper;
+use OCA\CustomerCheck\Db\AgreementMapper;
+use OCA\CustomerCheck\Db\DealMapper;
 use OCA\CustomerCheck\Service\AccessControlService;
 use OCA\CustomerCheck\Service\ActivityService;
 use OCA\CustomerCheck\Service\TimelineService;
 use OCA\CustomerCheck\Service\VTodoService;
 use OCP\AppFramework\Utility\ITimeFactory;
+use OCP\IDBConnection;
 use OCP\IL10N;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
@@ -34,33 +38,49 @@ final class ActivityDismissFollowUpsTest extends TestCase
 			$this->createMock(VTodoService::class),
 			$this->time,
 			$this->createMock(IL10N::class),
+			$this->createMock(IDBConnection::class),
+			$this->createMock(DealMapper::class),
+			$this->createMock(AgreementMapper::class),
+			$this->createMock(PersonMapper::class),
 		);
 	}
 
-	public function testDismissRemainingFollowUpsOnlyClosesSequenceOrigins(): void
+	public function testDismissRemainingFollowUpsOnlyClosesSequenceOriginsWithCas(): void
 	{
 		$seqQuoted = $this->activity(1, 'sequence_quoted');
 		$seqWon = $this->activity(2, 'sequence_won');
+		$seqContacted = $this->activity(5, 'sequence_contacted');
+		$seqNegotiation = $this->activity(6, 'sequence_negotiation');
 		$userCreated = $this->activity(3, 'user');
 		$webhook = $this->activity(4, 'webhook');
 
 		$this->mapper->expects($this->once())
 			->method('search')
 			->with(['dealId' => 42, 'openOnly' => true], 200)
-			->willReturn([$seqQuoted, $seqWon, $userCreated, $webhook]);
+			->willReturn([$seqQuoted, $seqWon, $seqContacted, $seqNegotiation, $userCreated, $webhook]);
 
-		$updatedIds = [];
-		$this->mapper->expects($this->exactly(2))
-			->method('update')
-			->willReturnCallback(function (Activity $activity) use (&$updatedIds) {
-				$updatedIds[] = (int)$activity->getId();
-				$this->assertNotNull($activity->getDoneAt());
-				return $activity;
+		$casIds = [];
+		$this->mapper->expects($this->exactly(4))
+			->method('updateDoneCas')
+			->willReturnCallback(function (int $id) use (&$casIds): int {
+				$casIds[] = $id;
+				return 1;
 			});
+		$this->mapper->expects($this->never())->method('update');
 
 		$result = $this->service->dismissRemainingFollowUps(42, 'alice');
-		$this->assertSame(2, $result['dismissed']);
-		$this->assertSame([1, 2], $updatedIds);
+		$this->assertSame(4, $result['dismissed']);
+		$this->assertSame([1, 2, 5, 6], $casIds);
+	}
+
+	public function testDismissSkipsCasMissWithoutCounting(): void
+	{
+		$seq = $this->activity(9, 'sequence_quoted');
+		$this->mapper->method('search')->willReturn([$seq]);
+		$this->mapper->expects($this->once())->method('updateDoneCas')->willReturn(0);
+
+		$result = $this->service->dismissRemainingFollowUps(42, 'alice');
+		$this->assertSame(0, $result['dismissed']);
 	}
 
 	public function testDismissWithInvalidDealIdReturnsZero(): void
@@ -78,6 +98,7 @@ final class ActivityDismissFollowUpsTest extends TestCase
 		$activity->setType('call');
 		$activity->setTitle('Follow up');
 		$activity->setOrigin($origin);
+		$activity->setUpdatedAt(new \DateTime('2026-07-24 08:00:00'));
 		return $activity;
 	}
 }

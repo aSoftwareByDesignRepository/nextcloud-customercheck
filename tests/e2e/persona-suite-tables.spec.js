@@ -22,7 +22,7 @@ test.describe('Persona suite tables + human labels', () => {
     await expect(page.locator('[data-crm-brief-this] table.table, [data-crm-brief-this] .crm-callout').first()).toBeVisible();
     await expect(page.locator('[data-crm-persona-mount="brief"] ul.crm-list')).toHaveCount(0);
     await expect(page.locator('#crm-brief-add')).toBeVisible();
-    await expect(page.locator('#crm-brief-add')).toContainText(/Add a promise|Versprechen hinzufügen/i);
+    await expect(page.locator('#crm-brief-add')).toContainText(/Add a commitment|Commitment hinzufügen/i);
     await expect(page.locator('#crm-brief-add')).not.toContainText(/^Confirm commitment$|^New commitment$/i);
     const title = page.locator('#crm-brief-title');
     if (await title.count()) {

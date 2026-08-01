@@ -24,8 +24,11 @@ final class DocumentsAndTasksContractTest extends TestCase
 		$this->assertStringContainsString('Unlink folder', $js);
 		$this->assertStringContainsString('CustomerCheckFolderPicker', $js);
 		$this->assertStringContainsString('pickFolder', $js);
+		$this->assertStringContainsString('pickFile', $picker);
 		$this->assertStringContainsString('allowDirectoryChooser', $picker);
 		$this->assertStringContainsString('common/folder-picker', $controller);
+		$assets = (string)file_get_contents(dirname(__DIR__, 2) . '/lib/Service/FrontEndAssetService.php');
+		$this->assertStringContainsString("common/folder-picker", $assets);
 		$this->assertStringContainsString('Browse folders', $html);
 		$this->assertStringContainsString('linkFolderViaSearchFallback', $js);
 		$this->assertStringContainsString('unavailable', $js);

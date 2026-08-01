@@ -83,4 +83,39 @@ final class SharedMailboxSmtpClientTest extends TestCase
 			'body' => 'Body',
 		]);
 	}
+
+	public function testBuildDataPayloadPlainText(): void
+	{
+		$payload = SharedMailboxSmtpClient::buildDataPayload([
+			'from' => 'a@b.c',
+			'fromName' => 'Ada',
+			'to' => 'x@y.z',
+			'subject' => 'Hi',
+			'body' => "Line1\n.hidden",
+		]);
+		$this->assertStringContainsString('Content-Type: text/plain; charset=UTF-8', $payload);
+		$this->assertStringNotContainsString('multipart/mixed', $payload);
+		$this->assertStringContainsString("\n..hidden", $payload);
+		$this->assertStringEndsWith("\r\n.", $payload);
+	}
+
+	public function testBuildDataPayloadMultipartWithAttachment(): void
+	{
+		$payload = SharedMailboxSmtpClient::buildDataPayload([
+			'from' => 'a@b.c',
+			'fromName' => 'Ada',
+			'to' => 'x@y.z',
+			'subject' => 'Quote',
+			'body' => 'See attached',
+			'attachments' => [[
+				'filename' => 'quote.pdf',
+				'mime' => 'application/pdf',
+				'data' => '%PDF-1.4',
+			]],
+		]);
+		$this->assertStringContainsString('Content-Type: multipart/mixed; boundary="crm_', $payload);
+		$this->assertStringContainsString('Content-Disposition: attachment; filename="quote.pdf"', $payload);
+		$this->assertStringContainsString(base64_encode('%PDF-1.4'), $payload);
+		$this->assertStringContainsString('Content-Transfer-Encoding: base64', $payload);
+	}
 }

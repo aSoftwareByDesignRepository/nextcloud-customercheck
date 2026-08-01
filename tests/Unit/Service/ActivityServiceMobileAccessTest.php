@@ -6,12 +6,16 @@ namespace OCA\CustomerCheck\Tests\Unit\Service;
 
 use OCA\CustomerCheck\Db\Activity;
 use OCA\CustomerCheck\Db\ActivityMapper;
+use OCA\CustomerCheck\Db\PersonMapper;
+use OCA\CustomerCheck\Db\AgreementMapper;
+use OCA\CustomerCheck\Db\DealMapper;
 use OCA\CustomerCheck\Exception\AccessDeniedException;
 use OCA\CustomerCheck\Service\AccessControlService;
 use OCA\CustomerCheck\Service\ActivityService;
 use OCA\CustomerCheck\Service\TimelineService;
 use OCA\CustomerCheck\Service\VTodoService;
 use OCP\AppFramework\Utility\ITimeFactory;
+use OCP\IDBConnection;
 use OCP\IL10N;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
@@ -37,6 +41,10 @@ final class ActivityServiceMobileAccessTest extends TestCase
 			$this->createMock(VTodoService::class),
 			$time,
 			$l10n,
+			$this->createMock(IDBConnection::class),
+			$this->createMock(DealMapper::class),
+			$this->createMock(AgreementMapper::class),
+			$this->createMock(PersonMapper::class),
 		);
 	}
 

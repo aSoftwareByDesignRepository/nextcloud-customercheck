@@ -9,6 +9,7 @@ $groups = $_['groups'] ?? ['overdue' => [], 'today' => [], 'later' => [], 'done'
 $filterOpen = ($filterType !== '' || $filterScope !== 'open');
 $labels = $_['labels'] ?? null;
 $activitiesUrl = $urlGenerator->linkToRoute('customercheck.page.activities');
+$canWrite = !empty($_['canWrite']);
 include __DIR__ . '/common/page-start.php';
 ?>
 <div class="crm-page-actions-source header-actions" hidden>
@@ -104,6 +105,7 @@ include __DIR__ . '/common/page-start.php';
 							<td data-label="<?php p($l->t('Due')); ?>"><?php p($act['dueDate'] ?? '—'); ?></td>
 							<td data-label="<?php p($l->t('Origin')); ?>"><?php p(($act['origin'] === 'system' || str_starts_with((string)$act['origin'], 'sequence_')) ? $l->t('Auto') : $l->t('User')); ?></td>
 							<td data-label="<?php p($l->t('Actions')); ?>" class="actions-cell crm-table-actions-col">
+								<?php if ($canWrite): ?>
 								<div class="crm-table-actions">
 									<?php if (empty($act['doneAt'])): ?>
 										<button type="button" class="crm-btn crm-btn--sm crm-btn--primary" data-crm-complete-activity="<?php p($act['id']); ?>" data-updated-at="<?php p($act['updatedAt'] ?? ''); ?>"><?php p($l->t('Done')); ?></button>
@@ -111,6 +113,9 @@ include __DIR__ . '/common/page-start.php';
 										<button type="button" class="crm-btn crm-btn--sm crm-btn--secondary" data-crm-undo-activity="<?php p($act['id']); ?>" data-updated-at="<?php p($act['updatedAt'] ?? ''); ?>"><?php p($l->t('Undo')); ?></button>
 									<?php endif; ?>
 								</div>
+								<?php else: ?>
+									<span class="crm-muted" aria-hidden="true">—</span>
+								<?php endif; ?>
 							</td>
 						</tr>
 					<?php endforeach; ?>

@@ -71,7 +71,8 @@ final class ChaseLogic
 	 *   quoteSentOn?: ?\DateTimeInterface,
 	 *   stageChangedAt?: ?\DateTimeInterface,
 	 *   healthy: bool,
-	 *   staleDays?: int
+	 *   staleDays?: int,
+	 *   stuckChaseDays?: int
 	 * } $deal
 	 * @return list<string> reasons in severity order
 	 */
@@ -104,8 +105,9 @@ final class ChaseLogic
 
 		$quoteSent = $deal['quoteSentOn'] ?? null;
 		if ($stage === 'quoted' && $quoteSent instanceof \DateTimeInterface) {
+			$stuckDays = max(1, (int)($deal['stuckChaseDays'] ?? 3));
 			$age = self::daysBetween($quoteSent, $today);
-			if ($age >= 3) {
+			if ($age >= $stuckDays) {
 				$reasons[] = 'quote_followup_due';
 			}
 		}

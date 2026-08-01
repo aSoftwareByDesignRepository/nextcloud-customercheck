@@ -38,24 +38,38 @@ class ImportMatcher
 	 *   suggestedSlug: string
 	 * }
 	 */
-	public function match(array $row): array
+	public function match(array $row, int $workspaceId): array
 	{
 		$slug = mb_strtolower(trim((string)($row['slug'] ?? $row['customerId'] ?? '')));
 		$name = trim((string)($row['companyName'] ?? $row['name'] ?? ''));
 		$email = mb_strtolower(trim((string)($row['email'] ?? '')));
+		// Fail closed — never match across books (§3.3 / §8.6).
+		$ws = $workspaceId > 0 ? $workspaceId : 0;
+		if ($ws <= 0) {
+			return [
+				'action' => 'needs_decision',
+				'companyId' => null,
+				'companyName' => null,
+				'companySlug' => null,
+				'candidates' => [],
+				'suggestedSlug' => $slug !== '' && SlugService::isValid($slug)
+					? $slug
+					: $this->slugService->suggestUnique($name !== '' ? $name : 'company'),
+			];
+		}
 
 		$candidates = [];
 		$seen = [];
 
 		if ($slug !== '' && SlugService::isValid($slug)) {
 			$bySlug = $this->companyMapper->findBySlug($slug);
-			if ($bySlug !== null) {
+			if ($bySlug !== null && (int)($bySlug->getWorkspaceId() ?? 0) === $ws) {
 				$this->addCandidate($candidates, $seen, $bySlug, 'slug');
 			}
 		}
 
 		if ($name !== '') {
-			foreach ($this->companyMapper->search(['search' => $name], 20, 0) as $company) {
+			foreach ($this->companyMapper->search(['search' => $name, 'workspaceId' => $ws], 20, 0) as $company) {
 				if (mb_strtolower((string)$company->getName()) === mb_strtolower($name)) {
 					$this->addCandidate($candidates, $seen, $company, 'name');
 				}
@@ -63,9 +77,12 @@ class ImportMatcher
 		}
 
 		if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL)) {
-			foreach ($this->personMapper->findByEmail($email) as $person) {
+			foreach ($this->personMapper->findByEmail($email, $ws) as $person) {
 				try {
 					$company = $this->companyMapper->findById((int)$person->getCompanyId());
+					if ((int)($company->getWorkspaceId() ?? 0) !== $ws) {
+						continue;
+					}
 					$this->addCandidate($candidates, $seen, $company, 'email');
 				} catch (\Throwable) {
 				}

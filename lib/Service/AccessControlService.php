@@ -13,17 +13,15 @@ use OCP\IGroupManager;
 use OCP\IUserSession;
 
 /**
- * CustomerCheck access model — PSD §2, implemented literally.
+ * CustomerCheck access model — portfolio ACCESS-AND-DIRECTORY-PICKERS §2.1.
  *
- * Two rules make this stricter than SbdLicenseOps and different from a default
- * ArbeitszeitCheck install, and both are deliberate:
- *
- *  1. **App admin requires system admin.** A non-empty `app_admin_user_ids` list
- *     narrows which Nextcloud admins get CustomerCheck admin powers; listing a
- *     non-admin uid grants nothing (AZC rule, §2.1).
+ *  1. **Dedicated App Admin (BudgetCheck semantics).**
+ *     `isAppAdmin = isSystemAdmin OR uid ∈ app_admin_user_ids`.
+ *     Nextcloud admins always retain policy access; any enabled user may be
+ *     delegated without joining the NC `admin` group.
  *  2. **Empty allowlists while restriction is on means nobody but app admins.**
- *     This app holds sales data, so the allowlist fails closed (§2.3) rather
- *     than falling back to "everyone" the way AZC's group-only check does.
+ *     This app holds sales data, so the allowlist fails closed rather than
+ *     falling back to "everyone".
  */
 class AccessControlService
 {
@@ -31,6 +29,9 @@ class AccessControlService
 	public const KEY_ACCESS_RESTRICTION = Constants::CONFIG_ACCESS_RESTRICTION_ENABLED;
 	public const KEY_ACCESS_ALLOWED_USER_IDS = Constants::CONFIG_ACCESS_ALLOWED_USER_IDS;
 	public const KEY_ACCESS_ALLOWED_GROUP_IDS = Constants::CONFIG_ACCESS_ALLOWED_GROUP_IDS;
+
+	public const DENIAL_RESTRICTION = 'restriction';
+	public const DENIAL_EMPTY = 'empty_user';
 
 	public function __construct(
 		private readonly IConfig $config,
@@ -66,37 +67,34 @@ class AccessControlService
 	}
 
 	/**
-	 * PSD §2.2:
+	 * Portfolio §2.1 / BudgetCheck:
 	 *
-	 *     if not isSystemAdmin(uid): return false
-	 *     admins = app_admin_user_ids
-	 *     if admins == []: return true
-	 *     return uid ∈ admins
+	 *     if uid == '': return false
+	 *     if isSystemAdmin(uid): return true
+	 *     return uid ∈ app_admin_user_ids
 	 */
 	public function isAppAdmin(string $userId): bool
 	{
 		if ($userId === '') {
 			return false;
 		}
-		if (!$this->isSystemAdmin($userId)) {
-			return false;
-		}
-
-		$admins = $this->getAppAdminIds();
-		if ($admins === []) {
+		if ($this->isSystemAdmin($userId)) {
 			return true;
 		}
 
-		return in_array($userId, $admins, true);
+		return in_array($userId, $this->getAppAdminIds(), true);
 	}
 
 	/**
-	 * PSD §2.2:
+	 * Directory door only (same model as BudgetCheck / MobilityCheck).
 	 *
 	 *     if uid == '': return false
 	 *     if isAppAdmin(uid): return true
-	 *     if not isAccessRestrictionEnabled(): return true
-	 *     return userMatchesAccessAllowList(uid)
+	 *     if not isAccessRestrictionEnabled(): return true   // Open mode
+	 *     return userMatchesAccessAllowList(uid)             // Restricted
+	 *
+	 * Open mode must show CustomerCheck in the menu for every
+	 * authenticated user. Do not fold workspace membership or other gates here.
 	 */
 	public function canUseApp(string $userId): bool
 	{
@@ -111,6 +109,21 @@ class AccessControlService
 		}
 
 		return $this->userMatchesAccessAllowList($userId);
+	}
+
+	/**
+	 * Stable reason when {@see canUseApp} is false (never call when true).
+	 *
+	 * Non-empty denials are always restriction: Open mode never denies a
+	 * logged-in user, and app admins always pass {@see canUseApp}.
+	 */
+	public function denialReasonWhenCannotUseApp(string $userId): string
+	{
+		if ($userId === '') {
+			return self::DENIAL_EMPTY;
+		}
+
+		return self::DENIAL_RESTRICTION;
 	}
 
 	public function canManageAppConfiguration(string $userId): bool
@@ -205,8 +218,9 @@ class AccessControlService
 	 * Every uid that may receive CustomerCheck notifications (§6.2 "all CRM users").
 	 *
 	 * Derived from the explicit user allowlist plus the members of every allowed
-	 * group plus the app administrators. When the restriction is off this cannot
-	 * be enumerated cheaply, so the caller falls back to the same set — notifying
+	 * group plus dedicated app administrators plus every Nextcloud system admin
+	 * (implicit app admins). When the restriction is off this cannot be
+	 * enumerated cheaply, so the caller falls back to the same set — notifying
 	 * literally every instance user would be noise, not a feature.
 	 *
 	 * @return list<string>
@@ -226,17 +240,13 @@ class AccessControlService
 		}
 
 		foreach ($this->getAppAdminIds() as $adminUid) {
-			if ($this->isSystemAdmin($adminUid)) {
-				$uids[] = $adminUid;
-			}
+			$uids[] = $adminUid;
 		}
 
-		if ($this->getAppAdminIds() === []) {
-			$adminGroup = $this->groupManager->get('admin');
-			if ($adminGroup !== null) {
-				foreach ($adminGroup->getUsers() as $user) {
-					$uids[] = $user->getUID();
-				}
+		$adminGroup = $this->groupManager->get('admin');
+		if ($adminGroup !== null) {
+			foreach ($adminGroup->getUsers() as $user) {
+				$uids[] = $user->getUID();
 			}
 		}
 

@@ -15,11 +15,11 @@ final class ContactsPeopleRosterContractTest extends TestCase
 	{
 		$html = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/company-detail.php');
 		$this->assertStringContainsString('id="crm-persons-table"', $html);
-		$this->assertStringContainsString("\$l->t('Last touch')", $html);
-		$this->assertStringContainsString("\$l->t('Linked')", $html);
+		$this->assertStringContainsString('data-crm-person-last-touch', $html);
 		$this->assertStringContainsString("\$l->t('Open in Contacts')", $html);
 		$this->assertStringContainsString('data-crm-unlink-contacts', $html);
 		$this->assertStringContainsString('contactsUid', $html);
+		$this->assertStringContainsString('data-crm-buying-role', $html);
 	}
 
 	public function testAddPersonJsPersistsContactsUid(): void
@@ -31,14 +31,16 @@ final class ContactsPeopleRosterContractTest extends TestCase
 		$this->assertStringContainsString("'/persons/'", $js);
 	}
 
-	public function testLogEmailBoundOnCockpitAndEmailsSection(): void
+	public function testLogEmailBoundOnceOnTalkedSection(): void
 	{
 		$js = (string)file_get_contents(dirname(__DIR__, 2) . '/js/pages/company-detail.js');
 		$this->assertStringContainsString('data-crm-log-email', $js);
 		$detail = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/company-detail.php');
+		$this->assertStringContainsString('id="crm-log-email"', $detail);
 		$this->assertStringContainsString('data-crm-log-email', $detail);
 		$emails = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/common/crm-emails-section.php');
-		$this->assertStringContainsString('data-crm-log-email', $emails);
+		$this->assertStringNotContainsString('id="crm-log-email"', $emails);
+		$this->assertStringContainsString('Talked above', $emails);
 	}
 
 	public function testPageControllerHydratesPeopleRoster(): void

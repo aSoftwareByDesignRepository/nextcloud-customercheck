@@ -203,6 +203,46 @@ class WorkspaceAccessService
 	}
 
 	/**
+	 * Workspace ids the user may read (app admins: every workspace).
+	 *
+	 * @return list<int>
+	 */
+	public function listAccessibleWorkspaceIds(string $userId): array
+	{
+		$ids = [];
+		foreach ($this->listVisibleSummaries($userId) as $row) {
+			$id = (int)($row['id'] ?? 0);
+			if ($id > 0) {
+				$ids[] = $id;
+			}
+		}
+		return $ids;
+	}
+
+	/**
+	 * User ids who are members of a workspace (for notification fan-out — product §3.3).
+	 * Never falls back to the instance-wide CRM allowlist.
+	 *
+	 * @return list<string>
+	 */
+	public function listWorkspaceMemberUserIds(int $workspaceId): array
+	{
+		if ($workspaceId <= 0) {
+			return [];
+		}
+		$uids = [];
+		foreach ($this->members->findByWorkspace($workspaceId) as $member) {
+			$uid = trim((string)$member->getUserId());
+			if ($uid !== '') {
+				$uids[] = $uid;
+			}
+		}
+		$uids = array_values(array_unique($uids));
+		sort($uids);
+		return $uids;
+	}
+
+	/**
 	 * Workspaces the user may open in the sidebar switcher (app admins: all).
 	 *
 	 * @return list<array{id: int, name: string, slug: string, archived: bool, isDefault: bool}>
@@ -224,6 +264,51 @@ class WorkspaceAccessService
 		}
 
 		return $out;
+	}
+
+	/**
+	 * Companion workspace picker payload — does **not** call remember() so listing
+	 * cannot race-overwrite the user's last-used book.
+	 *
+	 * @return array{
+	 *   workspaces: list<array{id: int, name: string, slug: string, archived: bool, isDefault: bool, role: string}>,
+	 *   lastUsedWorkspaceId: int|null
+	 * }
+	 */
+	public function listForMobile(string $userId): array
+	{
+		$isAppAdmin = $this->access->isAppAdmin($userId);
+		$rows = $isAppAdmin
+			? $this->workspaces->findAll()
+			: $this->workspaces->findForUser($userId);
+		$out = [];
+		foreach ($rows as $ws) {
+			$wsId = (int)$ws->getId();
+			$member = $this->members->findMembershipOrNull($wsId, $userId);
+			$out[] = [
+				'id' => $wsId,
+				'name' => (string)$ws->getName(),
+				'slug' => (string)$ws->getSlug(),
+				'archived' => $ws->isArchived(),
+				'isDefault' => $ws->isDefaultWorkspace(),
+				'role' => $isAppAdmin ? 'manager' : (string)($member?->getRole() ?? 'viewer'),
+			];
+		}
+		$lastId = (int)$this->config->getUserValue(
+			$userId,
+			'customercheck',
+			Constants::USER_CONFIG_LAST_WORKSPACE,
+			'0',
+		);
+		$visibleIds = array_column($out, 'id');
+		if ($lastId > 0 && !in_array($lastId, $visibleIds, true)) {
+			$lastId = 0;
+		}
+
+		return [
+			'workspaces' => $out,
+			'lastUsedWorkspaceId' => $lastId > 0 ? $lastId : null,
+		];
 	}
 
 	private function remember(string $userId, int $workspaceId): void

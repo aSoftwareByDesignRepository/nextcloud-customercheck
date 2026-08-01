@@ -3,10 +3,9 @@
 /** @var \OCP\IL10N $l */
 $settings = is_array($_['settings'] ?? null) ? $_['settings'] : [];
 $canManage = !empty($_['canManage']);
-$availableAppAdmins = is_array($_['availableAppAdmins'] ?? null) ? $_['availableAppAdmins'] : [];
 $availableGroups = is_array($_['availableGroups'] ?? null) ? $_['availableGroups'] : [];
 $selectedAllowedUsers = is_array($_['selectedAllowedUsers'] ?? null) ? $_['selectedAllowedUsers'] : [];
-$selectedAppAdmins = is_array($settings['app_admin_user_ids'] ?? null) ? $settings['app_admin_user_ids'] : [];
+$selectedAppAdmins = is_array($_['selectedAppAdmins'] ?? null) ? $_['selectedAppAdmins'] : [];
 $selectedGroups = is_array($settings['access_allowed_group_ids'] ?? null) ? $settings['access_allowed_group_ids'] : [];
 $restrictionOn = !empty($settings['access_restriction_enabled']);
 ?>
@@ -14,7 +13,7 @@ $restrictionOn = !empty($settings['access_restriction_enabled']);
 		<header class="crm-card__header">
 			<div class="crm-card__header-text">
 				<h2 id="section-access-heading" class="crm-card__title"><?php p($l->t('Access control')); ?></h2>
-				<p class="crm-card__lead"><?php p($l->t('App administrators always have access. When restriction is on, only allowlisted users and groups may use the app.')); ?> <?php p($l->t('All customer data stays on this Nextcloud — CustomerCheck never contacts external services.')); ?></p>
+				<p class="crm-card__lead"><?php p($l->t('App administrators and Nextcloud admins always have access. When restriction is on, only allowlisted users and groups may use the app.')); ?> <?php p($l->t('All customer data stays on this Nextcloud — CustomerCheck never contacts external services.')); ?></p>
 			</div>
 		</header>
 		<div class="crm-card__body">
@@ -26,44 +25,39 @@ $restrictionOn = !empty($settings['access_restriction_enabled']);
 				<div class="form-group">
 					<label for="crm-app-admins-search" class="form-label"><?php p($l->t('CustomerCheck app administrators')); ?></label>
 					<input type="search" id="crm-app-admins-search" class="form-input crm-input" autocomplete="off" spellcheck="false"
-						placeholder="<?php p($l->t('Search administrators…')); ?>"
+						placeholder="<?php p($l->t('Search users to add…')); ?>"
+						aria-controls="crm-app-admins-suggest" aria-autocomplete="list"
 						aria-describedby="crm-app-admins-count crm-app-admins-help">
+					<div id="crm-app-admins-suggest" class="crm-suggest" role="listbox" hidden></div>
+					<ul id="crm-app-admins-chips" class="crm-chip-list" role="list" aria-label="<?php p($l->t('Selected app administrators')); ?>">
+						<?php foreach ($selectedAppAdmins as $adminOption): ?>
+							<li class="crm-chip" data-uid="<?php p($adminOption['id']); ?>">
+								<span><?php p($adminOption['displayName']); ?></span>
+								<button type="button" class="crm-chip__remove" data-remove-uid="<?php p($adminOption['id']); ?>" aria-label="<?php p($l->t('Remove %s', [$adminOption['displayName']])); ?>">×</button>
+							</li>
+						<?php endforeach; ?>
+					</ul>
 					<p id="crm-app-admins-count" class="form-help form-help--note" aria-live="polite">
 						<?php
 						$count = count($selectedAppAdmins);
 						p($count > 0
-							? $l->t('%d app admin(s) selected', [$count])
-							: $l->t('No app admins selected (all Nextcloud admins are allowed).'));
+							? $l->t('%d dedicated app admin(s) selected', [$count])
+							: $l->t('No dedicated app admins yet — every Nextcloud admin can still manage CustomerCheck.'));
 						?>
 					</p>
-					<div id="crm-app-admins-list" class="access-groups-list" role="group" aria-label="<?php p($l->t('App administrator selection')); ?>">
-						<?php foreach ($availableAppAdmins as $adminOption):
-							$adminId = (string)($adminOption['id'] ?? '');
-							if ($adminId === '') {
-								continue;
-							}
-							$adminDisplayName = (string)($adminOption['displayName'] ?? $adminId);
-							$isSelected = in_array($adminId, $selectedAppAdmins, true);
-							?>
-							<label class="access-groups-item" data-search="<?php p(strtolower($adminDisplayName . ' ' . $adminId)); ?>">
-								<input type="checkbox" name="app_admin_user_ids[]" value="<?php p($adminId); ?>" <?php echo $isSelected ? 'checked' : ''; ?>>
-								<span class="access-groups-item__label"><?php p($adminDisplayName); ?></span>
-								<span class="access-groups-item__meta"><?php p($adminId); ?></span>
-							</label>
-						<?php endforeach; ?>
-					</div>
-					<p id="crm-app-admins-help" class="form-help"><?php p($l->t('Only Nextcloud admins are listed. Empty list means every Nextcloud admin is a CustomerCheck app administrator.')); ?></p>
+					<p id="crm-app-admins-help" class="form-help"><?php p($l->t('Nextcloud admins always keep CustomerCheck admin powers. Add any colleague here to delegate app administration without making them a Nextcloud admin. Search by name or login, then pick — never type a raw user id.')); ?></p>
 				</div>
 
 				<div class="form-group">
-					<label class="crm-switch">
-						<input type="checkbox" id="crm-access-restriction" name="access_restriction_enabled" value="1" <?php echo $restrictionOn ? 'checked' : ''; ?>>
-						<span><?php p($l->t('Restrict access')); ?></span>
-					</label>
-					<p class="form-help"><?php p($l->t('When on (recommended), only allowlisted users and groups plus app administrators may open CustomerCheck.')); ?></p>
+					<label for="crm-access-mode" class="form-label"><?php p($l->t('Access mode')); ?></label>
+					<select id="crm-access-mode" name="access_mode" class="form-input crm-input" aria-describedby="crm-access-mode-help">
+						<option value="restricted" <?php echo $restrictionOn ? 'selected' : ''; ?>><?php p($l->t('Restricted — only allow-listed users and groups can open the app')); ?></option>
+						<option value="open" <?php echo !$restrictionOn ? 'selected' : ''; ?>><?php p($l->t('Open — every logged-in user can open the app')); ?></option>
+					</select>
+					<p id="crm-access-mode-help" class="form-help"><?php p($l->t('Open shows CustomerCheck in the menu for everyone. Restricted hides it unless the person is allow-listed below. App administrators always pass.')); ?></p>
 					<label class="crm-switch crm-switch--danger" id="crm-open-access-confirm-wrap" <?php if ($restrictionOn): ?>hidden<?php endif; ?>>
 						<input type="checkbox" id="crm-confirm-open-access" name="confirmOpenAccess" value="1">
-						<span><?php p($l->t('Allow all logged-in users — not recommended')); ?></span>
+						<span><?php p($l->t('I understand — allow all logged-in users to see sales data')); ?></span>
 					</label>
 				</div>
 
@@ -81,7 +75,7 @@ $restrictionOn = !empty($settings['access_restriction_enabled']);
 							</li>
 						<?php endforeach; ?>
 					</ul>
-					<p class="form-help"><?php p($l->t('Sales colleagues who are not in a dedicated group yet can be allowlisted by user id.')); ?></p>
+					<p class="form-help"><?php p($l->t('Search by name or login, then pick a colleague. Never type a raw user id.')); ?></p>
 				</div>
 
 				<div class="form-group">

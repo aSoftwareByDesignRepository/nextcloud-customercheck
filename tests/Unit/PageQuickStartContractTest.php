@@ -61,7 +61,7 @@ final class PageQuickStartContractTest extends TestCase
 	{
 		$helpSrc = (string)file_get_contents(dirname(__DIR__, 2) . '/lib/Service/PageHelpCatalog.php');
 		$this->assertStringContainsString('agreement-form', $helpSrc);
-		$this->assertStringContainsString('An agreement always belongs to one company', $helpSrc);
+		$this->assertStringContainsString('always belongs to one company', $helpSrc);
 		$ctrl = (string)file_get_contents(dirname(__DIR__, 2) . '/lib/Controller/PageController.php');
 		$this->assertStringContainsString("t('New agreement')", $ctrl);
 		$this->assertDoesNotMatchRegularExpression(

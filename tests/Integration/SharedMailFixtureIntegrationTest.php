@@ -65,4 +65,38 @@ final class SharedMailFixtureIntegrationTest extends TestCase
 		$this->assertSame('ok', MailMatchLogic::nextAuthStatus(2));
 		$this->assertSame('error', MailMatchLogic::nextAuthStatus(3));
 	}
+
+	public function testAmbiguousDomainDoesNotAutoMatch(): void
+	{
+		$persons = [
+			['companyId' => 1, 'email' => 'a@shared.example'],
+			['companyId' => 2, 'email' => 'b@shared.example'],
+		];
+		$r = MailMatchLogic::match(null, 'ceo@shared.example', $persons);
+		$this->assertSame('unmatched', $r['how']);
+		$this->assertNull($r['companyId']);
+	}
+
+	public function testExplicitCompanyIdWinsOverPersonEmail(): void
+	{
+		$persons = [['companyId' => 42, 'email' => 'ada@acme.example']];
+		$r = MailMatchLogic::match(99, 'ada@acme.example', $persons);
+		$this->assertSame('manual', $r['how']);
+		$this->assertSame(99, $r['companyId']);
+	}
+
+	public function testSmtpClientRejectsMissingHost(): void
+	{
+		$this->expectException(ValidationException::class);
+		SharedMailboxSmtpClient::assertConfig([
+			'host' => '',
+			'port' => 1025,
+			'username' => 'shared',
+			'password' => 'secret',
+			'from' => 'shared@example.test',
+			'to' => 'ada@example.test',
+			'subject' => 'Hi',
+			'body' => 'Hello',
+		]);
+	}
 }

@@ -26,6 +26,7 @@ $roleHelp = match ($roleSlug) {
 $ctaLabel = static function (string $cta) use ($l): string {
 	return match ($cta) {
 		'done' => $l->t('Done'),
+		'claim' => $l->t('Claim'),
 		'triage' => $l->t('Triage'),
 		'coach' => $l->t('Coach'),
 		default => $l->t('Open'),
@@ -70,11 +71,12 @@ $renderTodayTable = static function (array $items, bool $allowDone) use ($l, $ur
 				$due = trim((string)($item['dueDate'] ?? ''));
 				$openHref = $resolveOpenHref($item);
 				$kind = trim((string)($item['kind'] ?? ''));
+				$kindLabel = trim((string)($item['kindLabel'] ?? ''));
 				?>
 				<tr class="crm-today-row">
 					<td data-label="<?php p($l->t('What')); ?>">
-						<?php if ($kind !== ''): ?>
-							<span class="crm-badge crm-badge--neutral"><?php p($kind); ?></span>
+						<?php if ($kindLabel !== ''): ?>
+							<span class="crm-badge crm-badge--neutral"><?php p($kindLabel); ?></span>
 						<?php endif; ?>
 						<span class="crm-today-what"><?php p($why !== '' ? $why : $l->t('Open item')); ?></span>
 						<?php
@@ -106,6 +108,14 @@ $renderTodayTable = static function (array $items, bool $allowDone) use ($l, $ur
 									data-crm-complete-activity="<?php p($activityId); ?>"
 									data-updated-at="<?php p($item['updatedAt'] ?? ''); ?>">
 									<?php p($l->t('Done')); ?>
+								</button>
+							<?php elseif ($cta === 'claim' && $allowDone && (int)($item['dealId'] ?? 0) > 0): ?>
+								<button type="button"
+									class="crm-btn crm-btn--sm crm-btn--primary"
+									data-crm-claim-deal="<?php p((int)$item['dealId']); ?>"
+									data-updated-at="<?php p($item['updatedAt'] ?? ''); ?>"
+									<?php if ($openHref !== ''): ?>data-open-href="<?php p($openHref); ?>"<?php endif; ?>>
+									<?php p($l->t('Claim')); ?>
 								</button>
 							<?php elseif ($openHref !== ''): ?>
 								<a class="crm-btn crm-btn--sm crm-btn--primary" href="<?php p($openHref); ?>">
@@ -177,8 +187,10 @@ $renderTodayTable = static function (array $items, bool $allowDone) use ($l, $ur
 					<h2 id="crm-today-empty-title" class="crm-empty-state__title"><?php p($l->t('Start with your first customer')); ?></h2>
 					<p class="crm-empty-state__text"><?php p($l->t('Import a list or add a company. Today then shows renewals and follow-ups.')); ?></p>
 					<div class="crm-empty-state__actions">
+						<?php if ($canWrite): ?>
 						<a class="crm-btn crm-btn--primary crm-btn--lg" href="<?php p($urls['companyNew'] ?? '#'); ?>"><?php p($l->t('Add company')); ?></a>
 						<a class="crm-btn crm-btn--secondary" href="<?php p($urls['import'] ?? '#'); ?>"><?php p($l->t('Import')); ?></a>
+						<?php endif; ?>
 					</div>
 				</div>
 			</div>

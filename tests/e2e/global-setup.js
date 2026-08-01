@@ -40,7 +40,7 @@ async function loginOnce(page, { username, password, baseURL }) {
     .or(page.getByRole('button', { name: /^log in$|^anmelden$/i }))
     .first();
   await submit.click();
-  await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 60000 });
+  await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 60000, waitUntil: 'domcontentloaded' });
 }
 
 export default async function globalSetup(config) {

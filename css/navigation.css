@@ -64,6 +64,32 @@
     list-style: none;
 }
 
+/* Plain-language job groups — reduce flat 12-item cognitive load */
+#app-navigation .crm-nav__group {
+    list-style: none;
+    margin: 0.85rem 0 0.2rem;
+    padding: 0 var(--crm-nav-padding-inline, 1.25rem);
+    pointer-events: none;
+}
+#app-navigation .crm-nav__group:first-child {
+    margin-top: 0;
+}
+#app-navigation .crm-nav__group-label {
+    display: block;
+    margin-left: 10px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--color-text-maxcontrast, #767676);
+    line-height: 1.3;
+}
+#app-navigation .nav-menu > .crm-nav__group:hover,
+#app-navigation .nav-menu > .crm-nav__group:focus-within {
+    background: transparent;
+    box-shadow: none;
+}
+
 /* Navigation Menu - scrollable so Manager stays reachable when Verwaltung is expanded */
 .nav-menu {
     margin: 0;

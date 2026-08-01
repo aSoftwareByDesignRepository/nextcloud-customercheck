@@ -19,6 +19,7 @@ use OCA\CustomerCheck\Service\RateLimitService;
 use OCA\CustomerCheck\Service\SettingsService;
 use OCA\CustomerCheck\Service\SlugService;
 use OCA\CustomerCheck\Service\TimelineService;
+use OCA\CustomerCheck\Service\WorkspaceService;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\IL10N;
 use PHPUnit\Framework\TestCase;
@@ -68,6 +69,14 @@ class LeadWebhookServiceTest extends TestCase
 		});
 		$timeline = $this->createMock(TimelineService::class);
 		$notifications = $this->createMock(NotificationService::class);
+		$workspaces = $this->createMock(WorkspaceService::class);
+		$workspaces->method('getSettings')->willReturn([
+			'wipLimit' => 5,
+			'leadSlaHours' => 48,
+			'stuckChaseDays' => 3,
+			'mailRetentionDays' => 365,
+			'digestEnabled' => true,
+		]);
 		$time = $this->createMock(ITimeFactory::class);
 		$time->method('getDateTime')->willReturn(new \DateTime('2026-07-20 12:00:00'));
 		$l10n = $this->createMock(IL10N::class);
@@ -78,6 +87,7 @@ class LeadWebhookServiceTest extends TestCase
 			$company->setId(42);
 			$company->setSlug('lead-co');
 			$company->setName('Lead Co');
+			$company->setWorkspaceId(7);
 		}
 		$companies->method('create')->willReturn($company);
 		$companies->method('get')->willReturn($company);
@@ -86,6 +96,7 @@ class LeadWebhookServiceTest extends TestCase
 			$settings,
 			$rate,
 			$companies,
+			$workspaces,
 			$slug,
 			$personService,
 			$persons,
@@ -149,7 +160,67 @@ class LeadWebhookServiceTest extends TestCase
 
 	public function testHappyPathCreatesCompanyDealActivity(): void
 	{
-		$s = $this->service();
+		$inserted = null;
+		$settings = $this->createMock(SettingsService::class);
+		$settings->method('tokenMatches')->willReturn(true);
+		$rate = $this->createMock(RateLimitService::class);
+		$rate->method('allow')->willReturn(true);
+		$companies = $this->createMock(CompanyService::class);
+		$slug = $this->createMock(SlugService::class);
+		$slug->method('suggestUnique')->willReturn('lead-co');
+		$persons = $this->createMock(PersonMapper::class);
+		$persons->method('findByEmail')->willReturn([]);
+		$personService = $this->createMock(PersonService::class);
+		$personService->method('create')->willReturn(new Person());
+		$deals = $this->createMock(DealMapper::class);
+		$deals->method('findOpenByCompany')->willReturn([]);
+		$deals->method('insert')->willReturnCallback(static function ($d) use (&$inserted) {
+			$d->setId(55);
+			$inserted = $d;
+			return $d;
+		});
+		$activities = $this->createMock(ActivityMapper::class);
+		$activities->method('insert')->willReturnCallback(function ($a) {
+			$a->setId(77);
+			$this->insertedActivities[] = $a;
+			return $a;
+		});
+		$workspaces = $this->createMock(WorkspaceService::class);
+		$workspaces->expects($this->once())->method('getSettings')->with(7)->willReturn([
+			'wipLimit' => 5,
+			'leadSlaHours' => 48,
+			'stuckChaseDays' => 3,
+			'mailRetentionDays' => 365,
+			'digestEnabled' => true,
+		]);
+		$time = $this->createMock(ITimeFactory::class);
+		$time->method('getDateTime')->willReturn(new \DateTime('2026-07-20 12:00:00'));
+		$l10n = $this->createMock(IL10N::class);
+		$l10n->method('t')->willReturnCallback(static fn ($s) => $s);
+
+		$company = new Company();
+		$company->setId(42);
+		$company->setSlug('lead-co');
+		$company->setName('Lead Co');
+		$company->setWorkspaceId(7);
+		$companies->method('create')->willReturn($company);
+		$companies->method('get')->willReturn($company);
+
+		$s = new LeadWebhookService(
+			$settings,
+			$rate,
+			$companies,
+			$workspaces,
+			$slug,
+			$personService,
+			$persons,
+			$deals,
+			$activities,
+			$this->createMock(TimelineService::class),
+			$this->createMock(NotificationService::class),
+			$time,
+			$l10n,
+		);
 		$result = $s->handle('tok', '1.2.3.4', [
 			'companyName' => 'Lead Co',
 			'email' => 'lead@example.com',
@@ -161,6 +232,9 @@ class LeadWebhookServiceTest extends TestCase
 		$this->assertSame('lead-co', $result['slug']);
 		$this->assertCount(1, $this->insertedActivities);
 		$this->assertSame('email', (string)$this->insertedActivities[0]->getType());
+		$this->assertNotNull($inserted);
+		$this->assertNull($inserted->getOwnerUserId());
+		$this->assertSame('2026-07-22 12:00:00', $inserted->getLeadSlaDueAt()->format('Y-m-d H:i:s'));
 	}
 
 	public function testPhoneOnlyCreatesCallActivity(): void
@@ -186,12 +260,14 @@ class LeadWebhookServiceTest extends TestCase
 		$archived->setId(11);
 		$archived->setSlug('old-co');
 		$archived->setName('Old Co');
+		$archived->setWorkspaceId(1);
 		$archived->setArchivedAt(new \DateTime('2026-01-01'));
 
 		$fresh = new Company();
 		$fresh->setId(99);
 		$fresh->setSlug('fresh-co');
 		$fresh->setName('Fresh Co');
+		$fresh->setWorkspaceId(1);
 
 		$person = new Person();
 		$person->setId(3);
@@ -199,7 +275,7 @@ class LeadWebhookServiceTest extends TestCase
 		$person->setEmail('lead@example.com');
 
 		$persons = $this->createMock(PersonMapper::class);
-		$persons->method('findByEmail')->willReturn([$person]);
+		$persons->method('findByEmail')->with('lead@example.com', 1)->willReturn([$person]);
 
 		$companies = $this->createMock(CompanyService::class);
 		$companies->expects($this->once())->method('get')->with(11)->willReturn($archived);
@@ -225,10 +301,19 @@ class LeadWebhookServiceTest extends TestCase
 		$l10n = $this->createMock(IL10N::class);
 		$l10n->method('t')->willReturnCallback(static fn ($s) => $s);
 
+		$defaultWs = new \OCA\CustomerCheck\Db\Workspace();
+		$defaultWs->setId(1);
+		$defaultWs->setSlug('default');
+		$defaultWs->setName('Organisation');
+		$workspaces = $this->createMock(WorkspaceService::class);
+		$workspaces->method('findDefault')->willReturn($defaultWs);
+		$workspaces->method('getSettings')->willReturn(['leadSlaHours' => 24]);
+
 		$svc = new LeadWebhookService(
 			$settings,
 			$rate,
 			$companies,
+			$workspaces,
 			$slug,
 			$personService,
 			$persons,

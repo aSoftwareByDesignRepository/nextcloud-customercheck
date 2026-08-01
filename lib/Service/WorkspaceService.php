@@ -13,6 +13,7 @@ use OCA\CustomerCheck\Exception\ValidationException;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\IDBConnection;
 use OCP\IL10N;
+use OCP\IUserManager;
 
 /**
  * Workspace CRUD + membership — product §6.
@@ -26,6 +27,7 @@ class WorkspaceService
 		private readonly IDBConnection $db,
 		private readonly ITimeFactory $timeFactory,
 		private readonly IL10N $l10n,
+		private readonly IUserManager $userManager,
 	) {
 	}
 
@@ -42,6 +44,23 @@ class WorkspaceService
 	public function listAll(): array
 	{
 		return $this->workspaces->findAll();
+	}
+
+	public function findDefault(): ?Workspace
+	{
+		return $this->workspaces->findDefault();
+	}
+
+	public function findById(int $id): ?Workspace
+	{
+		if ($id <= 0) {
+			return null;
+		}
+		try {
+			return $this->workspaces->findById($id);
+		} catch (\OCP\AppFramework\Db\DoesNotExistException) {
+			return null;
+		}
 	}
 
 	public function create(string $name, string $slug, string $actor): Workspace
@@ -79,10 +98,15 @@ class WorkspaceService
 
 	public function addMember(int $workspaceId, string $userId, string $role, bool $canMailSend, string $actor): WorkspaceMember
 	{
-		$role = WorkspaceCapability::normalizeRole($role);
-		if ($this->members->countByWorkspace($workspaceId) >= Constants::WS_MAX_MEMBERS) {
-			throw ValidationException::field(Constants::ERR_WS_MEMBER_LIMIT, 'members', $this->l10n->t('Member limit reached for this workspace.'));
+		$userId = trim($userId);
+		if ($userId === '' || !$this->userManager->userExists($userId)) {
+			throw ValidationException::field(
+				Constants::ERR_VALIDATION,
+				'userId',
+				$this->l10n->t('Unknown Nextcloud user. Search the directory and pick a colleague.'),
+			);
 		}
+		$role = WorkspaceCapability::normalizeRole($role);
 		$existing = $this->members->findMembershipOrNull($workspaceId, $userId);
 		$now = $this->timeFactory->getDateTime();
 		if ($existing !== null) {
@@ -90,6 +114,9 @@ class WorkspaceService
 			$existing->setCanMailSend($canMailSend ? 1 : 0);
 			$existing->setUpdatedAt($now);
 			return $this->members->update($existing);
+		}
+		if ($this->members->countByWorkspace($workspaceId) >= Constants::WS_MAX_MEMBERS) {
+			throw ValidationException::field(Constants::ERR_WS_MEMBER_LIMIT, 'members', $this->l10n->t('Member limit reached for this workspace.'));
 		}
 		$m = new WorkspaceMember();
 		$m->setWorkspaceId($workspaceId);
@@ -157,7 +184,7 @@ class WorkspaceService
 			'wipLimit' => BriefLogic::clampWipLimit((int)($row['wip_limit'] ?? Constants::WIP_LIMIT_DEFAULT)),
 			'leadSlaHours' => max(1, (int)($row['lead_sla_hours'] ?? Constants::LEAD_SLA_HOURS_DEFAULT)),
 			'stuckChaseDays' => max(1, (int)($row['stuck_chase_days'] ?? 3)),
-			'mailRetentionDays' => max(30, (int)($row['mail_retention_days'] ?? 365)),
+			'mailRetentionDays' => max(Constants::MAIL_RETENTION_DAYS_MIN, (int)($row['mail_retention_days'] ?? 365)),
 			'digestEnabled' => (int)($row['digest_enabled'] ?? 1) === 1,
 		];
 	}
@@ -169,7 +196,9 @@ class WorkspaceService
 		$wip = isset($data['wipLimit']) ? BriefLogic::clampWipLimit((int)$data['wipLimit']) : $current['wipLimit'];
 		$sla = isset($data['leadSlaHours']) ? max(1, (int)$data['leadSlaHours']) : $current['leadSlaHours'];
 		$stuck = isset($data['stuckChaseDays']) ? max(1, (int)$data['stuckChaseDays']) : $current['stuckChaseDays'];
-		$ret = isset($data['mailRetentionDays']) ? max(30, (int)$data['mailRetentionDays']) : $current['mailRetentionDays'];
+		$ret = isset($data['mailRetentionDays'])
+			? max(Constants::MAIL_RETENTION_DAYS_MIN, (int)$data['mailRetentionDays'])
+			: $current['mailRetentionDays'];
 		$digest = array_key_exists('digestEnabled', $data) ? (!empty($data['digestEnabled']) ? 1 : 0) : ($current['digestEnabled'] ? 1 : 0);
 
 		$qb = $this->db->getQueryBuilder();

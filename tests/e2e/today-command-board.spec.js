@@ -1,7 +1,7 @@
 // @ts-check
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { login, credsFromEnv } from './helpers/auth.js';
+import { login, credsFromEnv, gotoCrm } from './helpers/auth.js';
 
 /**
  * Today Command Board — suite tables, role dashboard, jump chips, a11y.
@@ -12,8 +12,7 @@ test.describe('Today command board UX', () => {
   test('renders role dashboard, jump chips, and suite tables', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await login(page, credsFromEnv('ADMIN'));
-    await page.goto('/apps/customercheck/today');
-    await page.waitForSelector('#crm-main-content', { timeout: 30000 });
+    await gotoCrm(page, '/apps/customercheck/today');
 
     const firstRun = page.locator('.crm-empty-state__actions a', { hasText: /Add company/i });
     const calm = page.locator('.crm-callout--success');
@@ -49,15 +48,16 @@ test.describe('Today command board UX', () => {
       await expect(longLink).toHaveCount(0);
     }
 
-    // Admin / manager sees Team in nav
-    await expect(page.locator('#app-navigation a', { hasText: /^Team$/ })).toBeVisible();
+    // Admin / manager sees Team in nav (may sit below the fold in a scrollable sidebar).
+    const teamLink = page.locator('#app-navigation').getByRole('link', { name: 'Team' });
+    await teamLink.scrollIntoViewIfNeeded();
+    await expect(teamLink).toBeVisible();
   });
 
   test('today passes axe serious/critical and keeps touch targets', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await login(page, credsFromEnv('ADMIN'));
-    await page.goto('/apps/customercheck/today');
-    await page.waitForSelector('#crm-main-content', { timeout: 30000 });
+    await gotoCrm(page, '/apps/customercheck/today');
 
     const results = await new AxeBuilder({ page })
       .include('#crm-main-content')
@@ -67,8 +67,7 @@ test.describe('Today command board UX', () => {
     expect(serious, JSON.stringify(serious, null, 2)).toEqual([]);
 
     await page.setViewportSize({ width: 375, height: 812 });
-    await page.goto('/apps/customercheck/today');
-    await page.waitForSelector('#crm-main-content', { timeout: 30000 });
+    await gotoCrm(page, '/apps/customercheck/today');
     const overflow = await page.locator('#crm-main-content').evaluate((el) => el.scrollWidth > el.clientWidth + 2);
     expect(overflow).toBeFalsy();
 
@@ -91,8 +90,7 @@ test.describe('Today command board UX', () => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await login(page, credsFromEnv('ADMIN'));
 
-    await page.goto('/apps/customercheck/companies/new');
-    await page.waitForSelector('#crm-company-form', { timeout: 30000 });
+    await gotoCrm(page, '/apps/customercheck/companies/new', { ready: '#crm-company-form' });
     const suffix = Date.now().toString(36);
     await page.locator('#crm-company-name').fill(`Today Done ${suffix}`);
     await page.locator('#crm-company-form').evaluate((form) => {
@@ -110,8 +108,7 @@ test.describe('Today command board UX', () => {
     await form.locator('button[type="submit"]').click();
     await page.waitForLoadState('networkidle');
 
-    await page.goto('/apps/customercheck/today');
-    await page.waitForSelector('#crm-main-content', { timeout: 30000 });
+    await gotoCrm(page, '/apps/customercheck/today');
     const doneBtn = page.locator('[data-crm-complete-activity]').first();
     await expect(doneBtn).toBeVisible({ timeout: 15000 });
     await doneBtn.click();

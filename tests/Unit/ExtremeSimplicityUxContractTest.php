@@ -11,6 +11,53 @@ use PHPUnit\Framework\TestCase;
  */
 final class ExtremeSimplicityUxContractTest extends TestCase
 {
+	public function testBriefChromeUsesPlainLanguageNotWipJargon(): void
+	{
+		$js = (string)file_get_contents(dirname(__DIR__, 2) . '/js/pages/persona.js');
+		$this->assertStringContainsString("t('This week')", $js);
+		$this->assertStringContainsString("t('promises')", $js);
+		$this->assertStringContainsString("t('Money customers still owe')", $js);
+		$this->assertStringContainsString("t('Your week is full. Finish or drop a promise first.')", $js);
+		$this->assertStringNotContainsString("t('Overdue AR')", $js);
+		$this->assertStringNotContainsString("t('WIP')) + ' ' + (data.wipUsed", $js);
+		$this->assertStringContainsString("t('New lead waiting too long')", $js);
+		$this->assertStringNotContainsString("t('Lead SLA overdue')", $js);
+	}
+
+	public function testPipelineTableIsLeanAndEditDealNotChase(): void
+	{
+		$html = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/pipeline.php');
+		$this->assertStringContainsString("\$l->t('Edit deal')", $html);
+		$this->assertStringNotContainsString("\$l->t('Edit chase')", $html);
+		$this->assertStringContainsString('Tap New deal to add one', $html);
+		$this->assertStringNotContainsString('website lead webhook', $html);
+		$this->assertStringContainsString("\$l->t('More')", $html);
+		$this->assertLessThan(
+			10,
+			substr_count($html, '<th scope="col">'),
+			'Pipeline table must stay lean (granny column budget)'
+		);
+		$js = (string)file_get_contents(dirname(__DIR__, 2) . '/js/pages/pipeline.js');
+		$this->assertStringContainsString("t('Edit deal')", $js);
+		$this->assertStringContainsString("t('More options')", $js);
+		$this->assertStringNotContainsString("t('Edit chase')", $js);
+	}
+
+	public function testCompanyTalkedCallTomorrowIsOneClick(): void
+	{
+		$detail = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/company-detail.php');
+		$this->assertStringContainsString("\$l->t('Call tomorrow')", $detail);
+		$this->assertStringNotContainsString("\$l->t('Call back')", $detail);
+		$this->assertStringContainsString('What you told the customer.', $detail);
+		$this->assertStringNotContainsString('not internal weekly WIP', $detail);
+		$js = (string)file_get_contents(dirname(__DIR__, 2) . '/js/pages/company-detail.js');
+		$this->assertStringContainsString("t('Call tomorrow')", $js);
+		$this->assertStringContainsString("t('No next steps yet.')", $js);
+		$this->assertStringNotContainsString("t('No MAP steps yet.')", $js);
+		$this->assertStringContainsString("t('High')", $js);
+		$this->assertStringNotContainsString("promptFields(t('Schedule callback')", $js);
+	}
+
 	public function testCompanyFormDemotesSlugToAdvanced(): void
 	{
 		$html = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/company-form.php');
@@ -22,6 +69,39 @@ final class ExtremeSimplicityUxContractTest extends TestCase
 		);
 		$this->assertStringContainsString('Just enter a name', $html);
 		$this->assertStringContainsString('companyStatus', $html);
+		$this->assertStringContainsString('crm-company-owner', $html);
+		$this->assertStringContainsString('accountOwnerUserId', $html);
+		// Status / owner / language / notes live under Advanced on create (name-first).
+		$namePos = (int)strpos($html, 'crm-company-name');
+		$advancedPos = (int)strpos($html, 'id="crm-company-advanced"');
+		$statusPos = (int)strpos($html, 'crm-company-status');
+		$this->assertGreaterThan($namePos, $advancedPos);
+		$this->assertGreaterThan($advancedPos, $statusPos);
+	}
+
+	public function testCompanyDetailOneLogEmailAndSimplePeople(): void
+	{
+		$detail = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/company-detail.php');
+		$emails = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/common/crm-emails-section.php');
+		$this->assertSame(1, substr_count($detail, 'id="crm-log-email"') + substr_count($emails, 'id="crm-log-email"'));
+		$this->assertStringContainsString('id="crm-log-email"', $detail);
+		$this->assertStringNotContainsString('id="crm-log-email"', $emails);
+		$this->assertStringContainsString('crm-card--collapsible', $detail);
+		$this->assertStringContainsString('next steps for this account', $detail);
+		$this->assertStringNotContainsString('MAP steps', $detail);
+		$this->assertStringContainsString('crm-persons-table', $detail);
+		$this->assertStringNotContainsString("\$l->t('Phone')); ?></th>", $detail);
+		$this->assertStringNotContainsString("\$l->t('Buying role')); ?></th>", $detail);
+		$this->assertStringNotContainsString("\$l->t('Address book')); ?></th>", $detail);
+	}
+
+	public function testBriefVerifyDefaultsEvidenceAndPrimaryDone(): void
+	{
+		$js = (string)file_get_contents(dirname(__DIR__, 2) . '/js/pages/persona.js');
+		$this->assertStringContainsString('value="activity_done" selected', $js);
+		$this->assertStringContainsString('crm-btn--primary" data-verify="\' + id + \'" data-action="done"', $js);
+		$this->assertStringContainsString('crm-brief-verify__more', $js);
+		$this->assertStringContainsString('crm-brief-verify__note', $js);
 	}
 
 	public function testCompaniesExposeOneClickQuickFilters(): void
@@ -154,7 +234,7 @@ final class ExtremeSimplicityUxContractTest extends TestCase
 		$this->assertStringContainsString('commitmentStatusLabel', $js);
 		$this->assertStringContainsString('commitmentKindLabel', $js);
 		$this->assertStringContainsString('crm-brief-add', $js);
-		$this->assertStringContainsString("t('Add a promise')", $js);
+		$this->assertStringContainsString("t('Add a commitment')", $js);
 		$this->assertStringContainsString("t('What will you finish?')", $js);
 		$this->assertStringContainsString("t('Add to this week')", $js);
 		$this->assertStringContainsString('data-crm-brief-suggest', $js);
@@ -251,6 +331,6 @@ final class ExtremeSimplicityUxContractTest extends TestCase
 		$this->assertStringContainsString('class="crm-choice"', $import);
 		$this->assertStringContainsString('type="radio"', $import);
 		$info = (string)file_get_contents(dirname(__DIR__, 2) . '/appinfo/info.xml');
-		$this->assertMatchesRegularExpression('/<version>1\.5\.1[6-9]</', $info, 'Bump app version when shipping CSS cache-sensitive choice alignment');
+		$this->assertMatchesRegularExpression('/<version>1\.5\.(1[6-9]|[2-9]\d)</', $info, 'Bump app version when shipping CSS cache-sensitive choice alignment');
 	}
 }

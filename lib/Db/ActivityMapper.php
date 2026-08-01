@@ -35,6 +35,26 @@ class ActivityMapper extends QBMapper
 	}
 
 	/**
+	 * Write-lock the activity row. Callers MUST already be inside a DB transaction.
+	 */
+	public function lockRow(int $id): bool
+	{
+		if ($id <= 0) {
+			return false;
+		}
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('id')
+			->from($this->getTableName())
+			->where($qb->expr()->eq('id', $qb->createNamedParameter($id, IQueryBuilder::PARAM_INT)))
+			->forUpdate();
+		$result = $qb->executeQuery();
+		$row = $result->fetch();
+		$result->closeCursor();
+
+		return $row !== false;
+	}
+
+	/**
 	 * @param array{companyId?: int, dealId?: int, type?: string, createdBy?: string, openOnly?: bool, doneOnly?: bool, dueBefore?: \DateTimeInterface} $filters
 	 * @return Activity[]
 	 */
@@ -78,7 +98,7 @@ class ActivityMapper extends QBMapper
 	 *
 	 * @return Activity[]
 	 */
-	public function findOpenDueUpTo(\DateTimeInterface $date, int $limit = 500): array
+	public function findOpenDueUpTo(\DateTimeInterface $date, int $limit = 500, ?int $workspaceId = null): array
 	{
 		$qb = $this->db->getQueryBuilder();
 		$qb->select('*')
@@ -91,6 +111,9 @@ class ActivityMapper extends QBMapper
 			->setMaxResults(max(1, min(5000, $limit)));
 		// Archived companies stop generating open work (PSD §4.1).
 		$this->excludeArchivedCompanies($qb);
+		if ($workspaceId !== null && $workspaceId > 0) {
+			$this->restrictToWorkspace($qb, $workspaceId);
+		}
 
 		return $this->findEntities($qb);
 	}
@@ -138,6 +161,55 @@ class ActivityMapper extends QBMapper
 		$qb = $this->db->getQueryBuilder();
 		$qb->delete($this->getTableName())
 			->where($qb->expr()->eq('company_id', $qb->createNamedParameter($companyId, IQueryBuilder::PARAM_INT)));
+
+		return $qb->executeStatement();
+	}
+
+	/**
+	 * CAS done toggle — returns 1 when the row still matches expected updated_at.
+	 */
+	public function updateDoneCas(
+		int $id,
+		\DateTimeInterface $expectedUpdatedAt,
+		?\DateTimeInterface $doneAt,
+		\DateTimeInterface $now,
+	): int {
+		if ($id <= 0) {
+			return 0;
+		}
+		$stamp = $now->format('Y-m-d H:i:s');
+		$expected = $expectedUpdatedAt->format('Y-m-d H:i:s');
+		$qb = $this->db->getQueryBuilder();
+		$qb->update($this->getTableName())
+			->set('done_at', $doneAt !== null
+				? $qb->createNamedParameter($doneAt->format('Y-m-d H:i:s'))
+				: $qb->createNamedParameter(null, IQueryBuilder::PARAM_NULL))
+			->set('updated_at', $qb->createNamedParameter($stamp))
+			->where($qb->expr()->eq('id', $qb->createNamedParameter($id, IQueryBuilder::PARAM_INT)))
+			->andWhere($qb->expr()->eq('updated_at', $qb->createNamedParameter($expected)));
+
+		return $qb->executeStatement();
+	}
+
+	/**
+	 * CAS claim of todo_uri — returns 1 when the row was still unpushed.
+	 */
+	public function claimTodoUri(int $id, string $todoUri, \DateTimeInterface $now): int
+	{
+		$todoUri = trim($todoUri);
+		if ($id <= 0 || $todoUri === '') {
+			return 0;
+		}
+		$stamp = $now->format('Y-m-d H:i:s');
+		$qb = $this->db->getQueryBuilder();
+		$qb->update($this->getTableName())
+			->set('todo_uri', $qb->createNamedParameter($todoUri))
+			->set('updated_at', $qb->createNamedParameter($stamp))
+			->where($qb->expr()->eq('id', $qb->createNamedParameter($id, IQueryBuilder::PARAM_INT)))
+			->andWhere($qb->expr()->orX(
+				$qb->expr()->isNull('todo_uri'),
+				$qb->expr()->eq('todo_uri', $qb->createNamedParameter('')),
+			));
 
 		return $qb->executeStatement();
 	}

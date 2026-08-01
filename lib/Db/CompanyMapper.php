@@ -106,13 +106,23 @@ class CompanyMapper extends QBMapper
 		return $count;
 	}
 
-	/** @return Company[] */
-	public function findAllActive(int $limit = 5000): array
+	/**
+	 * Active companies in one workspace. Fail closed without a workspace —
+	 * never return every book’s customers.
+	 *
+	 * @return Company[]
+	 */
+	public function findAllActive(int $workspaceId, int $limit = 5000): array
 	{
+		if ($workspaceId <= 0) {
+			return [];
+		}
+
 		$qb = $this->db->getQueryBuilder();
 		$qb->select('*')
 			->from($this->getTableName())
 			->where($qb->expr()->isNull('archived_at'))
+			->andWhere($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, IQueryBuilder::PARAM_INT)))
 			->orderBy('id', 'ASC')
 			->setMaxResults($this->clampLimit($limit));
 
@@ -195,7 +205,7 @@ class CompanyMapper extends QBMapper
 	}
 
 	/**
-	 * @param array{status?: string, search?: string, archived?: bool, workspaceId?: int} $filters
+	 * @param array{status?: string, search?: string, archived?: bool, workspaceId?: int, workspaceIds?: list<int>} $filters
 	 */
 	private function applyFilters(IQueryBuilder $qb, array $filters): void
 	{
@@ -211,7 +221,25 @@ class CompanyMapper extends QBMapper
 		}
 
 		$workspaceId = (int)($filters['workspaceId'] ?? 0);
-		if ($workspaceId > 0) {
+		$workspaceIds = $filters['workspaceIds'] ?? null;
+		if (is_array($workspaceIds)) {
+			$ids = [];
+			foreach ($workspaceIds as $id) {
+				$id = (int)$id;
+				if ($id > 0) {
+					$ids[$id] = $id;
+				}
+			}
+			$ids = array_values($ids);
+			if ($ids === []) {
+				// Fail closed: empty allow-list must not mean “all books”.
+				$qb->andWhere($qb->expr()->eq($qb->createNamedParameter(1), $qb->createNamedParameter(0)));
+			} elseif (count($ids) === 1) {
+				$qb->andWhere($qb->expr()->eq('workspace_id', $qb->createNamedParameter($ids[0], IQueryBuilder::PARAM_INT)));
+			} else {
+				$qb->andWhere($qb->expr()->in('workspace_id', $qb->createNamedParameter($ids, IQueryBuilder::PARAM_INT_ARRAY)));
+			}
+		} elseif ($workspaceId > 0) {
 			$qb->andWhere($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, IQueryBuilder::PARAM_INT)));
 		}
 

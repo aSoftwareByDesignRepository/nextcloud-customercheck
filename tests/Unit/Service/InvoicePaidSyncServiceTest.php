@@ -6,6 +6,8 @@ namespace OCA\CustomerCheck\Tests\Unit\Service;
 use OCA\CustomerCheck\Db\ActivityMapper;
 use OCA\CustomerCheck\Db\Agreement;
 use OCA\CustomerCheck\Db\AgreementMapper;
+use OCA\CustomerCheck\Db\Company;
+use OCA\CustomerCheck\Db\CompanyMapper;
 use OCA\CustomerCheck\Db\PayWatchMapper;
 use OCA\CustomerCheck\Service\ActivityService;
 use OCA\CustomerCheck\Service\FacadeProbeService;
@@ -30,6 +32,7 @@ class InvoicePaidSyncServiceTest extends TestCase
 			$this->createMock(ActivityService::class),
 			$this->createMock(TimelineService::class),
 			$this->createMock(NotificationService::class),
+			$this->createMock(CompanyMapper::class),
 			$this->createMock(FacadeProbeService::class),
 			$this->createMock(IDBConnection::class),
 			$this->createMock(ITimeFactory::class),
@@ -83,7 +86,21 @@ class InvoicePaidSyncServiceTest extends TestCase
 		);
 
 		$notifications = $this->createMock(NotificationService::class);
-		$notifications->expects($this->once())->method('notifyCrmUsers');
+		$notifications->expects($this->once())->method('notifyWorkspaceUsers')->with(
+			7,
+			$this->anything(),
+			'invoice_ref',
+			'INV-9',
+			$this->callback(static fn ($p) => ($p['ambiguous'] ?? 0) === 1),
+		);
+		$notifications->expects($this->never())->method('notifyCrmUsers');
+
+		$company = new Company();
+		$company->setId(10);
+		$company->setWorkspaceId(7);
+		$companies = $this->createMock(CompanyMapper::class);
+		$companies->method('findById')->with(10)->willReturn($company);
+		$companies->method('findByPcCustomerId')->with(42)->willReturn($company);
 
 		$s = new InvoicePaidSyncService(
 			$agreements,
@@ -91,13 +108,86 @@ class InvoicePaidSyncServiceTest extends TestCase
 			$this->createMock(ActivityService::class),
 			$timeline,
 			$notifications,
+			$companies,
 			$this->createMock(FacadeProbeService::class),
 			$this->createMock(IDBConnection::class),
 			$this->createMock(ITimeFactory::class),
 			$this->createMock(IL10N::class),
 		);
 
-		$this->assertSame('ambiguous', $s->applySignal(['invoiceRef' => 'INV-9', 'status' => 'paid', 'paidTotalCents' => 100]));
+		$this->assertSame('ambiguous', $s->applySignal([
+			'invoiceRef' => 'INV-9',
+			'status' => 'paid',
+			'paidTotalCents' => 100,
+			'pcCustomerId' => 42,
+		]));
+	}
+
+	public function testInvoiceRefWithoutCompanyPinIsNoop(): void
+	{
+		$a1 = new Agreement();
+		$a1->setId(1);
+		$a1->setCompanyId(10);
+
+		$agreements = $this->createMock(AgreementMapper::class);
+		$agreements->expects($this->once())->method('findByInvoiceRef')->with('INV-ONLY')->willReturn([$a1]);
+		$agreements->expects($this->never())->method('update');
+
+		$s = new InvoicePaidSyncService(
+			$agreements,
+			$this->createMock(PayWatchMapper::class),
+			$this->createMock(ActivityService::class),
+			$this->createMock(TimelineService::class),
+			$this->createMock(NotificationService::class),
+			$this->createMock(CompanyMapper::class),
+			$this->createMock(FacadeProbeService::class),
+			$this->createMock(IDBConnection::class),
+			$this->createMock(ITimeFactory::class),
+			$this->createMock(IL10N::class),
+		);
+
+		$this->assertSame('noop', $s->applySignal([
+			'invoiceRef' => 'INV-ONLY',
+			'status' => 'paid',
+			'paidTotalCents' => 100,
+		]));
+	}
+
+	public function testInvoiceRefPinnedToForeignPcCustomerIsNoop(): void
+	{
+		$a1 = new Agreement();
+		$a1->setId(1);
+		$a1->setCompanyId(10);
+
+		$agreements = $this->createMock(AgreementMapper::class);
+		$agreements->expects($this->once())->method('findByInvoiceRef')->willReturn([$a1]);
+		$agreements->expects($this->never())->method('update');
+
+		$foreign = new Company();
+		$foreign->setId(99);
+		$foreign->setWorkspaceId(2);
+		$companies = $this->createMock(CompanyMapper::class);
+		$companies->method('findByPcCustomerId')->with(7)->willReturn($foreign);
+
+		$s = new InvoicePaidSyncService(
+			$agreements,
+			$this->createMock(PayWatchMapper::class),
+			$this->createMock(ActivityService::class),
+			$this->createMock(TimelineService::class),
+			$this->createMock(NotificationService::class),
+			$companies,
+			$this->createMock(FacadeProbeService::class),
+			$this->createMock(IDBConnection::class),
+			$this->createMock(ITimeFactory::class),
+			$this->createMock(IL10N::class),
+		);
+
+		$this->assertSame('noop', $s->applySignal([
+			'invoiceRef' => 'INV-X',
+			'status' => 'paid',
+			'paidTotalCents' => 50,
+			'pcCustomerId' => 7,
+		]));
 	}
 
 	public function testPollNoopWhenFacadeAbsent(): void
@@ -112,6 +202,7 @@ class InvoicePaidSyncServiceTest extends TestCase
 			$this->createMock(ActivityService::class),
 			$this->createMock(TimelineService::class),
 			$this->createMock(NotificationService::class),
+			$this->createMock(CompanyMapper::class),
 			$facades,
 			$this->createMock(IDBConnection::class),
 			$this->createMock(ITimeFactory::class),

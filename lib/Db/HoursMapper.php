@@ -32,6 +32,26 @@ class HoursMapper extends QBMapper
 		return $this->findEntity($qb);
 	}
 
+	/**
+	 * Write-lock the hours row. Callers MUST already be inside a DB transaction.
+	 */
+	public function lockRow(int $id): bool
+	{
+		if ($id <= 0) {
+			return false;
+		}
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('id')
+			->from($this->getTableName())
+			->where($qb->expr()->eq('id', $qb->createNamedParameter($id, IQueryBuilder::PARAM_INT)))
+			->forUpdate();
+		$result = $qb->executeQuery();
+		$row = $result->fetch();
+		$result->closeCursor();
+
+		return $row !== false;
+	}
+
 	/** @return HoursEntry[] */
 	public function findByAgreement(int $agreementId, int $limit = 1000): array
 	{

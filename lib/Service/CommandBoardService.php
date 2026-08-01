@@ -9,6 +9,7 @@ use OCA\CustomerCheck\Db\AgreementMapper;
 use OCA\CustomerCheck\Db\CompanyMapper;
 use OCA\CustomerCheck\Db\DealMapper;
 use OCA\CustomerCheck\Support\DateMath;
+use OCA\CustomerCheck\Support\TicketCompanyLink;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\IL10N;
 
@@ -66,14 +67,17 @@ class CommandBoardService
 				'items' => array_map(static function (array $d) use ($labels): array {
 					$reasonCode = (string)($d['primaryReason'] ?? '');
 					$reason = $reasonCode !== '' ? $labels->chaseReason($reasonCode) : '';
+					$owner = trim((string)($d['ownerUserId'] ?? ''));
 					return [
 						'companyId' => $d['companyId'],
 						'companyName' => $d['companyName'] ?? '',
 						'why' => trim((string)($d['title'] ?? '')),
 						'reasonLabel' => $reason,
 						'dueDate' => $d['expectedClose'] ?? $d['quoteSentOn'] ?? null,
-						'cta' => 'open',
+						// Unowned webhook/manual leads → Claim (§18.7); owned → Open.
+						'cta' => $owner === '' ? 'claim' : 'open',
 						'dealId' => $d['id'],
+						'updatedAt' => $d['updatedAt'] ?? null,
 						'covering' => !empty($d['covering']),
 						'coveringPrimary' => $d['coveringPrimary'] ?? null,
 						'coveringBadge' => $d['coveringBadge'] ?? null,
@@ -163,10 +167,12 @@ class CommandBoardService
 					$review = $plan['nextReviewOn'] ?? null;
 					$dueReview = is_string($review) && $review !== '' && $review <= $today->format('Y-m-d');
 					if ($health === 'stalled' || $health === 'at_risk' || $dueReview) {
+						$healthLabel = $this->labels->planHealth($health !== '' ? $health : 'unknown');
+						$goal = (string)($plan['goal'] ?? $this->l10n->t('Account plan'));
 						$planItems[] = [
 							'companyId' => $plan['companyId'] ?? null,
 							'companyName' => (string)($plan['companyName'] ?? ''),
-							'why' => ($plan['goal'] ?? $this->l10n->t('Account plan')) . ' · ' . $health,
+							'why' => $goal . ' · ' . $healthLabel,
 							'dueDate' => $review,
 							'cta' => 'open',
 							'planId' => $plan['id'] ?? null,
@@ -202,14 +208,20 @@ class CommandBoardService
 					$sections[] = [
 						'id' => 'team_stuck',
 						'title' => $this->l10n->t('Team stuck'),
-						'items' => array_map(static fn (array $r): array => [
-							'companyId' => null,
-							'companyName' => '',
-							'why' => sprintf('%s · %d stuck · %d chase', $r['userId'], $r['stuckScore'], $r['chase']),
-							'dueDate' => null,
-							'cta' => 'coach',
-							'userId' => $r['userId'],
-						], array_slice($stuck, 0, 25)),
+						'items' => array_map(function (array $r): array {
+							$name = trim((string)($r['displayName'] ?? ''));
+							if ($name === '') {
+								$name = (string)($r['userId'] ?? '');
+							}
+							return [
+								'companyId' => null,
+								'companyName' => '',
+								'why' => $this->l10n->t('%s · %d stuck · %d chase', [$name, (int)$r['stuckScore'], (int)$r['chase']]),
+								'dueDate' => null,
+								'cta' => 'coach',
+								'userId' => $r['userId'],
+							];
+						}, array_slice($stuck, 0, 25)),
 					];
 				} catch (\Throwable) {
 				}
@@ -217,7 +229,7 @@ class CommandBoardService
 		}
 
 		// Legacy urgency groups (renewals, invoices, activities, waiting, stale)
-		$legacy = $this->legacySections($today, $companyNames);
+		$legacy = $this->legacySections($today, $companyNames, $workspaceId > 0 ? $workspaceId : null);
 		$sections = array_merge($sections, $legacy);
 
 		$visible = [];
@@ -238,7 +250,7 @@ class CommandBoardService
 	 * @param array<int, string> $companyNames
 	 * @return list<array{id: string, title: string, items: list<array<string, mixed>>}>
 	 */
-	private function legacySections(\DateTimeInterface $today, array &$companyNames): array
+	private function legacySections(\DateTimeInterface $today, array &$companyNames, ?int $workspaceId = null): array
 	{
 		$sections = [
 			'overdue_callbacks' => [
@@ -285,8 +297,9 @@ class CommandBoardService
 
 		$todayYmd = $today->format('Y-m-d');
 		$plus7 = DateMath::addDays($today, 7);
+		$wsFilter = ($workspaceId !== null && $workspaceId > 0) ? $workspaceId : null;
 
-		foreach ($this->activityMapper->findOpenDueUpTo($plus7, 500) as $activity) {
+		foreach ($this->activityMapper->findOpenDueUpTo($plus7, 500, $wsFilter) as $activity) {
 			$due = $activity->getDueDate();
 			$dueYmd = $due?->format('Y-m-d');
 			$companyId = (int)$activity->getCompanyId();
@@ -308,7 +321,7 @@ class CommandBoardService
 			}
 		}
 
-		foreach ($this->agreementMapper->findRenewalCandidates(2000, 0) as $agreement) {
+		foreach ($this->agreementMapper->findRenewalCandidates(2000, 0, $wsFilter) as $agreement) {
 			$days = $this->statusService->daysUntilExpiry($agreement->getValidUntil(), $today);
 			if ($days === null || $days > 30) {
 				continue;
@@ -332,9 +345,15 @@ class CommandBoardService
 
 		if ($this->facades->invoicecheckAvailable()) {
 			foreach ($this->facades->listOverdueInvoices(50) as $inv) {
+				$companyId = isset($inv['companyId']) ? (int)$inv['companyId'] : 0;
+				if ($wsFilter !== null && ($companyId <= 0 || !$this->companyInWorkspace($companyId, $wsFilter, $companyNames))) {
+					continue;
+				}
 				$sections['overdue_invoices']['items'][] = [
-					'companyId' => $inv['companyId'] ?? null,
-					'companyName' => (string)($inv['companyName'] ?? ''),
+					'companyId' => $companyId > 0 ? $companyId : null,
+					'companyName' => $companyId > 0
+						? $this->name($companyId, $companyNames)
+						: (string)($inv['companyName'] ?? ''),
 					'why' => (string)($inv['label'] ?? $inv['invoiceRef'] ?? 'Overdue'),
 					'dueDate' => $inv['dueDate'] ?? null,
 					'cta' => 'open',
@@ -345,20 +364,25 @@ class CommandBoardService
 
 		if ($this->facades->ticketcheckAvailable()) {
 			foreach ($this->facades->listWaitingTickets(50) as $ticket) {
+				$companyId = TicketCompanyLink::resolveCompanyId($ticket, $this->companyMapper, $companyNames);
+				if ($wsFilter !== null && ($companyId <= 0 || !$this->companyInWorkspace($companyId, $wsFilter, $companyNames))) {
+					continue;
+				}
 				$sections['waiting']['items'][] = [
-					'companyId' => $ticket['companyId'] ?? null,
-					'companyName' => '',
+					'companyId' => $companyId > 0 ? $companyId : null,
+					'companyName' => $companyId > 0 ? $this->name($companyId, $companyNames) : '',
 					'why' => (string)($ticket['subject'] ?? $this->l10n->t('Waiting ticket')),
 					'dueDate' => null,
 					'cta' => 'open',
 					'deepLink' => $ticket['deepLink'] ?? null,
+					'ticketId' => $ticket['id'] ?? null,
 				];
 			}
 		}
 
 		$staleDays = $this->dealService->staleDealDays();
 		$staleCutoff = DateMath::addDays($today, -$staleDays);
-		foreach ($this->dealMapper->findOpenStaleBefore($staleCutoff, 200) as $deal) {
+		foreach ($this->dealMapper->findOpenStaleBefore($staleCutoff, 200, $wsFilter) as $deal) {
 			if (!$this->dealService->isStale($deal, $today)) {
 				continue;
 			}
@@ -374,6 +398,24 @@ class CommandBoardService
 		}
 
 		return array_values($sections);
+	}
+
+	/** @param array<int, string> $companyNames */
+	private function companyInWorkspace(int $companyId, int $workspaceId, array &$companyNames): bool
+	{
+		if ($companyId <= 0 || $workspaceId <= 0) {
+			return false;
+		}
+		try {
+			$c = $this->companyMapper->findById($companyId);
+			if ((int)($c->getWorkspaceId() ?? 0) !== $workspaceId) {
+				return false;
+			}
+			$companyNames[$companyId] = (string)$c->getName();
+			return true;
+		} catch (\Throwable) {
+			return false;
+		}
 	}
 
 	/** @param array<int, string> $companyNames */

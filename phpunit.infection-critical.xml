@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit bootstrap="tests/bootstrap.php" colors="true" executionOrder="default" resolveDependencies="true">
+	<testsuites>
+		<testsuite name="infection-critical">
+			<file>tests/Unit/Service/MailboxSyncServiceTest.php</file>
+			<file>tests/Unit/Controller/MobileWorkspaceAclContractTest.php</file>
+			<file>tests/Unit/Service/WorkspaceAccessListForMobileTest.php</file>
+			<file>tests/Unit/Service/MobileGateServiceTest.php</file>
+			<file>tests/Unit/Service/AccessControlServiceTest.php</file>
+			<file>tests/Unit/Service/MailMatchLogicTest.php</file>
+			<file>tests/Integration/SharedMailFixtureIntegrationTest.php</file>
+			<directory>tests/Unit/Support</directory>
+		</testsuite>
+	</testsuites>
+	<coverage>
+		<include>
+			<directory suffix=".php">lib/Service</directory>
+		</include>
+	</coverage>
+</phpunit>

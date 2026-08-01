@@ -34,9 +34,9 @@ class MobileApiService
 	 *
 	 * @return array{items: list<array<string, mixed>>, meta: array{truncated: bool, total: int}}
 	 */
-	public function today(): array
+	public function today(int $workspaceId): array
 	{
-		$built = $this->todayService->build();
+		$built = $this->todayService->build(null, $workspaceId);
 		$items = [];
 		foreach ($built['items'] as $item) {
 			$items[] = self::mapTodayItem($item);
@@ -97,6 +97,9 @@ class MobileApiService
 			'subtitle' => $dueDate,
 			'companyId' => isset($item['companyId']) && $item['companyId'] !== null ? (int)$item['companyId'] : null,
 			'deepLink' => $deepLink,
+			'updatedAt' => isset($item['updatedAt']) && is_string($item['updatedAt']) && $item['updatedAt'] !== ''
+				? $item['updatedAt']
+				: null,
 		];
 	}
 
@@ -242,6 +245,7 @@ class MobileApiService
 			'expectedClose' => $deal->getExpectedClose()?->format('Y-m-d'),
 			'stageChangedAt' => OptimisticLock::format($deal->getStageChangedAt()),
 			'lostReason' => $deal->getLostReason(),
+			'lostReasonCode' => $deal->getLostReasonCode(),
 			'stale' => $isStale($deal),
 			'updatedAt' => OptimisticLock::format($deal->getUpdatedAt()),
 		];

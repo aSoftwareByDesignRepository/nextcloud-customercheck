@@ -85,17 +85,25 @@ class PersonMapper extends QBMapper
 	}
 
 	/** @return Person[] */
-	public function findByEmail(string $email): array
+	/**
+	 * Find active contacts by email inside one workspace book (fail closed).
+	 *
+	 * @return Person[]
+	 */
+	public function findByEmail(string $email, int $workspaceId): array
 	{
 		$email = mb_strtolower(trim($email));
-		if ($email === '') {
+		if ($email === '' || $workspaceId <= 0) {
 			return [];
 		}
 
 		$qb = $this->db->getQueryBuilder();
-		$qb->select('*')
-			->from($this->getTableName())
-			->where($qb->expr()->eq($qb->func()->lower('email'), $qb->createNamedParameter($email)))
+		$qb->select('p.*')
+			->from($this->getTableName(), 'p')
+			->innerJoin('p', 'crm_company', 'c', $qb->expr()->eq('p.company_id', 'c.id'))
+			->where($qb->expr()->eq($qb->func()->lower('p.email'), $qb->createNamedParameter($email)))
+			->andWhere($qb->expr()->eq('c.workspace_id', $qb->createNamedParameter($workspaceId, IQueryBuilder::PARAM_INT)))
+			->andWhere($qb->expr()->isNull('c.archived_at'))
 			->setMaxResults(50);
 
 		return $this->findEntities($qb);
@@ -104,34 +112,100 @@ class PersonMapper extends QBMapper
 	/**
 	 * Unified search over contact name + email.
 	 *
-	 * @param array{search?: string, companyId?: int} $filters
+	 * @param array{search?: string, companyId?: int, workspaceId?: int, workspaceIds?: list<int>} $filters
 	 * @return Person[]
 	 */
 	public function search(array $filters = [], int $limit = 200, int $offset = 0): array
 	{
 		$qb = $this->db->getQueryBuilder();
-		$qb->select('*')->from($this->getTableName());
+		$qb->select('p.*')->from($this->getTableName(), 'p');
 
 		$companyId = (int)($filters['companyId'] ?? 0);
 		if ($companyId > 0) {
-			$qb->andWhere($qb->expr()->eq('company_id', $qb->createNamedParameter($companyId, IQueryBuilder::PARAM_INT)));
+			$qb->andWhere($qb->expr()->eq('p.company_id', $qb->createNamedParameter($companyId, IQueryBuilder::PARAM_INT)));
+		}
+
+		$workspaceId = (int)($filters['workspaceId'] ?? 0);
+		$workspaceIds = $filters['workspaceIds'] ?? null;
+		$needJoin = $workspaceId > 0 || is_array($workspaceIds);
+		if ($needJoin) {
+			$qb->innerJoin('p', 'crm_company', 'c', $qb->expr()->eq('p.company_id', 'c.id'))
+				->andWhere($qb->expr()->isNull('c.archived_at'));
+			if (is_array($workspaceIds)) {
+				$ids = [];
+				foreach ($workspaceIds as $id) {
+					$id = (int)$id;
+					if ($id > 0) {
+						$ids[$id] = $id;
+					}
+				}
+				$ids = array_values($ids);
+				if ($ids === []) {
+					$qb->andWhere($qb->expr()->eq($qb->createNamedParameter(1), $qb->createNamedParameter(0)));
+				} elseif (count($ids) === 1) {
+					$qb->andWhere($qb->expr()->eq('c.workspace_id', $qb->createNamedParameter($ids[0], IQueryBuilder::PARAM_INT)));
+				} else {
+					$qb->andWhere($qb->expr()->in('c.workspace_id', $qb->createNamedParameter($ids, IQueryBuilder::PARAM_INT_ARRAY)));
+				}
+			} elseif ($workspaceId > 0) {
+				$qb->andWhere($qb->expr()->eq('c.workspace_id', $qb->createNamedParameter($workspaceId, IQueryBuilder::PARAM_INT)));
+			}
 		}
 
 		$search = trim((string)($filters['search'] ?? ''));
 		if ($search !== '') {
 			$like = '%' . $this->db->escapeLikeParameter($search) . '%';
 			$qb->andWhere($qb->expr()->orX(
-				$qb->expr()->iLike('name', $qb->createNamedParameter($like)),
-				$qb->expr()->iLike('email', $qb->createNamedParameter($like)),
+				$qb->expr()->iLike('p.name', $qb->createNamedParameter($like)),
+				$qb->expr()->iLike('p.email', $qb->createNamedParameter($like)),
 			));
 		}
 
-		$qb->orderBy('name', 'ASC')
-			->addOrderBy('id', 'ASC')
+		$qb->orderBy('p.name', 'ASC')
+			->addOrderBy('p.id', 'ASC')
 			->setMaxResults(max(1, min(5000, $limit)))
 			->setFirstResult(max(0, $offset));
 
 		return $this->findEntities($qb);
+	}
+
+	/**
+	 * Batch-load people for many companies (Team coverage: one pass, not N× findByCompany).
+	 *
+	 * @param list<int> $companyIds
+	 * @return array<int, list<Person>> companyId → people
+	 */
+	public function findGroupedByCompanyIds(array $companyIds, int $limit = 10000): array
+	{
+		$ids = [];
+		foreach ($companyIds as $id) {
+			$id = (int)$id;
+			if ($id > 0) {
+				$ids[$id] = $id;
+			}
+		}
+		$ids = array_values($ids);
+		if ($ids === []) {
+			return [];
+		}
+
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('*')
+			->from($this->getTableName())
+			->where($qb->expr()->in('company_id', $qb->createNamedParameter($ids, IQueryBuilder::PARAM_INT_ARRAY)))
+			->orderBy('company_id', 'ASC')
+			->addOrderBy('is_primary', 'DESC')
+			->addOrderBy('name', 'ASC')
+			->setMaxResults(max(1, min(20000, $limit)));
+
+		$grouped = [];
+		foreach ($this->findEntities($qb) as $person) {
+			$cid = (int)$person->getCompanyId();
+			$grouped[$cid] ??= [];
+			$grouped[$cid][] = $person;
+		}
+
+		return $grouped;
 	}
 
 	public function deleteByCompany(int $companyId): int

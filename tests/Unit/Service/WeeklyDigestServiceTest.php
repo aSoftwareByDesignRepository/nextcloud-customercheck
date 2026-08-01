@@ -162,8 +162,16 @@ class WeeklyDigestServiceTest extends TestCase
 	public function testCollectCountsIncludesUnpaidAndQuota(): void
 	{
 		$s = $this->make(true, 1, 7, [], true, 3, 2);
-		$counts = $s->collectCounts(new \DateTimeImmutable('2026-07-20'));
+		$counts = $s->collectCounts(new \DateTimeImmutable('2026-07-20'), 1);
 		$this->assertSame(3, $counts['unpaid']);
 		$this->assertSame(2, $counts['quota80']);
+	}
+
+	public function testCollectCountsFailsClosedWithoutWorkspaceQuota(): void
+	{
+		$s = $this->make(true, 1, 7, [], true, 3, 2);
+		$counts = $s->collectCounts(new \DateTimeImmutable('2026-07-20'), null);
+		$this->assertSame(3, $counts['unpaid']);
+		$this->assertSame(0, $counts['quota80']);
 	}
 }

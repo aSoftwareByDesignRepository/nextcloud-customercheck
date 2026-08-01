@@ -4,21 +4,25 @@
  */
 
 :root {
-  /* Spacing Scale */
+  /*
+   * Spacing aliases — authoritative values live in tokens.css (--crm-space-* px grid).
+   * Keep names for legacy sheets; never redefine rem sizes that fight NC’s 15px root.
+   */
   --space-0: 0;
-  --space-1: 0.25rem;   /* 4px */
-  --space-2: 0.5rem;    /* 8px */
-  --space-3: 0.75rem;   /* 12px */
-  --space-4: 1rem;      /* 16px */
-  --space-5: 1.25rem;   /* 20px */
-  --space-6: 1.5rem;    /* 24px */
-  --space-8: 2rem;      /* 32px */
-  --space-10: 2.5rem;   /* 40px */
-  --space-12: 3rem;     /* 48px */
-  --space-16: 4rem;     /* 64px */
-  --space-20: 5rem;     /* 80px */
-  --space-24: 6rem;     /* 96px */
-  --space-32: 8rem;     /* 128px */
+  --space-1: var(--crm-space-1, 4px);
+  --space-2: var(--crm-space-2, 8px);
+  --space-3: var(--crm-space-3, 12px);
+  --space-4: var(--crm-space-4, 16px);
+  --space-5: var(--crm-space-5, 24px);
+  --space-6: var(--crm-space-6, 32px);
+  --space-7: var(--crm-space-7, 48px);
+  --space-8: var(--crm-space-8, 64px);
+  --space-10: 40px;
+  --space-12: var(--crm-space-7, 48px);
+  --space-16: var(--crm-space-8, 64px);
+  --space-20: 80px;
+  --space-24: 96px;
+  --space-32: 128px;
   
   /* Container Max Widths */
   --container-sm: 640px;
@@ -27,15 +31,15 @@
   --container-xl: 1280px;
   --container-2xl: 1536px;
   
-  /* Border Radius Scale */
+  /* Border Radius Scale → design-system radii */
   --radius-none: 0;
-  --radius-sm: 0.125rem;   /* 2px */
-  --radius-base: 0.25rem;  /* 4px */
-  --radius-md: 0.375rem;   /* 6px */
-  --radius-lg: 0.5rem;     /* 8px */
-  --radius-xl: 0.75rem;    /* 12px */
-  --radius-2xl: 1rem;      /* 16px */
-  --radius-3xl: 1.5rem;    /* 24px */
+  --radius-sm: var(--crm-radius-sm, 6px);
+  --radius-base: var(--crm-radius-sm, 6px);
+  --radius-md: var(--crm-radius-sm, 6px);
+  --radius-lg: var(--crm-radius-md, 12px);
+  --radius-xl: var(--crm-radius-md, 12px);
+  --radius-2xl: var(--crm-radius-lg, 16px);
+  --radius-3xl: var(--crm-radius-lg, 16px);
   --radius-full: 9999px;
   
   /* Shadow Scale - Use arbeitszeitcheck color variables */

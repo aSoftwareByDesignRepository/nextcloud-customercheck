@@ -9,38 +9,64 @@ include __DIR__ . '/common/page-start.php';
 	<section class="crm-card" aria-labelledby="crm-company-form-title">
 		<header class="crm-card__header">
 			<h2 id="crm-company-form-title" class="crm-card__title"><?php p($mode === 'edit' ? $l->t('Edit company') : $l->t('New company')); ?></h2>
-			<p class="crm-card__lead"><?php p($mode === 'edit' ? $l->t('Update the company name and links.') : $l->t('Just enter a name — everything else is optional.')); ?></p>
+			<p class="crm-card__lead"><?php p($mode === 'edit' ? $l->t('Update the company name, owner, and links.') : $l->t('Just enter a name — you become the account owner; everything else is optional.')); ?></p>
 		</header>
 		<div class="crm-card__body">
 			<form id="crm-company-form" class="crm-form" data-mode="<?php p($mode); ?>" data-id="<?php p($company ? $company->getId() : ''); ?>" data-updated-at="<?php p($company && $company->getUpdatedAt() ? $company->getUpdatedAt()->format(\DateTimeInterface::ATOM) : ''); ?>" novalidate>
 				<div class="form-group">
 					<label class="form-label" for="crm-company-name"><?php p($l->t('Name')); ?></label>
 					<input class="crm-input form-input crm-input--lg" id="crm-company-name" name="name" required maxlength="200" value="<?php p($company ? $company->getName() : ''); ?>" autocomplete="organization" autofocus />
-				</div>
-				<div class="form-group">
-					<label class="form-label" for="crm-company-status"><?php p($l->t('Status')); ?></label>
-					<select class="crm-input form-select" id="crm-company-status" name="status">
-						<?php foreach (['lead','active','paused','churned'] as $st): ?>
-							<option value="<?php p($st); ?>" <?php if ($company && $company->getStatus() === $st): ?>selected<?php endif; ?>><?php
-								p($labels instanceof \OCA\CustomerCheck\Service\DisplayLabelService ? $labels->companyStatus($st) : $st);
-							?></option>
-						<?php endforeach; ?>
-					</select>
-				</div>
-				<div class="form-group">
-					<label class="form-label" for="crm-company-lang"><?php p($l->t('Language')); ?></label>
-					<select class="crm-input form-select" id="crm-company-lang" name="lang">
-						<option value="de" <?php if (!$company || $company->getLang() === 'de'): ?>selected<?php endif; ?>>Deutsch</option>
-						<option value="en" <?php if ($company && $company->getLang() === 'en'): ?>selected<?php endif; ?>>English</option>
-					</select>
-				</div>
-				<div class="form-group">
-					<label class="form-label" for="crm-company-notes"><?php p($l->t('Notes')); ?></label>
-					<textarea class="crm-input form-input" id="crm-company-notes" name="notes" rows="3"><?php p($company ? (string)$company->getNotes() : ''); ?></textarea>
+					<?php if ($mode !== 'edit'): ?>
+					<p class="form-help" id="crm-company-name-help"><?php p($l->t('That is enough — press Save. Optional details are under Advanced.')); ?></p>
+					<?php endif; ?>
 				</div>
 				<details class="crm-advanced" id="crm-company-advanced"<?php if ($mode === 'edit'): ?> open<?php endif; ?>>
 					<summary class="crm-advanced__summary"><?php p($l->t('Advanced')); ?></summary>
 					<div class="crm-advanced__body">
+						<div class="form-group">
+							<label class="form-label" for="crm-company-status"><?php p($l->t('Status')); ?></label>
+							<select class="crm-input form-select" id="crm-company-status" name="status">
+								<?php foreach (['lead','active','paused','churned'] as $st): ?>
+									<option value="<?php p($st); ?>" <?php if ($company && $company->getStatus() === $st): ?>selected<?php elseif (!$company && $st === 'lead'): ?>selected<?php endif; ?>><?php
+										p($labels instanceof \OCA\CustomerCheck\Service\DisplayLabelService ? $labels->companyStatus($st) : $st);
+									?></option>
+								<?php endforeach; ?>
+							</select>
+						</div>
+						<div class="form-group">
+							<label class="form-label" for="crm-company-owner"><?php p($l->t('Account owner')); ?></label>
+							<?php
+							$ownerOptions = is_array($_['workspaceMemberOptions'] ?? null) ? $_['workspaceMemberOptions'] : [];
+							$currentOwner = $company ? trim((string)($company->getAccountOwnerUserId() ?? '')) : '';
+							$defaultOwner = $currentOwner !== '' ? $currentOwner : trim((string)($_['currentUserId'] ?? ''));
+							?>
+							<select class="crm-input form-select" id="crm-company-owner" name="accountOwnerUserId" aria-describedby="crm-company-owner-help">
+								<option value=""><?php p($l->t('Unassigned')); ?></option>
+								<?php foreach ($ownerOptions as $opt):
+									$oid = (string)($opt['id'] ?? '');
+									if ($oid === '') {
+										continue;
+									}
+									?>
+									<option value="<?php p($oid); ?>" <?php if ($defaultOwner === $oid): ?>selected<?php endif; ?>><?php p((string)($opt['label'] ?? $oid)); ?></option>
+								<?php endforeach; ?>
+								<?php if ($defaultOwner !== '' && !in_array($defaultOwner, array_column($ownerOptions, 'id'), true)): ?>
+									<option value="<?php p($defaultOwner); ?>" selected><?php p($defaultOwner); ?></option>
+								<?php endif; ?>
+							</select>
+							<p id="crm-company-owner-help" class="form-help"><?php p($l->t('Who is responsible for this customer? New companies default to you.')); ?></p>
+						</div>
+						<div class="form-group">
+							<label class="form-label" for="crm-company-lang"><?php p($l->t('Language')); ?></label>
+							<select class="crm-input form-select" id="crm-company-lang" name="lang">
+								<option value="de" <?php if (!$company || $company->getLang() === 'de'): ?>selected<?php endif; ?>>Deutsch</option>
+								<option value="en" <?php if ($company && $company->getLang() === 'en'): ?>selected<?php endif; ?>>English</option>
+							</select>
+						</div>
+						<div class="form-group">
+							<label class="form-label" for="crm-company-notes"><?php p($l->t('Notes')); ?></label>
+							<textarea class="crm-input form-input" id="crm-company-notes" name="notes" rows="3"><?php p($company ? (string)$company->getNotes() : ''); ?></textarea>
+						</div>
 						<div class="form-group">
 							<label class="form-label" for="crm-company-slug"><?php p($l->t('Slug')); ?></label>
 							<input class="crm-input form-input" id="crm-company-slug" name="slug" pattern="[a-z0-9-]{3,64}" maxlength="64" value="<?php p($company ? $company->getSlug() : ''); ?>" <?php if ($mode === 'edit'): ?>readonly<?php endif; ?> aria-describedby="crm-company-slug-help" />

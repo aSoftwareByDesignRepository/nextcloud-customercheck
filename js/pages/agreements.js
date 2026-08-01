@@ -16,6 +16,7 @@
   }
 
   const Api = window.CustomerCheckApi;
+  const SharedMail = window.CustomerCheckSharedMail || null;
 
   async function openLogHours(agreementId) {
     if (!C || !Api) return;
@@ -59,8 +60,14 @@
       try {
         const res = await Api.post('/agreements/' + agreementId + '/partner-mail', { promptHours: true });
         const data = res.data || res;
-        if (data.mailAppUrl) window.open(data.mailAppUrl, '_blank');
-        else if (data.mailtoUrl) window.location.href = data.mailtoUrl;
+        const companyId = parseInt(String(btn.getAttribute('data-company-id') || '0'), 10);
+        if (SharedMail) {
+          await SharedMail.offerPreparedMail(data, { companyId: companyId, title: t('Partner mail') });
+        } else if (data.mailAppUrl) {
+          window.open(data.mailAppUrl, '_blank');
+        } else if (data.mailtoUrl) {
+          window.location.href = data.mailtoUrl;
+        }
         const live = document.getElementById('crm-live-region');
         if (live) live.textContent = t('Partner mail prepared.');
         if (data.promptHours) {
@@ -95,6 +102,11 @@
         const res = await Api.post('/agreements/' + btn.getAttribute('data-crm-delivery-pack') + '/delivery-pack', {});
         const pack = res.data || {};
         if (!C) return;
+        const companyId = parseInt(String(btn.getAttribute('data-company-id') || '0'), 10);
+        if (SharedMail) {
+          await SharedMail.offerPreparedMail(pack, { companyId: companyId, title: t('Delivery pack') });
+          return;
+        }
         await C.openDialog({
           id: 'crm-delivery-pack',
           title: t('Delivery pack'),

@@ -39,6 +39,36 @@
 	--crm-icon-stroke: 2;
 
 	--crm-tab-num: tabular-nums;
+
+	/* Desktop app-navigation rail (Nextcloud drawer collapses below 1024px). */
+	--crm-nav-width: 280px;
+	--crm-nav-width-compact: 240px;
+
+	/*
+	 * Legacy --space-* / --azc-space-* bridges → design-system 4px grid (px, not rem).
+	 * Rem-based spacing under-delivers under Nextcloud’s 15px root font.
+	 */
+	--space-0: 0;
+	--space-1: var(--crm-space-1);
+	--space-2: var(--crm-space-2);
+	--space-3: var(--crm-space-3);
+	--space-4: var(--crm-space-4);
+	--space-5: var(--crm-space-5);
+	--space-6: var(--crm-space-6);
+	--space-7: var(--crm-space-7);
+	--space-8: var(--crm-space-8);
+	--space-10: 40px;
+	--space-12: var(--crm-space-7);
+	--space-16: var(--crm-space-8);
+	--space-20: 80px;
+	--space-24: 96px;
+	--space-32: 128px;
+
+	--azc-space-1: var(--crm-space-1);
+	--azc-space-2: var(--crm-space-2);
+	--azc-space-3: var(--crm-space-3);
+	--azc-space-4: var(--crm-space-4);
+	--azc-space-5: var(--crm-space-5);
 }
 
 /* Theme-bound tokens — must follow body [data-theme-*] where NC defines --color-* */
@@ -49,6 +79,7 @@ body {
 
 	--crm-bg-soft: color-mix(in srgb, var(--color-main-background) 96%, var(--color-main-text) 4%);
 	--crm-bg-card: var(--color-main-background);
+	--crm-surface-muted: var(--crm-bg-soft);
 	--crm-text: var(--color-main-text);
 	--crm-muted: var(--color-text-maxcontrast);
 	--crm-border: color-mix(in srgb, var(--color-main-text) 12%, transparent);
@@ -74,10 +105,4 @@ body {
 }
 
 /* Dual-token bridge: CRM aliases map to identical computed values (D11) */
-:root {
-  --azc-space-1: var(--crm-space-1, 0.25rem);
-  --azc-space-2: var(--crm-space-2, 0.5rem);
-  --azc-space-3: var(--crm-space-3, 0.75rem);
-  --azc-space-4: var(--crm-space-4, 1rem);
-  --azc-space-5: var(--crm-space-5, 1.25rem);
-}
+/* (legacy --azc-space-* / --space-* live in :root above) */

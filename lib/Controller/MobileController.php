@@ -6,6 +6,7 @@ namespace OCA\CustomerCheck\Controller;
 
 use OCA\CustomerCheck\AppInfo\Application;
 use OCA\CustomerCheck\Constants;
+use OCA\CustomerCheck\Db\Company;
 use OCA\CustomerCheck\Exception\AccessDeniedException;
 use OCA\CustomerCheck\Exception\AppAccessDeniedException;
 use OCA\CustomerCheck\Exception\ConflictException;
@@ -21,6 +22,7 @@ use OCA\CustomerCheck\Service\MobileApiService;
 use OCA\CustomerCheck\Service\MobileGateService;
 use OCA\CustomerCheck\Service\MobileIdempotencyService;
 use OCA\CustomerCheck\Service\MobilePushService;
+use OCA\CustomerCheck\Service\WorkspaceAccessService;
 use OCP\App\IAppManager;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
@@ -43,6 +45,11 @@ use OCP\IUserSession;
  *   1 NC auth        → 401 AUTH_REQUIRED
  *   2 canUseApp      → 403 ACCESS_DENIED (AppAccessMiddleware)
  *   3–6 license/seat → 402 (MobileGateService; skipped for bootstrap)
+ *   7 workspace ACL  → 404 on foreign book / object (product §3.3 / §21.1)
+ *
+ * Data routes are path-scoped under `/workspaces/{workspaceId}/…`. The client
+ * must send an explicit workspace on every call — never rely on last-used alone
+ * (avoids switch races blending two books).
  */
 class MobileController extends Controller
 {
@@ -51,6 +58,7 @@ class MobileController extends Controller
 		IRequest $request,
 		private readonly IUserSession $userSession,
 		private readonly AccessControlService $accessControl,
+		private readonly WorkspaceAccessService $workspaceAccess,
 		private readonly MobileGateService $gate,
 		private readonly MobileApiService $mobile,
 		private readonly CompanyService $companies,
@@ -79,15 +87,29 @@ class MobileController extends Controller
 		});
 	}
 
+	// ── Workspaces ──────────────────────────────────────────────────────
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function workspaces(): JSONResponse
+	{
+		return $this->guard(function (): JSONResponse {
+			$uid = $this->requireGatedUid();
+
+			return $this->success($this->workspaceAccess->listForMobile($uid));
+		});
+	}
+
 	// ── Today ───────────────────────────────────────────────────────────
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
-	public function today(): JSONResponse
+	public function today(int $workspaceId): JSONResponse
 	{
-		return $this->guard(function (): JSONResponse {
-			$this->requireGatedUid();
-			$today = $this->mobile->today();
+		return $this->guard(function () use ($workspaceId): JSONResponse {
+			$uid = $this->requireGatedUid();
+			$wsId = $this->requireMobileWorkspace($uid, $workspaceId);
+			$today = $this->mobile->today($wsId);
 
 			return $this->success(['items' => $today['items']], $today['meta']);
 		});
@@ -97,13 +119,14 @@ class MobileController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
-	public function companies(string $q = '', int $limit = 25, int $offset = 0): JSONResponse
+	public function companies(int $workspaceId, string $q = '', int $limit = 25, int $offset = 0): JSONResponse
 	{
-		return $this->guard(function () use ($q, $limit, $offset): JSONResponse {
-			$this->requireGatedUid();
+		return $this->guard(function () use ($workspaceId, $q, $limit, $offset): JSONResponse {
+			$uid = $this->requireGatedUid();
+			$wsId = $this->requireMobileWorkspace($uid, $workspaceId);
 			$limit = max(1, min(100, $limit));
 			$offset = max(0, $offset);
-			$filters = ['search' => trim($q), 'archived' => false];
+			$filters = ['search' => trim($q), 'archived' => false, 'workspaceId' => $wsId];
 			$rows = $this->companies->search($filters, $limit, $offset);
 			$total = $this->companies->count($filters);
 
@@ -116,12 +139,14 @@ class MobileController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
-	public function companyDetail(int $id): JSONResponse
+	public function companyDetail(int $workspaceId, int $id): JSONResponse
 	{
-		return $this->guard(function () use ($id): JSONResponse {
+		return $this->guard(function () use ($workspaceId, $id): JSONResponse {
 			$uid = $this->requireGatedUid();
+			$wsId = $this->requireMobileWorkspace($uid, $workspaceId);
+			$company = $this->requireCompanyInWorkspace($id, $wsId);
 
-			return $this->success($this->mobile->companyLite($this->companies->get($id), $uid));
+			return $this->success($this->mobile->companyLite($company, $uid));
 		});
 	}
 
@@ -129,13 +154,18 @@ class MobileController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
-	public function activities(int $open = 1, int $companyId = 0, int $limit = 100): JSONResponse
+	public function activities(int $workspaceId, int $open = 1, int $companyId = 0, int $limit = 100): JSONResponse
 	{
-		return $this->guard(function () use ($open, $companyId, $limit): JSONResponse {
+		return $this->guard(function () use ($workspaceId, $open, $companyId, $limit): JSONResponse {
 			$uid = $this->requireGatedUid();
+			$wsId = $this->requireMobileWorkspace($uid, $workspaceId);
+			if ($companyId > 0) {
+				$this->requireCompanyInWorkspace($companyId, $wsId);
+			}
 			$rows = $this->activities->searchForMobile($uid, [
 				'openOnly' => $open === 1,
 				'companyId' => $companyId,
+				'workspaceId' => $wsId,
 			], max(1, min(500, $limit)));
 
 			return $this->success(array_map([MobileApiService::class, 'serialiseActivity'], $rows));
@@ -144,12 +174,15 @@ class MobileController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
-	public function createActivity(): JSONResponse
+	public function createActivity(int $workspaceId): JSONResponse
 	{
-		return $this->guard(function (): JSONResponse {
+		return $this->guard(function () use ($workspaceId): JSONResponse {
 			$this->assertSafeMutationChannel();
 			$uid = $this->requireGatedUid();
+			$wsId = $this->requireMobileWorkspace($uid, $workspaceId, 'write');
 			$body = MobileApiService::normaliseActivityBody($this->jsonBody());
+			$companyId = (int)($body['companyId'] ?? 0);
+			$this->requireCompanyInWorkspace($companyId, $wsId);
 			$activity = $this->idempotency->createActivity($uid, $body, $this->idempotencyKey($body));
 
 			return $this->success(
@@ -195,13 +228,18 @@ class MobileController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
-	public function updateActivity(int $id): JSONResponse
+	public function updateActivity(int $workspaceId, int $id): JSONResponse
 	{
-		return $this->guard(function () use ($id): JSONResponse {
+		return $this->guard(function () use ($workspaceId, $id): JSONResponse {
 			$this->assertSafeMutationChannel();
 			$uid = $this->requireGatedUid();
+			$wsId = $this->requireMobileWorkspace($uid, $workspaceId, 'write');
+			$this->requireActivityInWorkspace($id, $wsId);
 			$this->activities->requireMobileAccess($id, $uid);
 			$body = MobileApiService::normaliseActivityBody($this->jsonBody());
+			if (isset($body['companyId'])) {
+				$this->requireCompanyInWorkspace((int)$body['companyId'], $wsId);
+			}
 
 			return $this->success(MobileApiService::serialiseActivity(
 				$this->activities->update($id, $body, $uid, $this->preconditionFrom($body)),
@@ -211,11 +249,13 @@ class MobileController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
-	public function doneActivity(int $id): JSONResponse
+	public function doneActivity(int $workspaceId, int $id): JSONResponse
 	{
-		return $this->guard(function () use ($id): JSONResponse {
+		return $this->guard(function () use ($workspaceId, $id): JSONResponse {
 			$this->assertSafeMutationChannel();
 			$uid = $this->requireGatedUid();
+			$wsId = $this->requireMobileWorkspace($uid, $workspaceId, 'write');
+			$this->requireActivityInWorkspace($id, $wsId);
 			$this->activities->requireMobileAccess($id, $uid);
 			$body = $this->jsonBody();
 
@@ -229,13 +269,18 @@ class MobileController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
-	public function deals(int $companyId = 0, int $limit = 200): JSONResponse
+	public function deals(int $workspaceId, int $companyId = 0, int $limit = 200): JSONResponse
 	{
-		return $this->guard(function () use ($companyId, $limit): JSONResponse {
-			$this->requireGatedUid();
+		return $this->guard(function () use ($workspaceId, $companyId, $limit): JSONResponse {
+			$uid = $this->requireGatedUid();
+			$wsId = $this->requireMobileWorkspace($uid, $workspaceId);
+			if ($companyId > 0) {
+				$this->requireCompanyInWorkspace($companyId, $wsId);
+			}
 			$rows = $this->deals->search([
 				'openOnly' => true,
 				'companyId' => $companyId,
+				'workspaceId' => $wsId,
 			], max(1, min(500, $limit)));
 
 			return $this->success(array_map(
@@ -247,11 +292,13 @@ class MobileController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
-	public function dealStage(int $id): JSONResponse
+	public function dealStage(int $workspaceId, int $id): JSONResponse
 	{
-		return $this->guard(function () use ($id): JSONResponse {
+		return $this->guard(function () use ($workspaceId, $id): JSONResponse {
 			$this->assertSafeMutationChannel();
 			$uid = $this->requireGatedUid();
+			$wsId = $this->requireMobileWorkspace($uid, $workspaceId, 'write');
+			$this->requireDealInWorkspace($id, $wsId);
 			$body = $this->jsonBody();
 			$result = $this->deals->changeStage(
 				$id,
@@ -259,6 +306,7 @@ class MobileController extends Controller
 				isset($body['lostReason']) ? (string)$body['lostReason'] : null,
 				$this->preconditionFrom($body),
 				$uid,
+				$body,
 			);
 			$data = MobileApiService::serialiseDeal($result['deal'], fn ($d): bool => $this->deals->isStale($d));
 			$data['sequencesFired'] = $result['sequencesFired'];
@@ -271,11 +319,15 @@ class MobileController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
-	public function agreements(int $expiringWithinDays = 60, int $companyId = 0, int $limit = 200): JSONResponse
+	public function agreements(int $workspaceId, int $expiringWithinDays = 60, int $companyId = 0, int $limit = 200): JSONResponse
 	{
-		return $this->guard(function () use ($expiringWithinDays, $companyId, $limit): JSONResponse {
-			$this->requireGatedUid();
-			$filters = ['companyId' => $companyId];
+		return $this->guard(function () use ($workspaceId, $expiringWithinDays, $companyId, $limit): JSONResponse {
+			$uid = $this->requireGatedUid();
+			$wsId = $this->requireMobileWorkspace($uid, $workspaceId);
+			if ($companyId > 0) {
+				$this->requireCompanyInWorkspace($companyId, $wsId);
+			}
+			$filters = ['companyId' => $companyId, 'workspaceId' => $wsId];
 			if ($expiringWithinDays > 0) {
 				$horizon = new \DateTimeImmutable(sprintf('+%d days', min(3660, $expiringWithinDays)));
 				$filters['expiringBefore'] = $horizon;
@@ -287,6 +339,58 @@ class MobileController extends Controller
 	}
 
 	// ── Plumbing ────────────────────────────────────────────────────────
+
+	/**
+	 * Explicit workspace membership for companion routes (product §3.3).
+	 * Missing / foreign workspace → 404 (no existence leak).
+	 *
+	 * @return int resolved workspace id
+	 */
+	private function requireMobileWorkspace(string $uid, int $workspaceId, string $capability = 'read'): int
+	{
+		if ($workspaceId <= 0) {
+			throw new NotFoundException('Workspace not found.');
+		}
+		$this->workspaceAccess->assertCapability($uid, $workspaceId, $capability);
+		$ctx = $this->workspaceAccess->resolveForUser($uid, $workspaceId);
+
+		return (int)$ctx['workspace']->getId();
+	}
+
+	/**
+	 * @throws NotFoundException
+	 */
+	private function requireCompanyInWorkspace(int $companyId, int $workspaceId): Company
+	{
+		if ($companyId <= 0) {
+			throw new NotFoundException('Company not found.');
+		}
+		$company = $this->companies->get($companyId);
+		$this->workspaceAccess->assertCompanyInWorkspace(
+			(int)($company->getWorkspaceId() ?? 0),
+			$workspaceId,
+		);
+
+		return $company;
+	}
+
+	/**
+	 * @throws NotFoundException
+	 */
+	private function requireActivityInWorkspace(int $activityId, int $workspaceId): void
+	{
+		$activity = $this->activities->get($activityId);
+		$this->requireCompanyInWorkspace((int)$activity->getCompanyId(), $workspaceId);
+	}
+
+	/**
+	 * @throws NotFoundException
+	 */
+	private function requireDealInWorkspace(int $dealId, int $workspaceId): void
+	{
+		$deal = $this->deals->get($dealId);
+		$this->requireCompanyInWorkspace((int)$deal->getCompanyId(), $workspaceId);
+	}
 
 	/**
 	 * @param callable(): JSONResponse $fn
@@ -456,7 +560,7 @@ class MobileController extends Controller
 			}
 		}
 		$params = $this->request->getParams();
-		unset($params['id'], $params['_route']);
+		unset($params['id'], $params['workspaceId'], $params['_route']);
 
 		return $params;
 	}

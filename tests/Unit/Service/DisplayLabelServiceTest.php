@@ -71,7 +71,8 @@ final class DisplayLabelServiceTest extends TestCase
 		$this->assertSame('Overdue', $this->labels->billingState('critical'));
 		$this->assertSame('Unknown', $this->labels->billingState('unknown'));
 		$this->assertSame('No next action', $this->labels->chaseReason('no_next_action'));
-		$this->assertSame('Lead SLA overdue', $this->labels->chaseReason('lead_sla'));
+		$this->assertSame('New lead waiting too long', $this->labels->chaseReason('lead_sla'));
+		$this->assertSame('Needs attention', $this->labels->chaseReason(''));
 		$this->assertSame('Quote follow-up due', $this->labels->chaseReason('quote_followup_due'));
 		$this->assertSame('Renewal soon', $this->labels->pulseAttentionKind('renewal_hot'));
 		$this->assertSame('Overdue invoice', $this->labels->pulseAttentionKind('overdue_invoice'));
@@ -93,6 +94,10 @@ final class DisplayLabelServiceTest extends TestCase
 		$this->assertStringNotContainsString('honesty_blocked', $this->labels->unbilledHint('honesty_blocked'));
 		$this->assertSame('Stalled', $this->labels->planHealth('stalled'));
 		$this->assertSame('At risk', $this->labels->planHealth('at_risk'));
+		$this->assertSame('On track', $this->labels->planHealth('on_track'));
+		$this->assertSame('Renewal', $this->labels->todayKind('agreement_expiry'));
+		$this->assertSame('Stale deal', $this->labels->todayKind('deal_stale'));
+		$this->assertSame('Overdue activity', $this->labels->todayKind('activity_overdue'));
 		$this->assertSame('Committed', $this->labels->commitmentStatus('committed'));
 		$this->assertSame('Abandoned', $this->labels->commitmentStatus('abandoned'));
 		$this->assertSame('Missing champion', $this->labels->coverageFlag('champion_gap'));

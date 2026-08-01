@@ -9,6 +9,7 @@ use OCA\CustomerCheck\Db\Person;
 use OCA\CustomerCheck\Db\PersonMapper;
 use OCA\CustomerCheck\Exception\NotFoundException;
 use OCA\CustomerCheck\Exception\ValidationException;
+use OCA\CustomerCheck\Support\CompanyScopedFk;
 use OCA\CustomerCheck\Support\OptimisticLock;
 use OCP\AppFramework\Db\DoesNotExistException;
 use OCP\AppFramework\Utility\ITimeFactory;
@@ -88,10 +89,11 @@ class PersonService
 		$person->setUpdatedAt($now);
 
 		$this->applyInput($person, $input, true);
-		$this->assertSingleEconomicBuyer($companyId, $person->getBuyingRole(), null);
 		$wantsPrimary = $this->readPrimaryFlag($input, false);
 
-		$stored = $this->persistWithPrimaryInvariant($person, $wantsPrimary, $companyId);
+		// Buyer uniqueness + primary invariant under the same company FOR UPDATE
+		// — closes concurrent second-economic-buyer race (§18.6).
+		$stored = $this->persistWithPrimaryInvariant($person, $wantsPrimary, $companyId, true);
 
 		$this->timelineService->append($companyId, 'company.updated', $actor, [
 			'contactAdded' => (string)$stored->getName(),
@@ -153,12 +155,30 @@ class PersonService
 	 */
 	public function delete(int $id, string $actor, ?string $updatedAtPrecondition = null): void
 	{
-		$person = $this->get($id);
-		OptimisticLock::assertFresh($person->getUpdatedAt(), $updatedAtPrecondition);
-		$companyId = (int)$person->getCompanyId();
-		$name = (string)$person->getName();
+		// Fail fast on missing precondition before taking locks (parity with update).
+		OptimisticLock::assertFresh(null, $updatedAtPrecondition);
 
-		$this->personMapper->delete($person);
+		$companyId = 0;
+		$name = '';
+
+		$this->db->beginTransaction();
+		try {
+			$person = $this->get($id);
+			$companyId = (int)$person->getCompanyId();
+			$this->companyService->lockRow($companyId);
+
+			// Re-load under company lock — closes TOCTOU vs concurrent update/primary swap.
+			$person = $this->get($id);
+			OptimisticLock::assertFresh($person->getUpdatedAt(), $updatedAtPrecondition);
+			$companyId = (int)$person->getCompanyId();
+			$name = (string)$person->getName();
+
+			$this->personMapper->delete($person);
+			$this->db->commit();
+		} catch (\Throwable $e) {
+			$this->db->rollBack();
+			throw $e;
+		}
 
 		$this->timelineService->append($companyId, 'company.updated', $actor, [
 			'contactRemoved' => $name,
@@ -179,13 +199,21 @@ class PersonService
 	 * other primary yet" (the peer row is uncommitted) and leave two primaries
 	 * after both commit — failing PSD §11 S1.
 	 */
-	private function persistWithPrimaryInvariant(Person $person, bool $wantsPrimary, int $companyId): Person
-	{
+	private function persistWithPrimaryInvariant(
+		Person $person,
+		bool $wantsPrimary,
+		int $companyId,
+		bool $assertBuyerOnCreate = false,
+	): Person {
 		$isInsert = $person->getId() === null;
 
 		$this->db->beginTransaction();
 		try {
 			$this->companyService->lockRow($companyId);
+
+			if ($assertBuyerOnCreate) {
+				$this->assertSingleEconomicBuyer($companyId, $person->getBuyingRole(), null);
+			}
 
 			if ($wantsPrimary) {
 				// Clear *all* primaries first so a concurrent peer cannot sneak
@@ -322,7 +350,35 @@ class PersonService
 
 		if (array_key_exists('reportsToPersonId', $input)) {
 			$rid = (int)($input['reportsToPersonId'] ?? 0);
-			$person->setReportsToPersonId($rid > 0 ? $rid : null);
+			if ($rid <= 0) {
+				$person->setReportsToPersonId(null);
+			} else {
+				$selfId = (int)($person->getId() ?? 0);
+				if ($selfId > 0 && $rid === $selfId) {
+					$fields['reportsToPersonId'] = $this->l10n->t('A contact cannot report to themselves.');
+				} else {
+					try {
+						$manager = $this->personMapper->findById($rid);
+					} catch (DoesNotExistException) {
+						$fields['reportsToPersonId'] = $this->l10n->t('Pick a manager on this company.');
+						$manager = null;
+					}
+					if ($manager !== null) {
+						try {
+							CompanyScopedFk::assertSameCompany(
+								(int)$person->getCompanyId(),
+								(int)$manager->getCompanyId(),
+								'reportsToPersonId',
+								$this->l10n,
+								$this->l10n->t('Pick a manager on this company.'),
+							);
+							$person->setReportsToPersonId($rid);
+						} catch (ValidationException $e) {
+							$fields['reportsToPersonId'] = $e->getMessage();
+						}
+					}
+				}
+			}
 		}
 
 		if ((string)$person->getName() === '' && !isset($fields['name'])) {

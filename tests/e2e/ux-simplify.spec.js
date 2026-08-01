@@ -97,4 +97,23 @@ test.describe('Simplified core UX journeys', () => {
     await page.waitForLoadState('networkidle');
     await expect(page.locator('#crm-activities')).toBeVisible();
   });
+
+  test('pipeline is lean: Edit deal, no chase jargon, no webhook empty copy', async ({ page }) => {
+    test.skip(!process.env.NC_ADMIN_USER, 'Requires NC admin credentials');
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await login(page, credsFromEnv('ADMIN'));
+    await page.goto('/apps/customercheck/pipeline');
+    await page.waitForSelector('#crm-pipeline-table, #crm-pipeline-board', { timeout: 30000 });
+    await expect(page.getByText(/Edit chase|Chase bearbeiten/i)).toHaveCount(0);
+    const editDeal = page.getByRole('button', { name: /Edit deal|Deal bearbeiten/i });
+    const empty = page.getByText(/No deals yet\. Tap New deal|Noch keine Deals\. Tippe auf Neuer Deal/i);
+    await expect(editDeal.or(empty).first()).toBeVisible();
+    await expect(page.getByText(/website lead webhook/i)).toHaveCount(0);
+    const results = await new AxeBuilder({ page })
+      .include('#crm-main-content')
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
+      .analyze();
+    const serious = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
+    expect(serious, JSON.stringify(serious, null, 2)).toEqual([]);
+  });
 });

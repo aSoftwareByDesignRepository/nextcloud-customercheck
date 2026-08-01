@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace OCA\CustomerCheck\Controller;
 
+use OCA\CustomerCheck\Exception\AccessDeniedException;
 use OCA\CustomerCheck\Service\AccessControlService;
 use OCA\CustomerCheck\Service\DirectoryOptionsService;
 use OCA\CustomerCheck\Service\SettingsService;
+use OCA\CustomerCheck\Service\WorkspaceAccessService;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\JSONResponse;
@@ -23,6 +25,7 @@ class SettingsApiController extends Controller
 		private readonly SettingsService $settings,
 		private readonly DirectoryOptionsService $directory,
 		private readonly \OCA\CustomerCheck\Service\ProductCodeRegistry $productCodes,
+		private readonly WorkspaceAccessService $workspaces,
 	) {
 		parent::__construct($appName, $request);
 	}
@@ -75,6 +78,27 @@ class SettingsApiController extends Controller
 		}
 	}
 
+	/**
+	 * Rotate the ICS feed token for one workspace book (§15.2 multi-book).
+	 * Managers (members capability) may rotate; independent of the Default feed.
+	 */
+	#[NoAdminRequired]
+	public function rotateWorkspaceIcs(int $workspaceId): JSONResponse
+	{
+		try {
+			$uid = $this->accessControl->requireCanUseApp();
+			$this->workspaces->assertCapability($uid, $workspaceId, 'members');
+			$token = $this->settings->rotateWorkspaceIcsToken($workspaceId);
+
+			return $this->ok([
+				'token' => $token,
+				'icsFeedUrl' => $this->settings->workspaceIcsFeedUrl($workspaceId),
+			]);
+		} catch (\Throwable $e) {
+			return $this->fromThrowable($e);
+		}
+	}
+
 	#[NoAdminRequired]
 	public function productCodes(): JSONResponse
 	{
@@ -103,15 +127,27 @@ class SettingsApiController extends Controller
 	}
 
 	/**
-	 * Search Nextcloud users for the allowed-users picker (app admin only).
+	 * Directory search for people pickers (allowed users, seats, workspace members, owners).
+	 *
+	 * App administrators may always search. Workspace members with write capability
+	 * may search when they pass workspaceId — never viewers.
 	 */
 	#[NoAdminRequired]
 	public function searchUsers(string $q = ''): JSONResponse
 	{
 		try {
 			$uid = $this->accessControl->requireCanUseApp();
-			$this->accessControl->requireAppAdmin();
+			$workspaceId = (int)$this->request->getParam('workspaceId', 0);
+			if (!$this->accessControl->isAppAdmin($uid)) {
+				if ($workspaceId < 1) {
+					throw new AccessDeniedException();
+				}
+				$this->workspaces->assertCapability($uid, $workspaceId, 'write');
+			}
 			$query = $q !== '' ? $q : (string)$this->request->getParam('q', '');
+			if (mb_strlen(trim($query)) < 2) {
+				return $this->ok(['users' => []]);
+			}
 			return $this->ok(['users' => $this->directory->searchUsers($query, 20)]);
 		} catch (\Throwable $e) {
 			return $this->fromThrowable($e);

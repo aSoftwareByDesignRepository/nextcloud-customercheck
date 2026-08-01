@@ -9,6 +9,7 @@ $items = $_['overview']['items'] ?? [];
 $filterOpen = $filterState !== '';
 $labels = $_['labels'] ?? null;
 $moneyUrl = $urlGenerator->linkToRoute('customercheck.page.money');
+$canWrite = !empty($_['canWrite']);
 include __DIR__ . '/common/page-start.php';
 ?>
 <div class="crm-page-actions-source header-actions" hidden>
@@ -108,8 +109,10 @@ include __DIR__ . '/common/page-start.php';
 							<?php if ($key !== 'paid30d'): ?>
 							<td data-label="<?php p($l->t('Actions')); ?>" class="actions-cell crm-table-actions-col">
 								<div class="crm-table-actions">
-									<?php if (!empty($row['agreementId'])): ?>
+									<?php if ($canWrite && !empty($row['agreementId'])): ?>
 									<button type="button" class="crm-btn crm-btn--sm crm-btn--secondary" data-crm-payment-reminder="<?php p($row['agreementId']); ?>" data-company-id="<?php p($row['companyId']); ?>"><?php p($l->t('Payment reminder')); ?></button>
+									<?php elseif (!empty($row['agreementId'])): ?>
+									<span class="crm-muted" aria-hidden="true">—</span>
 									<?php else: ?>
 									<span class="crm-muted"><?php p($l->t('From InvoicingCheck')); ?></span>
 									<?php endif; ?>

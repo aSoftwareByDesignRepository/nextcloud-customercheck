@@ -24,6 +24,7 @@ use OCA\CustomerCheck\Service\SettingsService;
 use OCA\CustomerCheck\Service\TimelineService;
 use OCA\CustomerCheck\Service\TodayService;
 use OCA\CustomerCheck\Service\WorkspaceAccessService;
+use OCA\CustomerCheck\Service\WorkspaceService;
 use OCA\CustomerCheck\Support\DensityCounts;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
@@ -66,6 +67,7 @@ class PageController extends Controller
 		private readonly LicenseService $license,
 		private readonly ProductCodeRegistry $productCodes,
 		private readonly WorkspaceAccessService $workspaceAccess,
+		private readonly WorkspaceService $workspaceService,
 		private readonly IURLGenerator $urlGenerator,
 		private readonly IL10N $l10n,
 		private readonly IFactory $l10nFactory,
@@ -99,16 +101,20 @@ class PageController extends Controller
 			} catch (\Throwable) {
 			}
 		}
-		$queue = $this->today->build();
+		$queue = $this->today->build(null, $wsId > 0 ? $wsId : null);
 		$board = $this->commandBoard->build(null, $uid !== '' ? $uid : null, $wsId > 0 ? $wsId : null, $role, $isAdmin);
+		$companyFilters = ['archived' => false];
+		if ($wsId > 0) {
+			$companyFilters['workspaceId'] = $wsId;
+		}
 		return new TemplateResponse('customercheck', 'today', $this->mergeShellPageParams(
 			'today',
-			$this->l10n->t('Command Board'),
+			$this->l10n->t('Today'),
 			$this->l10n->t('What needs attention right now.'),
 			[
 				'queue' => $queue,
 				'commandBoard' => $board,
-				'companyCount' => $this->companies->count(['archived' => false]),
+				'companyCount' => $this->companies->count($companyFilters),
 				'workspaceId' => $wsId,
 			],
 		));
@@ -145,8 +151,8 @@ class PageController extends Controller
 		$this->registerFrontEndAssets('pages/persona');
 		return new TemplateResponse('customercheck', 'my-accounts', $this->mergeShellPageParams(
 			'my-accounts',
-			$this->l10n->t('My Accounts'),
-			$this->l10n->t('Accounts you own or plan.'),
+			$this->l10n->t('My customers'),
+			$this->l10n->t('Companies you own or plan.'),
 		));
 	}
 
@@ -182,7 +188,7 @@ class PageController extends Controller
 		$this->registerFrontEndAssets('pages/persona');
 		return new TemplateResponse('customercheck', 'strategy', $this->mergeShellPageParams(
 			'strategy',
-			$this->l10n->t('Strategy'),
+			$this->l10n->t('Plans'),
 			$this->l10n->t('Account plans across the workspace.'),
 		));
 	}
@@ -231,6 +237,17 @@ class PageController extends Controller
 		}
 		$list = $this->companies->search($filters, 200, 0);
 		$health = $this->companyHealth->enrich($list);
+		$ownerUids = [];
+		foreach ($list as $company) {
+			$oid = trim((string)($company->getAccountOwnerUserId() ?? ''));
+			if ($oid !== '') {
+				$ownerUids[] = $oid;
+			}
+		}
+		$ownerDisplayNames = [];
+		foreach ($this->directory->resolveUsers(array_values(array_unique($ownerUids))) as $u) {
+			$ownerDisplayNames[$u['id']] = (string)($u['displayName'] ?? $u['id']);
+		}
 		return new TemplateResponse('customercheck', 'companies', $this->mergeShellPageParams(
 			'companies',
 			$this->l10n->t('Companies'),
@@ -238,6 +255,7 @@ class PageController extends Controller
 			[
 				'companies' => $list,
 				'health' => $health,
+				'ownerDisplayNames' => $ownerDisplayNames,
 				'filterQ' => $search,
 				'filterStatus' => $status,
 				'filterArchived' => $archived,
@@ -249,12 +267,19 @@ class PageController extends Controller
 	#[NoCSRFRequired]
 	public function companyNew(): TemplateResponse
 	{
+		$uid = $this->accessControl->requireCanUseApp();
+		$wsId = $this->resolvedWorkspaceId();
+		$this->workspaceAccess->assertCapability($uid, $wsId, 'write');
 		$this->registerFrontEndAssets('pages/company-form');
 		return new TemplateResponse('customercheck', 'company-form', $this->mergeShellPageParams(
 			'company-form',
 			$this->l10n->t('New company'),
 			$this->l10n->t('Create a customer record.'),
-			array_merge(['company' => null, 'mode' => 'create'], $this->siblingLinkOptions(null, null)),
+			array_merge(
+				['company' => null, 'mode' => 'create'],
+				$this->siblingLinkOptions(null, null),
+				$this->workspaceMemberOptions(),
+			),
 		));
 	}
 
@@ -262,8 +287,11 @@ class PageController extends Controller
 	#[NoCSRFRequired]
 	public function companyEdit(int $id): TemplateResponse
 	{
+		$uid = $this->accessControl->requireCanUseApp();
 		$this->registerFrontEndAssets('pages/company-form');
 		$company = $this->requireCompanyPage($id);
+		$wsId = (int)($company->getWorkspaceId() ?? 0);
+		$this->workspaceAccess->assertUserCanAccessCompany($uid, $wsId, 'write');
 		return new TemplateResponse('customercheck', 'company-form', $this->mergeShellPageParams(
 			'company-form',
 			$this->l10n->t('Edit company'),
@@ -271,8 +299,50 @@ class PageController extends Controller
 			array_merge(
 				['company' => $company, 'mode' => 'edit'],
 				$this->siblingLinkOptions($company->getPcCustomerId(), $company->getTcCustomerId()),
+				$this->workspaceMemberOptions(),
 			),
 		));
+	}
+
+	/**
+	 * Workspace members for account-owner pickers (user id + display label).
+	 *
+	 * @return array{workspaceMemberOptions: list<array{id:string,label:string}>, currentUserId: string}
+	 */
+	private function workspaceMemberOptions(): array
+	{
+		$uid = $this->accessControl->currentUserIdOrEmpty();
+		$options = [];
+		$wsId = $this->resolvedWorkspaceId();
+		if ($wsId > 0) {
+			foreach ($this->workspaceService->listMembers($wsId) as $m) {
+				$userId = trim((string)$m->getUserId());
+				if ($userId === '') {
+					continue;
+				}
+				$options[] = [
+					'id' => $userId,
+					'label' => $userId,
+				];
+			}
+		}
+		if ($uid !== '' && !in_array($uid, array_column($options, 'id'), true)) {
+			array_unshift($options, ['id' => $uid, 'label' => $uid]);
+		}
+		$resolved = [];
+		foreach ($this->directory->resolveUsers(array_column($options, 'id')) as $u) {
+			$resolved[$u['id']] = (string)($u['displayName'] ?? $u['id']);
+		}
+		foreach ($options as &$opt) {
+			$opt['label'] = $resolved[$opt['id']] ?? $opt['id'];
+		}
+		unset($opt);
+		usort($options, static fn (array $a, array $b): int => strcasecmp($a['label'], $b['label']));
+
+		return [
+			'workspaceMemberOptions' => $options,
+			'currentUserId' => $uid,
+		];
 	}
 
 	/**
@@ -518,7 +588,7 @@ class PageController extends Controller
 	#[NoCSRFRequired]
 	public function pipeline(): TemplateResponse
 	{
-		$this->registerFrontEndAssets('pages/pipeline');
+		$this->registerFrontEndAssets('pages/pipeline', null, [], ['common/folder-picker']);
 		$uid = $this->accessControl->currentUserId();
 		$wsId = $this->resolvedWorkspaceId();
 		$settings = $this->settings->getForUser($uid);
@@ -526,14 +596,30 @@ class PageController extends Controller
 		$companyIds = array_map(static fn ($d): int => (int)$d->getCompanyId(), $deals);
 		$companyMap = $this->companies->mapByIds($companyIds);
 		$dealRows = [];
+		$ownerUids = [];
 		foreach ($deals as $deal) {
 			$row = $this->deals->toArray($deal);
 			$company = $companyMap[$row['companyId']] ?? null;
 			$row['companyName'] = $company !== null
 				? $this->labels->companyOrUnknown($company->getName())
 				: $this->labels->unknownCompany();
+			$ownerUid = trim((string)($row['ownerUserId'] ?? ''));
+			if ($ownerUid !== '') {
+				$ownerUids[] = $ownerUid;
+			}
 			$dealRows[] = $row;
 		}
+		$ownerLabels = [];
+		foreach ($this->directory->resolveUsers(array_values(array_unique($ownerUids))) as $u) {
+			$ownerLabels[$u['id']] = $u['displayName'];
+		}
+		foreach ($dealRows as &$dealRow) {
+			$uid = trim((string)($dealRow['ownerUserId'] ?? ''));
+			$dealRow['ownerDisplayName'] = $uid !== ''
+				? ($ownerLabels[$uid] ?? $uid)
+				: '';
+		}
+		unset($dealRow);
 		$stageFilter = trim((string)$this->request->getParam('stage', ''));
 		if ($stageFilter !== '') {
 			$dealRows = array_values(array_filter(
@@ -552,7 +638,7 @@ class PageController extends Controller
 		return new TemplateResponse('customercheck', 'pipeline', $this->mergeShellPageParams(
 			'pipeline',
 			$this->l10n->t('Pipeline'),
-			$this->l10n->t('Deals as a table or board.'),
+			$this->l10n->t('All deals — table or board. Each deal has an owner.'),
 			[
 				'deals' => $dealRows,
 				'pipelineView' => $settings['pipelineView'] ?? 'table',
@@ -632,9 +718,16 @@ class PageController extends Controller
 	#[NoCSRFRequired]
 	public function agreementNew(): TemplateResponse
 	{
+		$uid = $this->accessControl->requireCanUseApp();
+		$wsId = $this->resolvedWorkspaceId();
+		$this->workspaceAccess->assertCapability($uid, $wsId, 'write');
 		$this->registerFrontEndAssets('pages/agreement-form');
-		$companies = $this->companies->search([], 500, 0);
+		// Never list foreign-book companies in the picker (§3.3 / §21.1).
+		$companies = $this->companies->search(['workspaceId' => $wsId], 500, 0);
 		$preselectCompanyId = (int)$this->request->getParam('companyId', 0);
+		if ($preselectCompanyId > 0) {
+			$this->requireCompanyPage($preselectCompanyId);
+		}
 		return new TemplateResponse('customercheck', 'agreement-form', $this->mergeShellPageParams(
 			'agreement-form',
 			$this->l10n->t('New agreement'),
@@ -653,9 +746,13 @@ class PageController extends Controller
 	#[NoCSRFRequired]
 	public function agreementEdit(int $id): TemplateResponse
 	{
+		$uid = $this->accessControl->requireCanUseApp();
 		$this->registerFrontEndAssets('pages/agreement-form');
 		$a = $this->agreements->get($id);
-		$companies = $this->companies->search([], 500, 0);
+		$company = $this->requireCompanyPage((int)$a->getCompanyId());
+		$wsId = (int)($company->getWorkspaceId() ?? 0);
+		$this->workspaceAccess->assertUserCanAccessCompany($uid, $wsId, 'write');
+		$companies = $this->companies->search(['workspaceId' => $wsId], 500, 0);
 		return new TemplateResponse('customercheck', 'agreement-form', $this->mergeShellPageParams(
 			'agreement-form',
 			$this->l10n->t('Edit agreement'),
@@ -675,7 +772,12 @@ class PageController extends Controller
 	{
 		$this->registerFrontEndAssets('pages/money');
 		$state = trim((string)$this->request->getParam('state', ''));
-		$overview = $this->money->overview(200, $state !== '' ? $state : null);
+		// Workspace scope is mandatory — never blend foreign-book € (§3.3 / §15.3 / §20).
+		$overview = $this->money->overview(
+			200,
+			$state !== '' ? $state : null,
+			$this->resolvedWorkspaceId(),
+		);
 		return new TemplateResponse('customercheck', 'money', $this->mergeShellPageParams(
 			'money',
 			$this->l10n->t('Money'),
@@ -758,6 +860,10 @@ class PageController extends Controller
 	#[NoCSRFRequired]
 	public function import(): TemplateResponse
 	{
+		$uid = $this->accessControl->requireCanUseApp();
+		$ctx = $this->workspaceAccess->resolveForUser($uid);
+		$wsId = (int)$ctx['workspace']->getId();
+		$this->workspaceAccess->assertCapability($uid, $wsId, 'write');
 		$this->registerFrontEndAssets('pages/import');
 		return new TemplateResponse('customercheck', 'import', $this->mergeShellPageParams(
 			'import',
@@ -806,6 +912,9 @@ class PageController extends Controller
 		$allowedUserIds = is_array($settings['access_allowed_user_ids'] ?? null)
 			? $settings['access_allowed_user_ids']
 			: [];
+		$appAdminUserIds = is_array($settings['app_admin_user_ids'] ?? null)
+			? $settings['app_admin_user_ids']
+			: [];
 		$shell = $this->mergeShellPageParams(
 			'app-settings',
 			$this->l10n->t('App settings'),
@@ -814,9 +923,9 @@ class PageController extends Controller
 				'settings' => $settings,
 				'capabilities' => $this->facades->capabilityMatrix(),
 				'canManage' => $canManage,
-				'availableAppAdmins' => $canManage ? $this->directory->availableAppAdmins() : [],
 				'availableGroups' => $canManage ? $this->directory->availableGroups() : [],
 				'selectedAllowedUsers' => $canManage ? $this->directory->resolveUsers($allowedUserIds) : [],
+				'selectedAppAdmins' => $canManage ? $this->directory->resolveUsers($appAdminUserIds) : [],
 				'license' => $canManage ? $this->license->status() : null,
 				'licenseSeats' => $canManage ? $this->license->listSeats(200, 0) : null,
 			],

@@ -96,6 +96,7 @@
       status: document.getElementById('crm-company-status').value,
       lang: document.getElementById('crm-company-lang').value,
       notes: document.getElementById('crm-company-notes').value,
+      accountOwnerUserId: (document.getElementById('crm-company-owner') || {}).value || '',
     };
     const pc = document.getElementById('crm-company-pc');
     const tc = document.getElementById('crm-company-tc');

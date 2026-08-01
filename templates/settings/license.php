@@ -49,7 +49,9 @@ $seatAssigned = (int)($license['seats']['assigned'] ?? 0);
 					</div>
 					<div class="crm-dl__row">
 						<dt><?php p($l->t('Mobile seats')); ?></dt>
-						<dd><?php p($l->t('%1$d of %2$d assigned', [$seatAssigned, $seatLimit])); ?></dd>
+						<dd id="crm-license-seats-count" data-seat-limit="<?php p($seatLimit); ?>" data-seat-assigned="<?php p($seatAssigned); ?>">
+							<?php p($l->t('%1$d of %2$d assigned', [$seatAssigned, $seatLimit])); ?>
+						</dd>
 					</div>
 				</dl>
 			<?php endif; ?>
@@ -75,13 +77,22 @@ $seatAssigned = (int)($license['seats']['assigned'] ?? 0);
 			<div class="form-group" id="crm-license-seats-block" <?php if ($licenseState === null): ?>hidden<?php endif; ?>>
 				<h3 class="crm-card__subtitle"><?php p($l->t('Mobile seats')); ?></h3>
 				<p class="form-help"><?php p($l->t('Only listed colleagues can log in with the mobile app. If the license shrinks, the newest seats are paused first.')); ?></p>
-				<div class="crm-token-row">
-					<input type="text" id="crm-license-seat-user" class="form-input crm-input"
-						autocomplete="off" spellcheck="false"
-						placeholder="<?php p($l->t('Nextcloud user id, e.g. anna')); ?>"
-						aria-label="<?php p($l->t('Nextcloud user id for the new mobile seat')); ?>">
-					<button type="button" class="crm-btn crm-btn--secondary" id="crm-license-seat-add"><?php p($l->t('Assign seat')); ?></button>
+				<div class="user-picker" id="crm-license-seat-picker">
+					<div class="user-picker__control">
+						<input type="search" id="crm-license-seat-search" class="form-input crm-input user-picker__search"
+							role="combobox" aria-autocomplete="list" aria-expanded="false"
+							aria-controls="crm-license-seat-suggest"
+							placeholder="<?php p($l->t('Search by name or login…')); ?>"
+							autocomplete="off" spellcheck="false"
+							aria-label="<?php p($l->t('Search colleagues for a mobile seat')); ?>">
+						<button type="button" class="user-picker__clear" id="crm-license-seat-clear" hidden
+							aria-label="<?php p($l->t('Clear selected colleague')); ?>">×</button>
+						<input type="hidden" id="crm-license-seat-user" value="">
+						<button type="button" class="crm-btn crm-btn--secondary" id="crm-license-seat-add"><?php p($l->t('Assign seat')); ?></button>
+					</div>
+					<ul id="crm-license-seat-suggest" class="user-picker__list" role="listbox" hidden></ul>
 				</div>
+				<p class="form-help"><?php p($l->t('Search by name or login, then pick a colleague. Never type a raw user id.')); ?></p>
 				<p id="crm-license-seat-error" class="form-error" role="alert" hidden></p>
 				<ul class="crm-simple-list" id="crm-license-seat-list" aria-label="<?php p($l->t('Assigned mobile seats')); ?>">
 					<?php foreach ($seatRows as $seatRow): ?>

@@ -42,9 +42,8 @@ class HoursApiController extends Controller
 	private function gateAgreement(int $id, string $capability = 'read'): array
 	{
 		$agreement = $this->agreements->get($id);
-		$this->requireCompanyInResolvedWorkspace((int)$agreement->getCompanyId());
 
-		return $this->requireWorkspaceCapability($capability);
+		return $this->requireCompanyCapability((int)$agreement->getCompanyId(), $capability);
 	}
 
 	#[NoAdminRequired]

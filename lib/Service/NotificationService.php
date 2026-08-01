@@ -11,10 +11,11 @@ use OCP\Notification\IManager;
 use Psr\Log\LoggerInterface;
 
 /**
- * Fan-out of CustomerCheck notifications to every CRM user (§6.2, §15).
+ * Fan-out of CustomerCheck notifications — product §3.3 / §6.2.
  *
- * Notifications are the CRM inbox: the app never emails the operator, and it
- * never emails a customer without a human pressing compose (§6.2).
+ * Prefer {@see notifyWorkspaceUsers} whenever the object belongs to a book.
+ * Instance-wide {@see notifyCrmUsers} remains for rare app-admin events without
+ * a workspace (never for company names).
  *
  * Companion P2 bridges selected subjects to Expo push via {@see MobilePushService}
  * after the in-app fan-out. Push failures never affect the return value.
@@ -24,6 +25,7 @@ class NotificationService
 	public function __construct(
 		private readonly IManager $notificationManager,
 		private readonly AccessControlService $accessControl,
+		private readonly WorkspaceAccessService $workspaces,
 		private readonly ITimeFactory $timeFactory,
 		private readonly LoggerInterface $logger,
 		private readonly ?MobilePushService $mobilePush = null,
@@ -41,6 +43,26 @@ class NotificationService
 		}
 
 		$recipients = $this->accessControl->listNotifiableUserIds();
+		return $this->notifyUsers($recipients, $subject, $objectType, $objectId, $subjectParameters);
+	}
+
+	/**
+	 * Fan-out to members of one workspace only — never cross-book company names (§3.3).
+	 *
+	 * @param array<string, string|int|bool> $subjectParameters
+	 * @return int number of users notified
+	 */
+	public function notifyWorkspaceUsers(
+		int $workspaceId,
+		string $subject,
+		string $objectType,
+		string $objectId,
+		array $subjectParameters = [],
+	): int {
+		if (!in_array($subject, Constants::NOTIFICATION_SUBJECTS, true)) {
+			throw new \InvalidArgumentException('Unknown CustomerCheck notification subject: ' . $subject);
+		}
+		$recipients = $this->workspaces->listWorkspaceMemberUserIds($workspaceId);
 		return $this->notifyUsers($recipients, $subject, $objectType, $objectId, $subjectParameters);
 	}
 

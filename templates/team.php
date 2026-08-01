@@ -8,7 +8,7 @@ include __DIR__ . '/common/page-start.php';
 		<header class="crm-card__header">
 			<div class="crm-card__header-text">
 				<h2 id="crm-team-board-title" class="crm-card__title"><?php p($l->t('Who needs help')); ?></h2>
-				<p class="crm-card__lead"><?php p($l->t('Green = fine. Amber = coach. Open a row for 1:1 prep.')); ?></p>
+				<p class="crm-card__lead"><?php p($l->t('On track = fine. Needs help = coach them. Open a row for 1:1 prep.')); ?></p>
 			</div>
 		</header>
 		<div class="crm-card__body">

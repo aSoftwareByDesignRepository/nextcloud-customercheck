@@ -109,6 +109,11 @@ for (const theme of THEMES) {
       await enableTheme(page, theme);
       await page.goto('/apps/customercheck/companies', { waitUntil: 'domcontentloaded' });
       await page.waitForSelector('#crm-main-content', { timeout: 30000 });
+      // Page CTAs relocate from .crm-page-actions-source into #crm-page-actions (header, not main).
+      await page.waitForSelector(
+        '#crm-page-actions .crm-btn--primary, #crm-main-content .crm-btn--primary',
+        { timeout: 30000 },
+      );
 
       const { expected, actual, probeFound } = await page.evaluate(() => {
         // Resolve what --color-primary-element computes to in this theme.
@@ -119,7 +124,9 @@ for (const theme of THEMES) {
         const expectedColor = getComputedStyle(probe).backgroundColor;
         probe.remove();
 
-        const btn = document.querySelector('#crm-main-content .crm-btn--primary');
+        const btn = document.querySelector(
+          '#crm-page-actions .crm-btn--primary, #crm-main-content .crm-btn--primary',
+        );
         return {
           expected: expectedColor,
           actual: btn ? getComputedStyle(btn).backgroundColor : null,

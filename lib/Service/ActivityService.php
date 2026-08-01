@@ -9,12 +9,17 @@ use OCA\CustomerCheck\Constants;
 use OCA\CustomerCheck\Db\Activity;
 use OCA\CustomerCheck\Db\ActivityMapper;
 use OCA\CustomerCheck\Db\Agreement;
+use OCA\CustomerCheck\Db\AgreementMapper;
+use OCA\CustomerCheck\Db\DealMapper;
+use OCA\CustomerCheck\Db\PersonMapper;
 use OCA\CustomerCheck\Exception\NotFoundException;
 use OCA\CustomerCheck\Exception\ValidationException;
+use OCA\CustomerCheck\Support\CompanyScopedFk;
 use OCA\CustomerCheck\Support\DateMath;
 use OCA\CustomerCheck\Support\OptimisticLock;
 use OCP\AppFramework\Db\DoesNotExistException;
 use OCP\AppFramework\Utility\ITimeFactory;
+use OCP\IDBConnection;
 use OCP\IL10N;
 
 /**
@@ -33,6 +38,10 @@ class ActivityService
 		private readonly VTodoService $vTodoService,
 		private readonly ITimeFactory $timeFactory,
 		private readonly IL10N $l10n,
+		private readonly IDBConnection $db,
+		private readonly DealMapper $dealMapper,
+		private readonly AgreementMapper $agreementMapper,
+		private readonly PersonMapper $personMapper,
 	) {
 	}
 
@@ -68,7 +77,7 @@ class ActivityService
 	/**
 	 * Mobile may only see its own activities unless the caller is an app admin.
 	 *
-	 * @param array{companyId?: int, dealId?: int, type?: string, createdBy?: string, openOnly?: bool, doneOnly?: bool, dueBefore?: \DateTimeInterface} $filters
+	 * @param array{companyId?: int, dealId?: int, type?: string, createdBy?: string, openOnly?: bool, doneOnly?: bool, dueBefore?: \DateTimeInterface, workspaceId?: int} $filters
 	 * @return Activity[]
 	 */
 	public function searchForMobile(string $userId, array $filters = [], int $limit = 500, int $offset = 0): array
@@ -83,6 +92,8 @@ class ActivityService
 	/**
 	 * Company 360 lite uses the same visibility as the mobile list to avoid
 	 * leaking counts for other users' open tasks.
+	 *
+	 * @param array{companyId?: int, dealId?: int, type?: string, createdBy?: string, openOnly?: bool, doneOnly?: bool, dueBefore?: \DateTimeInterface, workspaceId?: int} $filters
 	 */
 	public function countForMobile(string $userId, array $filters = []): int
 	{
@@ -128,28 +139,54 @@ class ActivityService
 	 */
 	public function update(int $id, array $input, string $actor, ?string $updatedAtPrecondition): Activity
 	{
-		$activity = $this->get($id);
-		OptimisticLock::assertFresh($activity->getUpdatedAt(), $updatedAtPrecondition);
+		$this->db->beginTransaction();
+		try {
+			// Serialize field edits — optimistic stamp alone loses to concurrent writers.
+			if (!$this->activityMapper->lockRow($id)) {
+				throw new NotFoundException($this->l10n->t('This activity no longer exists.'));
+			}
+			$activity = $this->activityMapper->findById($id);
+			OptimisticLock::assertFresh($activity->getUpdatedAt(), $updatedAtPrecondition);
 
-		$this->applyInput($activity, $input);
-		$activity->setUpdatedAt($this->timeFactory->getDateTime());
+			$this->applyInput($activity, $input);
+			$activity->setUpdatedAt($this->timeFactory->getDateTime());
+			$stored = $this->activityMapper->update($activity);
+			$this->db->commit();
 
-		return $this->activityMapper->update($activity);
+			return $stored;
+		} catch (\Throwable $e) {
+			$this->db->rollBack();
+			throw $e;
+		}
 	}
 
 	/**
 	 * Toggle completion. Returns the stored entity so the UI can offer undo
 	 * with the fresh `updatedAt` (§9.6). User-facing callers must echo `updatedAt`.
+	 * CAS on updated_at so concurrent Done/Undo with the same token cannot both win.
 	 */
 	public function setDone(int $id, bool $done, string $actor, ?string $updatedAtPrecondition): Activity
 	{
 		$activity = $this->get($id);
 		OptimisticLock::assertFresh($activity->getUpdatedAt(), $updatedAtPrecondition);
 
-		$activity->setDoneAt($done ? $this->timeFactory->getDateTime() : null);
-		$activity->setUpdatedAt($this->timeFactory->getDateTime());
+		$expectedUpdatedAt = $activity->getUpdatedAt();
+		if ($expectedUpdatedAt === null) {
+			throw new \OCA\CustomerCheck\Exception\ConflictException(
+				$this->l10n->t('This activity changed. Reload and try again.'),
+			);
+		}
 
-		return $this->activityMapper->update($activity);
+		$now = $this->timeFactory->getDateTime();
+		$doneAt = $done ? $now : null;
+		$affected = $this->activityMapper->updateDoneCas($id, $expectedUpdatedAt, $doneAt, $now);
+		if ($affected !== 1) {
+			throw new \OCA\CustomerCheck\Exception\ConflictException(
+				$this->l10n->t('Someone else just updated this activity. Reload and try again.'),
+			);
+		}
+
+		return $this->get($id);
 	}
 
 	/**
@@ -175,7 +212,8 @@ class ActivityService
 
 	/**
 	 * One-way VTODO push (§7.2). Idempotent: a second push is refused because
-	 * `todo_uri` is already set.
+	 * `todo_uri` is already set. CAS claim prevents two concurrent pushes from
+	 * each creating a calendar task.
 	 *
 	 * @return array{pushed: bool, todoUri: string|null, reason: string|null}
 	 */
@@ -193,9 +231,17 @@ class ActivityService
 			return ['pushed' => false, 'todoUri' => null, 'reason' => 'no_writable_calendar'];
 		}
 
-		$activity->setTodoUri($result);
-		$activity->setUpdatedAt($this->timeFactory->getDateTime());
-		$this->activityMapper->update($activity);
+		$now = $this->timeFactory->getDateTime();
+		$claimed = $this->activityMapper->claimTodoUri($id, $result, $now);
+		if ($claimed !== 1) {
+			$fresh = $this->get($id);
+			$uri = $fresh->getTodoUri();
+			return [
+				'pushed' => false,
+				'todoUri' => ($uri !== null && $uri !== '') ? $uri : null,
+				'reason' => 'already_pushed',
+			];
+		}
 
 		return ['pushed' => true, 'todoUri' => $result, 'reason' => null];
 	}
@@ -287,8 +333,9 @@ class ActivityService
 	}
 
 	/**
-	 * Bulk-dismiss remaining open follow-up activities for a deal (§14.2).
+	 * Bulk-dismiss remaining open follow-up activities for a deal (§14.2 / §11.4).
 	 * Only sequence-originated open activities are closed; user-created ones stay.
+	 * Each row uses updateDoneCas so concurrent Done/Undo cannot be clobbered.
 	 *
 	 * @return array{dismissed: int}
 	 */
@@ -297,19 +344,28 @@ class ActivityService
 		if ($dealId <= 0) {
 			return ['dismissed' => 0];
 		}
-		$origins = ['sequence_quoted', 'sequence_won'];
+		// All stage-sequence origins (§11.4) — contacted/quoted/negotiation/won.
 		$open = $this->activityMapper->search(['dealId' => $dealId, 'openOnly' => true], 200);
 		$now = $this->timeFactory->getDateTime();
 		$dismissed = 0;
 		foreach ($open as $activity) {
 			$origin = (string)$activity->getOrigin();
-			if (!in_array($origin, $origins, true)) {
+			if (!str_starts_with($origin, 'sequence_')) {
 				continue;
 			}
-			$activity->setDoneAt($now);
-			$activity->setUpdatedAt($now);
-			$this->activityMapper->update($activity);
-			$dismissed++;
+			$expected = $activity->getUpdatedAt();
+			if ($expected === null) {
+				continue;
+			}
+			$affected = $this->activityMapper->updateDoneCas(
+				(int)$activity->getId(),
+				$expected,
+				$now,
+				$now,
+			);
+			if ($affected === 1) {
+				$dismissed++;
+			}
 		}
 		return ['dismissed' => $dismissed];
 	}
@@ -397,17 +453,77 @@ class ActivityService
 
 		if (array_key_exists('dealId', $input)) {
 			$dealId = (int)($input['dealId'] ?? 0);
-			$activity->setDealId($dealId > 0 ? $dealId : null);
+			if ($dealId <= 0) {
+				$activity->setDealId(null);
+			} else {
+				try {
+					$deal = $this->dealMapper->findById($dealId);
+				} catch (DoesNotExistException) {
+					throw ValidationException::field(
+						Constants::ERR_VALIDATION,
+						'dealId',
+						$this->l10n->t('Pick a deal that belongs to this company.'),
+					);
+				}
+				CompanyScopedFk::assertSameCompany(
+					(int)$activity->getCompanyId(),
+					(int)$deal->getCompanyId(),
+					'dealId',
+					$this->l10n,
+					$this->l10n->t('Pick a deal that belongs to this company.'),
+				);
+				$activity->setDealId($dealId);
+			}
 		}
 
 		if (array_key_exists('agreementId', $input)) {
 			$agreementId = (int)($input['agreementId'] ?? 0);
-			$activity->setAgreementId($agreementId > 0 ? $agreementId : null);
+			if ($agreementId <= 0) {
+				$activity->setAgreementId(null);
+			} else {
+				try {
+					$agreement = $this->agreementMapper->findById($agreementId);
+				} catch (DoesNotExistException) {
+					throw ValidationException::field(
+						Constants::ERR_VALIDATION,
+						'agreementId',
+						$this->l10n->t('Pick an agreement that belongs to this company.'),
+					);
+				}
+				CompanyScopedFk::assertSameCompany(
+					(int)$activity->getCompanyId(),
+					(int)$agreement->getCompanyId(),
+					'agreementId',
+					$this->l10n,
+					$this->l10n->t('Pick an agreement that belongs to this company.'),
+				);
+				$activity->setAgreementId($agreementId);
+			}
 		}
 
 		if (array_key_exists('personId', $input)) {
 			$personId = (int)($input['personId'] ?? 0);
-			$activity->setPersonId($personId > 0 ? $personId : null);
+			if ($personId <= 0) {
+				$activity->setPersonId(null);
+			} else {
+				try {
+					$person = $this->personMapper->findById($personId);
+				} catch (DoesNotExistException) {
+					throw ValidationException::field(
+						Constants::ERR_VALIDATION,
+						'personId',
+						$this->l10n->t('Pick a person on this company.'),
+					);
+				}
+				CompanyScopedFk::assertSameCompany(
+					(int)$activity->getCompanyId(),
+					(int)$person->getCompanyId(),
+					'personId',
+					$this->l10n,
+					$this->l10n->t('Pick a person on this company.'),
+				);
+				$activity->setPersonId($personId);
+			}
 		}
 
 		if (array_key_exists('isCallback', $input)) {

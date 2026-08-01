@@ -109,7 +109,7 @@ class AgreementMapper extends QBMapper
 	 *
 	 * @return Agreement[]
 	 */
-	public function findRenewalCandidates(int $limit = 500, int $offset = 0): array
+	public function findRenewalCandidates(int $limit = 500, int $offset = 0, ?int $workspaceId = null): array
 	{
 		$qb = $this->db->getQueryBuilder();
 		$qb->select('*')
@@ -122,6 +122,9 @@ class AgreementMapper extends QBMapper
 			->orderBy('id', 'ASC');
 		// Archived companies stop generating renewal work (Today + reminder job).
 		$this->excludeArchivedCompanies($qb);
+		if ($workspaceId !== null && $workspaceId > 0) {
+			$this->restrictToWorkspace($qb, $workspaceId);
+		}
 		$qb
 			->setMaxResults(max(1, min(5000, $limit)))
 			->setFirstResult(max(0, $offset));
@@ -129,9 +132,18 @@ class AgreementMapper extends QBMapper
 		return $this->findEntities($qb);
 	}
 
-	/** @return Agreement[] */
-	public function findPartnerAgreements(int $limit = 1000): array
+	/**
+	 * Active partner agreements in one workspace (hours / digest quota strip).
+	 * Fail closed without a workspace — never scan every book.
+	 *
+	 * @return Agreement[]
+	 */
+	public function findPartnerAgreements(int $workspaceId, int $limit = 1000): array
 	{
+		if ($workspaceId <= 0) {
+			return [];
+		}
+
 		$qb = $this->db->getQueryBuilder();
 		$qb->select('*')
 			->from($this->getTableName())
@@ -142,6 +154,8 @@ class AgreementMapper extends QBMapper
 			))
 			->orderBy('id', 'ASC')
 			->setMaxResults(max(1, min(5000, $limit)));
+		$this->excludeArchivedCompanies($qb);
+		$this->restrictToWorkspace($qb, $workspaceId);
 
 		return $this->findEntities($qb);
 	}
@@ -256,6 +270,7 @@ class AgreementMapper extends QBMapper
 	{
 		$qb = $this->db->getQueryBuilder();
 		$qb->update($this->getTableName())
+			->set('label', $qb->createNamedParameter('[erased]'))
 			->set('notes', $qb->createNamedParameter(null, IQueryBuilder::PARAM_NULL))
 			->set('cancel_reason', $qb->createNamedParameter(null, IQueryBuilder::PARAM_NULL))
 			->set('created_by', $qb->createNamedParameter('system'))

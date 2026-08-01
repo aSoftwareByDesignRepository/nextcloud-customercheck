@@ -18,6 +18,7 @@ use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\IDBConnection;
 use OCP\IL10N;
 use OCP\IUserManager;
+use OCP\Lock\ILockingProvider;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -83,6 +84,38 @@ final class CoachingBulkReassignTest extends TestCase
 		], 'mgr');
 	}
 
+	public function testCasMissRollsBackAndReportsConflict(): void
+	{
+		$db = $this->createMock(IDBConnection::class);
+		$db->method('tableExists')->willReturn(true);
+		$db->expects($this->once())->method('beginTransaction');
+		$db->expects($this->once())->method('rollBack');
+		$db->expects($this->never())->method('commit');
+		$db->method('inTransaction')->willReturn(false);
+
+		$selectQb = $this->queryBuilderReturning([['id' => 11], ['id' => 12]]);
+		// First update succeeds, second misses (owner already changed).
+		$updateQb = $this->updatingQueryBuilderSequence([1, 0]);
+		$calls = 0;
+		$db->method('getQueryBuilder')->willReturnCallback(static function () use (&$calls, $selectQb, $updateQb) {
+			$calls++;
+			return $calls <= 2 ? $selectQb : $updateQb;
+		});
+
+		$svc = $this->serviceWithDb($db);
+		try {
+			$svc->bulkReassign(7, [
+				'fromUser' => 'alex',
+				'toUser' => 'sam',
+				'confirmFromUserName' => 'alex',
+				'entityTypes' => ['deals'],
+			], 'mgr');
+			$this->fail('Expected ValidationException');
+		} catch (ValidationException $e) {
+			$this->assertSame(Constants::ERR_CONFLICT_STALE, $e->getErrorCode());
+		}
+	}
+
 	/** @param list<array{id:int}> $rows */
 	private function queryBuilderReturning(array $rows): object
 	{
@@ -124,9 +157,17 @@ final class CoachingBulkReassignTest extends TestCase
 
 	private function updatingQueryBuilder(int $times): object
 	{
-		$qb = new class($times) {
-			private int $left;
-			public function __construct(int $times) { $this->left = $times; }
+		$returns = array_fill(0, max(1, $times), 1);
+		return $this->updatingQueryBuilderSequence($returns);
+	}
+
+	/** @param list<int> $returns */
+	private function updatingQueryBuilderSequence(array $returns): object
+	{
+		$qb = new class($returns) {
+			/** @var list<int> */
+			private array $returns;
+			public function __construct(array $returns) { $this->returns = $returns; }
 			public function update(...$a): self { return $this; }
 			public function set(...$a): self { return $this; }
 			public function where(...$a): self { return $this; }
@@ -140,8 +181,10 @@ final class CoachingBulkReassignTest extends TestCase
 			}
 			public function executeStatement(): int
 			{
-				$this->left--;
-				return 1;
+				if ($this->returns === []) {
+					return 0;
+				}
+				return (int)array_shift($this->returns);
 			}
 		};
 		return $qb;
@@ -151,6 +194,7 @@ final class CoachingBulkReassignTest extends TestCase
 	{
 		$l10n = $this->createMock(IL10N::class);
 		$l10n->method('t')->willReturnCallback(static fn (string $s): string => $s);
+		$locking = $this->createMock(ILockingProvider::class);
 		return new CoachingService(
 			$db,
 			$this->createMock(WorkspaceService::class),
@@ -163,6 +207,7 @@ final class CoachingBulkReassignTest extends TestCase
 			$this->createMock(ITimeFactory::class),
 			$l10n,
 			$this->createMock(IUserManager::class),
+			$locking,
 		);
 	}
 }

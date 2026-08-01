@@ -29,15 +29,31 @@ $projectsHasData = ($_['projects'] ?? []) !== [];
 $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasData;
 ?>
 <div class="crm-page-actions-source header-actions" hidden>
+	<?php if (!empty($_['canWrite'])): ?>
 	<a class="crm-btn crm-btn--primary" href="<?php p($urlGenerator->linkToRoute('customercheck.page.companyEdit', ['id' => $company->getId()])); ?>"><?php p($l->t('Edit')); ?></a>
+	<?php endif; ?>
 	<button type="button" class="crm-btn crm-btn--secondary" id="crm-company-gdpr-export" data-company-id="<?php p($company->getId()); ?>" data-slug="<?php p($company->getSlug()); ?>"><?php p($l->t('Export')); ?></button>
+	<?php if (!empty($_['canWrite']) || !empty($_['canMove']) || !empty($_['canDelete'])): ?>
 	<details class="crm-more-menu">
 		<summary class="crm-btn crm-btn--secondary"><?php p($l->t('More')); ?></summary>
 		<div class="crm-more-menu__panel" role="group" aria-label="<?php p($l->t('More actions')); ?>">
+			<?php if (!empty($_['canWrite'])): ?>
 			<button type="button" class="crm-btn crm-btn--secondary" id="crm-company-merge" data-company-id="<?php p($company->getId()); ?>" data-updated-at="<?php p(\OCA\CustomerCheck\Support\OptimisticLock::format($company->getUpdatedAt()) ?? ''); ?>" <?php if ($company->isArchived()): ?>disabled<?php endif; ?>><?php p($l->t('Merge into…')); ?></button>
+			<?php endif; ?>
+			<?php if (!empty($_['canMove'])): ?>
+			<button type="button" class="crm-btn crm-btn--secondary" id="crm-company-move-workspace"
+				data-company-id="<?php p($company->getId()); ?>"
+				data-slug="<?php p($company->getSlug()); ?>"
+				data-workspace-id="<?php p((int)($company->getWorkspaceId() ?? 0)); ?>"
+				data-updated-at="<?php p(\OCA\CustomerCheck\Support\OptimisticLock::format($company->getUpdatedAt()) ?? ''); ?>"
+				<?php if ($company->isArchived()): ?>disabled<?php endif; ?>><?php p($l->t('Move to workspace…')); ?></button>
+			<?php endif; ?>
+			<?php if (!empty($_['canDelete'])): ?>
 			<button type="button" class="crm-btn crm-btn--danger" id="crm-company-gdpr-erase" data-company-id="<?php p($company->getId()); ?>" data-slug="<?php p($company->getSlug()); ?>"><?php p($l->t('Erase (GDPR)')); ?></button>
+			<?php endif; ?>
 		</div>
 	</details>
+	<?php endif; ?>
 </div>
 <div id="crm-live-region" class="crm-sr-only" aria-live="polite"></div>
 <div class="crm-page-stack" data-company-id="<?php p($company->getId()); ?>" data-workspace-id="<?php p((int)($_['workspaceId'] ?? $company->getWorkspaceId() ?? 0)); ?>" data-workspace-name="<?php p((string)($_['workspaceName'] ?? '')); ?>" data-crm-persons="<?php p($crmPersonsJson); ?>">
@@ -132,10 +148,10 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 	$jumpNavItems = [
 		['href' => '#crm-glance', 'label' => $l->t('At a glance'), 'primary' => true],
 		['href' => '#crm-communication', 'label' => $l->t('Talked'), 'primary' => true],
-		['href' => '#crm-account-plan', 'label' => $l->t('Account plan'), 'primary' => true],
 		['href' => '#crm-persons', 'label' => $l->t('People'), 'primary' => true],
 		['href' => '#crm-promises', 'label' => $l->t('Promises'), 'primary' => true],
-		['href' => '#crm-contracts', 'label' => $l->t('Contracts')],
+		['href' => '#crm-contracts', 'label' => $l->t('Contracts'), 'primary' => true],
+		['href' => '#crm-account-plan', 'label' => $l->t('Account plan')],
 		['href' => '#crm-open-tasks', 'label' => $l->t('Tasks')],
 		['href' => '#crm-billing', 'label' => $l->t('Money')],
 		['href' => '#crm-projects', 'label' => $l->t('Projects')],
@@ -159,8 +175,10 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 				<p class="crm-card__lead"><?php p($l->t('What you last discussed — emails, calls and notes in one list.')); ?></p>
 			</div>
 			<div class="crm-inline-actions">
-				<button type="button" class="crm-btn crm-btn--primary crm-btn--sm" id="crm-log-email-btn" data-crm-log-email><?php p($l->t('Log email')); ?></button>
-				<button type="button" class="crm-btn crm-btn--secondary crm-btn--sm" id="crm-schedule-callback"><?php p($l->t('Call back')); ?></button>
+				<?php if (!empty($_['canWrite'])): ?>
+				<button type="button" class="crm-btn crm-btn--primary crm-btn--sm" id="crm-log-email" data-crm-log-email><?php p($l->t('Log email')); ?></button>
+				<button type="button" class="crm-btn crm-btn--secondary crm-btn--sm" id="crm-schedule-callback" title="<?php p($l->t('Schedules a call for tomorrow')); ?>"><?php p($l->t('Call tomorrow')); ?></button>
+				<?php endif; ?>
 			</div>
 		</header>
 		<div class="crm-card__body">
@@ -172,17 +190,17 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 		</div>
 	</section>
 
-	<section class="crm-card" id="crm-account-plan" aria-labelledby="crm-account-plan-title">
-		<header class="crm-card__header">
+	<details class="crm-card crm-card--collapsible" id="crm-account-plan" aria-labelledby="crm-account-plan-title">
+		<summary class="crm-card__header crm-card__header--summary">
 			<div class="crm-card__header-text">
 				<h2 id="crm-account-plan-title" class="crm-card__title"><?php p($l->t('Account plan')); ?></h2>
-				<p class="crm-card__lead"><?php p($l->t('Goal, priority and MAP steps for this account.')); ?></p>
+				<p class="crm-card__lead"><?php p($l->t('Goal, priority and next steps for this account.')); ?></p>
 			</div>
-		</header>
+		</summary>
 		<div class="crm-card__body" id="crm-account-plan-body">
 			<p class="crm-muted"><?php p($l->t('Loading account plan…')); ?></p>
 		</div>
-	</section>
+	</details>
 
 <section class="crm-card" id="crm-persons" aria-labelledby="crm-persons-title" data-contacts-available="<?php p(!empty($_['contactsAvailable']) ? '1' : '0'); ?>" data-contacts-home="<?php p((string)($_['contactsHomeUrl'] ?? '/apps/contacts/')); ?>">
 		<header class="crm-card__header">
@@ -190,7 +208,7 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 				<h2 id="crm-persons-title" class="crm-card__title"><?php p($l->t('People')); ?></h2>
 				<p class="crm-card__lead"><?php p($l->t('Contacts at this company.')); ?></p>
 			</div>
-			<button type="button" class="crm-btn crm-btn--secondary crm-btn--sm" id="crm-add-person"><?php p($l->t('Add person')); ?></button>
+			<button type="button" class="crm-btn crm-btn--secondary crm-btn--sm" id="crm-add-person"<?php if (empty($_['canWrite'])): ?> hidden<?php endif; ?>><?php p($l->t('Add person')); ?></button>
 		</header>
 		<div class="crm-card__body">
 			<?php if (($_['persons'] ?? []) === []): ?>
@@ -204,11 +222,6 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 					<thead><tr>
 						<th scope="col"><?php p($l->t('Name')); ?></th>
 						<th scope="col"><?php p($l->t('Email')); ?></th>
-						<th scope="col"><?php p($l->t('Phone')); ?></th>
-						<th scope="col"><?php p($l->t('Role')); ?></th>
-						<th scope="col"><?php p($l->t('Buying role')); ?></th>
-						<th scope="col"><?php p($l->t('Last touch')); ?></th>
-						<th scope="col"><?php p($l->t('Address book')); ?></th>
 						<th scope="col" class="crm-table-actions-col"><?php p($l->t('Actions')); ?></th>
 					</tr></thead>
 					<tbody>
@@ -220,40 +233,52 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 						$buyingRole = (string)($p['buyingRole'] ?? '');
 					?>
 						<tr data-person-id="<?php p((int)$p['id']); ?>" data-contacts-uid="<?php p((string)($p['contactsUid'] ?? '')); ?>" data-updated-at="<?php p((string)($p['updatedAt'] ?? '')); ?>" data-buying-role="<?php p($buyingRole); ?>">
-							<td data-label="<?php p($l->t('Name')); ?>"><?php p($p['name']); ?><?php if (!empty($p['isPrimary'])): ?> <span class="crm-badge crm-badge--info"><?php p($l->t('Primary')); ?></span><?php endif; ?></td>
+							<td data-label="<?php p($l->t('Name')); ?>">
+								<?php p($p['name']); ?><?php if (!empty($p['isPrimary'])): ?> <span class="crm-badge crm-badge--info"><?php p($l->t('Primary')); ?></span><?php endif; ?>
+								<?php if (!empty($p['phone']) || !empty($p['role'])): ?>
+									<p class="crm-muted crm-person-meta">
+										<?php if (!empty($p['role'])): ?><?php p($p['role']); ?><?php endif; ?>
+										<?php if (!empty($p['phone'])): ?><?php if (!empty($p['role'])): ?> · <?php endif; ?><?php p($p['phone']); ?><?php endif; ?>
+									</p>
+								<?php endif; ?>
+							</td>
 							<td data-label="<?php p($l->t('Email')); ?>"><?php p($p['email'] ?? '—'); ?></td>
-							<td data-label="<?php p($l->t('Phone')); ?>"><?php p($p['phone'] ?? '—'); ?></td>
-							<td data-label="<?php p($l->t('Role')); ?>"><?php p($p['role'] ?? '—'); ?></td>
-							<td data-label="<?php p($l->t('Buying role')); ?>">
-								<label class="crm-sr-only" for="crm-buying-role-<?php p((int)$p['id']); ?>"><?php p($l->t('Buying role')); ?></label>
-								<select id="crm-buying-role-<?php p((int)$p['id']); ?>" class="crm-input crm-input--sm" data-crm-buying-role="<?php p((int)$p['id']); ?>" data-updated-at="<?php p((string)($p['updatedAt'] ?? '')); ?>">
-									<?php foreach ($buyingRoleOptions as $opt): ?>
-										<option value="<?php p($opt['value']); ?>" <?php if ((string)$opt['value'] === $buyingRole): ?>selected<?php endif; ?>><?php p($opt['label']); ?></option>
-									<?php endforeach; ?>
-								</select>
-							</td>
-							<td data-label="<?php p($l->t('Last touch')); ?>">
-								<?php if (!empty($p['lastTouch'])): ?>
-									<button type="button" class="crm-btn crm-btn--ghost crm-btn--sm" data-crm-person-last-touch="<?php p((int)$p['id']); ?>"><?php p($ltLabel); ?></button>
-								<?php else: ?>
-									<span class="crm-muted"><?php p($ltLabel); ?></span>
-								<?php endif; ?>
-							</td>
-							<td data-label="<?php p($l->t('Address book')); ?>">
-								<?php if ($linked): ?>
-									<span class="crm-badge crm-badge--success"><?php p($l->t('Linked')); ?></span>
-								<?php else: ?>
-									<span class="crm-muted"><?php p($l->t('Not linked')); ?></span>
-								<?php endif; ?>
-							</td>
 							<td data-label="<?php p($l->t('Actions')); ?>" class="actions-cell crm-table-actions-col">
 								<div class="crm-table-actions">
 									<?php if ($linked && !empty($_['contactsAvailable'])): ?>
 										<a class="crm-btn crm-btn--sm crm-btn--secondary" href="<?php p((string)$_['contactsHomeUrl']); ?>" data-crm-open-contacts="<?php p((int)$p['id']); ?>" data-person-name="<?php p($p['name']); ?>"><?php p($l->t('Open in Contacts')); ?></a>
-										<button type="button" class="crm-btn crm-btn--sm crm-btn--ghost" data-crm-unlink-contacts="<?php p((int)$p['id']); ?>"><?php p($l->t('Unlink')); ?></button>
 									<?php elseif ($linked): ?>
 										<span class="crm-badge crm-badge--neutral" title="<?php p($l->t('Contacts app is not available — link kept.')); ?>"><?php p($l->t('Linked')); ?></span>
 									<?php endif; ?>
+									<details class="crm-more-menu">
+										<summary class="crm-btn crm-btn--ghost crm-btn--sm"><?php p($l->t('More')); ?></summary>
+										<div class="crm-more-menu__panel" role="group" aria-label="<?php p($l->t('More person actions')); ?>">
+											<?php if (!empty($p['lastTouch'])): ?>
+												<button type="button" class="crm-btn crm-btn--secondary crm-btn--sm" data-crm-person-last-touch="<?php p((int)$p['id']); ?>"><?php p($ltLabel); ?></button>
+											<?php else: ?>
+												<span class="crm-muted"><?php p($ltLabel); ?></span>
+											<?php endif; ?>
+											<?php if (!empty($_['canWrite'])): ?>
+											<label class="form-label" for="crm-buying-role-<?php p((int)$p['id']); ?>"><?php p($l->t('Buying role')); ?></label>
+											<select id="crm-buying-role-<?php p((int)$p['id']); ?>" class="crm-input crm-input--sm" data-crm-buying-role="<?php p((int)$p['id']); ?>" data-updated-at="<?php p((string)($p['updatedAt'] ?? '')); ?>">
+												<?php foreach ($buyingRoleOptions as $opt): ?>
+													<option value="<?php p($opt['value']); ?>" <?php if ((string)$opt['value'] === $buyingRole): ?>selected<?php endif; ?>><?php p($opt['label']); ?></option>
+												<?php endforeach; ?>
+											</select>
+											<?php else: ?>
+												<?php
+												$roleLabel = $buyingRole;
+												if ($labels instanceof \OCA\CustomerCheck\Service\DisplayLabelService && $buyingRole !== '') {
+													$roleLabel = $labels->buyingRole($buyingRole);
+												}
+												?>
+												<p class="crm-muted"><?php p($l->t('Buying role')); ?>: <?php p($roleLabel !== '' ? $roleLabel : '—'); ?></p>
+											<?php endif; ?>
+											<?php if ($linked && !empty($_['canWrite'])): ?>
+												<button type="button" class="crm-btn crm-btn--ghost crm-btn--sm" data-crm-unlink-contacts="<?php p((int)$p['id']); ?>"><?php p($l->t('Unlink Contacts')); ?></button>
+											<?php endif; ?>
+										</div>
+									</details>
 								</div>
 							</td>
 						</tr>
@@ -269,9 +294,9 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 		<header class="crm-card__header">
 			<div class="crm-card__header-text">
 				<h2 id="crm-promises-title" class="crm-card__title"><?php p($l->t('Customer promises')); ?></h2>
-				<p class="crm-card__lead"><?php p($l->t('What you told the customer — not internal weekly WIP.')); ?></p>
+				<p class="crm-card__lead"><?php p($l->t('What you told the customer.')); ?></p>
 			</div>
-			<button type="button" class="crm-btn crm-btn--secondary crm-btn--sm" id="crm-add-promise"><?php p($l->t('Add promise')); ?></button>
+			<button type="button" class="crm-btn crm-btn--secondary crm-btn--sm" id="crm-add-promise"<?php if (empty($_['canWrite'])): ?> hidden<?php endif; ?>><?php p($l->t('Add promise')); ?></button>
 		</header>
 		<div class="crm-card__body" id="crm-promises-body">
 			<p class="crm-muted"><?php p($l->t('Loading promises…')); ?></p>
@@ -287,7 +312,9 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 				<h2 id="crm-agreements-title" class="crm-card__title"><?php p($l->t('Agreements')); ?></h2>
 				<p class="crm-card__lead"><?php p($l->t('Licenses and Check Partner packages.')); ?></p>
 			</div>
+			<?php if (!empty($_['canWrite'])): ?>
 			<a class="crm-btn crm-btn--secondary crm-btn--sm" href="<?php p($urlGenerator->linkToRoute('customercheck.page.agreementNew')); ?>?companyId=<?php p((int)$company->getId()); ?>"><?php p($l->t('New agreement')); ?></a>
+			<?php endif; ?>
 		</header>
 		<div class="crm-card__body">
 			<?php if (($_['agreements'] ?? []) === []): ?>
@@ -313,7 +340,7 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 						$canLifecycle = in_array($agStatus, ['draft', 'active', 'expiring', 'expired'], true);
 						?>
 						<tr data-agreement-id="<?php p($a['id']); ?>" data-kind="<?php p($a['kind']); ?>" data-updated-at="<?php p($a['updatedAt'] ?? ''); ?>" data-status="<?php p($agStatus); ?>" data-valid-until="<?php p($a['validUntil'] ?? ''); ?>" data-amount-cents="<?php p((int)($a['amountCents'] ?? 0)); ?>" data-label="<?php p($a['label']); ?>">
-							<td data-label="<?php p($l->t('Label')); ?>"><a href="<?php p($urlGenerator->linkToRoute('customercheck.page.agreementEdit', ['id' => $a['id']])); ?>"><?php p($a['label']); ?></a></td>
+							<td data-label="<?php p($l->t('Label')); ?>"><?php if (!empty($_['canWrite'])): ?><a href="<?php p($urlGenerator->linkToRoute('customercheck.page.agreementEdit', ['id' => $a['id']])); ?>"><?php p($a['label']); ?></a><?php else: ?><?php p($a['label']); ?><?php endif; ?></td>
 							<td data-label="<?php p($l->t('Product')); ?>"><code><?php p($a['productCode']); ?></code></td>
 							<td data-label="<?php p($l->t('Status')); ?>"><span class="crm-badge"><?php
 								p($labels instanceof \OCA\CustomerCheck\Service\DisplayLabelService
@@ -330,27 +357,46 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 								<?php p(number_format(($a['amountCents'] ?? 0) / 100, 2)); ?> €
 							</td>
 							<td data-label="<?php p($l->t('Actions')); ?>">
-								<div class="crm-inline-actions">
-								<?php if ($canLifecycle): ?>
-									<button type="button" class="crm-btn crm-btn--sm crm-btn--primary" data-crm-renew-agreement="<?php p($a['id']); ?>"><?php p($l->t('Renew')); ?></button>
-									<button type="button" class="crm-btn crm-btn--sm crm-btn--danger" data-crm-cancel-agreement="<?php p($a['id']); ?>"><?php p($l->t('Cancel agreement')); ?></button>
-								<?php endif; ?>
-								<?php if (($a['kind'] ?? '') === 'license' && in_array($agStatus, ['expiring', 'expired', 'active'], true) && !empty($a['validUntil'])): ?>
-									<button type="button" class="crm-btn crm-btn--sm crm-btn--secondary" data-crm-renewal-compose="renewal_60" data-agreement-id="<?php p($a['id']); ?>"><?php p($l->t('Send renewal quote')); ?></button>
-								<?php endif; ?>
-								<?php if (($a['kind'] ?? '') === 'license' && (!empty($a['salesLogId']) || !empty($a['keyFingerprint']))): ?>
-									<button type="button" class="crm-btn crm-btn--sm crm-btn--secondary" data-crm-delivery-pack="<?php p($a['id']); ?>"><?php p($l->t('Delivery pack')); ?></button>
-								<?php endif; ?>
+								<?php if (!empty($_['canWrite'])): ?>
+								<div class="crm-table-actions">
 								<?php if (($a['kind'] ?? '') === 'partner'): ?>
 									<button type="button" class="crm-btn crm-btn--sm crm-btn--primary" data-crm-partner-session="<?php p($a['id']); ?>" title="<?php p($l->t('Open partner mail, then log hours')); ?>"><?php p($l->t('Mail & log hours')); ?></button>
-									<button type="button" class="crm-btn crm-btn--sm crm-btn--ghost" data-crm-log-hours="<?php p($a['id']); ?>"><?php p($l->t('Hours only')); ?></button>
 									<?php if (!empty($a['quota'])): ?>
 										<span class="crm-badge <?php echo !empty($a['quota']['alert']) ? 'crm-badge--warning' : 'crm-badge--neutral'; ?>" title="<?php p($l->t('Partner quota')); ?>">
 											<?php p(number_format(($a['quota']['usedMinutes'] ?? 0) / 60, 2)); ?> / <?php p(number_format(($a['quota']['quotaMinutes'] ?? 0) / 60, 2)); ?> h
 										</span>
 									<?php endif; ?>
+								<?php elseif ($canLifecycle): ?>
+									<button type="button" class="crm-btn crm-btn--sm crm-btn--primary" data-crm-renew-agreement="<?php p($a['id']); ?>"><?php p($l->t('Renew')); ?></button>
 								<?php endif; ?>
+								<details class="crm-more-menu">
+									<summary class="crm-btn crm-btn--ghost crm-btn--sm"><?php p($l->t('More')); ?></summary>
+									<div class="crm-more-menu__panel" role="group" aria-label="<?php p($l->t('More agreement actions')); ?>">
+									<?php if ($canLifecycle && ($a['kind'] ?? '') === 'partner'): ?>
+										<button type="button" class="crm-btn crm-btn--sm crm-btn--primary" data-crm-renew-agreement="<?php p($a['id']); ?>"><?php p($l->t('Renew')); ?></button>
+									<?php endif; ?>
+									<?php if ($canLifecycle): ?>
+										<button type="button" class="crm-btn crm-btn--sm crm-btn--danger" data-crm-cancel-agreement="<?php p($a['id']); ?>"><?php p($l->t('Cancel agreement')); ?></button>
+									<?php endif; ?>
+									<?php if (($a['kind'] ?? '') === 'license' && in_array($agStatus, ['expiring', 'expired', 'active'], true) && !empty($a['validUntil'])): ?>
+										<button type="button" class="crm-btn crm-btn--sm crm-btn--secondary" data-crm-renewal-compose="renewal_60" data-agreement-id="<?php p($a['id']); ?>"><?php p($l->t('Send renewal quote')); ?></button>
+									<?php endif; ?>
+									<?php if (($a['kind'] ?? '') === 'license' && (!empty($a['salesLogId']) || !empty($a['keyFingerprint']))): ?>
+										<button type="button" class="crm-btn crm-btn--sm crm-btn--secondary" data-crm-delivery-pack="<?php p($a['id']); ?>"><?php p($l->t('Delivery pack')); ?></button>
+									<?php endif; ?>
+									<?php if (($a['kind'] ?? '') === 'partner'): ?>
+										<button type="button" class="crm-btn crm-btn--sm crm-btn--ghost" data-crm-log-hours="<?php p($a['id']); ?>"><?php p($l->t('Hours only')); ?></button>
+									<?php endif; ?>
+									</div>
+								</details>
 								</div>
+								<?php elseif (!empty($a['quota']) && ($a['kind'] ?? '') === 'partner'): ?>
+									<span class="crm-badge <?php echo !empty($a['quota']['alert']) ? 'crm-badge--warning' : 'crm-badge--neutral'; ?>" title="<?php p($l->t('Partner quota')); ?>">
+										<?php p(number_format(($a['quota']['usedMinutes'] ?? 0) / 60, 2)); ?> / <?php p(number_format(($a['quota']['quotaMinutes'] ?? 0) / 60, 2)); ?> h
+									</span>
+								<?php else: ?>
+									<span class="crm-muted" aria-hidden="true">—</span>
+								<?php endif; ?>
 							</td>
 						</tr>
 					<?php endforeach; ?>
@@ -367,7 +413,7 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 				<h2 id="crm-open-tasks-title" class="crm-card__title"><?php p($l->t('Open tasks')); ?></h2>
 				<p class="crm-card__lead"><?php p($l->t('Done in CustomerCheck is what counts. Tasks app gets a copy you can open on your phone.')); ?></p>
 			</div>
-			<button type="button" class="crm-btn crm-btn--primary crm-btn--sm" id="crm-new-task"><?php p($l->t('New task')); ?></button>
+			<button type="button" class="crm-btn crm-btn--primary crm-btn--sm" id="crm-new-task"<?php if (empty($_['canWrite'])): ?> hidden<?php endif; ?>><?php p($l->t('New task')); ?></button>
 		</header>
 		<div class="crm-card__body" id="crm-open-tasks-body">
 			<p class="crm-muted"><?php p($l->t('Loading tasks…')); ?></p>
@@ -541,9 +587,11 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 				<p class="crm-card__lead"><?php p($l->t('Customer files live in Nextcloud Files — browse and choose one folder.')); ?></p>
 			</div>
 			<div class="crm-inline-actions">
+				<?php if (!empty($_['canWrite'])): ?>
 				<button type="button" class="crm-btn crm-btn--primary crm-btn--sm" id="crm-link-folder"><?php p($l->t('Browse folders')); ?></button>
 				<button type="button" class="crm-btn crm-btn--secondary crm-btn--sm" id="crm-create-folder"><?php p($l->t('Create folder')); ?></button>
 				<button type="button" class="crm-btn crm-btn--ghost crm-btn--sm" id="crm-unlink-folder" hidden><?php p($l->t('Unlink folder')); ?></button>
+				<?php endif; ?>
 			</div>
 		</header>
 		<div class="crm-card__body" id="crm-documents-body">
@@ -559,7 +607,7 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 				<h2 id="crm-deals-title" class="crm-card__title"><?php p($l->t('Deals')); ?></h2>
 				<p class="crm-card__lead"><?php p($l->t('Pipeline opportunities for this company.')); ?></p>
 			</div>
-			<button type="button" class="crm-btn crm-btn--secondary crm-btn--sm" id="crm-add-deal"><?php p($l->t('Add deal')); ?></button>
+			<button type="button" class="crm-btn crm-btn--secondary crm-btn--sm" id="crm-add-deal"<?php if (empty($_['canWrite'])): ?> hidden<?php endif; ?>><?php p($l->t('Add deal')); ?></button>
 		</header>
 		<div class="crm-card__body">
 			<?php if (($_['deals'] ?? []) === []): ?>
@@ -584,7 +632,9 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 								$cents = (int)($d['valueCents'] ?? 0);
 								p($cents > 0 ? number_format($cents / 100, 2) . ' €' : '—');
 							?>
+								<?php if (!empty($_['canWrite'])): ?>
 								<button type="button" class="crm-btn crm-btn--ghost crm-btn--sm" data-crm-dismiss-followups="<?php p($d['id']); ?>"><?php p($l->t('Dismiss follow-ups')); ?></button>
+								<?php endif; ?>
 							</td>
 						</tr>
 					<?php endforeach; ?>
@@ -604,7 +654,7 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 				<h2 id="crm-activities-title" class="crm-card__title"><?php p($l->t('Open activities')); ?></h2>
 				<p class="crm-card__lead"><?php p($l->t('Follow-ups you still owe (calls, reminders, to-dos).')); ?></p>
 			</div>
-			<button type="button" class="crm-btn crm-btn--secondary crm-btn--sm" id="crm-add-activity"><?php p($l->t('Add activity')); ?></button>
+			<button type="button" class="crm-btn crm-btn--secondary crm-btn--sm" id="crm-add-activity"<?php if (empty($_['canWrite'])): ?> hidden<?php endif; ?>><?php p($l->t('Add activity')); ?></button>
 		</header>
 		<div class="crm-card__body">
 			<?php if (($_['activities'] ?? []) === []): ?>
@@ -640,6 +690,7 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 								<?php endif; ?>
 							</td>
 							<td data-label="<?php p($l->t('Actions')); ?>" class="actions-cell crm-table-actions-col">
+								<?php if (!empty($_['canWrite'])): ?>
 								<div class="crm-table-actions">
 									<button type="button" class="crm-btn crm-btn--sm crm-btn--primary" data-crm-complete-activity="<?php p($act['id']); ?>" data-updated-at="<?php p($act['updatedAt'] ?? ''); ?>"><?php p($l->t('Done')); ?></button>
 									<?php if (empty($act['todoUri'])): ?>
@@ -648,6 +699,9 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 										<span class="crm-badge crm-badge--success"><?php p($l->t('Sent to Tasks')); ?></span>
 									<?php endif; ?>
 								</div>
+								<?php else: ?>
+									<span class="crm-muted" aria-hidden="true">—</span>
+								<?php endif; ?>
 							</td>
 						</tr>
 					<?php endforeach; ?>
@@ -667,7 +721,7 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 			<a class="crm-btn crm-btn--primary crm-btn--sm" href="<?php p((string)($_['prepareMeetingUrl'] ?? '#')); ?>"><?php p($l->t('Open prepare meeting')); ?></a>
 		</header>
 		<div class="crm-card__body">
-			<p class="crm-muted"><?php p($l->t('Coverage, people, recent talk, open promises, MAP and money in one pack.')); ?></p>
+			<p class="crm-muted"><?php p($l->t('Coverage, people, recent talk, open promises, next steps and money in one pack.')); ?></p>
 		</div>
 	</section>
 

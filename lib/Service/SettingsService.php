@@ -7,8 +7,10 @@ namespace OCA\CustomerCheck\Service;
 use OCA\CustomerCheck\AppInfo\Application;
 use OCA\CustomerCheck\Constants;
 use OCA\CustomerCheck\Exception\AccessDeniedException;
+use OCA\CustomerCheck\Exception\ValidationException;
 use OCP\IConfig;
 use OCP\IURLGenerator;
+use OCP\IUserManager;
 use OCP\Security\ISecureRandom;
 
 /**
@@ -21,6 +23,7 @@ class SettingsService
 		private readonly AccessControlService $accessControl,
 		private readonly ISecureRandom $secureRandom,
 		private readonly IURLGenerator $urlGenerator,
+		private readonly IUserManager $userManager,
 	) {
 	}
 
@@ -84,12 +87,19 @@ class SettingsService
 		if (array_key_exists(Constants::CONFIG_ACCESS_RESTRICTION_ENABLED, $payload)) {
 			$wantRestriction = $this->truthy($payload[Constants::CONFIG_ACCESS_RESTRICTION_ENABLED]);
 			if (!$wantRestriction && empty($payload['confirmOpenAccess'])) {
-				throw new \OCA\CustomerCheck\Exception\ValidationException(
+				throw new ValidationException(
 					Constants::ERR_VALIDATION,
 					'Turning off access restriction requires an explicit confirmation checkbox.',
 					['confirmOpenAccess' => 'Confirmation required'],
 				);
 			}
+		}
+
+		if (array_key_exists(Constants::CONFIG_APP_ADMIN_USER_IDS, $payload)) {
+			$payload[Constants::CONFIG_APP_ADMIN_USER_IDS] = $this->normalizeAppAdminUserIds(
+				$userId,
+				$payload[Constants::CONFIG_APP_ADMIN_USER_IDS],
+			);
 		}
 
 		$writable = array_keys(Constants::CONFIG_DEFAULTS);
@@ -104,6 +114,72 @@ class SettingsService
 		}
 
 		return $this->getForUser($userId);
+	}
+
+	/**
+	 * Dedicated App Admins may be any enabled Nextcloud user (portfolio §2.1).
+	 * Delegated (non–system-admin) operators cannot clear the list while removing themselves.
+	 *
+	 * @return list<string>
+	 */
+	private function normalizeAppAdminUserIds(string $actorUserId, mixed $raw): array
+	{
+		if (!is_array($raw)) {
+			throw new ValidationException(
+				Constants::ERR_VALIDATION,
+				'App administrators must be a list of users.',
+				[Constants::CONFIG_APP_ADMIN_USER_IDS => 'Invalid list'],
+			);
+		}
+
+		$normalised = [];
+		foreach ($raw as $candidate) {
+			if (!is_string($candidate) && !is_int($candidate)) {
+				continue;
+			}
+			$uid = trim((string)$candidate);
+			if ($uid === '' || strlen($uid) > 64) {
+				continue;
+			}
+			$normalised[$uid] = true;
+		}
+		$adminIds = array_keys($normalised);
+
+		foreach ($adminIds as $adminId) {
+			$user = $this->userManager->get($adminId);
+			if ($user === null) {
+				throw new ValidationException(
+					Constants::ERR_VALIDATION,
+					'One or more app administrators do not exist. Search the directory and pick again.',
+					[Constants::CONFIG_APP_ADMIN_USER_IDS => 'Unknown user'],
+				);
+			}
+			if (!$user->isEnabled()) {
+				throw new ValidationException(
+					Constants::ERR_VALIDATION,
+					'One or more app administrators are disabled accounts.',
+					[Constants::CONFIG_APP_ADMIN_USER_IDS => 'Disabled user'],
+				);
+			}
+		}
+
+		// Delegated app admin must not wipe the dedicated list and lock themselves out.
+		if (
+			$actorUserId !== ''
+			&& !$this->accessControl->isSystemAdmin($actorUserId)
+			&& $this->accessControl->isAppAdmin($actorUserId)
+		) {
+			$removingSelf = !in_array($actorUserId, $adminIds, true);
+			if ($removingSelf && $adminIds === []) {
+				throw new ValidationException(
+					Constants::ERR_VALIDATION,
+					'You cannot remove your own app administrator access without assigning another administrator first.',
+					[Constants::CONFIG_APP_ADMIN_USER_IDS => 'Cannot remove yourself'],
+				);
+			}
+		}
+
+		return $adminIds;
 	}
 
 	private function truthy(mixed $value): bool
@@ -172,6 +248,99 @@ class SettingsService
 	{
 		$expected = $this->getToken($key);
 		return $expected !== '' && hash_equals($expected, $candidate);
+	}
+
+	/**
+	 * Absolute ICS URL for one workspace book (§15.2 multi-book).
+	 * Token is independent of the Default-workspace global feed token.
+	 */
+	public function workspaceIcsFeedUrl(int $workspaceId): string
+	{
+		$token = $this->ensureWorkspaceIcsToken($workspaceId);
+		if ($token === '') {
+			return '';
+		}
+
+		return $this->urlGenerator->linkToRouteAbsolute(
+			'customercheck.feed.workspaceRenewals',
+			['workspaceId' => $workspaceId, 'token' => $token],
+		);
+	}
+
+	public function ensureWorkspaceIcsToken(int $workspaceId): string
+	{
+		if ($workspaceId <= 0) {
+			return '';
+		}
+		$map = $this->readWorkspaceIcsMap();
+		$key = (string)$workspaceId;
+		if (($map[$key] ?? '') === '') {
+			$map[$key] = $this->generateSecretToken();
+			$this->writeWorkspaceIcsMap($map);
+		}
+
+		return $map[$key];
+	}
+
+	public function rotateWorkspaceIcsToken(int $workspaceId): string
+	{
+		if ($workspaceId <= 0) {
+			throw ValidationException::field(
+				Constants::ERR_VALIDATION,
+				'workspaceId',
+				'Choose a workspace before rotating the ICS feed.',
+			);
+		}
+		$map = $this->readWorkspaceIcsMap();
+		$token = $this->generateSecretToken();
+		$map[(string)$workspaceId] = $token;
+		$this->writeWorkspaceIcsMap($map);
+
+		return $token;
+	}
+
+	public function workspaceIcsTokenMatches(int $workspaceId, string $candidate): bool
+	{
+		if ($workspaceId <= 0 || $candidate === '') {
+			return false;
+		}
+		$map = $this->readWorkspaceIcsMap();
+		$expected = (string)($map[(string)$workspaceId] ?? '');
+
+		return $expected !== '' && hash_equals($expected, $candidate);
+	}
+
+	/** @return array<string, string> */
+	private function readWorkspaceIcsMap(): array
+	{
+		$raw = $this->config->getAppValue(Application::APP_ID, Constants::CONFIG_ICS_WORKSPACE_TOKENS, '{}');
+		$decoded = json_decode($raw, true);
+		if (!is_array($decoded)) {
+			return [];
+		}
+		$out = [];
+		foreach ($decoded as $wsId => $token) {
+			if (!is_string($token) && !is_int($token)) {
+				continue;
+			}
+			$token = trim((string)$token);
+			if ($token === '') {
+				continue;
+			}
+			$out[(string)(int)$wsId] = $token;
+		}
+
+		return $out;
+	}
+
+	/** @param array<string, string> $map */
+	private function writeWorkspaceIcsMap(array $map): void
+	{
+		$this->config->setAppValue(
+			Application::APP_ID,
+			Constants::CONFIG_ICS_WORKSPACE_TOKENS,
+			json_encode($map, JSON_THROW_ON_ERROR),
+		);
 	}
 
 	private function decodeValue(string $key, string $value): mixed

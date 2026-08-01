@@ -89,12 +89,14 @@ final class ActivityDueReminderServiceTest extends TestCase
 		$company = new Company();
 		$company->setId(3);
 		$company->setName('Müller GmbH');
+		$company->setWorkspaceId(9);
 
 		$this->activities->method('findOpenDueUpTo')->willReturn([$activity]);
 		$this->ledger->method('exists')->willReturn(false);
 		$this->ledger->expects($this->once())->method('insert')->with($this->isInstanceOf(ActivityDueLog::class));
 		$this->companies->method('findById')->with(3)->willReturn($company);
-		$this->notifications->expects($this->once())->method('notifyCrmUsers')->with(
+		$this->notifications->expects($this->once())->method('notifyWorkspaceUsers')->with(
+			9,
 			Constants::NOTIFY_ACTIVITY_DUE,
 			'activity',
 			'12',
@@ -104,6 +106,7 @@ final class ActivityDueReminderServiceTest extends TestCase
 					&& ($p['title'] ?? '') === 'Call back';
 			}),
 		);
+		$this->notifications->expects($this->never())->method('notifyCrmUsers');
 
 		$result = $this->service()->run();
 		self::assertSame(1, $result['sent']);

@@ -7,6 +7,7 @@ namespace OCA\CustomerCheck\Service;
 use OCA\CustomerCheck\Constants;
 use OCA\CustomerCheck\Exception\ValidationException;
 use OCP\AppFramework\Utility\ITimeFactory;
+use OCP\DB\Exception as DbException;
 use OCP\IDBConnection;
 use OCP\IL10N;
 
@@ -21,6 +22,7 @@ class AccountPlanService
 		private readonly IDBConnection $db,
 		private readonly CompanyService $companies,
 		private readonly CoverageService $coverage,
+		private readonly DisplayLabelService $labels,
 		private readonly ITimeFactory $timeFactory,
 		private readonly IL10N $l10n,
 	) {
@@ -83,23 +85,74 @@ class AccountPlanService
 		$horizon = trim((string)($data['horizon'] ?? ''));
 		$nextReview = trim((string)($data['nextReviewOn'] ?? ''));
 		$now = $this->timeFactory->getDateTime()->format('Y-m-d H:i:s');
-		$existing = $this->forCompany($companyId);
-		if ($existing !== null) {
-			$qb = $this->db->getQueryBuilder();
-			$qb->update('crm_acct_plan')
-				->set('goal', $qb->createNamedParameter($goal !== '' ? $goal : null))
-				->set('priority', $qb->createNamedParameter($priority))
-				->set('owner_user_id', $qb->createNamedParameter($owner !== '' ? $owner : null))
-				->set('horizon', $qb->createNamedParameter($horizon !== '' ? $horizon : null))
-				->set('next_review_on', $qb->createNamedParameter($nextReview !== '' ? $nextReview : null))
-				->set('status', $qb->createNamedParameter((string)($data['status'] ?? 'active')))
-				->set('updated_at', $qb->createNamedParameter($now))
-				->where($qb->expr()->eq('id', $qb->createNamedParameter((int)$existing['id'])))
-				->executeStatement();
-			$plan = $this->forCompany($companyId);
-			assert($plan !== null);
-			return $plan;
+		$status = (string)($data['status'] ?? 'active');
+
+		$this->db->beginTransaction();
+		try {
+			// Serialise concurrent first-creates (company → plan lock order).
+			$this->companies->lockRow($companyId);
+			$existing = $this->forCompany($companyId);
+			if ($existing !== null) {
+				$this->updatePlanRow((int)$existing['id'], $goal, $priority, $owner, $horizon, $nextReview, $status, $now);
+			} else {
+				try {
+					$this->insertPlanRow($companyId, $ws, $goal, $priority, $owner, $horizon, $nextReview, $now);
+				} catch (DbException $e) {
+					if ($e->getReason() !== DbException::REASON_UNIQUE_CONSTRAINT_VIOLATION) {
+						throw $e;
+					}
+					// Peer won the insert — update that row instead of surfacing a raw SQL error.
+					$existing = $this->forCompany($companyId);
+					if ($existing === null) {
+						throw $e;
+					}
+					$this->updatePlanRow((int)$existing['id'], $goal, $priority, $owner, $horizon, $nextReview, $status, $now);
+				}
+			}
+			$this->db->commit();
+		} catch (\Throwable $e) {
+			$this->db->rollBack();
+			throw $e;
 		}
+
+		$plan = $this->forCompany($companyId);
+		assert($plan !== null);
+		return $plan;
+	}
+
+	private function updatePlanRow(
+		int $planId,
+		string $goal,
+		string $priority,
+		string $owner,
+		string $horizon,
+		string $nextReview,
+		string $status,
+		string $now,
+	): void {
+		$qb = $this->db->getQueryBuilder();
+		$qb->update('crm_acct_plan')
+			->set('goal', $qb->createNamedParameter($goal !== '' ? $goal : null))
+			->set('priority', $qb->createNamedParameter($priority))
+			->set('owner_user_id', $qb->createNamedParameter($owner !== '' ? $owner : null))
+			->set('horizon', $qb->createNamedParameter($horizon !== '' ? $horizon : null))
+			->set('next_review_on', $qb->createNamedParameter($nextReview !== '' ? $nextReview : null))
+			->set('status', $qb->createNamedParameter($status))
+			->set('updated_at', $qb->createNamedParameter($now))
+			->where($qb->expr()->eq('id', $qb->createNamedParameter($planId)))
+			->executeStatement();
+	}
+
+	private function insertPlanRow(
+		int $companyId,
+		int $ws,
+		string $goal,
+		string $priority,
+		string $owner,
+		string $horizon,
+		string $nextReview,
+		string $now,
+	): void {
 		$ins = $this->db->getQueryBuilder();
 		$ins->insert('crm_acct_plan')->values([
 			'company_id' => $ins->createNamedParameter($companyId),
@@ -113,9 +166,6 @@ class AccountPlanService
 			'created_at' => $ins->createNamedParameter($now),
 			'updated_at' => $ins->createNamedParameter($now),
 		])->executeStatement();
-		$plan = $this->forCompany($companyId);
-		assert($plan !== null);
-		return $plan;
 	}
 
 	/**
@@ -126,7 +176,7 @@ class AccountPlanService
 	{
 		$title = trim((string)($data['title'] ?? ''));
 		if ($title === '') {
-			throw ValidationException::field(Constants::ERR_VALIDATION, 'title', $this->l10n->t('Enter a MAP step title.'));
+			throw ValidationException::field(Constants::ERR_VALIDATION, 'title', $this->l10n->t('Enter a next step title.'));
 		}
 		$plan = $this->requirePlan($planId, $workspaceId);
 		$now = $this->timeFactory->getDateTime()->format('Y-m-d H:i:s');
@@ -185,8 +235,8 @@ class AccountPlanService
 		$health = self::health([
 			'nextReviewOn' => $row['next_review_on'] ?? null,
 			'touchOverdue' => $touchOverdue,
-			'openCallbacks' => 0,
-			'renewalsHot' => false,
+			'openCallbacks' => $this->countOpenCallbacksOverdue($companyId),
+			'renewalsHot' => $this->hasRenewalHot($companyId),
 		]);
 		return [
 			'id' => $planId,
@@ -200,9 +250,61 @@ class AccountPlanService
 			'status' => (string)$row['status'],
 			'nextReviewOn' => $row['next_review_on'] ?? null,
 			'health' => $health,
+			'healthLabel' => $this->labels->planHealth($health),
 			'mapSteps' => $this->mapSteps($planId),
 			'milestones' => $this->milestones($planId),
 		];
+	}
+
+	private function countOpenCallbacksOverdue(int $companyId): int
+	{
+		if ($companyId <= 0 || !$this->db->tableExists('crm_activity')) {
+			return 0;
+		}
+		$todayYmd = $this->timeFactory->getDateTime()->format('Y-m-d');
+		$qb = $this->db->getQueryBuilder();
+		$qb->selectAlias($qb->func()->count('*'), 'cnt')
+			->from('crm_activity')
+			->where($qb->expr()->eq('company_id', $qb->createNamedParameter($companyId)))
+			->andWhere($qb->expr()->eq('is_callback', $qb->createNamedParameter(1)))
+			->andWhere($qb->expr()->isNull('done_at'))
+			->andWhere($qb->expr()->isNotNull('due_date'))
+			->andWhere($qb->expr()->lt('due_date', $qb->createNamedParameter($todayYmd)));
+		$r = $qb->executeQuery();
+		$row = $r->fetch();
+		$r->closeCursor();
+
+		return (int)($row['cnt'] ?? 0);
+	}
+
+	private function hasRenewalHot(int $companyId): bool
+	{
+		if ($companyId <= 0 || !$this->db->tableExists('crm_agreement')) {
+			return false;
+		}
+		$today = $this->timeFactory->getDateTime();
+		$todayYmd = $today->format('Y-m-d');
+		$horizon = (clone \DateTimeImmutable::createFromInterface($today))
+			->modify('+7 days')
+			->format('Y-m-d');
+		$qb = $this->db->getQueryBuilder();
+		$terminal = [];
+		foreach (Constants::AGREEMENT_TERMINAL_STATUSES as $i => $status) {
+			$terminal[] = $qb->createNamedParameter($status, null, 'term' . $i);
+		}
+		$qb->select($qb->createFunction('1'))
+			->from('crm_agreement')
+			->where($qb->expr()->eq('company_id', $qb->createNamedParameter($companyId)))
+			->andWhere($qb->expr()->isNotNull('valid_until'))
+			->andWhere($qb->expr()->gte('valid_until', $qb->createNamedParameter($todayYmd)))
+			->andWhere($qb->expr()->lte('valid_until', $qb->createNamedParameter($horizon)))
+			->andWhere($qb->expr()->notIn('status', $terminal))
+			->setMaxResults(1);
+		$r = $qb->executeQuery();
+		$row = $r->fetch();
+		$r->closeCursor();
+
+		return $row !== false;
 	}
 
 	/** @return list<array<string, mixed>> */

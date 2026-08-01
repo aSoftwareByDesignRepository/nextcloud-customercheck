@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace OCA\CustomerCheck\Service;
 
 use OCA\CustomerCheck\Constants;
+use OCA\CustomerCheck\Exception\NotFoundException;
 use OCA\CustomerCheck\Exception\ValidationException;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\IDBConnection;
 use OCP\IL10N;
+use OCP\Lock\ILockingProvider;
 
 /**
  * Manager escalations — product §13.3.
@@ -21,6 +23,7 @@ class EscalationService
 		private readonly IDBConnection $db,
 		private readonly ITimeFactory $timeFactory,
 		private readonly IL10N $l10n,
+		private readonly ILockingProvider $locking,
 	) {
 	}
 
@@ -51,34 +54,52 @@ class EscalationService
 	 */
 	public function create(int $workspaceId, array $data, string $actor): array
 	{
-		$open = $this->listOpen($workspaceId);
-		if (count($open) >= Constants::ESCALATION_MAX_OPEN) {
-			throw ValidationException::field(
-				Constants::ERR_ESCALATION_LIMIT,
-				'escalation',
-				$this->l10n->t('Maximum of 50 open escalations per workspace.'),
-			);
+		if ($workspaceId <= 0) {
+			throw new NotFoundException($this->l10n->t('Workspace not found.'));
 		}
-		$subject = trim((string)($data['subjectUserId'] ?? ''));
-		$reason = trim((string)($data['reason'] ?? ''));
-		if ($subject === '' || $reason === '') {
-			throw ValidationException::field(Constants::ERR_VALIDATION, 'reason', $this->l10n->t('Subject and reason are required.'));
+
+		$lockKey = 'crm_escal_open/' . $workspaceId;
+		$this->locking->acquireLock($lockKey, ILockingProvider::LOCK_EXCLUSIVE);
+		try {
+			$open = $this->listOpen($workspaceId);
+			if (count($open) >= Constants::ESCALATION_MAX_OPEN) {
+				throw ValidationException::field(
+					Constants::ERR_ESCALATION_LIMIT,
+					'escalation',
+					$this->l10n->t('Maximum of 50 open escalations per workspace.'),
+				);
+			}
+			$subject = trim((string)($data['subjectUserId'] ?? ''));
+			$reason = trim((string)($data['reason'] ?? ''));
+			if ($subject === '' || $reason === '') {
+				throw ValidationException::field(Constants::ERR_VALIDATION, 'reason', $this->l10n->t('Subject and reason are required.'));
+			}
+			$companyId = isset($data['companyId']) ? (int)$data['companyId'] : 0;
+			$dealId = isset($data['dealId']) ? (int)$data['dealId'] : 0;
+			if ($companyId > 0) {
+				$this->assertCompanyInWorkspace($workspaceId, $companyId);
+			}
+			if ($dealId > 0) {
+				$this->assertDealInWorkspace($workspaceId, $dealId);
+			}
+			$now = $this->timeFactory->getDateTime()->format('Y-m-d H:i:s');
+			$ins = $this->db->getQueryBuilder();
+			$ins->insert('crm_escal')->values([
+				'workspace_id' => $ins->createNamedParameter($workspaceId),
+				'subject_user_id' => $ins->createNamedParameter($subject),
+				'owner_user_id' => $ins->createNamedParameter($actor),
+				'reason' => $ins->createNamedParameter($reason),
+				'status' => $ins->createNamedParameter('open'),
+				'company_id' => $ins->createNamedParameter($companyId > 0 ? $companyId : null),
+				'deal_id' => $ins->createNamedParameter($dealId > 0 ? $dealId : null),
+				'created_by' => $ins->createNamedParameter($actor),
+				'created_at' => $ins->createNamedParameter($now),
+				'updated_at' => $ins->createNamedParameter($now),
+			])->executeStatement();
+			return ['id' => (int)$this->db->lastInsertId('crm_escal'), 'status' => 'open', 'subjectUserId' => $subject];
+		} finally {
+			$this->locking->releaseLock($lockKey, ILockingProvider::LOCK_EXCLUSIVE);
 		}
-		$now = $this->timeFactory->getDateTime()->format('Y-m-d H:i:s');
-		$ins = $this->db->getQueryBuilder();
-		$ins->insert('crm_escal')->values([
-			'workspace_id' => $ins->createNamedParameter($workspaceId),
-			'subject_user_id' => $ins->createNamedParameter($subject),
-			'owner_user_id' => $ins->createNamedParameter($actor),
-			'reason' => $ins->createNamedParameter($reason),
-			'status' => $ins->createNamedParameter('open'),
-			'company_id' => $ins->createNamedParameter(isset($data['companyId']) ? (int)$data['companyId'] : null),
-			'deal_id' => $ins->createNamedParameter(isset($data['dealId']) ? (int)$data['dealId'] : null),
-			'created_by' => $ins->createNamedParameter($actor),
-			'created_at' => $ins->createNamedParameter($now),
-			'updated_at' => $ins->createNamedParameter($now),
-		])->executeStatement();
-		return ['id' => (int)$this->db->lastInsertId('crm_escal'), 'status' => 'open', 'subjectUserId' => $subject];
 	}
 
 	/**
@@ -108,6 +129,44 @@ class EscalationService
 			$n++;
 		}
 		return $n;
+	}
+
+	private function assertCompanyInWorkspace(int $workspaceId, int $companyId): void
+	{
+		if (!$this->db->tableExists('crm_company')) {
+			throw new NotFoundException($this->l10n->t('This company is not in the current workspace.'));
+		}
+		$check = $this->db->getQueryBuilder();
+		$check->select('id')->from('crm_company')
+			->where($check->expr()->eq('id', $check->createNamedParameter($companyId)))
+			->andWhere($check->expr()->eq('workspace_id', $check->createNamedParameter($workspaceId)))
+			->setMaxResults(1);
+		$r = $check->executeQuery();
+		$row = $r->fetch();
+		$r->closeCursor();
+		if ($row === false) {
+			throw new NotFoundException($this->l10n->t('This company is not in the current workspace.'));
+		}
+	}
+
+	private function assertDealInWorkspace(int $workspaceId, int $dealId): void
+	{
+		if (!$this->db->tableExists('crm_deal') || !$this->db->tableExists('crm_company')) {
+			throw new NotFoundException($this->l10n->t('That company is not in the current workspace.'));
+		}
+		$check = $this->db->getQueryBuilder();
+		$check->select('d.id')
+			->from('crm_deal', 'd')
+			->innerJoin('d', 'crm_company', 'c', $check->expr()->eq('d.company_id', 'c.id'))
+			->where($check->expr()->eq('d.id', $check->createNamedParameter($dealId)))
+			->andWhere($check->expr()->eq('c.workspace_id', $check->createNamedParameter($workspaceId)))
+			->setMaxResults(1);
+		$r = $check->executeQuery();
+		$row = $r->fetch();
+		$r->closeCursor();
+		if ($row === false) {
+			throw new NotFoundException($this->l10n->t('That company is not in the current workspace.'));
+		}
 	}
 
 	/** @param array<string, mixed> $row */

@@ -25,6 +25,7 @@ class QuotaServiceTest extends TestCase
 		$this->quota = new QuotaService(
 			$this->createMock(HoursMapper::class),
 			$this->createMock(AgreementMapper::class),
+			$this->createMock(\OCA\CustomerCheck\Db\CompanyMapper::class),
 			$this->createMock(ReminderLogMapper::class),
 			$this->createMock(NotificationService::class),
 			$this->createMock(TimelineService::class),

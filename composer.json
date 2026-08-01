@@ -34,7 +34,8 @@
 	"scripts": {
 		"test": "phpunit --testsuite unit",
 		"test:unit": "phpunit --testsuite unit",
-		"test:integration": "phpunit --testsuite integration"
+		"test:integration": "phpunit --testsuite integration",
+		"test:mutation:open-access": "php tests/Mutation/run-open-access-door-mutations.php"
 	},
 	"config": {
 		"optimize-autoloader": true,

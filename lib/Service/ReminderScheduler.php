@@ -303,8 +303,11 @@ class ReminderScheduler
 
 		try {
 			$companyName = '';
+			$workspaceId = 0;
 			try {
-				$companyName = (string)$this->companyMapper->findById((int)$agreement->getCompanyId())->getName();
+				$company = $this->companyMapper->findById((int)$agreement->getCompanyId());
+				$companyName = (string)$company->getName();
+				$workspaceId = (int)($company->getWorkspaceId() ?? 0);
 			} catch (\Throwable) {
 				$companyName = '';
 			}
@@ -312,21 +315,26 @@ class ReminderScheduler
 			if ($offset === 0) {
 				$graceUntil = DateMath::addDays($validUntil, Constants::GRACE_DAYS)->format('Y-m-d');
 			}
-			$this->notificationService->notifyCrmUsers(
-				Constants::NOTIFY_REMINDER,
-				'agreement',
-				(string)$agreement->getId(),
-				[
-					'agreementId' => (int)$agreement->getId(),
-					'companyId' => (int)$agreement->getCompanyId(),
-					'companyName' => $companyName,
-					'label' => (string)$agreement->getLabel(),
-					'offsetDays' => $offset,
-					'daysUntil' => $daysUntil,
-					'validUntil' => $validUntil->format('Y-m-d'),
-					'graceUntil' => $graceUntil,
-				],
-			);
+			$params = [
+				'agreementId' => (int)$agreement->getId(),
+				'companyId' => (int)$agreement->getCompanyId(),
+				'companyName' => $companyName,
+				'label' => (string)$agreement->getLabel(),
+				'offsetDays' => $offset,
+				'daysUntil' => $daysUntil,
+				'validUntil' => $validUntil->format('Y-m-d'),
+				'graceUntil' => $graceUntil,
+			];
+			if ($workspaceId > 0) {
+				$this->notificationService->notifyWorkspaceUsers(
+					$workspaceId,
+					Constants::NOTIFY_REMINDER,
+					'agreement',
+					(string)$agreement->getId(),
+					$params,
+				);
+			}
+			// Fail closed when company has no workspace — never broadcast names.
 		} catch (\Throwable $e) {
 			// Notify failed — release so the next run retries this exact offset.
 			$this->reminderLogMapper->delete($row);

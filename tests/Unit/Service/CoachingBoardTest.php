@@ -111,15 +111,12 @@ final class CoachingBoardTest extends TestCase
 		]);
 
 		$chase = $this->createMock(ChaseService::class);
-		$chase->method('myChase')->willReturnCallback(static function (string $uid): array {
-			if ($uid === 'alex') {
-				return [
-					['quoteAgeDays' => 20, 'forecastBucket' => 'commit', 'valueCents' => 50000],
-					['quoteAgeDays' => 2, 'forecastBucket' => 'upside', 'valueCents' => 1000],
-				];
-			}
-			return [];
-		});
+		$chase->method('chaseByOwnerForWorkspace')->willReturn([
+			'alex' => [
+				['quoteAgeDays' => 20, 'forecastBucket' => 'commit', 'valueCents' => 50000],
+				['quoteAgeDays' => 2, 'forecastBucket' => 'upside', 'valueCents' => 1000],
+			],
+		]);
 
 		$promises = $this->createMock(PromiseService::class);
 		$promises->method('dueSoon')->willReturn([
@@ -129,9 +126,8 @@ final class CoachingBoardTest extends TestCase
 		]);
 
 		$coverage = $this->createMock(CoverageService::class);
-		$coverage->method('myAccounts')->willReturnCallback(static function (string $uid): array {
-			return $uid === 'alex' ? [['gap' => true], ['gap' => false]] : [];
-		});
+		$coverage->method('gapCountsByAccountOwner')->willReturn(['alex' => 1]);
+		$coverage->method('myAccounts')->willReturn([]);
 
 		$plans = $this->createMock(AccountPlanService::class);
 		$plans->method('listForWorkspace')->willReturn([
@@ -170,6 +166,7 @@ final class CoachingBoardTest extends TestCase
 			$time,
 			$l10n,
 			$userManager,
+			$this->createMock(\OCP\Lock\ILockingProvider::class),
 		);
 
 		$board = $svc->board(1, 'sam', 'manager', false);
@@ -221,10 +218,12 @@ final class CoachingBoardTest extends TestCase
 		$time->method('getDateTime')->willReturn(new \DateTime('2026-07-28'));
 
 		$chase = $this->createMock(ChaseService::class);
+		$chase->method('chaseByOwnerForWorkspace')->willReturn([]);
 		$chase->method('myChase')->willReturn([]);
 		$promises = $this->createMock(PromiseService::class);
 		$promises->method('dueSoon')->willReturn([]);
 		$coverage = $this->createMock(CoverageService::class);
+		$coverage->method('gapCountsByAccountOwner')->willReturn([]);
 		$coverage->method('myAccounts')->willReturn([]);
 		$plans = $this->createMock(AccountPlanService::class);
 		$plans->method('listForWorkspace')->willReturn([]);
@@ -248,6 +247,7 @@ final class CoachingBoardTest extends TestCase
 			$time,
 			$l10n,
 			$um ?? $this->createMock(IUserManager::class),
+			$this->createMock(\OCP\Lock\ILockingProvider::class),
 		);
 	}
 }

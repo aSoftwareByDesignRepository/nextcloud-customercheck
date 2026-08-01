@@ -17,12 +17,13 @@ use PHPUnit\Framework\TestCase;
  */
 class ImportMatcherTest extends TestCase
 {
-	private function company(int $id, string $slug, string $name): Company
+	private function company(int $id, string $slug, string $name, int $workspaceId = 1): Company
 	{
 		$c = new Company();
 		$c->setId($id);
 		$c->setSlug($slug);
 		$c->setName($name);
+		$c->setWorkspaceId($workspaceId);
 		return $c;
 	}
 
@@ -59,12 +60,16 @@ class ImportMatcherTest extends TestCase
 			}
 		);
 		$persons->method('findByEmail')->willReturnCallback(
-			static function (string $email) use ($byEmail) {
+			static function (string $email, int $workspaceId) use ($byEmail) {
 				$out = [];
 				foreach ($byEmail as [$person, $company]) {
-					if (mb_strtolower((string)$person->getEmail()) === mb_strtolower($email)) {
-						$out[] = $person;
+					if (mb_strtolower((string)$person->getEmail()) !== mb_strtolower($email)) {
+						continue;
 					}
+					if ($workspaceId > 0 && (int)($company->getWorkspaceId() ?? 0) !== $workspaceId) {
+						continue;
+					}
+					$out[] = $person;
 				}
 				return $out;
 			}
@@ -77,7 +82,7 @@ class ImportMatcherTest extends TestCase
 	{
 		$c = $this->company(7, 'acme-gmbh', 'Acme GmbH');
 		$m = $this->matcher($c);
-		$result = $m->match(['customerId' => 'acme-gmbh', 'companyName' => 'Other']);
+		$result = $m->match(['customerId' => 'acme-gmbh', 'companyName' => 'Other'], 1);
 		$this->assertSame('link', $result['action']);
 		$this->assertSame(7, $result['companyId']);
 		$this->assertSame('Acme GmbH', $result['companyName']);
@@ -89,7 +94,7 @@ class ImportMatcherTest extends TestCase
 	{
 		$c = $this->company(3, 'foo-co', 'Exact Name AG');
 		$m = $this->matcher(null, [$c]);
-		$result = $m->match(['companyName' => 'Exact Name AG']);
+		$result = $m->match(['companyName' => 'Exact Name AG'], 1);
 		$this->assertSame('link', $result['action']);
 		$this->assertSame(3, $result['companyId']);
 	}
@@ -101,7 +106,7 @@ class ImportMatcherTest extends TestCase
 		$p->setCompanyId(9);
 		$p->setEmail('boss@mail.co');
 		$m = $this->matcher(null, [], [[$p, $c]]);
-		$result = $m->match(['companyName' => 'Totally New', 'email' => 'boss@mail.co']);
+		$result = $m->match(['companyName' => 'Totally New', 'email' => 'boss@mail.co'], 1);
 		$this->assertSame('link', $result['action']);
 		$this->assertSame(9, $result['companyId']);
 		$this->assertSame('email', $result['candidates'][0]['via']);
@@ -115,7 +120,7 @@ class ImportMatcherTest extends TestCase
 		$p->setCompanyId(2);
 		$p->setEmail('a@b.co');
 		$m = $this->matcher(null, [$byName], [[$p, $byEmailCompany]]);
-		$result = $m->match(['companyName' => 'Shared Name', 'email' => 'a@b.co']);
+		$result = $m->match(['companyName' => 'Shared Name', 'email' => 'a@b.co'], 1);
 		$this->assertSame('needs_decision', $result['action']);
 		$this->assertNull($result['companyId']);
 		$this->assertCount(2, $result['candidates']);
@@ -124,7 +129,7 @@ class ImportMatcherTest extends TestCase
 	public function testNoMatchCreatesWithSuggestedSlug(): void
 	{
 		$m = $this->matcher();
-		$result = $m->match(['companyName' => 'Brand New GmbH', 'customerId' => '']);
+		$result = $m->match(['companyName' => 'Brand New GmbH', 'customerId' => ''], 1);
 		$this->assertSame('create', $result['action']);
 		$this->assertNull($result['companyId']);
 		$this->assertSame('brand-new-gmbh', $result['suggestedSlug']);
@@ -133,8 +138,17 @@ class ImportMatcherTest extends TestCase
 	public function testProvidedValidCustomerIdPreferredAsSuggestedSlug(): void
 	{
 		$m = $this->matcher();
-		$result = $m->match(['companyName' => 'X', 'customerId' => 'custom-slug-1']);
+		$result = $m->match(['companyName' => 'X', 'customerId' => 'custom-slug-1'], 1);
 		$this->assertSame('create', $result['action']);
 		$this->assertSame('custom-slug-1', $result['suggestedSlug']);
+	}
+
+	public function testMissingWorkspaceNeedsDecision(): void
+	{
+		$c = $this->company(7, 'acme-gmbh', 'Acme GmbH');
+		$m = $this->matcher($c);
+		$result = $m->match(['customerId' => 'acme-gmbh'], 0);
+		$this->assertSame('needs_decision', $result['action']);
+		$this->assertNull($result['companyId']);
 	}
 }

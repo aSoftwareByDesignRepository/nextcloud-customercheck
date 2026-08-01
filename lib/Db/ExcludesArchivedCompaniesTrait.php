@@ -43,4 +43,34 @@ trait ExcludesArchivedCompaniesTrait
 			$companyIdColumn . ' IN (SELECT id FROM `*PREFIX*crm_company` WHERE workspace_id = ' . $param . ')',
 		));
 	}
+
+	/**
+	 * Restrict child rows to companies in any of the given workspaces.
+	 * Empty list → no rows (fail closed — never unscoped).
+	 *
+	 * @param list<int> $workspaceIds
+	 */
+	private function restrictToWorkspaces(IQueryBuilder $qb, array $workspaceIds, string $companyIdColumn = 'company_id'): void
+	{
+		$ids = [];
+		foreach ($workspaceIds as $id) {
+			$id = (int)$id;
+			if ($id > 0) {
+				$ids[$id] = $id;
+			}
+		}
+		$ids = array_values($ids);
+		if ($ids === []) {
+			$qb->andWhere($qb->expr()->eq($qb->createNamedParameter(1), $qb->createNamedParameter(0)));
+			return;
+		}
+		if (count($ids) === 1) {
+			$this->restrictToWorkspace($qb, $ids[0], $companyIdColumn);
+			return;
+		}
+		$param = $qb->createNamedParameter($ids, IQueryBuilder::PARAM_INT_ARRAY);
+		$qb->andWhere($qb->createFunction(
+			$companyIdColumn . ' IN (SELECT id FROM `*PREFIX*crm_company` WHERE workspace_id IN (' . $param . '))',
+		));
+	}
 }

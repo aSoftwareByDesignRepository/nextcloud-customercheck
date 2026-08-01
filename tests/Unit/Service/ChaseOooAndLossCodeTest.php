@@ -10,15 +10,19 @@ use OCA\CustomerCheck\Db\Company;
 use OCA\CustomerCheck\Db\CompanyMapper;
 use OCA\CustomerCheck\Db\Deal;
 use OCA\CustomerCheck\Db\DealMapper;
+use OCA\CustomerCheck\Db\AgreementMapper;
 use OCA\CustomerCheck\Exception\ValidationException;
 use OCA\CustomerCheck\Service\ChaseService;
 use OCA\CustomerCheck\Service\CompanyService;
 use OCA\CustomerCheck\Service\DealService;
+use OCA\CustomerCheck\Service\FilesAccessService;
 use OCA\CustomerCheck\Service\OooCoverService;
 use OCA\CustomerCheck\Service\StageSequenceService;
 use OCA\CustomerCheck\Service\TimelineService;
+use OCA\CustomerCheck\Service\WorkspaceService;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\IConfig;
+use OCP\IDBConnection;
 use OCP\IL10N;
 use PHPUnit\Framework\TestCase;
 
@@ -78,7 +82,16 @@ final class ChaseOooAndLossCodeTest extends TestCase
 		$l10n = $this->createMock(IL10N::class);
 		$l10n->method('t')->willReturnCallback(static fn (string $s): string => $s);
 
-		$svc = new ChaseService($deals, $activities, $companies, $dealService, $ooo, $time, $l10n);
+		$workspaces = $this->createMock(WorkspaceService::class);
+		$workspaces->method('getSettings')->willReturn([
+			'wipLimit' => 5,
+			'leadSlaHours' => 24,
+			'stuckChaseDays' => 3,
+			'mailRetentionDays' => 365,
+			'digestEnabled' => true,
+		]);
+
+		$svc = new ChaseService($deals, $activities, $companies, $dealService, $workspaces, $ooo, $time, $l10n);
 		$rows = $svc->myChase('sam', 7, $today, true);
 
 		$this->assertCount(1, $rows);
@@ -107,7 +120,16 @@ final class ChaseOooAndLossCodeTest extends TestCase
 		$l10n = $this->createMock(IL10N::class);
 		$l10n->method('t')->willReturnCallback(static fn (string $s): string => $s);
 
-		$svc = new ChaseService($deals, $activities, $companies, $dealService, $ooo, $time, $l10n);
+		$workspaces = $this->createMock(WorkspaceService::class);
+		$workspaces->method('getSettings')->willReturn([
+			'wipLimit' => 5,
+			'leadSlaHours' => 24,
+			'stuckChaseDays' => 3,
+			'mailRetentionDays' => 365,
+			'digestEnabled' => true,
+		]);
+
+		$svc = new ChaseService($deals, $activities, $companies, $dealService, $workspaces, $ooo, $time, $l10n);
 		$this->assertSame([], $svc->myChase('sam', 7, $today, false));
 	}
 
@@ -134,11 +156,15 @@ final class ChaseOooAndLossCodeTest extends TestCase
 		$svc = new DealService(
 			$mapper,
 			$this->createMock(CompanyService::class),
+			$this->createMock(WorkspaceService::class),
 			$this->createMock(StageSequenceService::class),
 			$this->createMock(TimelineService::class),
+			$this->createMock(FilesAccessService::class),
 			$config,
 			$time,
 			$l10n,
+			$this->createMock(IDBConnection::class),
+			$this->createMock(AgreementMapper::class),
 		);
 
 		try {
@@ -158,9 +184,19 @@ final class ChaseOooAndLossCodeTest extends TestCase
 		$deal->setStage('quoted');
 		$deal->setUpdatedAt(new \DateTime('2026-07-01T12:00:00+00:00'));
 
+		$after = new Deal();
+		$after->setId(1);
+		$after->setCompanyId(9);
+		$after->setTitle('X');
+		$after->setStage('lost');
+		$after->setLostReasonCode('competitor');
+		$after->setLostReason('competitor');
+		$after->setUpdatedAt(new \DateTime('2026-07-28T00:00:00+00:00'));
+
 		$mapper = $this->createMock(DealMapper::class);
-		$mapper->method('findById')->willReturn($deal);
-		$mapper->method('update')->willReturnCallback(static fn (Deal $d): Deal => $d);
+		$mapper->method('findById')->willReturnOnConsecutiveCalls($deal, $after);
+		$mapper->expects($this->once())->method('updateStageCas')->willReturn(1);
+		$mapper->expects($this->never())->method('update');
 
 		$sequences = $this->createMock(StageSequenceService::class);
 		$sequences->method('fireForStage')->willReturn([]);
@@ -178,11 +214,15 @@ final class ChaseOooAndLossCodeTest extends TestCase
 		$svc = new DealService(
 			$mapper,
 			$this->createMock(CompanyService::class),
+			$this->createMock(WorkspaceService::class),
 			$sequences,
 			$timeline,
+			$this->createMock(FilesAccessService::class),
 			$config,
 			$time,
 			$l10n,
+			$this->createMock(IDBConnection::class),
+			$this->createMock(AgreementMapper::class),
 		);
 		$result = $svc->changeStage(1, 'lost', null, '2026-07-01T12:00:00+00:00', 'ae', [
 			'lostReasonCode' => 'competitor',

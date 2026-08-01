@@ -35,6 +35,26 @@ class DealMapper extends QBMapper
 		return $this->findEntity($qb);
 	}
 
+	/**
+	 * Write-lock the deal row. Callers MUST already be inside a DB transaction.
+	 */
+	public function lockRow(int $id): bool
+	{
+		if ($id <= 0) {
+			return false;
+		}
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('id')
+			->from($this->getTableName())
+			->where($qb->expr()->eq('id', $qb->createNamedParameter($id, IQueryBuilder::PARAM_INT)))
+			->forUpdate();
+		$result = $qb->executeQuery();
+		$row = $result->fetch();
+		$result->closeCursor();
+
+		return $row !== false;
+	}
+
 	/** @return Deal[] */
 	public function findByCompany(int $companyId): array
 	{
@@ -105,11 +125,15 @@ class DealMapper extends QBMapper
 
 	/**
 	 * Find the currently open deal created for a website order id.
+	 * Workspace is required — never match across books.
 	 *
 	 * @return Deal[]
 	 */
-	public function findOpenByTitle(string $title): array
+	public function findOpenByTitle(string $title, int $workspaceId): array
 	{
+		if ($workspaceId <= 0) {
+			return [];
+		}
 		$qb = $this->db->getQueryBuilder();
 		$qb->select('*')
 			->from($this->getTableName())
@@ -117,42 +141,49 @@ class DealMapper extends QBMapper
 			->andWhere($qb->expr()->notIn(
 				'stage',
 				$qb->createNamedParameter(Constants::DEAL_TERMINAL_STAGES, IQueryBuilder::PARAM_STR_ARRAY),
-			))
-			->orderBy('id', 'DESC')
+			));
+		$this->restrictToWorkspace($qb, $workspaceId);
+		$qb->orderBy('id', 'DESC')
 			->setMaxResults(1);
 
 		return $this->findEntities($qb);
 	}
 
 	/**
-	 * Open pipeline value per stage, used by the Today summary strip.
-	 *
-	 * @return array<string, array{count: int, valueCents: int}>
+	 * CAS stage change — returns 1 when the row still matches expected updated_at.
 	 */
-	public function sumOpenValueByStage(): array
-	{
-		$qb = $this->db->getQueryBuilder();
-		$qb->select('stage')
-			->selectAlias($qb->func()->count('*'), 'cnt')
-			->selectAlias($qb->func()->sum('value_cents'), 'total')
-			->from($this->getTableName())
-			->where($qb->expr()->notIn(
-				'stage',
-				$qb->createNamedParameter(Constants::DEAL_TERMINAL_STAGES, IQueryBuilder::PARAM_STR_ARRAY)
-			))
-			->groupBy('stage');
-
-		$result = $qb->executeQuery();
-		$out = [];
-		while (($row = $result->fetch()) !== false) {
-			$out[(string)$row['stage']] = [
-				'count' => (int)$row['cnt'],
-				'valueCents' => (int)$row['total'],
-			];
+	public function updateStageCas(
+		int $id,
+		\DateTimeInterface $expectedUpdatedAt,
+		string $stage,
+		\DateTimeInterface $now,
+		?string $lostReasonCode,
+		?string $lostReason,
+		?string $wonReasonCode,
+	): int {
+		if ($id <= 0) {
+			return 0;
 		}
-		$result->closeCursor();
+		$stamp = $now->format('Y-m-d H:i:s');
+		$expected = $expectedUpdatedAt->format('Y-m-d H:i:s');
+		$qb = $this->db->getQueryBuilder();
+		$qb->update($this->getTableName())
+			->set('stage', $qb->createNamedParameter($stage))
+			->set('stage_changed_at', $qb->createNamedParameter($stamp))
+			->set('updated_at', $qb->createNamedParameter($stamp))
+			->where($qb->expr()->eq('id', $qb->createNamedParameter($id, IQueryBuilder::PARAM_INT)))
+			->andWhere($qb->expr()->eq('updated_at', $qb->createNamedParameter($expected)));
+		if ($lostReasonCode !== null) {
+			$qb->set('lost_reason_code', $qb->createNamedParameter($lostReasonCode));
+		}
+		if ($lostReason !== null) {
+			$qb->set('lost_reason', $qb->createNamedParameter($lostReason));
+		}
+		if ($wonReasonCode !== null) {
+			$qb->set('won_reason_code', $qb->createNamedParameter($wonReasonCode !== '' ? $wonReasonCode : null));
+		}
 
-		return $out;
+		return $qb->executeStatement();
 	}
 
 	public function deleteByCompany(int $companyId): int
@@ -165,12 +196,13 @@ class DealMapper extends QBMapper
 	}
 
 	/**
-	 * @param array{companyId?: int, stage?: string, openOnly?: bool, search?: string, title?: string, workspaceId?: int} $filters
+	 * @param array{companyId?: int, stage?: string, openOnly?: bool, search?: string, title?: string, workspaceId?: int, workspaceIds?: list<int>} $filters
 	 */
 	private function applyFilters(IQueryBuilder $qb, array $filters): void
 	{
 		$companyId = (int)($filters['companyId'] ?? 0);
 		$workspaceId = (int)($filters['workspaceId'] ?? 0);
+		$workspaceIds = $filters['workspaceIds'] ?? null;
 		if ($companyId > 0) {
 			$qb->andWhere($qb->expr()->eq('company_id', $qb->createNamedParameter($companyId, IQueryBuilder::PARAM_INT)));
 		} else {
@@ -178,7 +210,9 @@ class DealMapper extends QBMapper
 			// explicit company context (companyId) keeps history reachable.
 			$this->excludeArchivedCompanies($qb);
 		}
-		if ($workspaceId > 0) {
+		if (is_array($workspaceIds)) {
+			$this->restrictToWorkspaces($qb, $workspaceIds);
+		} elseif ($workspaceId > 0) {
 			$this->restrictToWorkspace($qb, $workspaceId);
 		}
 
@@ -206,7 +240,7 @@ class DealMapper extends QBMapper
 	 *
 	 * @return Deal[]
 	 */
-	public function findOpenStaleBefore(\DateTimeInterface $changedBefore, int $limit = 200): array
+	public function findOpenStaleBefore(\DateTimeInterface $changedBefore, int $limit = 200, ?int $workspaceId = null): array
 	{
 		$qb = $this->db->getQueryBuilder();
 		$qb->select('*')
@@ -230,6 +264,9 @@ class DealMapper extends QBMapper
 			->setMaxResults(max(1, min(500, $limit)));
 		// Archived companies stop generating stale-deal nudges (PSD §4.1).
 		$this->excludeArchivedCompanies($qb);
+		if ($workspaceId !== null && $workspaceId > 0) {
+			$this->restrictToWorkspace($qb, $workspaceId);
+		}
 
 		return $this->findEntities($qb);
 	}
@@ -248,4 +285,35 @@ class DealMapper extends QBMapper
 		return $qb->executeStatement();
 	}
 
+	/**
+	 * Atomic claim of an unowned deal (§18.7). Returns rows affected (0 or 1).
+	 * Empty string owner is treated as unowned (legacy rows).
+	 * CAS includes expected updated_at so a concurrent field edit cannot be
+	 * overwritten by a stale claim that only checked owner emptiness.
+	 */
+	public function claimUnowned(
+		int $id,
+		string $ownerUserId,
+		\DateTimeInterface $expectedUpdatedAt,
+		\DateTimeInterface $now,
+	): int {
+		$ownerUserId = trim($ownerUserId);
+		if ($id <= 0 || $ownerUserId === '') {
+			return 0;
+		}
+		$stamp = $now->format('Y-m-d H:i:s');
+		$expected = $expectedUpdatedAt->format('Y-m-d H:i:s');
+		$qb = $this->db->getQueryBuilder();
+		$qb->update($this->getTableName())
+			->set('owner_user_id', $qb->createNamedParameter($ownerUserId))
+			->set('updated_at', $qb->createNamedParameter($stamp))
+			->where($qb->expr()->eq('id', $qb->createNamedParameter($id, IQueryBuilder::PARAM_INT)))
+			->andWhere($qb->expr()->orX(
+				$qb->expr()->isNull('owner_user_id'),
+				$qb->expr()->eq('owner_user_id', $qb->createNamedParameter('')),
+			))
+			->andWhere($qb->expr()->eq('updated_at', $qb->createNamedParameter($expected)));
+
+		return $qb->executeStatement();
+	}
 }

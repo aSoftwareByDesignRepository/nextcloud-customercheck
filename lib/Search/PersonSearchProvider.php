@@ -8,6 +8,7 @@ use OCA\CustomerCheck\AppInfo\Application;
 use OCA\CustomerCheck\Service\AccessControlService;
 use OCA\CustomerCheck\Service\AppIconService;
 use OCA\CustomerCheck\Service\PersonService;
+use OCA\CustomerCheck\Service\WorkspaceAccessService;
 use OCP\IL10N;
 use OCP\IURLGenerator;
 use OCP\IUser;
@@ -17,9 +18,9 @@ use OCP\Search\SearchResult;
 use OCP\Search\SearchResultEntry;
 
 /**
- * Unified search over contact name + email — PSD §7.5 / S8 / S9.
+ * Unified search over contact name + email — product §3.3 / §16.
  *
- * Non–CRM users receive an empty result set (never an error).
+ * Results are scoped to workspaces the user may access (never cross-book).
  */
 class PersonSearchProvider implements IProvider
 {
@@ -28,6 +29,7 @@ class PersonSearchProvider implements IProvider
 		private readonly IURLGenerator $urlGenerator,
 		private readonly PersonService $personService,
 		private readonly AccessControlService $accessControl,
+		private readonly WorkspaceAccessService $workspaces,
 		private readonly AppIconService $appIconService,
 	) {
 	}
@@ -49,7 +51,8 @@ class PersonSearchProvider implements IProvider
 
 	public function search(IUser $user, ISearchQuery $query): SearchResult
 	{
-		if (!$this->accessControl->canUseApp($user->getUID())) {
+		$uid = $user->getUID();
+		if (!$this->accessControl->canUseApp($uid)) {
 			return SearchResult::complete($this->getName(), []);
 		}
 
@@ -58,8 +61,16 @@ class PersonSearchProvider implements IProvider
 			return SearchResult::complete($this->getName(), []);
 		}
 
+		$workspaceIds = $this->workspaces->listAccessibleWorkspaceIds($uid);
+		if ($workspaceIds === []) {
+			return SearchResult::complete($this->getName(), []);
+		}
+
 		$limit = max(1, min(25, $query->getLimit()));
-		$persons = $this->personService->search(['search' => $term], $limit, 0);
+		$persons = $this->personService->search([
+			'search' => $term,
+			'workspaceIds' => $workspaceIds,
+		], $limit, 0);
 		$entries = [];
 		$icon = $this->appIconService->surfaceIconPath();
 

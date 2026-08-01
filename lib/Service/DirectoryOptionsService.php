@@ -8,12 +8,12 @@ use OCP\IGroupManager;
 use OCP\IUserManager;
 
 /**
- * Directory listings for Settings → Access control (PSD §2.5).
+ * Directory listings for Settings → Access control.
  *
- * App-admin picker lists only Nextcloud admins (AZC rule). Groups are the
- * full searchable directory. Allowed-user chips are resolved by uid so the
- * UI can show display names for already-selected colleagues without dumping
- * every account into the HTML.
+ * App administrators and allowed users use search + chips over the full
+ * directory (portfolio ACCESS-AND-DIRECTORY-PICKERS §2.1). Groups are a
+ * searchable checkbox list. resolveUsers() paints display names for chips
+ * already saved in config without dumping every account into the HTML.
  */
 class DirectoryOptionsService
 {
@@ -24,6 +24,9 @@ class DirectoryOptionsService
 	}
 
 	/**
+	 * @deprecated Prefer resolveUsers() + directory search chips for dedicated app admins.
+	 * Kept for any callers that still need the Nextcloud admin group roster.
+	 *
 	 * @return list<array{id: string, displayName: string}>
 	 */
 	public function availableAppAdmins(): array
@@ -101,30 +104,44 @@ class DirectoryOptionsService
 	}
 
 	/**
-	 * Lightweight user search for the allowed-users picker.
+	 * Lightweight user search for people pickers (access, seats, workspace members).
+	 *
+	 * Merges uid search + display-name search (Nextcloud backends often miss names
+	 * via search() alone). Skips disabled accounts.
 	 *
 	 * @return list<array{id: string, displayName: string}>
 	 */
 	public function searchUsers(string $query, int $limit = 20): array
 	{
 		$query = trim($query);
-		if ($query === '' || $limit < 1) {
+		if (mb_strlen($query) < 2 || $limit < 1) {
 			return [];
 		}
-		$limit = min(50, $limit);
-		$out = [];
-		foreach ($this->userManager->search($query, $limit) as $user) {
+		$limit = min(50, max(1, $limit));
+		$byId = $this->userManager->search($query, $limit, 0);
+		$byName = $this->userManager->searchDisplayName($query, $limit, 0);
+		$merged = [];
+		foreach (array_merge($byId, $byName) as $user) {
+			if ($user === null) {
+				continue;
+			}
+			if (method_exists($user, 'isEnabled') && !$user->isEnabled()) {
+				continue;
+			}
 			$userId = trim((string)$user->getUID());
-			if ($userId === '') {
+			if ($userId === '' || isset($merged[$userId])) {
 				continue;
 			}
 			$displayName = trim((string)$user->getDisplayName());
-			$out[] = [
+			$merged[$userId] = [
 				'id' => $userId,
 				'displayName' => $displayName !== '' ? $displayName : $userId,
 			];
+			if (count($merged) >= $limit) {
+				break;
+			}
 		}
 
-		return $out;
+		return array_values($merged);
 	}
 }

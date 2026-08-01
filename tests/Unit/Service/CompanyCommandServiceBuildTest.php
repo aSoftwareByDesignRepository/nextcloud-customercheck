@@ -9,6 +9,7 @@ use OCA\CustomerCheck\Db\ActivityMapper;
 use OCA\CustomerCheck\Db\AgreementMapper;
 use OCA\CustomerCheck\Db\Company;
 use OCA\CustomerCheck\Db\EmailTouchMapper;
+use OCA\CustomerCheck\Db\WorkspaceMapper;
 use OCA\CustomerCheck\Service\AgreementStatusService;
 use OCA\CustomerCheck\Service\BillingIntegrityService;
 use OCA\CustomerCheck\Service\CommunicationFeedService;
@@ -87,6 +88,7 @@ final class CompanyCommandServiceBuildTest extends TestCase
 		]);
 		$mailbox = $this->createMock(MailboxService::class);
 		$mailbox->method('matchedForCompany')->willReturn([]);
+		$workspaces = $this->createMock(WorkspaceMapper::class);
 		$apps = $this->createMock(IAppManager::class);
 		$apps->method('isEnabledForUser')->willReturn(false);
 		$time = $this->createMock(ITimeFactory::class);
@@ -110,6 +112,7 @@ final class CompanyCommandServiceBuildTest extends TestCase
 			$mail,
 			$coverage,
 			$mailbox,
+			$workspaces,
 			$apps,
 			$time,
 			$l,
@@ -241,6 +244,7 @@ final class CompanyCommandServiceBuildTest extends TestCase
 			$mail,
 			$coverage,
 			$mailbox,
+			$this->createMock(WorkspaceMapper::class),
 			$apps,
 			$time,
 			$l,

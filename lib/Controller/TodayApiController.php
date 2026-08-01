@@ -33,7 +33,10 @@ class TodayApiController extends Controller
 	{
 		try {
 			$this->accessControl->requireCanUseApp();
-			$q = $this->today->build();
+			$uid = $this->accessControl->currentUserId();
+			$ctx = $this->workspaces->resolveForUser($uid);
+			$wsId = (int)$ctx['workspace']->getId();
+			$q = $this->today->build(null, $wsId > 0 ? $wsId : null);
 
 			return $this->ok($q, 200, $q['meta']);
 		} catch (\Throwable $e) {

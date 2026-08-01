@@ -50,6 +50,11 @@ trait PageShellTrait
 			}
 		}
 		$canWrite = WorkspaceCapability::allows($workspaceRole, 'write', $isAppAdminCtx);
+		$canDelete = WorkspaceCapability::allows($workspaceRole, 'delete', $isAppAdminCtx);
+		$canMove = WorkspaceCapability::allows($workspaceRole, 'move', $isAppAdminCtx);
+		$canBriefConfirm = WorkspaceCapability::allows($workspaceRole, 'brief.confirm', $isAppAdminCtx);
+		$canTeamCoach = WorkspaceCapability::allows($workspaceRole, 'team.coach', $isAppAdminCtx);
+		$canBulk = WorkspaceCapability::allows($workspaceRole, 'bulk', $isAppAdminCtx);
 		$showTeamNav = WorkspaceCapability::canOpenTeamBoard($workspaceRole, $isAppAdminCtx);
 		$locale = 'en-US';
 		if ($userId !== '') {
@@ -88,6 +93,11 @@ trait PageShellTrait
 			'labels' => $this->labels,
 			'canManage' => $isAdmin,
 			'canWrite' => $canWrite,
+			'canDelete' => $canDelete,
+			'canMove' => $canMove,
+			'canBriefConfirm' => $canBriefConfirm,
+			'canTeamCoach' => $canTeamCoach,
+			'canBulk' => $canBulk,
 			'showTeamNav' => $showTeamNav,
 			'showToolsNav' => true,
 		];

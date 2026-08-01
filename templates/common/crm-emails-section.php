@@ -31,7 +31,9 @@ $lastLabel = (string)($mailSummary['lastContactLabel'] ?? '');
 				<p class="crm-card__lead"><?php p($mailHeadline); ?></p>
 			<?php endif; ?>
 		</div>
-		<button type="button" class="crm-btn crm-btn--primary crm-btn--sm" id="crm-log-email" data-crm-log-email><?php p($l->t('Log email')); ?></button>
+		<?php if (!empty($_['canWrite'])): ?>
+		<p class="crm-muted crm-emails__log-hint"><?php p($l->t('To log a message, use Log email under Talked above.')); ?></p>
+		<?php endif; ?>
 	</header>
 	<div class="crm-card__body">
 		<?php if ($mailSteps !== []): ?>

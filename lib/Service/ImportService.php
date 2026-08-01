@@ -57,6 +57,14 @@ class ImportService
 	public function scan(array $payload): array
 	{
 		$source = (string)($payload['source'] ?? 'csv');
+		$workspaceId = (int)($payload['workspaceId'] ?? 0);
+		if ($workspaceId <= 0) {
+			throw ValidationException::field(
+				Constants::ERR_VALIDATION,
+				'workspaceId',
+				$this->l10n->t('Choose a workspace before importing.'),
+			);
+		}
 		$errors = [];
 		$rows = [];
 
@@ -77,7 +85,7 @@ class ImportService
 
 		$proposals = [];
 		foreach ($rows as $index => $row) {
-			$match = $this->matcher->match($row);
+			$match = $this->matcher->match($row, $workspaceId);
 			$salesLogId = isset($row['salesLogId']) ? (int)$row['salesLogId'] : 0;
 			$already = $salesLogId > 0 ? $this->agreementMapper->findBySalesLogId($salesLogId) : null;
 
@@ -95,6 +103,7 @@ class ImportService
 
 		return [
 			'source' => $source,
+			'workspaceId' => $workspaceId,
 			'proposals' => $proposals,
 			'errors' => $errors,
 			'meta' => [
@@ -115,6 +124,7 @@ class ImportService
 	public function apply(array $payload, string $actor): array
 	{
 		$scan = $this->scan($payload);
+		$workspaceId = (int)$scan['workspaceId'];
 		$decisions = [];
 		foreach ($payload['decisions'] ?? [] as $d) {
 			$decisions[(int)($d['index'] ?? -1)] = $d;
@@ -155,13 +165,21 @@ class ImportService
 						'status' => 'active',
 						'lang' => 'de',
 						'notes' => isset($row['notes']) ? (string)$row['notes'] : null,
+						'workspaceId' => $workspaceId,
 					], $actor);
 					$companyId = (int)$company->getId();
 					$summary['created']++;
 					$this->maybeCreatePerson($companyId, $row, $actor, $now);
 				} else {
 					$companyId = (int)($decision['companyId'] ?? $proposal['match']['companyId'] ?? 0);
-					$this->companies->get($companyId);
+					$company = $this->companies->get($companyId);
+					if ((int)($company->getWorkspaceId() ?? 0) !== $workspaceId) {
+						throw ValidationException::field(
+							Constants::ERR_NOT_FOUND,
+							'companyId',
+							$this->l10n->t('That company is not in the current workspace.'),
+						);
+					}
 					$summary['linked']++;
 				}
 

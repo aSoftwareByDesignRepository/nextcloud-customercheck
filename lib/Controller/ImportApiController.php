@@ -5,13 +5,16 @@ namespace OCA\CustomerCheck\Controller;
 
 use OCA\CustomerCheck\Service\AccessControlService;
 use OCA\CustomerCheck\Service\ImportService;
+use OCA\CustomerCheck\Service\WorkspaceAccessService;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\IRequest;
 
 /**
- * Two-phase import API — PSD §8.6 / §10.1.
+ * Two-phase import API — product §15.4 / §3.3.
+ *
+ * Always scoped to the active workspace with write capability.
  */
 class ImportApiController extends Controller
 {
@@ -21,6 +24,7 @@ class ImportApiController extends Controller
 		string $appName,
 		IRequest $request,
 		private readonly AccessControlService $accessControl,
+		private readonly WorkspaceAccessService $workspaces,
 		private readonly ImportService $imports,
 	) {
 		parent::__construct($appName, $request);
@@ -30,9 +34,16 @@ class ImportApiController extends Controller
 	public function scan(): JSONResponse
 	{
 		try {
-			$this->accessControl->requireCanUseApp();
+			$uid = $this->accessControl->requireCanUseApp();
+			$ctx = $this->workspaces->resolveForUser($uid);
+			$wsId = (int)$ctx['workspace']->getId();
+			$this->workspaces->assertCapability($uid, $wsId, 'write');
 			$payload = json_decode(file_get_contents('php://input') ?: '{}', true) ?: [];
-			return $this->ok($this->imports->scan(is_array($payload) ? $payload : []));
+			if (!is_array($payload)) {
+				$payload = [];
+			}
+			$payload['workspaceId'] = $wsId;
+			return $this->ok($this->imports->scan($payload));
 		} catch (\Throwable $e) {
 			return $this->fromThrowable($e);
 		}
@@ -43,8 +54,15 @@ class ImportApiController extends Controller
 	{
 		try {
 			$uid = $this->accessControl->requireCanUseApp();
+			$ctx = $this->workspaces->resolveForUser($uid);
+			$wsId = (int)$ctx['workspace']->getId();
+			$this->workspaces->assertCapability($uid, $wsId, 'write');
 			$payload = json_decode(file_get_contents('php://input') ?: '{}', true) ?: [];
-			return $this->ok($this->imports->apply(is_array($payload) ? $payload : [], $uid));
+			if (!is_array($payload)) {
+				$payload = [];
+			}
+			$payload['workspaceId'] = $wsId;
+			return $this->ok($this->imports->apply($payload, $uid));
 		} catch (\Throwable $e) {
 			return $this->fromThrowable($e);
 		}

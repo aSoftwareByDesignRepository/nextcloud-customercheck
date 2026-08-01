@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace OCA\CustomerCheck\Tests\Unit\Dashboard;
 
 use OCA\CustomerCheck\Dashboard\TodayWidget;
+use OCA\CustomerCheck\Db\Workspace;
 use OCA\CustomerCheck\Service\AccessControlService;
 use OCA\CustomerCheck\Service\AppIconService;
 use OCA\CustomerCheck\Service\TodayService;
+use OCA\CustomerCheck\Service\WorkspaceAccessService;
 use OCP\App\IAppManager;
 use OCP\IL10N;
 use OCP\IURLGenerator;
@@ -20,6 +22,7 @@ class TodayWidgetTest extends TestCase
 {
 	private AccessControlService&MockObject $access;
 	private TodayService&MockObject $today;
+	private WorkspaceAccessService&MockObject $workspaces;
 	private IUserSession&MockObject $session;
 	private TodayWidget $widget;
 
@@ -28,6 +31,7 @@ class TodayWidgetTest extends TestCase
 		parent::setUp();
 		$this->access = $this->createMock(AccessControlService::class);
 		$this->today = $this->createMock(TodayService::class);
+		$this->workspaces = $this->createMock(WorkspaceAccessService::class);
 		$this->session = $this->createMock(IUserSession::class);
 		$url = $this->createMock(IURLGenerator::class);
 		$url->method('imagePath')->willReturn('/apps/customercheck/img/app-dashboard.svg');
@@ -38,7 +42,15 @@ class TodayWidgetTest extends TestCase
 		$apps = $this->createMock(IAppManager::class);
 		$apps->method('getAppVersion')->willReturn('1.0.4');
 		$icons = new AppIconService($url, $apps);
-		$this->widget = new TodayWidget($l10n, $url, $this->today, $this->access, $this->session, $icons);
+		$this->widget = new TodayWidget(
+			$l10n,
+			$url,
+			$this->today,
+			$this->access,
+			$this->workspaces,
+			$this->session,
+			$icons,
+		);
 	}
 
 	public function testIconUrlUsesDarkSurfaceAsset(): void
@@ -63,15 +75,25 @@ class TodayWidgetTest extends TestCase
 		$this->assertSame([], $items->getItems());
 	}
 
-	public function testItemsFromTodayQueue(): void
+	public function testItemsFromTodayQueueAreWorkspaceScoped(): void
 	{
 		$this->access->method('canUseApp')->with('alice')->willReturn(true);
-		$this->today->method('build')->willReturn([
-			'items' => [
-				['kind' => 'agreement_expiry', 'label' => 'AZC renewal', 'dueDate' => '2026-08-01', 'companyId' => 1],
-			],
-			'meta' => ['truncated' => false, 'total' => 1],
+		$ws = new Workspace();
+		$ws->setId(7);
+		$this->workspaces->method('resolveForUser')->with('alice')->willReturn([
+			'workspace' => $ws,
+			'role' => 'member',
+			'isAppAdmin' => false,
 		]);
+		$this->today->expects($this->once())
+			->method('build')
+			->with(null, 7)
+			->willReturn([
+				'items' => [
+					['kind' => 'agreement_expiry', 'label' => 'AZC renewal', 'dueDate' => '2026-08-01', 'companyId' => 1],
+				],
+				'meta' => ['truncated' => false, 'total' => 1],
+			]);
 		$items = $this->widget->getItemsV2('alice', null, 7);
 		$this->assertCount(1, $items->getItems());
 		$this->assertSame('AZC renewal', $items->getItems()[0]->getTitle());

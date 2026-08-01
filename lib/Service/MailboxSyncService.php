@@ -24,6 +24,7 @@ class MailboxSyncService
 		private readonly IDBConnection $db,
 		private readonly ICrypto $crypto,
 		private readonly MailboxService $mailboxes,
+		private readonly WorkspaceService $workspaces,
 		private readonly NotificationService $notifications,
 		private readonly ILockingProvider $locks,
 		private readonly ITimeFactory $timeFactory,
@@ -33,37 +34,127 @@ class MailboxSyncService
 	}
 
 	/**
-	 * Sync all healthy mailboxes. Returns aggregate counts.
+	 * Sync all healthy mailboxes, then purge aged CRM mail index rows.
 	 *
-	 * @return array{mailboxes: int, messages: int, errors: int}
+	 * @return array{mailboxes: int, messages: int, errors: int, purged: int}
 	 */
 	public function syncAll(): array
 	{
-		if (!$this->db->tableExists('crm_mailbox')) {
-			return ['mailboxes' => 0, 'messages' => 0, 'errors' => 0];
-		}
-		$qb = $this->db->getQueryBuilder();
-		$qb->select('id', 'workspace_id')->from('crm_mailbox')
-			->where($qb->expr()->neq('status', $qb->createNamedParameter('error')));
-		$r = $qb->executeQuery();
 		$mailboxes = 0;
 		$messages = 0;
 		$errors = 0;
-		while ($row = $r->fetch()) {
-			$mailboxes++;
-			try {
-				$result = $this->syncOne((int)$row['id'], (int)$row['workspace_id']);
-				$messages += (int)$result['ingested'];
-			} catch (\Throwable $e) {
-				$errors++;
-				$this->logger->warning('CustomerCheck mailbox sync failed', [
-					'mailboxId' => (int)$row['id'],
-					'exception' => $e,
+		if ($this->db->tableExists('crm_mailbox')) {
+			$qb = $this->db->getQueryBuilder();
+			$qb->select('id', 'workspace_id')->from('crm_mailbox')
+				->where($qb->expr()->neq('status', $qb->createNamedParameter('error')));
+			$r = $qb->executeQuery();
+			while ($row = $r->fetch()) {
+				$mailboxes++;
+				try {
+					$result = $this->syncOne((int)$row['id'], (int)$row['workspace_id']);
+					$messages += (int)$result['ingested'];
+				} catch (\Throwable $e) {
+					$errors++;
+					$this->logger->warning('CustomerCheck mailbox sync failed', [
+						'mailboxId' => (int)$row['id'],
+						'exception' => $e,
+					]);
+				}
+			}
+			$r->closeCursor();
+		}
+		// Retention purge runs after sync so a concurrent ingest cannot race a
+		// mid-flight message into a half-deleted state for the same batch.
+		$purge = $this->purgeExpiredAcrossWorkspaces();
+		return [
+			'mailboxes' => $mailboxes,
+			'messages' => $messages,
+			'errors' => $errors,
+			'purged' => $purge['purged'],
+			'purgeRemaining' => $purge['remaining'],
+		];
+	}
+
+	/**
+	 * Enforce per-workspace mail_retention_days on the CRM index only.
+	 * Serialized with an advisory lock so two sync jobs cannot interleave
+	 * select-then-delete batches for the same backlog. Drains under a wall-clock
+	 * budget with fair round-robin across workspaces so early WS cannot starve later ones.
+	 *
+	 * @return array{purged: int, remaining: int}
+	 */
+	public function purgeExpiredAcrossWorkspaces(): array
+	{
+		$lockKey = 'crm_mail_purge_all';
+		try {
+			$this->locks->acquireLock($lockKey, ILockingProvider::LOCK_EXCLUSIVE);
+		} catch (\Throwable) {
+			return ['purged' => 0, 'remaining' => -1];
+		}
+		$total = 0;
+		$remaining = 0;
+		$deadline = microtime(true) + Constants::MAIL_PURGE_BUDGET_SECONDS;
+		try {
+			$workspaces = array_values(array_filter(
+				$this->workspaces->listAll(),
+				static fn ($ws): bool => (int)$ws->getId() > 0,
+			));
+			$count = count($workspaces);
+			if ($count === 0) {
+				return ['purged' => 0, 'remaining' => 0];
+			}
+			// Rotate start each minute so a heavy early workspace cannot monopolize every run.
+			$start = ((int)floor(time() / 60)) % $count;
+			$ordered = [];
+			for ($i = 0; $i < $count; $i++) {
+				$ordered[] = $workspaces[($start + $i) % $count];
+			}
+
+			// Fair drain: one batch per workspace per wave until budget or quiet.
+			for ($round = 0; $round < Constants::MAIL_PURGE_MAX_ROUNDS; $round++) {
+				if (microtime(true) >= $deadline) {
+					break;
+				}
+				$progress = false;
+				foreach ($ordered as $ws) {
+					if (microtime(true) >= $deadline) {
+						break;
+					}
+					$wsId = (int)$ws->getId();
+					$days = (int)$this->workspaces->getSettings($wsId)['mailRetentionDays'];
+					$n = $this->mailboxes->purgeExpired($wsId, $days);
+					$total += $n;
+					if ($n > 0) {
+						$progress = true;
+					}
+				}
+				if (!$progress) {
+					break;
+				}
+			}
+
+			foreach ($ordered as $ws) {
+				$wsId = (int)$ws->getId();
+				$days = (int)$this->workspaces->getSettings($wsId)['mailRetentionDays'];
+				$remaining += $this->mailboxes->countExpired($wsId, $days);
+			}
+			if ($remaining > 0) {
+				$this->logger->warning('CustomerCheck mail retention purge incomplete', [
+					'purged' => $total,
+					'remaining' => $remaining,
 				]);
 			}
+		} catch (\Throwable $e) {
+			$this->logger->warning('CustomerCheck mail retention purge failed', [
+				'exception' => $e,
+			]);
+		} finally {
+			try {
+				$this->locks->releaseLock($lockKey, ILockingProvider::LOCK_EXCLUSIVE);
+			} catch (\Throwable) {
+			}
 		}
-		$r->closeCursor();
-		return ['mailboxes' => $mailboxes, 'messages' => $messages, 'errors' => $errors];
+		return ['purged' => $total, 'remaining' => $remaining];
 	}
 
 	/**
@@ -186,12 +277,16 @@ class MailboxSyncService
 		if ($stream === false) {
 			$status = $this->mailboxes->recordAuthFailure($mailboxId, (int)$row['auth_fail_count']);
 			if ($status === 'error') {
-				$this->notifications->notifyCrmUsers(
-					Constants::NOTIFY_DIGEST,
-					'mailbox_error',
-					(string)$mailboxId,
-					['label' => (string)$row['label']],
-				);
+				$wsId = (int)($row['workspace_id'] ?? 0);
+				if ($wsId > 0) {
+					$this->notifications->notifyWorkspaceUsers(
+						$wsId,
+						Constants::NOTIFY_DIGEST,
+						'mailbox_error',
+						(string)$mailboxId,
+						['label' => (string)$row['label']],
+					);
+				}
 			}
 			return ['ingested' => 0, 'status' => $status];
 		}

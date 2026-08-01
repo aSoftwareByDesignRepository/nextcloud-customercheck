@@ -56,6 +56,12 @@ trait ApiControllerTrait
 				Constants::ERR_HOOK_TOKEN_INVALID => Http::STATUS_UNAUTHORIZED,
 				Constants::ERR_HOOK_RATE_LIMITED, Constants::ERR_RATE_LIMITED => Http::STATUS_TOO_MANY_REQUESTS,
 				Constants::ERR_FEED_TOKEN_REVOKED => Http::STATUS_GONE,
+				Constants::ERR_ATTACHMENT_TOO_LARGE,
+				Constants::ERR_ATTACHMENT_DENIED,
+				Constants::ERR_FILES_NOT_FILE,
+				Constants::ERR_FILES_NOT_FOLDER,
+				Constants::ERR_FILES_NOT_FOUND,
+				Constants::ERR_FILES_PERMISSION_DENIED => Http::STATUS_UNPROCESSABLE_ENTITY,
 				default => Http::STATUS_BAD_REQUEST,
 			};
 			return $this->fail($e->getErrorCode(), $e->getMessage(), $e->getFields(), $status);

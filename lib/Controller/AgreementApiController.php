@@ -69,9 +69,8 @@ class AgreementApiController extends Controller
 	private function gateAgreement(int $id, string $capability = 'read'): array
 	{
 		$agreement = $this->agreements->get($id);
-		$this->requireCompanyInResolvedWorkspace((int)$agreement->getCompanyId());
 
-		return $this->requireWorkspaceCapability($capability);
+		return $this->requireCompanyCapability((int)$agreement->getCompanyId(), $capability);
 	}
 
 	#[NoAdminRequired]
@@ -100,9 +99,8 @@ class AgreementApiController extends Controller
 	public function create(): JSONResponse
 	{
 		try {
-			$ctx = $this->requireWorkspaceCapability('write');
 			$body = $this->body();
-			$this->requireCompanyInResolvedWorkspace((int)($body['companyId'] ?? 0));
+			$ctx = $this->requireCompanyCapability((int)($body['companyId'] ?? 0), 'write');
 
 			return $this->ok($this->ser($this->agreements->create($body, $ctx['uid'])), Http::STATUS_CREATED);
 		} catch (\Throwable $e) {
@@ -154,7 +152,7 @@ class AgreementApiController extends Controller
 	public function deliveryPack(int $id): JSONResponse
 	{
 		try {
-			$ctx = $this->gateAgreement($id, 'read');
+			$ctx = $this->gateAgreement($id, 'write');
 			$b = $this->body();
 
 			return $this->ok($this->delivery->build(
@@ -172,7 +170,7 @@ class AgreementApiController extends Controller
 	public function partnerMail(int $id): JSONResponse
 	{
 		try {
-			$ctx = $this->gateAgreement($id, 'read');
+			$ctx = $this->gateAgreement($id, 'write');
 			$b = $this->body();
 
 			return $this->ok($this->partnerMail->build(

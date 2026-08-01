@@ -8,6 +8,7 @@ use OCA\CustomerCheck\AppInfo\Application;
 use OCA\CustomerCheck\Service\AccessControlService;
 use OCA\CustomerCheck\Service\AppIconService;
 use OCA\CustomerCheck\Service\CompanyService;
+use OCA\CustomerCheck\Service\WorkspaceAccessService;
 use OCP\IL10N;
 use OCP\IURLGenerator;
 use OCP\IUser;
@@ -17,9 +18,9 @@ use OCP\Search\SearchResult;
 use OCP\Search\SearchResultEntry;
 
 /**
- * Unified search over company name + slug — PSD §7.5 / S8 / S9.
+ * Unified search over company name + slug — product §3.3 / §16.
  *
- * Non–CRM users receive an empty result set (never an error).
+ * Results are scoped to workspaces the user may access (never cross-book).
  */
 class CompanySearchProvider implements IProvider
 {
@@ -28,6 +29,7 @@ class CompanySearchProvider implements IProvider
 		private readonly IURLGenerator $urlGenerator,
 		private readonly CompanyService $companyService,
 		private readonly AccessControlService $accessControl,
+		private readonly WorkspaceAccessService $workspaces,
 		private readonly AppIconService $appIconService,
 	) {
 	}
@@ -49,7 +51,8 @@ class CompanySearchProvider implements IProvider
 
 	public function search(IUser $user, ISearchQuery $query): SearchResult
 	{
-		if (!$this->accessControl->canUseApp($user->getUID())) {
+		$uid = $user->getUID();
+		if (!$this->accessControl->canUseApp($uid)) {
 			return SearchResult::complete($this->getName(), []);
 		}
 
@@ -58,8 +61,16 @@ class CompanySearchProvider implements IProvider
 			return SearchResult::complete($this->getName(), []);
 		}
 
+		$workspaceIds = $this->workspaces->listAccessibleWorkspaceIds($uid);
+		if ($workspaceIds === []) {
+			return SearchResult::complete($this->getName(), []);
+		}
+
 		$limit = max(1, min(25, $query->getLimit()));
-		$companies = $this->companyService->search(['search' => $term], $limit, 0);
+		$companies = $this->companyService->search([
+			'search' => $term,
+			'workspaceIds' => $workspaceIds,
+		], $limit, 0);
 		$entries = [];
 		$icon = $this->appIconService->surfaceIconPath();
 

@@ -63,6 +63,23 @@ final class PersonaOsLogicTest extends TestCase
 		], $today));
 	}
 
+	public function testCoverageRiskFlagsWireThroughEvaluate(): void
+	{
+		$people = [
+			['buying_role' => 'economic_buyer', 'status' => 'active'],
+			['buying_role' => 'champion', 'status' => 'left'],
+			['buying_role' => 'day_to_day', 'status' => 'active'],
+		];
+		$eval = CoverageLogic::evaluate('key', $people, true, true, true, true);
+		$this->assertContains('champion_gap', $eval['flags']);
+		$this->assertContains('champion_left', $eval['flags']);
+		$this->assertContains('touch_overdue', $eval['flags']);
+		$this->assertContains('promise_overdue', $eval['flags']);
+		$this->assertContains('partner_hours_hot', $eval['flags']);
+		$this->assertContains('renewal_hot', $eval['flags']);
+		$this->assertTrue($eval['gap']);
+	}
+
 	public function testCoverageGapOnlyForKeyPartner(): void
 	{
 		$people = [
@@ -233,6 +250,25 @@ final class PersonaOsLogicTest extends TestCase
 			[],
 		);
 		$this->assertSame(Constants::ERR_OOO_TOO_LONG, $long);
+	}
+
+	public function testOooEndedCoverDoesNotBlockReschedule(): void
+	{
+		$existing = [[
+			'primaryUserId' => 'alex',
+			'startsOn' => '2026-08-01',
+			'endsOn' => '2026-08-10',
+			'status' => 'ended',
+			'id' => 1,
+		]];
+		$err = OooLogic::validate(
+			'alex',
+			'sam',
+			new \DateTimeImmutable('2026-08-05'),
+			new \DateTimeImmutable('2026-08-12'),
+			$existing,
+		);
+		$this->assertNull($err);
 	}
 
 	public function testOooNeverSamePrimaryBackup(): void

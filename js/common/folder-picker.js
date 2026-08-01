@@ -317,8 +317,132 @@
       });
   }
 
+  /**
+   * @param {string} pickedPath
+   * @returns {Promise<{ fileId: number|null, path: string, name?: string }|null>}
+   */
+  function resolveFileSelection(pickedPath) {
+    const normalized = normalizePickerPath(pickedPath);
+    if (!normalized || normalized === '/') {
+      return Promise.resolve(null);
+    }
+    const rel = normalized.replace(/^\/+/, '');
+    const tryPaths = [normalized, '/' + rel, rel];
+    let infoChain = Promise.resolve(null);
+    tryPaths.forEach((tryPath) => {
+      infoChain = infoChain.then((found) => {
+        if (found) return found;
+        return getFileInfoAsync(tryPath).catch(() => null);
+      });
+    });
+
+    return infoChain.then((info) => {
+      if (!info) return null;
+      if (isDirectoryInfo(info)) {
+        const C = window.CustomerCheckComponents || window.CrmComponents;
+        if (C && typeof C.alertDialog === 'function') {
+          return C.alertDialog({
+            title: t('That is a folder'),
+            message: t('Pick a file (for example a PDF), not a folder.'),
+            variant: 'warning',
+          }).then(() => null);
+        }
+        return null;
+      }
+      const fileId = fileIdFromInfo(info);
+      const name = String((info && (info.name || info.displayname || info.basename)) || rel.split('/').pop() || '');
+      return { fileId: fileId, path: normalized, name: name };
+    });
+  }
+
+  function openModernFilePicker(mimeFilter, title) {
+    return import('@nextcloud/dialogs').then((dialogs) => {
+      if (!dialogs || typeof dialogs.getFilePickerBuilder !== 'function') {
+        return undefined;
+      }
+      const typeChoose = (dialogs.FilePickerType && dialogs.FilePickerType.Choose) || 1;
+      const filter = Array.isArray(mimeFilter) && mimeFilter.length ? mimeFilter : ['*'];
+      const picker = dialogs.getFilePickerBuilder(title || t('Select a file'))
+        .setMultiSelect(false)
+        .setMimeTypeFilter(filter)
+        .allowDirectories(false)
+        .setType(typeChoose)
+        .build();
+      return picker.pick().then((pickedPath) => {
+        if (!pickedPath) return null;
+        return resolveFileSelection(pickedPath);
+      });
+    }).catch(() => undefined);
+  }
+
+  function openLegacyFilePicker(mimeFilter, title) {
+    return new Promise((resolve) => {
+      if (!window.OC || !OC.dialogs || typeof OC.dialogs.filepicker !== 'function') {
+        resolve(null);
+        return;
+      }
+
+      let settled = false;
+      const finish = (selection) => {
+        if (settled) return;
+        settled = true;
+        window.removeEventListener('unhandledrejection', onPickerDismiss);
+        clearTimeout(safetyTimer);
+        resolve(selection);
+      };
+
+      const onPickerDismiss = (event) => {
+        if (!isPickerCancelled(event.reason)) return;
+        event.preventDefault();
+        finish(null);
+      };
+      window.addEventListener('unhandledrejection', onPickerDismiss);
+      const safetyTimer = window.setTimeout(() => finish(null), PICKER_SAFETY_MS);
+
+      const typeChoose = OC.dialogs.FILEPICKER_TYPE_CHOOSE || 1;
+      const filter = Array.isArray(mimeFilter) && mimeFilter.length ? mimeFilter : null;
+      try {
+        OC.dialogs.filepicker(
+          title || t('Select a file'),
+          (path) => {
+            resolveFileSelection(path).then((selection) => finish(selection));
+          },
+          false,
+          filter,
+          true,
+          typeChoose,
+        );
+      } catch (err) {
+        finish(null);
+      }
+    });
+  }
+
+  /**
+   * Pick a single file (PDF / attachment) — never a folder.
+   *
+   * @param {{ mimeTypes?: string[], title?: string }} [options]
+   * @returns {Promise<{ fileId: number|null, path: string, name?: string }|{ unavailable: true }|null>}
+   */
+  function pickFile(options) {
+    const opts = options || {};
+    const mimeTypes = opts.mimeTypes || ['application/pdf'];
+    const title = opts.title || t('Select a file');
+    return openModernFilePicker(mimeTypes, title).then((modernResult) => {
+      if (modernResult !== undefined) {
+        return modernResult === null ? null : (modernResult || { unavailable: true });
+      }
+      const legacyAvailable = !!(window.OC && OC.dialogs && typeof OC.dialogs.filepicker === 'function');
+      if (!legacyAvailable) {
+        return { unavailable: true };
+      }
+      return openLegacyFilePicker(mimeTypes, title).then((selection) => selection);
+    });
+  }
+
   window.CustomerCheckFolderPicker = {
     pickFolder: pickFolder,
+    pickFile: pickFile,
     openNativeFolderPicker: openNativeFolderPicker,
     resolveFolderFileId: resolveFolderFileId,
     normalizePickerPath: normalizePickerPath,

@@ -11,6 +11,7 @@ use OCA\CustomerCheck\Db\CompanyMapper;
 use OCA\CustomerCheck\Db\DealMapper;
 use OCA\CustomerCheck\Support\DateMath;
 use OCA\CustomerCheck\Support\OptimisticLock;
+use OCA\CustomerCheck\Support\TicketCompanyLink;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\IL10N;
 
@@ -38,16 +39,23 @@ class TodayService
 	}
 
 	/**
+	 * Build the Today urgency queue.
+	 *
+	 * When `$workspaceId` is set, every source is restricted to that book
+	 * (product §3.3 / §21.1 — never blend workspaces). Tickets without a
+	 * company in the workspace are dropped (no ambiguous cross-book rows).
+	 *
 	 * @return array{items: list<array<string, mixed>>, meta: array{truncated: bool, total: int}}
 	 */
-	public function build(?\DateTimeInterface $today = null): array
+	public function build(?\DateTimeInterface $today = null, ?int $workspaceId = null): array
 	{
 		$today = $today ?? $this->timeFactory->getDateTime();
+		$wsFilter = ($workspaceId !== null && $workspaceId > 0) ? $workspaceId : null;
 		$items = [];
 		/** @var array<int, string> $companyNames */
 		$companyNames = [];
 
-		foreach ($this->agreementMapper->findRenewalCandidates(2000, 0) as $agreement) {
+		foreach ($this->agreementMapper->findRenewalCandidates(2000, 0, $wsFilter) as $agreement) {
 			$days = $this->statusService->daysUntilExpiry($agreement->getValidUntil(), $today);
 			if ($days === null || $days > 60) {
 				continue;
@@ -56,6 +64,7 @@ class TodayService
 			$urgency = $days <= 7 ? 10 : ($days <= 30 ? 15 : 18);
 			$items[] = [
 				'kind' => 'agreement_expiry',
+				'kindLabel' => $this->labels->todayKind('agreement_expiry'),
 				'urgency' => $urgency,
 				'companyId' => $companyId,
 				'companyName' => $this->resolveCompanyName($companyId, $companyNames),
@@ -69,17 +78,16 @@ class TodayService
 
 		if ($this->facades->ticketcheckAvailable()) {
 			foreach ($this->facades->listWaitingTickets(50) as $ticket) {
-				$companyId = isset($ticket['companyId']) ? (int)$ticket['companyId'] : 0;
-				$tcCustomerId = (int)($ticket['customerId'] ?? 0);
-				if ($companyId <= 0 && $tcCustomerId > 0) {
-					$linked = $this->companyMapper->findByTcCustomerId($tcCustomerId);
-					$companyId = $linked !== null ? (int)$linked->getId() : 0;
-					if ($linked !== null) {
-						$companyNames[$companyId] = (string)$linked->getName();
+				$companyId = TicketCompanyLink::resolveCompanyId($ticket, $this->companyMapper, $companyNames);
+				// Workspace-scoped Today: skip tickets we cannot place in this book.
+				if ($wsFilter !== null) {
+					if ($companyId <= 0 || !$this->companyBelongsToWorkspace($companyId, $wsFilter, $companyNames)) {
+						continue;
 					}
 				}
 				$items[] = [
 					'kind' => 'ticket_waiting',
+					'kindLabel' => $this->labels->todayKind('ticket_waiting'),
 					'urgency' => 20,
 					'companyId' => $companyId > 0 ? $companyId : null,
 					'companyName' => $companyId > 0
@@ -92,12 +100,14 @@ class TodayService
 			}
 		}
 
-		foreach ($this->activityMapper->findOpenDueUpTo(DateMath::toUtcMidnight($today), 500) as $activity) {
+		foreach ($this->activityMapper->findOpenDueUpTo(DateMath::toUtcMidnight($today), 500, $wsFilter) as $activity) {
 			$due = $activity->getDueDate();
 			$daysLate = $due !== null ? DateMath::daysBetween($due, $today) : 0;
 			$companyId = (int)$activity->getCompanyId();
+			$kind = $daysLate > 0 ? 'activity_overdue' : 'activity_due';
 			$items[] = [
-				'kind' => $daysLate > 0 ? 'activity_overdue' : 'activity_due',
+				'kind' => $kind,
+				'kindLabel' => $this->labels->todayKind($kind),
 				'urgency' => $daysLate > 0 ? 30 : 40,
 				'companyId' => $companyId,
 				'companyName' => $this->resolveCompanyName($companyId, $companyNames),
@@ -111,7 +121,7 @@ class TodayService
 
 		$staleDays = $this->dealService->staleDealDays();
 		$staleCutoff = DateMath::addDays($today, -$staleDays);
-		foreach ($this->dealMapper->findOpenStaleBefore($staleCutoff, 200) as $deal) {
+		foreach ($this->dealMapper->findOpenStaleBefore($staleCutoff, 200, $wsFilter) as $deal) {
 			// Double-check via DealService so settings/edge cases stay single-sourced.
 			if (!$this->dealService->isStale($deal, $today)) {
 				continue;
@@ -120,6 +130,7 @@ class TodayService
 			$changed = $deal->getStageChangedAt();
 			$items[] = [
 				'kind' => 'deal_stale',
+				'kindLabel' => $this->labels->todayKind('deal_stale'),
 				'urgency' => 50,
 				'companyId' => $companyId,
 				'companyName' => $this->resolveCompanyName($companyId, $companyNames),
@@ -148,6 +159,23 @@ class TodayService
 			'items' => array_values($items),
 			'meta' => ['truncated' => $truncated, 'total' => $total],
 		];
+	}
+
+	/**
+	 * @param array<int, string> $cache
+	 */
+	private function companyBelongsToWorkspace(int $companyId, int $workspaceId, array &$cache): bool
+	{
+		if ($companyId <= 0 || $workspaceId <= 0) {
+			return false;
+		}
+		try {
+			$company = $this->companyMapper->findById($companyId);
+			$cache[$companyId] = $this->labels->companyOrUnknown($company->getName());
+			return (int)($company->getWorkspaceId() ?? 0) === $workspaceId;
+		} catch (\Throwable) {
+			return false;
+		}
 	}
 
 	/**

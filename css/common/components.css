@@ -1095,7 +1095,7 @@ body[data-theme-dark-highcontrast] .form-input.form-select option {
 .modal,
 .crm-dialog {
   background-color: var(--arbeitszeitcheck-color-modal-background, var(--crm-bg-card, var(--color-main-background)));
-  color: var(--arbeitszeitcheck-color-text-maxcontrast, var(--color-text-maxcontrast, var(--arbeitszeitcheck-color-text)));
+  color: var(--crm-text, var(--color-main-text));
   border: 1px solid var(--crm-border, var(--color-border));
   border-radius: var(--crm-radius-lg, 16px);
   box-shadow: var(--crm-shadow-md, 0 8px 24px color-mix(in srgb, var(--color-main-text) 12%, transparent));

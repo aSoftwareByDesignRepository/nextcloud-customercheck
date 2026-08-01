@@ -31,7 +31,10 @@ class AppAccessMiddleware extends Middleware
 	public function beforeController($controller, $methodName): void
 	{
 		$class = is_object($controller) ? get_class($controller) : '';
-		if (!str_starts_with($class, 'OCA\\CustomerCheck\\Controller\\')) {
+		$parent = is_object($controller) ? (get_parent_class($controller) ?: '') : '';
+		// PHPUnit mocks use a generated class name; honour the real controller parent.
+		if (!str_starts_with($class, 'OCA\\CustomerCheck\\Controller\\')
+			&& !str_starts_with($parent, 'OCA\\CustomerCheck\\Controller\\')) {
 			return;
 		}
 		if ($this->isPublic($controller, $methodName)) {
@@ -45,8 +48,9 @@ class AppAccessMiddleware extends Middleware
 		if ($this->accessControl->canUseApp($uid)) {
 			return;
 		}
-		$this->logger->warning('customercheck access denied', ['userId' => $uid]);
-		throw new AppAccessDeniedException('ACCESS_DENIED');
+		$reason = $this->accessControl->denialReasonWhenCannotUseApp($uid);
+		$this->logger->warning('customercheck access denied', ['userId' => $uid, 'reason' => $reason]);
+		throw new AppAccessDeniedException($reason !== '' ? $reason : 'ACCESS_DENIED');
 	}
 
 	public function afterException($controller, $methodName, \Exception $exception)
@@ -67,6 +71,7 @@ class AppAccessMiddleware extends Middleware
 
 			return new TemplateResponse('customercheck', 'access-denied', [
 				'message' => $l->t('Not found.'),
+				'hint' => '',
 				'homeUrl' => $this->urlGenerator->linkToDefaultPageUrl(),
 				'todayUrl' => $this->urlGenerator->linkToRoute('customercheck.page.today'),
 				'showAppLink' => true,
@@ -81,10 +86,24 @@ class AppAccessMiddleware extends Middleware
 		$path = (string)($this->request->getPathInfo() ?? '');
 		$wantsJson = str_contains($path, '/api/') || $this->request->getMethod() !== 'GET';
 		$l = $this->l10nFactory->get('customercheck');
-		$message = $isAdminGate
-			? $l->t('You need CustomerCheck administrator rights for this action.')
-			: $l->t('You do not have access to CustomerCheck.');
-		$error = $isAdminGate ? 'ACCESS_DENIED' : 'ACCESS_DENIED';
+		if ($isAdminGate) {
+			$message = $l->t('You need CustomerCheck administrator rights for this action.');
+			$hint = $l->t('Ask a Nextcloud administrator who manages CustomerCheck to help with this change.');
+			$error = 'ACCESS_DENIED';
+		} else {
+			$reason = $exception->getMessage();
+			[$message, $hint] = match ($reason) {
+				AccessControlService::DENIAL_RESTRICTION => [
+					$l->t('Your organisation restricts CustomerCheck access. You are not on the allowed-users list and you are not a member of any allowed group.'),
+					$l->t('Ask a CustomerCheck administrator to add you under App settings → Access mode, or switch Access mode to Open if everyone should see the app.'),
+				],
+				default => [
+					$l->t('You do not have access to CustomerCheck.'),
+					$l->t('Ask a CustomerCheck administrator to check Access mode and allowlists under App settings.'),
+				],
+			};
+			$error = 'ACCESS_DENIED';
+		}
 		if ($wantsJson) {
 			return new JSONResponse([
 				'success' => false,
@@ -95,6 +114,7 @@ class AppAccessMiddleware extends Middleware
 		}
 		return new TemplateResponse('customercheck', 'access-denied', [
 			'message' => $message,
+			'hint' => $hint,
 			'homeUrl' => $this->urlGenerator->linkToDefaultPageUrl(),
 			'todayUrl' => $this->urlGenerator->linkToRoute('customercheck.page.today'),
 			'showAppLink' => false,

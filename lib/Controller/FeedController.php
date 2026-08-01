@@ -6,6 +6,7 @@ use OCA\CustomerCheck\Service\ActivityService;
 use OCA\CustomerCheck\Service\AgreementService;
 use OCA\CustomerCheck\Service\CompanyService;
 use OCA\CustomerCheck\Service\SettingsService;
+use OCA\CustomerCheck\Service\WorkspaceService;
 use OCA\CustomerCheck\Support\Ics;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
@@ -15,8 +16,11 @@ use OCP\AppFramework\Http\DataDisplayResponse;
 use OCP\IRequest;
 
 /**
- * Read-only ICS renewal feed — PSD §7.1.
- * Always regenerated on request so calendar clients never see stale events.
+ * Read-only ICS renewal feed — product §15.2 / §3.3.
+ *
+ * Legacy global token is scoped to the Default workspace so one leaked URL
+ * cannot dump every book. Per-workspace tokens use an independent map
+ * ({@see SettingsService::workspaceIcsTokenMatches}).
  */
 class FeedController extends Controller {
 	use ApiControllerTrait;
@@ -28,6 +32,7 @@ class FeedController extends Controller {
 		private readonly AgreementService $agreements,
 		private readonly CompanyService $companies,
 		private readonly ActivityService $activities,
+		private readonly WorkspaceService $workspaces,
 	) {
 		parent::__construct($appName, $request);
 	}
@@ -39,12 +44,43 @@ class FeedController extends Controller {
 			return $this->fail(Constants::ERR_FEED_TOKEN_REVOKED, 'Feed token revoked', [], Http::STATUS_GONE);
 		}
 
+		$default = $this->workspaces->findDefault();
+		$workspaceId = $default !== null ? (int)$default->getId() : 0;
+
+		return $this->icsResponse($workspaceId);
+	}
+
+	#[PublicPage]
+	#[NoCSRFRequired]
+	public function workspaceRenewals(int $workspaceId, string $token) {
+		if ($workspaceId <= 0 || !$this->settings->workspaceIcsTokenMatches($workspaceId, $token)) {
+			return $this->fail(Constants::ERR_FEED_TOKEN_REVOKED, 'Feed token revoked', [], Http::STATUS_GONE);
+		}
+
+		$ws = $this->workspaces->findById($workspaceId);
+		if ($ws === null || $ws->isArchived()) {
+			return $this->fail(Constants::ERR_FEED_TOKEN_REVOKED, 'Feed token revoked', [], Http::STATUS_GONE);
+		}
+
+		return $this->icsResponse($workspaceId);
+	}
+
+	private function icsResponse(int $workspaceId): DataDisplayResponse
+	{
+		if ($workspaceId <= 0) {
+			$body = Ics::calendar('CustomerCheck renewals', []);
+			return new DataDisplayResponse($body, Http::STATUS_OK, [
+				'Content-Type' => 'text/calendar; charset=utf-8',
+				'Content-Disposition' => 'inline; filename="renewals.ics"',
+			]);
+		}
+
 		$events = [];
 		$companyCache = [];
 		$agreementEvents = 0;
 		$maxAgreements = 500;
 
-		foreach ($this->agreements->search([], 2000) as $a) {
+		foreach ($this->agreements->search(['workspaceId' => $workspaceId], 2000) as $a) {
 			$status = (string)$a->getStatus();
 			if (in_array($status, Constants::AGREEMENT_TERMINAL_STATUSES, true)) {
 				continue;
@@ -64,7 +100,7 @@ class FeedController extends Controller {
 				try {
 					$companyCache[$companyId] = (string)$this->companies->get($companyId)->getName();
 				} catch (\Throwable) {
-					$companyCache[$companyId] = '#' . $companyId;
+					$companyCache[$companyId] = 'Company';
 				}
 			}
 			$companyName = $companyCache[$companyId];
@@ -79,11 +115,10 @@ class FeedController extends Controller {
 			$agreementEvents++;
 		}
 
-		// Open activity due dates — omit first when over capacity (§15).
 		$activityBudget = max(0, 500 - count($events));
 		if ($activityBudget > 0) {
 			$added = 0;
-			foreach ($this->activities->search(['openOnly' => true], 500) as $act) {
+			foreach ($this->activities->search(['openOnly' => true, 'workspaceId' => $workspaceId], 500) as $act) {
 				if ($added >= $activityBudget) {
 					break;
 				}
@@ -96,7 +131,7 @@ class FeedController extends Controller {
 					try {
 						$companyCache[$companyId] = (string)$this->companies->get($companyId)->getName();
 					} catch (\Throwable) {
-						$companyCache[$companyId] = '#' . $companyId;
+						$companyCache[$companyId] = 'Company';
 					}
 				}
 				$summary = $companyCache[$companyId] . ' — ' . (string)$act->getTitle();

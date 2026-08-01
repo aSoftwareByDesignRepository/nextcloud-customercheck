@@ -1,0 +1,18 @@
+{
+  "source": {
+    "directories": ["lib/Service"]
+  },
+  "timeout": 30,
+  "logs": { "text": "infection-critical.log", "html": "infection-critical.html" },
+  "tmpDir": "/tmp/crm-infection-critical",
+  "mutators": {
+    "@default": true,
+    "PublicVisibility": false
+  },
+  "minMsi": 75,
+  "minCoveredMsi": 80,
+  "testFramework": "phpunit",
+  "phpUnit": {
+    "configDir": "."
+  }
+}

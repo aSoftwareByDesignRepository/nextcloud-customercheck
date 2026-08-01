@@ -29,6 +29,7 @@ class LeadWebhookService
 		private readonly SettingsService $settings,
 		private readonly RateLimitService $rateLimit,
 		private readonly CompanyService $companyService,
+		private readonly WorkspaceService $workspaces,
 		private readonly SlugService $slugService,
 		private readonly PersonService $personService,
 		private readonly PersonMapper $personMapper,
@@ -79,11 +80,15 @@ class LeadWebhookService
 		}
 
 		$now = $this->timeFactory->getDateTime();
+		$defaultWs = $this->workspaces->findDefault();
+		$workspaceId = $defaultWs !== null ? (int)$defaultWs->getId() : 0;
 		$company = null;
 		if ($emailOk) {
-			$matches = $this->personMapper->findByEmail($email);
-			// Prefer an active company. Archived matches must not swallow the
-			// follow-up activity (Today excludes archived companies).
+			// Email match only inside the default intake workspace — never attach
+			// a lead to another circle’s book (§3.3 / §18.1).
+			$matches = $workspaceId > 0
+				? $this->personMapper->findByEmail($email, $workspaceId)
+				: [];
 			foreach ($matches as $person) {
 				$candidate = $this->companyService->get((int)$person->getCompanyId());
 				if (!$candidate->isArchived()) {
@@ -94,12 +99,16 @@ class LeadWebhookService
 		}
 		if ($company === null) {
 			$slug = $this->slugService->suggestUnique($companyName);
-			$company = $this->companyService->create([
+			$create = [
 				'name' => $companyName,
 				'slug' => $slug,
 				'lang' => $lang,
 				'status' => 'lead',
-			], 'webhook');
+			];
+			if ($workspaceId > 0) {
+				$create['workspaceId'] = $workspaceId;
+			}
+			$company = $this->companyService->create($create, 'webhook');
 			if ($contactName !== '' || $emailOk || $phoneOk) {
 				$this->personService->create((int)$company->getId(), [
 					'name' => $contactName !== '' ? $contactName : $companyName,
@@ -130,12 +139,17 @@ class LeadWebhookService
 			'dealId' => (int)$deal->getId(),
 			'source' => (string)($payload['source'] ?? 'website'),
 		]);
-		$this->notificationService->notifyCrmUsers(
-			Constants::NOTIFY_LEAD,
-			'company',
-			(string)$company->getId(),
-			['slug' => (string)$company->getSlug(), 'name' => (string)$company->getName()],
-		);
+		$notifyWs = (int)($company->getWorkspaceId() ?? 0);
+		$leadParams = ['slug' => (string)$company->getSlug(), 'name' => (string)$company->getName()];
+		if ($notifyWs > 0) {
+			$this->notificationService->notifyWorkspaceUsers(
+				$notifyWs,
+				Constants::NOTIFY_LEAD,
+				'company',
+				(string)$company->getId(),
+				$leadParams,
+			);
+		}
 
 		return [
 			'companyId' => (int)$company->getId(),
@@ -153,15 +167,25 @@ class LeadWebhookService
 			}
 		}
 
+		$wsId = (int)($company->getWorkspaceId() ?? 0);
+		$slaHours = Constants::LEAD_SLA_HOURS_DEFAULT;
+		if ($wsId > 0) {
+			$slaHours = max(1, (int)$this->workspaces->getSettings($wsId)['leadSlaHours']);
+		}
+
+		$stamp = $now instanceof \DateTime ? clone $now : \DateTime::createFromInterface($now);
 		$deal = new Deal();
 		$deal->setCompanyId((int)$company->getId());
 		$deal->setTitle($productInterest !== '' ? $productInterest : $this->l10n->t('Website inquiry'));
 		$deal->setStage('lead');
 		$deal->setValueCents(0);
-		$deal->setStageChangedAt($now);
+		// Unowned until claimed on Today (§18.7) — chase surfaces with Claim CTA.
+		$deal->setOwnerUserId(null);
+		$deal->setLeadSlaDueAt((clone $stamp)->modify('+' . $slaHours . ' hours'));
+		$deal->setStageChangedAt($stamp);
 		$deal->setCreatedBy('webhook');
-		$deal->setCreatedAt($now);
-		$deal->setUpdatedAt($now);
+		$deal->setCreatedAt($stamp);
+		$deal->setUpdatedAt($stamp);
 
 		return $this->dealMapper->insert($deal);
 	}

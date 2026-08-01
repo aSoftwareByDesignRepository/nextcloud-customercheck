@@ -10,6 +10,173 @@
   const canManage = root.getAttribute('data-can-manage') === '1';
   const canManageWorkspace = root.getAttribute('data-can-manage-workspace') === '1' || canManage;
 
+	/**
+	 * @param {{
+	 *   searchId: string,
+	 *   suggestId: string,
+	 *   hiddenId: string,
+	 *   clearId?: string,
+	 *   enabled: boolean,
+	 *   workspaceIdFn?: () => number,
+	 *   excludeUidsFn?: () => string[],
+	 * }} opts
+	 */
+  function bindDirectoryUserPicker(opts) {
+    const search = document.getElementById(opts.searchId);
+    const suggest = document.getElementById(opts.suggestId);
+    const hidden = document.getElementById(opts.hiddenId);
+    const clearBtn = opts.clearId ? document.getElementById(opts.clearId) : null;
+    if (!search || !suggest || !hidden || !opts.enabled) {
+      return {
+        selectedUid: () => '',
+        clear: () => {},
+      };
+    }
+    let timer = null;
+    let searchGeneration = 0;
+    const nav = (window.CustomerCheckUserPickerNav && window.CustomerCheckUserPickerNav.bindListboxKeyboard)
+      ? window.CustomerCheckUserPickerNav.bindListboxKeyboard(search, suggest)
+      : { reset: function () {} };
+
+    function syncClear() {
+      if (!clearBtn) return;
+      clearBtn.hidden = !hidden.value;
+    }
+
+    function clearSelection() {
+      hidden.value = '';
+      search.value = '';
+      suggest.innerHTML = '';
+      suggest.hidden = true;
+      search.setAttribute('aria-expanded', 'false');
+      search.removeAttribute('aria-busy');
+      nav.reset();
+      syncClear();
+    }
+
+    function commitUser(user) {
+      hidden.value = String(user.id || '');
+      search.value = (user.displayName || user.id || '') + (user.id ? ' (' + user.id + ')' : '');
+      suggest.innerHTML = '';
+      suggest.hidden = true;
+      search.setAttribute('aria-expanded', 'false');
+      search.removeAttribute('aria-busy');
+      nav.reset();
+      syncClear();
+    }
+
+    function excludedSet() {
+      const set = Object.create(null);
+      if (typeof opts.excludeUidsFn === 'function') {
+        (opts.excludeUidsFn() || []).forEach((uid) => {
+          const id = String(uid || '').trim();
+          if (id !== '') set[id] = true;
+        });
+      }
+      return set;
+    }
+
+    function showSuggestNote(message, isError) {
+      suggest.innerHTML = '';
+      const note = document.createElement('li');
+      note.className = 'user-picker__item user-picker__item--muted';
+      note.setAttribute('role', isError ? 'alert' : 'presentation');
+      note.textContent = message;
+      suggest.appendChild(note);
+      suggest.hidden = false;
+      search.setAttribute('aria-expanded', 'true');
+      nav.reset();
+    }
+
+    if (clearBtn) {
+      clearBtn.addEventListener('click', () => {
+        clearSelection();
+        search.focus();
+      });
+    }
+
+    search.addEventListener('input', () => {
+      // Typing after a commit invalidates the selection until a new pick.
+      if (hidden.value) {
+        hidden.value = '';
+        syncClear();
+      }
+      clearTimeout(timer);
+      const q = search.value.trim();
+      if (q.length < 2) {
+        suggest.hidden = true;
+        suggest.innerHTML = '';
+        search.setAttribute('aria-expanded', 'false');
+        search.removeAttribute('aria-busy');
+        nav.reset();
+        return;
+      }
+      searchGeneration += 1;
+      const myGeneration = searchGeneration;
+      timer = setTimeout(async () => {
+        search.setAttribute('aria-busy', 'true');
+        showSuggestNote(tr('Searching…'), false);
+        try {
+          let url = '/settings/users?q=' + encodeURIComponent(q);
+          if (typeof opts.workspaceIdFn === 'function') {
+            const wid = opts.workspaceIdFn();
+            if (wid > 0) {
+              url += '&workspaceId=' + encodeURIComponent(String(wid));
+            }
+          }
+          const res = await Api.get(url);
+          if (myGeneration !== searchGeneration) {
+            return;
+          }
+          search.removeAttribute('aria-busy');
+          // Prefer envelope data.users; also accept a bare users array if a proxy changes shape.
+          const raw = (res && res.data && Array.isArray(res.data.users))
+            ? res.data.users
+            : (res && Array.isArray(res.users) ? res.users : []);
+          const excluded = excludedSet();
+          const users = raw.filter((u) => u && u.id && !excluded[String(u.id)]);
+          suggest.innerHTML = '';
+          if (users.length === 0) {
+            showSuggestNote(tr('No matching users found.'), false);
+            return;
+          }
+          users.forEach((u) => {
+            const opt = document.createElement('li');
+            opt.className = 'user-picker__item';
+            opt.setAttribute('role', 'option');
+            opt.setAttribute('aria-selected', 'false');
+            opt.tabIndex = -1;
+            const name = document.createElement('span');
+            name.className = 'user-picker__name';
+            name.textContent = u.displayName || u.id;
+            const meta = document.createElement('span');
+            meta.className = 'user-picker__meta';
+            meta.textContent = u.id || '';
+            opt.appendChild(name);
+            opt.appendChild(meta);
+            opt.addEventListener('click', () => commitUser(u));
+            suggest.appendChild(opt);
+          });
+          suggest.hidden = false;
+          search.setAttribute('aria-expanded', 'true');
+          nav.reset();
+        } catch (e) {
+          if (myGeneration !== searchGeneration) {
+            return;
+          }
+          search.removeAttribute('aria-busy');
+          showSuggestNote(tr('Could not search the directory. Try again.'), true);
+        }
+      }, 250);
+    });
+
+    syncClear();
+    return {
+      selectedUid: () => String(hidden.value || '').trim(),
+      clear: clearSelection,
+    };
+  }
+
   function checkedValues(selector) {
     return Array.from(document.querySelectorAll(selector + ':checked')).map((el) => el.value);
   }
@@ -30,86 +197,107 @@
     input.addEventListener('input', () => filterList(listId, input.value));
   }
 
-  bindSearch('crm-app-admins-search', 'crm-app-admins-list');
   bindSearch('crm-allowed-groups-search', 'crm-allowed-groups-list');
 
-  const restriction = document.getElementById('crm-access-restriction');
+  const modeSelect = document.getElementById('crm-access-mode');
   const confirmWrap = document.getElementById('crm-open-access-confirm-wrap');
   const confirmOpen = document.getElementById('crm-confirm-open-access');
-  if (restriction && confirmWrap) {
-    restriction.addEventListener('change', () => {
-      const on = restriction.checked;
-      confirmWrap.hidden = on;
-      if (on && confirmOpen) confirmOpen.checked = false;
-    });
+  if (modeSelect && confirmWrap) {
+    const syncConfirm = () => {
+      const open = modeSelect.value === 'open';
+      confirmWrap.hidden = !open;
+      if (!open && confirmOpen) confirmOpen.checked = false;
+    };
+    modeSelect.addEventListener('change', syncConfirm);
+    syncConfirm();
   }
 
-  // Allowed users chips
-  const chipList = document.getElementById('crm-allowed-users-chips');
-  const suggest = document.getElementById('crm-allowed-users-suggest');
-  const userSearch = document.getElementById('crm-allowed-users-search');
-  let searchTimer = null;
+  /**
+   * Multi-select directory chips (app admins / allowed users).
+   * @param {{ chipListId: string, searchId: string, suggestId: string, enabled: boolean }} opts
+   */
+  function bindUserChipPicker(opts) {
+    const chipList = document.getElementById(opts.chipListId);
+    const suggest = document.getElementById(opts.suggestId);
+    const userSearch = document.getElementById(opts.searchId);
+    let searchTimer = null;
 
-  function selectedUids() {
-    if (!chipList) return [];
-    return Array.from(chipList.querySelectorAll('[data-uid]')).map((el) => el.getAttribute('data-uid'));
-  }
+    function selectedUids() {
+      if (!chipList) return [];
+      return Array.from(chipList.querySelectorAll('[data-uid]')).map((el) => el.getAttribute('data-uid'));
+    }
 
-  function renderChip(user) {
-    if (!chipList || selectedUids().includes(user.id)) return;
-    const li = document.createElement('li');
-    li.className = 'crm-chip';
-    li.setAttribute('data-uid', user.id);
-    li.innerHTML = '<span></span><button type="button" class="crm-chip__remove" aria-label="' + tr('Remove') + '">×</button>';
-    li.querySelector('span').textContent = user.displayName || user.id;
-    li.querySelector('button').setAttribute('data-remove-uid', user.id);
-    chipList.appendChild(li);
-  }
+    function renderChip(user) {
+      if (!chipList || selectedUids().includes(user.id)) return;
+      const li = document.createElement('li');
+      li.className = 'crm-chip';
+      li.setAttribute('data-uid', user.id);
+      li.innerHTML = '<span></span><button type="button" class="crm-chip__remove" aria-label="' + tr('Remove') + '">×</button>';
+      li.querySelector('span').textContent = user.displayName || user.id;
+      li.querySelector('button').setAttribute('data-remove-uid', user.id);
+      chipList.appendChild(li);
+    }
 
-  if (chipList) {
-    chipList.addEventListener('click', (ev) => {
-      const btn = ev.target.closest('[data-remove-uid]');
-      if (!btn) return;
-      const uid = btn.getAttribute('data-remove-uid');
-      const chip = chipList.querySelector('[data-uid="' + CSS.escape(uid) + '"]');
-      if (chip) chip.remove();
-    });
-  }
+    if (chipList) {
+      chipList.addEventListener('click', (ev) => {
+        const btn = ev.target.closest('[data-remove-uid]');
+        if (!btn) return;
+        const uid = btn.getAttribute('data-remove-uid');
+        const chip = chipList.querySelector('[data-uid="' + CSS.escape(uid) + '"]');
+        if (chip) chip.remove();
+      });
+    }
 
-  if (userSearch && suggest && canManage) {
-    userSearch.addEventListener('input', () => {
-      clearTimeout(searchTimer);
-      const q = userSearch.value.trim();
-      if (q.length < 2) {
-        suggest.hidden = true;
-        suggest.innerHTML = '';
-        return;
-      }
-      searchTimer = setTimeout(async () => {
-        try {
-          const res = await Api.get('/settings/users?q=' + encodeURIComponent(q));
-          const users = (res.data && res.data.users) || [];
-          suggest.innerHTML = '';
-          users.forEach((u) => {
-            const opt = document.createElement('button');
-            opt.type = 'button';
-            opt.className = 'crm-suggest__item';
-            opt.setAttribute('role', 'option');
-            opt.textContent = (u.displayName || u.id) + ' (' + u.id + ')';
-            opt.addEventListener('click', () => {
-              renderChip(u);
-              suggest.hidden = true;
-              userSearch.value = '';
-            });
-            suggest.appendChild(opt);
-          });
-          suggest.hidden = users.length === 0;
-        } catch (e) {
+    if (userSearch && suggest && opts.enabled) {
+      userSearch.addEventListener('input', () => {
+        clearTimeout(searchTimer);
+        const q = userSearch.value.trim();
+        if (q.length < 2) {
           suggest.hidden = true;
+          suggest.innerHTML = '';
+          return;
         }
-      }, 250);
-    });
+        searchTimer = setTimeout(async () => {
+          try {
+            const res = await Api.get('/settings/users?q=' + encodeURIComponent(q));
+            const users = (res.data && res.data.users) || [];
+            suggest.innerHTML = '';
+            users.forEach((u) => {
+              const opt = document.createElement('button');
+              opt.type = 'button';
+              opt.className = 'crm-suggest__item';
+              opt.setAttribute('role', 'option');
+              opt.textContent = (u.displayName || u.id) + ' (' + u.id + ')';
+              opt.addEventListener('click', () => {
+                renderChip(u);
+                suggest.hidden = true;
+                userSearch.value = '';
+              });
+              suggest.appendChild(opt);
+            });
+            suggest.hidden = users.length === 0;
+          } catch (e) {
+            suggest.hidden = true;
+          }
+        }, 250);
+      });
+    }
+
+    return { selectedUids };
   }
+
+  const appAdminChips = bindUserChipPicker({
+    chipListId: 'crm-app-admins-chips',
+    searchId: 'crm-app-admins-search',
+    suggestId: 'crm-app-admins-suggest',
+    enabled: canManage,
+  });
+  const allowedUserChips = bindUserChipPicker({
+    chipListId: 'crm-allowed-users-chips',
+    searchId: 'crm-allowed-users-search',
+    suggestId: 'crm-allowed-users-suggest',
+    enabled: canManage,
+  });
 
   async function copyField(id) {
     const el = document.getElementById(id);
@@ -147,16 +335,40 @@
     });
   });
 
+  const wsIcsRotate = document.getElementById('crm-ws-ics-rotate');
+  if (wsIcsRotate) {
+    wsIcsRotate.addEventListener('click', async () => {
+      if (!currentWorkspaceId) return;
+      const ok = await C.confirmDialog({
+        title: tr('Rotate token'),
+        message: tr('The old URL will stop working immediately (HTTP 410). Continue?'),
+        confirmLabel: tr('Rotate'),
+        cancelLabel: tr('Cancel'),
+        variant: 'warning',
+      });
+      if (!ok || !ok.confirmed) return;
+      try {
+        const res = await Api.post('/workspaces/' + currentWorkspaceId + '/ics-token/rotate', {});
+        const url = (res.data && res.data.icsFeedUrl) || '';
+        const icsUrl = document.getElementById('crm-ws-ics-url');
+        if (icsUrl && url) icsUrl.value = url;
+        if (C && C.announce) C.announce(tr('Token rotated'));
+      } catch (e) {
+        await C.alertDialog({ title: tr('Rotate failed'), message: (e.payload && e.payload.message) || e.message, variant: 'danger' });
+      }
+    });
+  }
+
   const accessForm = document.getElementById('crm-settings-access-form');
   if (accessForm) {
     accessForm.addEventListener('submit', async (ev) => {
       ev.preventDefault();
-      const restrictionOn = !!(restriction && restriction.checked);
+      const restrictionOn = !(modeSelect && modeSelect.value === 'open');
       const payload = {
-        app_admin_user_ids: checkedValues('#crm-app-admins-list input[type="checkbox"]'),
+        app_admin_user_ids: appAdminChips.selectedUids(),
         access_restriction_enabled: restrictionOn,
         access_allowed_group_ids: checkedValues('#crm-allowed-groups-list input[type="checkbox"]'),
-        access_allowed_user_ids: selectedUids(),
+        access_allowed_user_ids: allowedUserChips.selectedUids(),
       };
       if (!restrictionOn) {
         payload.confirmOpenAccess = !!(confirmOpen && confirmOpen.checked);
@@ -237,37 +449,108 @@
   }
 
   const seatAdd = document.getElementById('crm-license-seat-add');
-  const seatUser = document.getElementById('crm-license-seat-user');
   const seatError = document.getElementById('crm-license-seat-error');
   const seatList = document.getElementById('crm-license-seat-list');
+  const seatPicker = bindDirectoryUserPicker({
+    searchId: 'crm-license-seat-search',
+    suggestId: 'crm-license-seat-suggest',
+    hiddenId: 'crm-license-seat-user',
+    clearId: 'crm-license-seat-clear',
+    enabled: canManage,
+    excludeUidsFn: () => {
+      if (!seatList) return [];
+      return Array.from(seatList.querySelectorAll('li[data-seat-uid]'))
+        .map((el) => el.getAttribute('data-seat-uid') || '')
+        .filter(Boolean);
+    },
+  });
 
-  async function assignSeat() {
-    showInlineError(seatError, '');
-    const userId = (seatUser && seatUser.value ? seatUser.value : '').trim();
-    if (userId === '') {
-      showInlineError(seatError, tr('Enter the Nextcloud user id first.'));
-      if (seatUser) seatUser.focus();
+  function updateSeatFactsCount() {
+    if (!seatList) return;
+    const count = seatList.querySelectorAll('li[data-seat-uid]').length;
+    const seatsDd = document.getElementById('crm-license-seats-count');
+    if (!seatsDd) return;
+    const limit = parseInt(seatsDd.getAttribute('data-seat-limit') || '0', 10) || 0;
+    seatsDd.setAttribute('data-seat-assigned', String(count));
+    seatsDd.textContent = tr('%1$d of %2$d assigned', [count, limit]);
+  }
+
+  function appendSeatRow(seat) {
+    if (!seatList || !seat || !seat.uid) return;
+    if (seatList.querySelector('li[data-seat-uid="' + CSS.escape(String(seat.uid)) + '"]')) {
       return;
     }
+    const li = document.createElement('li');
+    li.setAttribute('data-seat-uid', String(seat.uid));
+    const name = document.createElement('strong');
+    name.textContent = String(seat.displayName || seat.uid);
+    const uid = document.createElement('span');
+    uid.className = 'crm-muted';
+    uid.textContent = String(seat.uid);
+    li.appendChild(name);
+    li.appendChild(document.createTextNode(' '));
+    li.appendChild(uid);
+    if (seat.withinLimit === false) {
+      li.appendChild(document.createTextNode(' · '));
+      const badge = document.createElement('span');
+      badge.className = 'crm-badge crm-badge--warning';
+      badge.textContent = tr('over limit — paused');
+      li.appendChild(badge);
+    }
+    if (canManage) {
+      li.appendChild(document.createTextNode(' '));
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'crm-btn crm-btn--ghost crm-btn--small';
+      btn.setAttribute('data-remove-seat', String(seat.uid));
+      btn.setAttribute('aria-label', tr('Remove mobile seat of %s', [String(seat.displayName || seat.uid)]));
+      btn.textContent = tr('Remove');
+      li.appendChild(btn);
+    }
+    seatList.appendChild(li);
+    updateSeatFactsCount();
+  }
+
+  let seatAssignInFlight = false;
+  async function assignSeat() {
+    if (seatAssignInFlight) {
+      return;
+    }
+    showInlineError(seatError, '');
+    const userId = seatPicker.selectedUid();
+    if (userId === '') {
+      showInlineError(seatError, tr('Select a colleague from the directory first.'));
+      const search = document.getElementById('crm-license-seat-search');
+      if (search) search.focus();
+      return;
+    }
+    seatAssignInFlight = true;
+    if (seatAdd) {
+      seatAdd.disabled = true;
+    }
     try {
-      await Api.post('/license/seats', { userId });
-      location.reload();
+      const seat = await Api.post('/license/seats', { userId });
+      appendSeatRow(seat);
+      seatPicker.clear();
+      const search = document.getElementById('crm-license-seat-search');
+      if (search) search.focus();
+      if (C && C.announce) {
+        C.announce(tr('Seat assigned.'));
+      }
     } catch (e) {
       showInlineError(seatError, (e.payload && e.payload.message) || e.message);
-      if (seatUser) seatUser.focus();
+      const search = document.getElementById('crm-license-seat-search');
+      if (search) search.focus();
+    } finally {
+      seatAssignInFlight = false;
+      if (seatAdd) {
+        seatAdd.disabled = false;
+      }
     }
   }
 
   if (seatAdd && canManage) {
     seatAdd.addEventListener('click', assignSeat);
-  }
-  if (seatUser && canManage) {
-    seatUser.addEventListener('keydown', (ev) => {
-      if (ev.key === 'Enter') {
-        ev.preventDefault();
-        assignSeat();
-      }
-    });
   }
 
   if (seatList && canManage) {
@@ -285,7 +568,12 @@
       if (!ok || !ok.confirmed) return;
       try {
         await Api.del('/license/seats/' + encodeURIComponent(uid));
-        location.reload();
+        const row = seatList.querySelector('li[data-seat-uid="' + CSS.escape(String(uid)) + '"]');
+        if (row) row.remove();
+        updateSeatFactsCount();
+        if (C && C.announce) {
+          C.announce(tr('Seat removed.'));
+        }
       } catch (e) {
         await C.alertDialog({ title: tr('Could not remove seat'), message: (e.payload && e.payload.message) || e.message, variant: 'danger' });
       }
@@ -504,17 +792,19 @@
       }
       list.forEach((m) => {
         const uid = m.userId || m.id || '';
+        const label = m.displayName || uid;
         const li = document.createElement('li');
         li.className = 'crm-ws-members__item';
-        li.innerHTML = '<span><strong></strong> · <span class="crm-badge"></span>' +
+        li.innerHTML = '<span><strong></strong> · <span class="crm-muted"></span> · <span class="crm-badge"></span>' +
           (m.canMailSend || m.can_mail_send ? ' · ' + tr('mail send') : '') + '</span>';
-        li.querySelector('strong').textContent = uid;
+        li.querySelector('strong').textContent = label;
+        li.querySelector('.crm-muted').textContent = uid;
         li.querySelector('.crm-badge').textContent = m.role || 'member';
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'crm-btn crm-btn--ghost';
         btn.textContent = tr('Remove');
-        btn.setAttribute('aria-label', tr('Remove member') + ' ' + uid);
+        btn.setAttribute('aria-label', tr('Remove member') + ' ' + label);
         btn.addEventListener('click', async () => {
           try {
             await Api.del('/workspaces/' + currentWorkspaceId + '/members/' + encodeURIComponent(uid));
@@ -537,9 +827,26 @@
       const res = await Api.get('/workspaces/' + currentWorkspaceId + '/settings');
       const s = res.data || {};
       const wip = document.getElementById('crm-ws-wip');
+      const leadSla = document.getElementById('crm-ws-lead-sla');
+      const stuck = document.getElementById('crm-ws-stuck');
+      const mailRetention = document.getElementById('crm-ws-mail-retention');
       const digest = document.getElementById('crm-ws-digest');
       if (wip) wip.value = String(s.wipLimit != null ? s.wipLimit : 5);
+      if (leadSla) leadSla.value = String(s.leadSlaHours != null ? s.leadSlaHours : 24);
+      if (stuck) stuck.value = String(s.stuckChaseDays != null ? s.stuckChaseDays : 3);
+      if (mailRetention) mailRetention.value = String(s.mailRetentionDays != null ? s.mailRetentionDays : 365);
       if (digest) digest.checked = !!s.digestEnabled;
+      const icsWrap = document.getElementById('crm-ws-ics-wrap');
+      const icsUrl = document.getElementById('crm-ws-ics-url');
+      if (icsWrap && icsUrl) {
+        if (s.icsFeedEditable && s.icsFeedUrl) {
+          icsWrap.hidden = false;
+          icsUrl.value = String(s.icsFeedUrl);
+        } else {
+          icsWrap.hidden = true;
+          icsUrl.value = '';
+        }
+      }
     } catch (e) {
       showWsError((e.payload && e.payload.message) || e.message || tr('Could not load workspace settings.'));
     }
@@ -596,10 +903,16 @@
       if (!currentWorkspaceId) return;
       showWsError('');
       const wip = parseInt(String((document.getElementById('crm-ws-wip') || {}).value || '5'), 10);
+      const leadSlaHours = parseInt(String((document.getElementById('crm-ws-lead-sla') || {}).value || '24'), 10);
+      const stuckChaseDays = parseInt(String((document.getElementById('crm-ws-stuck') || {}).value || '3'), 10);
+      const mailRetentionDays = parseInt(String((document.getElementById('crm-ws-mail-retention') || {}).value || '365'), 10);
       const digestEnabled = !!(document.getElementById('crm-ws-digest') || {}).checked;
       try {
         await Api.put('/workspaces/' + currentWorkspaceId + '/settings', {
           wipLimit: wip,
+          leadSlaHours: leadSlaHours,
+          stuckChaseDays: stuckChaseDays,
+          mailRetentionDays: mailRetentionDays,
           digestEnabled: digestEnabled,
         });
         if (C && C.announce) C.announce(tr('Workspace settings saved'));
@@ -609,13 +922,28 @@
     });
   }
 
+  const wsMemberPicker = bindDirectoryUserPicker({
+    searchId: 'crm-ws-member-search',
+    suggestId: 'crm-ws-member-suggest',
+    hiddenId: 'crm-ws-member-uid',
+    clearId: 'crm-ws-member-clear',
+    enabled: canManageWorkspace,
+    workspaceIdFn: () => currentWorkspaceId || 0,
+  });
+
   const wsMemberForm = document.getElementById('crm-ws-member-form');
   if (wsMemberForm && canManageWorkspace) {
     wsMemberForm.addEventListener('submit', async (ev) => {
       ev.preventDefault();
       if (!currentWorkspaceId) return;
       showWsError('');
-      const userId = String((document.getElementById('crm-ws-member-uid') || {}).value || '').trim();
+      const userId = wsMemberPicker.selectedUid();
+      if (userId === '') {
+        showWsError(tr('Select a colleague from the directory first.'));
+        const search = document.getElementById('crm-ws-member-search');
+        if (search) search.focus();
+        return;
+      }
       const role = String((document.getElementById('crm-ws-member-role') || {}).value || 'member');
       const canMailSend = !!(document.getElementById('crm-ws-member-mail') || {}).checked;
       try {
@@ -625,7 +953,7 @@
           can_mail_send: canMailSend,
           canMailSend: canMailSend,
         });
-        document.getElementById('crm-ws-member-uid').value = '';
+        wsMemberPicker.clear();
         await refreshWorkspaceMembers();
       } catch (e) {
         showWsError((e.payload && e.payload.message) || e.message);

@@ -2,6 +2,7 @@
   'use strict';
   const C = window.CustomerCheckComponents || window.CrmComponents;
   const Api = window.CustomerCheckApi;
+  const SharedMail = window.CustomerCheckSharedMail || null;
   const t = (msg) => (window.t ? window.t('customercheck', msg) : msg);
   if (C && C.init) { C.init(); }
 
@@ -26,8 +27,16 @@
           agreementId: parseInt(agreementId, 10),
         });
         const data = res.data || res;
-        if (data.mailAppUrl) window.open(data.mailAppUrl, '_blank');
-        else if (data.mailtoUrl) window.location.href = data.mailtoUrl;
+        if (SharedMail) {
+          await SharedMail.offerPreparedMail(data, {
+            companyId: parseInt(String(companyId || '0'), 10),
+            title: t('Payment reminder'),
+          });
+        } else if (data.mailAppUrl) {
+          window.open(data.mailAppUrl, '_blank');
+        } else if (data.mailtoUrl) {
+          window.location.href = data.mailtoUrl;
+        }
         const live = document.getElementById('crm-live-region');
         if (live) live.textContent = t('Payment reminder prepared.');
       } catch (e) {

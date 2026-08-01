@@ -21,6 +21,7 @@ use OCA\CustomerCheck\Service\SettingsService;
 use OCA\CustomerCheck\Service\SlugService;
 use OCA\CustomerCheck\Service\TimelineService;
 use OCA\CustomerCheck\Service\WebsiteOrderWebhookService;
+use OCA\CustomerCheck\Service\WorkspaceService;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\IL10N;
 use OCP\Lock\ILockingProvider;
@@ -48,9 +49,14 @@ class WebsiteOrderWebhookServiceTest extends TestCase
 		$company->setId(42);
 		$company->setSlug('order-co');
 		$company->setName('Order Co');
+		$company->setWorkspaceId(1);
 		$companies = $this->createMock(CompanyService::class);
 		$companies->method('create')->willReturn($company);
 		$companies->method('get')->willReturn($company);
+		$defaultWs = new \OCA\CustomerCheck\Db\Workspace();
+		$defaultWs->setId(1);
+		$workspaces = $this->createMock(WorkspaceService::class);
+		$workspaces->method('findDefault')->willReturn($defaultWs);
 		$slug = $this->createMock(SlugService::class);
 		$slug->method('suggestUnique')->willReturn('order-co');
 		$persons = $this->createMock(PersonMapper::class);
@@ -81,6 +87,7 @@ class WebsiteOrderWebhookServiceTest extends TestCase
 			$settings,
 			$rate,
 			$companies,
+			$workspaces,
 			$slug,
 			$this->createMock(PersonService::class),
 			$persons,

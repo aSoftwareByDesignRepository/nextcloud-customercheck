@@ -23,8 +23,8 @@ use OCA\CustomerCheck\License\Cuc2Codec;
  */
 class MobileGateService
 {
-	public const COMPANION_API_VERSION = 1;
-	public const MIN_APP_VERSION = '1.0.0';
+	public const COMPANION_API_VERSION = 2;
+	public const MIN_APP_VERSION = '1.0.1';
 
 	public function __construct(
 		private readonly LicenseService $license,
@@ -82,11 +82,12 @@ class MobileGateService
 				'deals' => true,
 				'agreements' => true,
 				'push' => true,
+				'workspaces' => true,
 				'projectcheck' => $this->facades->projectcheckAvailable(),
 				'invoicecheck' => $this->facades->invoicecheckAvailable(),
 				'ticketcheck' => $this->facades->ticketcheckAvailable(),
 				// Companion API floor — clients fail closed to app_outdated when missing/mismatched.
-				'customercheck.companion.min' => 1,
+				'customercheck.companion.min' => 2,
 			],
 			'licensing' => $licensing,
 			// Raw seat membership (not the enabled composite). Clients must also honour

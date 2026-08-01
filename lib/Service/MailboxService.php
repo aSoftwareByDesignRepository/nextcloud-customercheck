@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OCA\CustomerCheck\Service;
 
 use OCA\CustomerCheck\Constants;
+use OCA\CustomerCheck\Exception\NotFoundException;
 use OCA\CustomerCheck\Exception\ValidationException;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\IDBConnection;
@@ -240,14 +241,46 @@ class MailboxService
 
 	public function triageAssign(int $messageId, int $workspaceId, int $companyId): void
 	{
+		if ($messageId <= 0 || $workspaceId <= 0) {
+			throw ValidationException::field(
+				Constants::ERR_VALIDATION,
+				'messageId',
+				$this->l10n->t('Choose a message and workspace to triage.'),
+			);
+		}
+		if ($companyId <= 0) {
+			throw ValidationException::field(
+				Constants::ERR_VALIDATION,
+				'companyId',
+				$this->l10n->t('Pick a company in this workspace.'),
+			);
+		}
+		// Cross-book guard: never attach shared mail to a foreign workspace company.
+		$check = $this->db->getQueryBuilder();
+		$check->select('id')->from('crm_company')
+			->where($check->expr()->eq('id', $check->createNamedParameter($companyId)))
+			->andWhere($check->expr()->eq('workspace_id', $check->createNamedParameter($workspaceId)))
+			->setMaxResults(1);
+		$r = $check->executeQuery();
+		$row = $r->fetch();
+		$r->closeCursor();
+		if ($row === false) {
+			throw new NotFoundException($this->l10n->t('This company is not in the current workspace.'));
+		}
+
 		$qb = $this->db->getQueryBuilder();
-		$qb->update('crm_mail_msg')
+		$affected = $qb->update('crm_mail_msg')
 			->set('company_id', $qb->createNamedParameter($companyId))
 			->set('matched_how', $qb->createNamedParameter('manual'))
 			->set('triage_status', $qb->createNamedParameter('matched'))
 			->where($qb->expr()->eq('id', $qb->createNamedParameter($messageId)))
 			->andWhere($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId)))
+			// Only open triage rows — never silently rematch an already-matched message.
+			->andWhere($qb->expr()->eq('triage_status', $qb->createNamedParameter('open')))
 			->executeStatement();
+		if ($affected < 1) {
+			throw new NotFoundException($this->l10n->t('This message is not open for triage in the current workspace.'));
+		}
 	}
 
 	/**
@@ -284,5 +317,96 @@ class MailboxService
 		}
 		$r->closeCursor();
 		return $out;
+	}
+
+	/**
+	 * Delete aged shared-mailbox index rows for one workspace (§5.10 / §18.9).
+	 * Uses COALESCE(sent_at, created_at) semantics without raw SQL — portable
+	 * across MySQL/PostgreSQL/Oracle. Does not touch IMAP; CRM index only.
+	 *
+	 * @return int number of rows deleted in this batch
+	 */
+	public function purgeExpired(
+		int $workspaceId,
+		int $retentionDays,
+		int $limit = Constants::MAIL_PURGE_BATCH,
+	): int {
+		if ($workspaceId <= 0 || !$this->db->tableExists('crm_mail_msg')) {
+			return 0;
+		}
+		$retentionDays = max(Constants::MAIL_RETENTION_DAYS_MIN, $retentionDays);
+		$limit = max(1, min(Constants::MAIL_PURGE_BATCH, $limit));
+		$cutoff = $this->retentionCutoff($retentionDays);
+
+		$select = $this->db->getQueryBuilder();
+		$select->select('id')->from('crm_mail_msg')
+			->where($select->expr()->eq('workspace_id', $select->createNamedParameter($workspaceId)))
+			->andWhere($this->expiredExpr($select, $cutoff))
+			->orderBy('id', 'ASC')
+			->setMaxResults($limit);
+		$result = $select->executeQuery();
+		$ids = [];
+		while ($row = $result->fetch()) {
+			$ids[] = (int)$row['id'];
+		}
+		$result->closeCursor();
+		if ($ids === []) {
+			return 0;
+		}
+
+		$deleted = 0;
+		foreach (array_chunk($ids, 100) as $chunk) {
+			$del = $this->db->getQueryBuilder();
+			$del->delete('crm_mail_msg')
+				->where($del->expr()->in('id', $del->createNamedParameter($chunk, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_INT_ARRAY)))
+				->andWhere($del->expr()->eq('workspace_id', $del->createNamedParameter($workspaceId)));
+			$deleted += $del->executeStatement();
+		}
+		return $deleted;
+	}
+
+	/**
+	 * How many aged CRM index rows remain for this workspace after a purge pass.
+	 */
+	public function countExpired(int $workspaceId, int $retentionDays): int
+	{
+		if ($workspaceId <= 0 || !$this->db->tableExists('crm_mail_msg')) {
+			return 0;
+		}
+		$retentionDays = max(Constants::MAIL_RETENTION_DAYS_MIN, $retentionDays);
+		$cutoff = $this->retentionCutoff($retentionDays);
+		$qb = $this->db->getQueryBuilder();
+		$qb->select($qb->func()->count('*', 'cnt'))
+			->from('crm_mail_msg')
+			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId)))
+			->andWhere($this->expiredExpr($qb, $cutoff));
+		$result = $qb->executeQuery();
+		$row = $result->fetch();
+		$result->closeCursor();
+		return (int)($row['cnt'] ?? 0);
+	}
+
+	private function retentionCutoff(int $retentionDays): string
+	{
+		return (clone $this->timeFactory->getDateTime())
+			->modify('-' . $retentionDays . ' days')
+			->format('Y-m-d H:i:s');
+	}
+
+	/**
+	 * @param \OCP\DB\QueryBuilder\IQueryBuilder $qb
+	 */
+	private function expiredExpr($qb, string $cutoff): mixed
+	{
+		return $qb->expr()->orX(
+			$qb->expr()->andX(
+				$qb->expr()->isNotNull('sent_at'),
+				$qb->expr()->lt('sent_at', $qb->createNamedParameter($cutoff)),
+			),
+			$qb->expr()->andX(
+				$qb->expr()->isNull('sent_at'),
+				$qb->expr()->lt('created_at', $qb->createNamedParameter($cutoff)),
+			),
+		);
 	}
 }

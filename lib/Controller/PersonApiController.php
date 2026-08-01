@@ -52,8 +52,7 @@ class PersonApiController extends Controller
 	public function create(int $id): JSONResponse
 	{
 		try {
-			$this->requireCompanyInResolvedWorkspace($id);
-			$ctx = $this->requireWorkspaceCapability('write');
+			$ctx = $this->requireCompanyCapability($id, 'write');
 			$body = $this->jsonBody();
 
 			return $this->ok($this->ser($this->persons->create($id, $body, $ctx['uid'])), Http::STATUS_CREATED);
@@ -67,8 +66,7 @@ class PersonApiController extends Controller
 	{
 		try {
 			$person = $this->persons->get($id);
-			$this->requireCompanyInResolvedWorkspace((int)$person->getCompanyId());
-			$ctx = $this->requireWorkspaceCapability('write');
+			$ctx = $this->requireCompanyCapability((int)$person->getCompanyId(), 'write');
 			$body = $this->jsonBody();
 
 			return $this->ok($this->ser($this->persons->update($id, $body, $ctx['uid'], $this->updatedAtPrecondition($body))));
@@ -82,8 +80,7 @@ class PersonApiController extends Controller
 	{
 		try {
 			$person = $this->persons->get($id);
-			$this->requireCompanyInResolvedWorkspace((int)$person->getCompanyId());
-			$ctx = $this->requireWorkspaceCapability('write');
+			$ctx = $this->requireCompanyCapability((int)$person->getCompanyId(), 'write');
 			$body = $this->jsonBody();
 			$this->persons->delete($id, $ctx['uid'], $this->updatedAtPrecondition($body));
 

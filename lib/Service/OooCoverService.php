@@ -67,13 +67,16 @@ class OooCoverService
 	}
 
 	/**
-	 * @return list<array{id: int, primaryUserId: string, backupUserId: string, startsOn: string, endsOn: string}>
+	 * @return list<array{id: int, primaryUserId: string, backupUserId: string, startsOn: string, endsOn: string, status: string}>
 	 */
 	public function listActive(int $workspaceId, ?\DateTimeInterface $today = null): array
 	{
 		$today = $today ?? $this->timeFactory->getDateTime();
 		$out = [];
 		foreach ($this->listAll($workspaceId) as $row) {
+			if ($row['status'] === 'ended') {
+				continue;
+			}
 			$starts = new \DateTimeImmutable($row['startsOn']);
 			$ends = new \DateTimeImmutable($row['endsOn']);
 			if (!OooLogic::isActive($starts, $ends, $today)) {
@@ -85,7 +88,7 @@ class OooCoverService
 	}
 
 	/**
-	 * @return list<array{id: int, primaryUserId: string, backupUserId: string, startsOn: string, endsOn: string}>
+	 * @return list<array{id: int, primaryUserId: string, backupUserId: string, startsOn: string, endsOn: string, status: string}>
 	 */
 	public function listAll(int $workspaceId): array
 	{
@@ -104,6 +107,7 @@ class OooCoverService
 				'backupUserId' => (string)$row['backup_user_id'],
 				'startsOn' => (string)$row['starts_on'],
 				'endsOn' => (string)$row['ends_on'],
+				'status' => (string)($row['status'] ?? 'scheduled'),
 			];
 		}
 		$r->closeCursor();

@@ -5,8 +5,17 @@
   const t = (msg, args) => (window.t ? window.t('customercheck', msg, args || []) : msg);
   if (C && C.init) { C.init(); }
 
+  function shellCan(flag) {
+    if (typeof window.CustomerCheckShellCan === 'function') {
+      return window.CustomerCheckShellCan(flag);
+    }
+    const el = document.getElementById('app-content');
+    return !!(el && el.getAttribute('data-crm-can-' + flag) === '1');
+  }
+
   const root = document.querySelector('.crm-page-stack[data-company-id]');
   const companyId = root ? parseInt(root.getAttribute('data-company-id'), 10) : 0;
+  const SharedMail = window.CustomerCheckSharedMail || null;
 
   const exportBtn = document.getElementById('crm-company-gdpr-export');
   if (exportBtn) {
@@ -120,6 +129,84 @@
     });
   }
 
+  const moveWsBtn = document.getElementById('crm-company-move-workspace');
+  if (moveWsBtn && !moveWsBtn.disabled) {
+    moveWsBtn.addEventListener('click', async () => {
+      const slug = moveWsBtn.getAttribute('data-slug') || '';
+      const fromWs = parseInt(moveWsBtn.getAttribute('data-workspace-id') || '0', 10);
+      let workspaces = [];
+      try {
+        const res = await Api.get('/workspaces');
+        const list = (res.data && res.data.workspaces) || res.data || [];
+        workspaces = (Array.isArray(list) ? list : []).filter((w) => parseInt(w.id, 10) !== fromWs);
+      } catch (e) {
+        await C.alertDialog({
+          title: t('Could not load workspaces'),
+          message: (e.payload && e.payload.message) || e.message,
+          variant: 'danger',
+        });
+        return;
+      }
+      if (workspaces.length === 0) {
+        await C.alertDialog({
+          title: t('No other workspace'),
+          message: t('Create another workspace where you are a manager, then move this company there.'),
+          variant: 'info',
+        });
+        return;
+      }
+      const options = workspaces.map((w) => ({
+        value: String(w.id),
+        label: w.name || ('#' + w.id),
+      }));
+      const data = await promptFields(t('Move to another workspace'), [
+        {
+          name: 'workspaceId',
+          label: t('Destination workspace'),
+          type: 'select',
+          options: options,
+          value: options[0].value,
+          required: true,
+          hint: t('Shared mail matches are cleared. Files folder sharing is not moved — review ACL manually.'),
+        },
+      ]);
+      if (!data) return;
+      const toWs = parseInt(data.workspaceId, 10);
+      const destLabel = (options.find((o) => o.value === String(toWs)) || {}).label || String(toWs);
+      const ok = await C.confirmDialog({
+        title: t('Confirm move'),
+        message: t('Move this company to “%s”? Type the slug to confirm. Files sharing stays as-is.', [destLabel]),
+        confirmLabel: t('Move'),
+        cancelLabel: t('Cancel'),
+        variant: 'warning',
+        requireTypedConfirm: true,
+        typedConfirmPhrase: slug,
+      });
+      if (!ok || !ok.confirmed) return;
+      moveWsBtn.disabled = true;
+      const live = document.getElementById('crm-live-region');
+      if (live) live.textContent = t('Moving company…');
+      try {
+        const res = await Api.post('/companies/' + companyId + '/move-workspace', {
+          workspaceId: toWs,
+          confirmSlug: slug,
+          updatedAt: moveWsBtn.getAttribute('data-updated-at') || null,
+        });
+        if (live) live.textContent = t('Company moved. Review Files sharing for this folder.');
+        const newWs = (res.data && res.data.workspaceId) || toWs;
+        window.location.href = OC.generateUrl('/apps/customercheck/companies/' + companyId + '?workspaceId=' + newWs);
+      } catch (e) {
+        moveWsBtn.disabled = false;
+        if (live) live.textContent = '';
+        await C.alertDialog({
+          title: t('Move failed'),
+          message: (e.payload && e.payload.message) || e.message,
+          variant: 'danger',
+        });
+      }
+    });
+  }
+
   async function promptFields(title, fields) {
     // Lightweight modal form via openDialog
     return new Promise((resolve) => {
@@ -128,7 +215,7 @@
       fields.forEach((f) => {
         html += '<div class="form-group"><label class="form-label" for="' + id + '-' + f.name + '">' + f.label + '</label>';
         if (f.type === 'textarea') {
-          html += '<textarea class="crm-input form-input" id="' + id + '-' + f.name + '" name="' + f.name + '" rows="3">' +
+          html += '<textarea class="crm-input form-input" id="' + id + '-' + f.name + '" name="' + f.name + '" rows="3"' + (f.required ? ' required' : '') + '>' +
             (f.value ? String(f.value).replace(/</g, '&lt;') : '') + '</textarea>';
         } else if (f.type === 'select') {
           html += '<select class="crm-input form-select" id="' + id + '-' + f.name + '" name="' + f.name + '">' +
@@ -351,6 +438,17 @@
     return root ? (root.getAttribute('data-workspace-name') || '') : '';
   }
 
+  /** Plain-language feed kind — never raw tokens like shared_mail (§19 granny test). */
+  function feedKindLabel(kind) {
+    const k = String(kind || '');
+    if (k === 'shared_mail') return t('Shared mail');
+    if (k === 'mail_related') return t('Private mail');
+    if (k === 'email_touch') return t('Logged email');
+    if (k === 'activity') return t('Activity');
+    if (k === 'note') return t('Note');
+    return k || t('Update');
+  }
+
   function buyingRoleOptionsFromDom() {
     const sel = document.querySelector('[data-crm-buying-role]');
     if (!sel) {
@@ -522,9 +620,19 @@
             String(pack.bodyText || '').replace(/[<>&]/g, (ch) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[ch])) +
             '</pre><div class="crm-form-actions">' +
             '<a class="crm-btn crm-btn--primary" href="' + (pack.mailAppUrl || pack.mailtoUrl || '#') + '">' + t('Open mail') + '</a> ' +
+            '<button type="button" class="crm-btn crm-btn--secondary" id="crm-send-delivery">' + t('Send from shared mailbox') + '</button> ' +
             '<button type="button" class="crm-btn crm-btn--secondary" id="crm-copy-delivery">' + t('Copy') + '</button></div>',
           size: 'md',
         });
+        const sendBtn = document.getElementById('crm-send-delivery');
+        if (sendBtn && SharedMail) {
+          sendBtn.addEventListener('click', async () => {
+            sendBtn.disabled = true;
+            const sent = await SharedMail.sendViaSharedMailbox(pack, { companyId: companyId });
+            if (!sent) sendBtn.disabled = false;
+            else sendBtn.textContent = t('Sent');
+          });
+        }
         const copyBtn = document.getElementById('crm-copy-delivery');
         if (copyBtn) {
           copyBtn.addEventListener('click', async () => {
@@ -562,9 +670,13 @@
       try {
         const res = await Api.post('/agreements/' + agreementId + '/partner-mail', { promptHours: true });
         const pack = res.data || {};
-        const composeUrl = pack.mailAppUrl || pack.mailtoUrl || '';
-        if (composeUrl) {
-          window.open(composeUrl, '_blank', 'noopener,noreferrer');
+        if (SharedMail) {
+          await SharedMail.offerPreparedMail(pack, { companyId: companyId, title: t('Partner mail') });
+        } else {
+          const composeUrl = pack.mailAppUrl || pack.mailtoUrl || '';
+          if (composeUrl) {
+            window.open(composeUrl, '_blank', 'noopener,noreferrer');
+          }
         }
         if (pack.promptHours) {
           if (skipHoursConfirm) {
@@ -647,8 +759,13 @@
           agreementId: parseInt(btn.getAttribute('data-agreement-id') || '0', 10) || null,
         });
         const pack = res.data || {};
-        if (pack.mailAppUrl) window.open(pack.mailAppUrl, '_blank');
-        else if (pack.mailtoUrl) window.location.href = pack.mailtoUrl;
+        if (SharedMail) {
+          await SharedMail.offerPreparedMail(pack, { companyId: companyId, title: t('Prepared message') });
+        } else if (pack.mailAppUrl) {
+          window.open(pack.mailAppUrl, '_blank');
+        } else if (pack.mailtoUrl) {
+          window.location.href = pack.mailtoUrl;
+        }
       } catch (e) {
         await C.alertDialog({ title: t('Compose failed'), message: (e.payload && e.payload.message) || e.message, variant: 'danger' });
       }
@@ -870,7 +987,7 @@
             row.className = 'crm-feed__item';
             const badge = document.createElement('span');
             badge.className = 'crm-badge';
-            badge.textContent = item.kind || '';
+            badge.textContent = feedKindLabel(item.kind);
             row.appendChild(badge);
             if (item.shared || item.kind === 'shared_mail') {
               const sharedBadge = document.createElement('span');
@@ -1155,19 +1272,20 @@
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
       const ymd = tomorrow.toISOString().slice(0, 10);
-      const data = await promptFields(t('Schedule callback'), [
-        { name: 'dueDate', label: t('Due date'), type: 'date', required: true, value: ymd },
-        { name: 'reason', label: t('Reason'), type: 'textarea', required: false },
-      ]);
-      if (!data) return;
+      callbackBtn.disabled = true;
       try {
-        await Api.post('/companies/' + companyId + '/callbacks', data);
+        await Api.post('/companies/' + companyId + '/callbacks', {
+          dueDate: ymd,
+          reason: t('Call tomorrow'),
+        });
         if (document.getElementById('crm-live-region')) {
           document.getElementById('crm-live-region').textContent = t('Callback scheduled.');
         }
         await loadCommandCenter();
       } catch (e) {
         await C.alertDialog({ title: t('Could not schedule callback'), message: (e.payload && e.payload.message) || e.message, variant: 'danger' });
+      } finally {
+        callbackBtn.disabled = false;
       }
     });
   }
@@ -1211,21 +1329,60 @@
   async function loadAccountPlan() {
     const body = document.getElementById('crm-account-plan-body');
     if (!body || !companyId) return;
+    const canWrite = shellCan('write');
+    const priorityLabel = function (code) {
+      if (code === 'p1') return t('High');
+      if (code === 'p3') return t('Low');
+      return t('Normal');
+    };
     try {
       const res = await Api.get('/companies/' + companyId + '/account-plan');
       const plan = res.data || res || {};
       const mapSteps = plan.mapSteps || [];
-      let html = '<form id="crm-account-plan-form" class="crm-form">';
+      let html = '';
+      if (!canWrite) {
+        html += '<dl class="crm-dl">';
+        html += '<div><dt>' + escapeHtml(t('Goal')) + '</dt><dd>' + escapeHtml(plan.goal || '—') + '</dd></div>';
+        html += '<div><dt>' + escapeHtml(t('Priority')) + '</dt><dd>' + escapeHtml(priorityLabel(plan.priority || 'p2')) + '</dd></div>';
+        html += '<div><dt>' + escapeHtml(t('Plan owner')) + '</dt><dd>' + escapeHtml(plan.ownerUserId || '—') + '</dd></div>';
+        html += '<div><dt>' + escapeHtml(t('Next review')) + '</dt><dd>' + escapeHtml(plan.nextReviewOn || '—') + '</dd></div>';
+        if (plan.health) {
+          html += '<div><dt>' + escapeHtml(t('Health')) + '</dt><dd><span class="crm-badge">' + escapeHtml(plan.health) + '</span></dd></div>';
+        }
+        html += '</dl>';
+        if (mapSteps.length) {
+          html += '<h3 class="crm-card__title">' + escapeHtml(t('Next steps')) + '</h3><ul class="crm-simple-list">';
+          mapSteps.forEach((s) => {
+            html += '<li>' + escapeHtml(s.title || '') + ' · <span class="crm-badge">' + escapeHtml(s.status || '') + '</span></li>';
+          });
+          html += '</ul>';
+        } else {
+          html += '<p class="crm-muted">' + escapeHtml(t('No next steps yet.')) + '</p>';
+        }
+        body.innerHTML = html;
+        return;
+      }
+      html = '<form id="crm-account-plan-form" class="crm-form">';
       html += '<div class="form-group"><label class="form-label" for="crm-plan-goal">' + escapeHtml(t('Goal')) + '</label>';
       html += '<textarea class="crm-input form-input" id="crm-plan-goal" name="goal" rows="3">' + escapeHtml(plan.goal || '') + '</textarea></div>';
       html += '<div class="form-group"><label class="form-label" for="crm-plan-priority">' + escapeHtml(t('Priority')) + '</label>';
       html += '<select class="crm-input form-select" id="crm-plan-priority" name="priority">';
-      ['p1', 'p2', 'p3'].forEach((p) => {
-        html += '<option value="' + p + '"' + ((plan.priority || 'p2') === p ? ' selected' : '') + '>' + p.toUpperCase() + '</option>';
+      [
+        { value: 'p1', label: t('High') },
+        { value: 'p2', label: t('Normal') },
+        { value: 'p3', label: t('Low') },
+      ].forEach((p) => {
+        html += '<option value="' + p.value + '"' + ((plan.priority || 'p2') === p.value ? ' selected' : '') + '>' + escapeHtml(p.label) + '</option>';
       });
       html += '</select></div>';
-      html += '<div class="form-group"><label class="form-label" for="crm-plan-owner">' + escapeHtml(t('Plan owner')) + '</label>';
-      html += '<input class="crm-input form-input" id="crm-plan-owner" name="ownerUserId" type="text" value="' + escapeHtml(plan.ownerUserId || '') + '" /></div>';
+      html += '<div class="form-group"><label class="form-label" for="crm-plan-owner-search">' + escapeHtml(t('Plan owner')) + '</label>';
+      html += '<div class="user-picker" id="crm-plan-owner-picker">';
+      html += '<div class="user-picker__control">';
+      html += '<input type="search" id="crm-plan-owner-search" class="form-input crm-input user-picker__search" role="combobox" aria-autocomplete="list" aria-controls="crm-plan-owner-suggest" aria-expanded="false" autocomplete="off" placeholder="' + escapeHtml(t('Search by name or login…')) + '" />';
+      html += '<button type="button" class="user-picker__clear" id="crm-plan-owner-clear" hidden aria-label="' + escapeHtml(t('Clear')) + '">×</button></div>';
+      html += '<ul id="crm-plan-owner-suggest" class="user-picker__list" role="listbox" hidden></ul>';
+      html += '<input type="hidden" id="crm-plan-owner" name="ownerUserId" value="" />';
+      html += '</div><p class="crm-muted">' + escapeHtml(t('Search by name or login, then pick a colleague. Never type a raw user id.')) + '</p></div>';
       html += '<div class="form-group"><label class="form-label" for="crm-plan-review">' + escapeHtml(t('Next review')) + '</label>';
       html += '<input class="crm-input form-input" id="crm-plan-review" name="nextReviewOn" type="date" value="' + escapeHtml(plan.nextReviewOn || '') + '" /></div>';
       if (plan.health) {
@@ -1233,19 +1390,113 @@
       }
       html += '<div class="crm-form-actions"><button type="submit" class="crm-btn crm-btn--primary">' + escapeHtml(t('Save plan')) + '</button></div></form>';
       if (mapSteps.length) {
-        html += '<h3 class="crm-card__title">' + escapeHtml(t('Action plan')) + '</h3><ul class="crm-simple-list">';
+        html += '<h3 class="crm-card__title">' + escapeHtml(t('Next steps')) + '</h3><ul class="crm-simple-list">';
         mapSteps.forEach((s) => {
           html += '<li>' + escapeHtml(s.title || '') + ' · <span class="crm-badge">' + escapeHtml(s.status || '') + '</span></li>';
         });
         html += '</ul>';
       } else {
-        html += '<p class="crm-muted">' + escapeHtml(t('No MAP steps yet.')) + '</p>';
+        html += '<p class="crm-muted">' + escapeHtml(t('No next steps yet.')) + '</p>';
       }
-      html += '<form id="crm-map-step-form" class="crm-form crm-form--inline" aria-label="' + escapeHtml(t('Add MAP step')) + '">';
-      html += '<label class="form-label" for="crm-map-step-title">' + escapeHtml(t('New MAP step')) + '</label>';
+      html += '<form id="crm-map-step-form" class="crm-form crm-form--inline" aria-label="' + escapeHtml(t('Add next step')) + '">';
+      html += '<label class="form-label" for="crm-map-step-title">' + escapeHtml(t('New next step')) + '</label>';
       html += '<input class="crm-input form-input" id="crm-map-step-title" name="title" type="text" required maxlength="255" />';
       html += '<button type="submit" class="crm-btn crm-btn--secondary">' + escapeHtml(t('Add step')) + '</button></form>';
       body.innerHTML = html;
+      const ownerUid = String(plan.ownerUserId || '').trim();
+      const ownerSearch = document.getElementById('crm-plan-owner-search');
+      const ownerSuggest = document.getElementById('crm-plan-owner-suggest');
+      const ownerHidden = document.getElementById('crm-plan-owner');
+      const ownerClear = document.getElementById('crm-plan-owner-clear');
+      let ownerTimer = null;
+      const workspaceId = (function () {
+        const root = document.querySelector('.crm-page-stack[data-workspace-id]');
+        const id = root ? parseInt(root.getAttribute('data-workspace-id') || '0', 10) : 0;
+        return id > 0 ? id : 0;
+      })();
+      if (ownerHidden && ownerUid) {
+        ownerHidden.value = ownerUid;
+        if (ownerSearch) {
+          ownerSearch.value = ownerUid;
+        }
+        if (ownerClear) {
+          ownerClear.hidden = false;
+        }
+      }
+      if (ownerClear && ownerSearch && ownerHidden) {
+        ownerClear.addEventListener('click', () => {
+          ownerHidden.value = '';
+          ownerSearch.value = '';
+          if (ownerSuggest) {
+            ownerSuggest.innerHTML = '';
+            ownerSuggest.hidden = true;
+          }
+          ownerClear.hidden = true;
+          ownerSearch.focus();
+        });
+      }
+      if (ownerSearch && ownerSuggest && ownerHidden && Api) {
+        const ownerNav = (window.CustomerCheckUserPickerNav && window.CustomerCheckUserPickerNav.bindListboxKeyboard)
+          ? window.CustomerCheckUserPickerNav.bindListboxKeyboard(ownerSearch, ownerSuggest)
+          : { reset: function () {} };
+        ownerSearch.addEventListener('input', () => {
+          if (ownerHidden.value) {
+            ownerHidden.value = '';
+            if (ownerClear) ownerClear.hidden = true;
+          }
+          clearTimeout(ownerTimer);
+          const q = ownerSearch.value.trim();
+          if (q.length < 2) {
+            ownerSuggest.hidden = true;
+            ownerSuggest.innerHTML = '';
+            ownerSearch.setAttribute('aria-expanded', 'false');
+            ownerNav.reset();
+            return;
+          }
+          ownerTimer = setTimeout(async () => {
+            try {
+              let url = '/settings/users?q=' + encodeURIComponent(q);
+              if (workspaceId > 0) {
+                url += '&workspaceId=' + encodeURIComponent(String(workspaceId));
+              }
+              const res = await Api.get(url);
+              const users = (res.data && res.data.users) || [];
+              ownerSuggest.innerHTML = '';
+              users.forEach((u) => {
+                const opt = document.createElement('li');
+                opt.className = 'user-picker__item';
+                opt.setAttribute('role', 'option');
+                opt.setAttribute('aria-selected', 'false');
+                const name = document.createElement('span');
+                name.className = 'user-picker__name';
+                name.textContent = u.displayName || u.id;
+                const meta = document.createElement('span');
+                meta.className = 'user-picker__meta';
+                meta.textContent = u.id || '';
+                opt.appendChild(name);
+                opt.appendChild(meta);
+                opt.addEventListener('click', () => {
+                  ownerHidden.value = String(u.id || '');
+                  ownerSearch.value = (u.displayName || u.id || '') + (u.id ? ' (' + u.id + ')' : '');
+                  ownerSuggest.innerHTML = '';
+                  ownerSuggest.hidden = true;
+                  ownerSearch.setAttribute('aria-expanded', 'false');
+                  ownerNav.reset();
+                  if (ownerClear) ownerClear.hidden = !ownerHidden.value;
+                });
+                ownerSuggest.appendChild(opt);
+              });
+              ownerSuggest.hidden = users.length === 0;
+              ownerSearch.setAttribute('aria-expanded', users.length === 0 ? 'false' : 'true');
+              ownerNav.reset();
+            } catch (e) {
+              ownerSuggest.hidden = true;
+              ownerSearch.setAttribute('aria-expanded', 'false');
+              ownerNav.reset();
+            }
+          }, 250);
+        });
+      }
       const form = document.getElementById('crm-account-plan-form');
       if (form) {
         form.addEventListener('submit', async (ev) => {
@@ -1254,7 +1505,7 @@
             await Api.put('/companies/' + companyId + '/account-plan', {
               goal: form.elements.goal.value,
               priority: form.elements.priority.value,
-              ownerUserId: form.elements.ownerUserId.value,
+              ownerUserId: ownerHidden ? ownerHidden.value : '',
               nextReviewOn: form.elements.nextReviewOn.value,
               status: plan.status || 'active',
             });
@@ -1273,10 +1524,10 @@
           if (!title) return;
           try {
             await Api.post('/companies/' + companyId + '/account-plan/map-steps', { title: title });
-            if (liveRegion()) liveRegion().textContent = t('MAP step added.');
+            if (liveRegion()) liveRegion().textContent = t('Next step added.');
             await loadAccountPlan();
           } catch (e) {
-            await C.alertDialog({ title: t('Could not add MAP step'), message: (e.payload && e.payload.message) || e.message, variant: 'danger' });
+            await C.alertDialog({ title: t('Could not add next step'), message: (e.payload && e.payload.message) || e.message, variant: 'danger' });
           }
         });
       }
@@ -1302,10 +1553,11 @@
         html += '<tr data-promise-id="' + escapeHtml(String(p.id)) + '">';
         html += '<td data-label="' + escapeHtml(t('Title')) + '">' + escapeHtml(p.title || '') + '</td>';
         html += '<td data-label="' + escapeHtml(t('Due')) + '">' + escapeHtml(p.dueOn || '—') + '</td>';
-        html += '<td data-label="' + escapeHtml(t('Status')) + '"><span class="crm-badge">' + escapeHtml(p.status || '') + '</span></td>';
+        html += '<td data-label="' + escapeHtml(t('Status')) + '"><span class="crm-badge">' + escapeHtml(p.statusLabel || p.status || '') + '</span></td>';
         html += '<td data-label="' + escapeHtml(t('Actions')) + '">';
-        if ((p.status || '') === 'open') {
-          html += '<button type="button" class="crm-btn crm-btn--sm crm-btn--primary" data-crm-promise-done="' + escapeHtml(String(p.id)) + '">' + escapeHtml(t('Mark done')) + '</button>';
+        if (shellCan('write') && (p.status || '') === 'open') {
+          html += '<button type="button" class="crm-btn crm-btn--sm crm-btn--primary" data-crm-promise-done="' + escapeHtml(String(p.id)) + '">' + escapeHtml(t('Mark done')) + '</button> ';
+          html += '<button type="button" class="crm-btn crm-btn--sm crm-btn--secondary" data-crm-promise-cancel="' + escapeHtml(String(p.id)) + '">' + escapeHtml(t('Cancel')) + '</button>';
         } else {
           html += '—';
         }
@@ -1317,7 +1569,7 @@
         btn.addEventListener('click', async () => {
           const id = btn.getAttribute('data-crm-promise-done');
           const data = await promptFields(t('Mark promise done'), [
-            { name: 'evidence', label: t('Evidence (optional)'), type: 'textarea' },
+            { name: 'evidence', label: t('Evidence (what was delivered?)'), type: 'textarea', required: true },
           ]);
           if (data === null) return;
           try {
@@ -1326,6 +1578,26 @@
             await loadPromises();
           } catch (e) {
             await C.alertDialog({ title: t('Could not complete promise'), message: (e.payload && e.payload.message) || e.message, variant: 'danger' });
+          }
+        });
+      });
+      body.querySelectorAll('[data-crm-promise-cancel]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const id = btn.getAttribute('data-crm-promise-cancel');
+          const ok = await C.confirmDialog({
+            title: t('Cancel promise?'),
+            message: t('This marks the promise as cancelled. It will no longer appear as open.'),
+            confirmLabel: t('Cancel promise'),
+            cancelLabel: t('Keep open'),
+            variant: 'danger',
+          });
+          if (!ok) return;
+          try {
+            await Api.post('/companies/' + companyId + '/promises/' + id + '/cancel', {});
+            if (liveRegion()) liveRegion().textContent = t('Promise cancelled.');
+            await loadPromises();
+          } catch (e) {
+            await C.alertDialog({ title: t('Could not cancel promise'), message: (e.payload && e.payload.message) || e.message, variant: 'danger' });
           }
         });
       });
@@ -1340,7 +1612,7 @@
       const today = new Date().toISOString().slice(0, 10);
       const data = await promptFields(t('Add promise'), [
         { name: 'title', label: t('Title'), required: true },
-        { name: 'dueOn', label: t('Due date'), type: 'date', value: today },
+        { name: 'dueOn', label: t('Due date'), type: 'date', value: today, required: true },
       ]);
       if (!data) return;
       try {

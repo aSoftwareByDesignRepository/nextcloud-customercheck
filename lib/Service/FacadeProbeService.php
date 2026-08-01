@@ -287,7 +287,7 @@ class FacadeProbeService
 	}
 
 	/**
-	 * @return list<array{icInvoiceId:?int,invoiceRef:?string,paidTotalCents:int,status:string}>
+	 * @return list<array{icInvoiceId:?int,invoiceRef:?string,paidTotalCents:int,status:string,pcCustomerId?:int|null}>
 	 */
 	public function listPaidInvoiceSignals(int $limit = 500): array
 	{

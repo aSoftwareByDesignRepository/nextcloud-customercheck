@@ -38,8 +38,22 @@ class MoneyService
 	 */
 	public function overview(int $limit = 200, ?string $stateFilter = null, ?int $workspaceId = null): array
 	{
+		// Fail closed: missing / invalid workspace must never mean “all books” (§20).
+		if ($workspaceId === null || $workspaceId <= 0) {
+			$empty = ['overdue' => [], 'sent' => [], 'paid30d' => [], 'unknown' => []];
+			return [
+				'items' => [],
+				'groups' => $empty,
+				'meta' => [
+					'total' => 0,
+					'facadeAvailable' => $this->facades->invoicecheckAvailable(),
+					'workspaceId' => null,
+				],
+			];
+		}
+
 		$companyIds = $this->companyIdsForWorkspace($workspaceId);
-		if ($workspaceId !== null && $workspaceId > 0 && $companyIds === []) {
+		if ($companyIds === []) {
 			$empty = ['overdue' => [], 'sent' => [], 'paid30d' => [], 'unknown' => []];
 			return [
 				'items' => [],
@@ -92,12 +106,12 @@ class MoneyService
 	}
 
 	/**
-	 * @return list<int>|null null = no workspace filter (legacy global money page before WS resolve)
+	 * @return list<int> empty = no companies in workspace (never “unscoped”)
 	 */
-	private function companyIdsForWorkspace(?int $workspaceId): ?array
+	private function companyIdsForWorkspace(int $workspaceId): array
 	{
-		if ($workspaceId === null || $workspaceId <= 0) {
-			return null;
+		if ($workspaceId <= 0) {
+			return [];
 		}
 		$ids = [];
 		foreach ($this->companies->search(['workspaceId' => $workspaceId], 5000) as $c) {
@@ -108,22 +122,20 @@ class MoneyService
 
 	/**
 	 * @param array<string, mixed> $filters
-	 * @param list<int>|null $companyIds
+	 * @param list<int> $companyIds
 	 * @return array<string, mixed>
 	 */
-	private function withCompanyScope(array $filters, ?array $companyIds): array
+	private function withCompanyScope(array $filters, array $companyIds): array
 	{
-		if ($companyIds !== null) {
-			$filters['companyIds'] = $companyIds;
-		}
+		$filters['companyIds'] = $companyIds;
 		return $filters;
 	}
 
 	/**
-	 * @param list<int>|null $companyIds
+	 * @param list<int> $companyIds
 	 * @return list<array<string,mixed>>
 	 */
-	private function buildOverdue(int $limit, bool $facadeAvailable, ?array $companyIds, ?int $workspaceId): array
+	private function buildOverdue(int $limit, bool $facadeAvailable, array $companyIds, ?int $workspaceId): array
 	{
 		$manual = $this->mapRows(
 			$this->agreements->search($this->withCompanyScope(['invoiceStatus' => 'overdue'], $companyIds), $limit),
@@ -150,12 +162,16 @@ class MoneyService
 			$company = $pcId > 0 ? $this->companies->findByPcCustomerId($pcId) : null;
 			$matchedAgreementId = null;
 			if ($ref !== '') {
-				$matches = $this->agreements->findByInvoiceRef($ref);
-				if ($matches !== []) {
-					$matchedAgreementId = (int)$matches[0]->getId();
+				$match = $this->matchScopedInvoiceRef(
+					$this->agreements->findByInvoiceRef($ref),
+					$company,
+					$companyIds,
+				);
+				if ($match !== null) {
+					$matchedAgreementId = (int)$match->getId();
 					if ($company === null) {
 						try {
-							$company = $this->companies->findById((int)$matches[0]->getCompanyId());
+							$company = $this->companies->findById((int)$match->getCompanyId());
 						} catch (\Throwable) {
 							$company = null;
 						}
@@ -229,10 +245,10 @@ class MoneyService
 	}
 
 	/**
-	 * @param list<int>|null $companyIds
+	 * @param list<int> $companyIds
 	 * @return list<array<string,mixed>>
 	 */
-	private function buildPaidRecent(int $limit, bool $facadeAvailable, ?array $companyIds, ?int $workspaceId): array
+	private function buildPaidRecent(int $limit, bool $facadeAvailable, array $companyIds, ?int $workspaceId): array
 	{
 		$manual = $this->mapPaidRecentCrm($limit, $companyIds);
 		if (!$facadeAvailable) {
@@ -256,12 +272,16 @@ class MoneyService
 			$company = $pcId > 0 ? $this->companies->findByPcCustomerId($pcId) : null;
 			$matchedAgreementId = null;
 			if ($ref !== '') {
-				$matches = $this->agreements->findByInvoiceRef($ref);
-				if ($matches !== []) {
-					$matchedAgreementId = (int)$matches[0]->getId();
+				$match = $this->matchScopedInvoiceRef(
+					$this->agreements->findByInvoiceRef($ref),
+					$company,
+					$companyIds,
+				);
+				if ($match !== null) {
+					$matchedAgreementId = (int)$match->getId();
 					if ($company === null) {
 						try {
-							$company = $this->companies->findById((int)$matches[0]->getCompanyId());
+							$company = $this->companies->findById((int)$match->getCompanyId());
 						} catch (\Throwable) {
 							$company = null;
 						}
@@ -304,10 +324,10 @@ class MoneyService
 	}
 
 	/**
-	 * @param list<int>|null $companyIds
+	 * @param list<int> $companyIds
 	 * @return list<array<string,mixed>>
 	 */
-	private function mapPaidRecentCrm(int $limit, ?array $companyIds): array
+	private function mapPaidRecentCrm(int $limit, array $companyIds): array
 	{
 		$cutoff = DateMath::addDays($this->timeFactory->getDateTime(), -30);
 		$rows = $this->agreements->search($this->withCompanyScope(['invoiceStatus' => 'paid'], $companyIds), $limit * 2);
@@ -327,15 +347,46 @@ class MoneyService
 	}
 
 	/**
-	 * @param \OCA\CustomerCheck\Db\Company|null $company
-	 * @param list<int>|null $companyIds
+	 * Pick at most one agreement for an IC invoice ref inside the active book.
+	 * Never returns a foreign-workspace agreement when refs collide (§14.3 / §20).
+	 *
+	 * @param list<\OCA\CustomerCheck\Db\Agreement> $candidates
+	 * @param list<int> $companyIds
 	 */
-	private function companyInScope($company, ?array $companyIds, ?int $workspaceId): bool
-	{
-		if ($companyIds === null) {
-			return true;
+	private function matchScopedInvoiceRef(
+		array $candidates,
+		?\OCA\CustomerCheck\Db\Company $pcCompany,
+		array $companyIds,
+	): ?\OCA\CustomerCheck\Db\Agreement {
+		if ($candidates === [] || $companyIds === []) {
+			return null;
 		}
-		if ($company === null) {
+
+		$allowed = $companyIds;
+		if ($pcCompany !== null) {
+			$pcId = (int)$pcCompany->getId();
+			if (!in_array($pcId, $companyIds, true)) {
+				return null;
+			}
+			$allowed = [$pcId];
+		}
+
+		$scoped = array_values(array_filter(
+			$candidates,
+			static fn ($a): bool => in_array((int)$a->getCompanyId(), $allowed, true),
+		));
+
+		// Ambiguous within the pin — do not guess which contract the invoice belongs to.
+		return count($scoped) === 1 ? $scoped[0] : null;
+	}
+
+	/**
+	 * @param \OCA\CustomerCheck\Db\Company|null $company
+	 * @param list<int> $companyIds
+	 */
+	private function companyInScope($company, array $companyIds, ?int $workspaceId): bool
+	{
+		if ($companyIds === [] || $company === null) {
 			return false;
 		}
 		$id = (int)$company->getId();
@@ -345,6 +396,6 @@ class MoneyService
 		if ($workspaceId !== null && $workspaceId > 0) {
 			return (int)($company->getWorkspaceId() ?? 0) === $workspaceId;
 		}
-		return true;
+		return false;
 	}
 }

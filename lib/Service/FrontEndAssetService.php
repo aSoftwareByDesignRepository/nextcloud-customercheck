@@ -29,6 +29,10 @@ final class FrontEndAssetService
 		Util::addStyle(Application::APP_ID, 'navigation');
 		Util::addScript(Application::APP_ID, 'common/components');
 		Util::addScript(Application::APP_ID, 'common/api');
+		Util::addScript(Application::APP_ID, 'common/shell-can');
+		Util::addScript(Application::APP_ID, 'common/folder-picker');
+		Util::addScript(Application::APP_ID, 'common/shared-mail-send');
+		Util::addScript(Application::APP_ID, 'common/user-picker-nav');
 		Util::addScript(Application::APP_ID, 'common/navigation');
 		Util::addScript(Application::APP_ID, 'common/navigation-icons');
 		Util::addScript(Application::APP_ID, 'common/filter-live');

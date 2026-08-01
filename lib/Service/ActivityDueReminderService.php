@@ -115,9 +115,11 @@ class ActivityDueReminderService
 		try {
 			$companyId = (int)$activity->getCompanyId();
 			$companyName = '';
+			$workspaceId = 0;
 			try {
 				$company = $this->companies->findById($companyId);
 				$companyName = (string)$company->getName();
+				$workspaceId = (int)($company->getWorkspaceId() ?? 0);
 			} catch (\Throwable) {
 				// Still notify with activity title alone.
 			}
@@ -128,20 +130,25 @@ class ActivityDueReminderService
 				? (int)$dueDay->diff($todayDay)->days
 				: 0;
 
-			$this->notifications->notifyCrmUsers(
-				Constants::NOTIFY_ACTIVITY_DUE,
-				'activity',
-				(string)$activityId,
-				[
-					'companyId' => $companyId,
-					'companyName' => $companyName,
-					'activityId' => $activityId,
-					'title' => (string)$activity->getTitle(),
-					'dueOn' => $dueYmd,
-					'daysLate' => $daysLate,
-					'overdue' => $daysLate > 0 ? 1 : 0,
-				],
-			);
+			$params = [
+				'companyId' => $companyId,
+				'companyName' => $companyName,
+				'activityId' => $activityId,
+				'title' => (string)$activity->getTitle(),
+				'dueOn' => $dueYmd,
+				'daysLate' => $daysLate,
+				'overdue' => $daysLate > 0 ? 1 : 0,
+			];
+			if ($workspaceId > 0) {
+				$this->notifications->notifyWorkspaceUsers(
+					$workspaceId,
+					Constants::NOTIFY_ACTIVITY_DUE,
+					'activity',
+					(string)$activityId,
+					$params,
+				);
+			}
+			// No workspace → fail closed (never fan out company names instance-wide).
 
 			return 'sent';
 		} catch (\Throwable $e) {

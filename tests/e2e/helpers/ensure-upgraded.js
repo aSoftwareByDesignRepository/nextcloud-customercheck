@@ -78,7 +78,9 @@ function withUpgradeLock(fn) {
 export function needsDbUpgrade() {
   try {
     const out = occ(['status']);
-    return /needsDbUpgrade:\s*true/.test(out);
+    // Some limited-mode states print “require upgrade” while the YAML line
+    // still says needsDbUpgrade: false — treat either as pending.
+    return /needsDbUpgrade:\s*true|require upgrade/i.test(out);
   } catch (err) {
     const msg = String(err?.stdout || err?.stderr || err?.message || err);
     return /needsDbUpgrade:\s*true|require upgrade/i.test(msg);

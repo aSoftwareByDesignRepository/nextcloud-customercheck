@@ -13,6 +13,7 @@ use OCA\CustomerCheck\Service\WorkspaceService;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\IDBConnection;
 use OCP\IL10N;
+use OCP\Lock\ILockingProvider;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -54,6 +55,7 @@ final class BriefVerifyEvidenceTest extends TestCase
 			$this->createMock(AgreementRenewalMoney::class),
 			$this->createMock(ITimeFactory::class),
 			$l10n,
+			$this->createMock(ILockingProvider::class),
 		);
 	}
 
@@ -91,5 +93,23 @@ final class BriefVerifyEvidenceTest extends TestCase
 		]);
 		$this->expectException(ValidationException::class);
 		$svc->verify(1, 1, 'missed', 'sam', null, null, 'member');
+	}
+
+	public function testClosedCommitmentCannotBeReVerified(): void
+	{
+		$svc = $this->serviceWithCommitRow([
+			'id' => 1,
+			'week_key' => '2026-W31',
+			'kind' => 'ar_chase',
+			'title' => 'Chase Acme',
+			'company_id' => 5,
+			'owner_user_id' => 'alex',
+			'status' => 'done',
+			'due_on' => null,
+			'carry_streak' => 0,
+			'counts_wip' => 1,
+		]);
+		$this->expectException(ValidationException::class);
+		$svc->verify(1, 1, 'missed', 'alex', null, null, 'manager');
 	}
 }

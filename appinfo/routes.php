@@ -95,6 +95,7 @@ return [
 		['name' => 'deal_api#index', 'url' => '/api/v1/deals', 'verb' => 'GET'],
 		['name' => 'deal_api#create', 'url' => '/api/v1/deals', 'verb' => 'POST'],
 		['name' => 'deal_api#update', 'url' => '/api/v1/deals/{id}', 'verb' => 'PUT', 'requirements' => ['id' => '\d+']],
+		['name' => 'deal_api#claim', 'url' => '/api/v1/deals/{id}/claim', 'verb' => 'POST', 'requirements' => ['id' => '\d+']],
 		['name' => 'deal_api#stage', 'url' => '/api/v1/deals/{id}/stage', 'verb' => 'POST', 'requirements' => ['id' => '\d+']],
 
 		// ── Activities API ──────────────────────────────────────────────
@@ -131,6 +132,10 @@ return [
 		['name' => 'persona_api#saveMailbox', 'url' => '/api/v1/workspaces/{workspaceId}/mailboxes', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\d+']],
 		['name' => 'persona_api#unmatchedMail', 'url' => '/api/v1/workspaces/{workspaceId}/mail/unmatched', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\d+']],
 		['name' => 'persona_api#triageMail', 'url' => '/api/v1/workspaces/{workspaceId}/mail/{id}/triage', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\d+', 'id' => '\d+']],
+		['name' => 'persona_api#listMailDrafts', 'url' => '/api/v1/workspaces/{workspaceId}/mail/drafts', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\d+']],
+		['name' => 'persona_api#getMailDraft', 'url' => '/api/v1/workspaces/{workspaceId}/mail/drafts/{id}', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\d+', 'id' => '\d+']],
+		['name' => 'persona_api#sendMailDraft', 'url' => '/api/v1/workspaces/{workspaceId}/mail/drafts/{id}/send', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\d+', 'id' => '\d+']],
+		['name' => 'persona_api#deleteMailDraft', 'url' => '/api/v1/workspaces/{workspaceId}/mail/drafts/{id}', 'verb' => 'DELETE', 'requirements' => ['workspaceId' => '\d+', 'id' => '\d+']],
 		['name' => 'persona_api#testMailbox', 'url' => '/api/v1/workspaces/{workspaceId}/mailboxes/test', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\d+']],
 		['name' => 'persona_api#sendMail', 'url' => '/api/v1/workspaces/{workspaceId}/mail/send', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\d+']],
 		['name' => 'persona_api#escalate', 'url' => '/api/v1/workspaces/{workspaceId}/escalations', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\d+']],
@@ -145,6 +150,7 @@ return [
 		['name' => 'persona_api#promises', 'url' => '/api/v1/companies/{companyId}/promises', 'verb' => 'GET', 'requirements' => ['companyId' => '\d+']],
 		['name' => 'persona_api#createPromise', 'url' => '/api/v1/companies/{companyId}/promises', 'verb' => 'POST', 'requirements' => ['companyId' => '\d+']],
 		['name' => 'persona_api#completePromise', 'url' => '/api/v1/companies/{companyId}/promises/{id}/done', 'verb' => 'POST', 'requirements' => ['companyId' => '\d+', 'id' => '\d+']],
+		['name' => 'persona_api#cancelPromise', 'url' => '/api/v1/companies/{companyId}/promises/{id}/cancel', 'verb' => 'POST', 'requirements' => ['companyId' => '\d+', 'id' => '\d+']],
 		['name' => 'persona_api#prepareMeeting', 'url' => '/api/v1/companies/{companyId}/prepare-meeting', 'verb' => 'GET', 'requirements' => ['companyId' => '\d+']],
 
 		// ── Aggregates ──────────────────────────────────────────────────
@@ -175,21 +181,24 @@ return [
 
 		// ── Companion mobile API v1 (Basic auth, COMPANION-APP §9) ──────
 		['name' => 'mobile#bootstrap', 'url' => '/api/mobile/v1/bootstrap', 'verb' => 'GET'],
-		['name' => 'mobile#today', 'url' => '/api/mobile/v1/today', 'verb' => 'GET'],
-		['name' => 'mobile#companies', 'url' => '/api/mobile/v1/companies', 'verb' => 'GET'],
-		['name' => 'mobile#companyDetail', 'url' => '/api/mobile/v1/companies/{id}', 'verb' => 'GET', 'requirements' => ['id' => '\d+']],
-		['name' => 'mobile#activities', 'url' => '/api/mobile/v1/activities', 'verb' => 'GET'],
-		['name' => 'mobile#createActivity', 'url' => '/api/mobile/v1/activities', 'verb' => 'POST'],
-		['name' => 'mobile#updateActivity', 'url' => '/api/mobile/v1/activities/{id}', 'verb' => 'PUT', 'requirements' => ['id' => '\d+']],
-		['name' => 'mobile#doneActivity', 'url' => '/api/mobile/v1/activities/{id}/done', 'verb' => 'POST', 'requirements' => ['id' => '\d+']],
-		['name' => 'mobile#deals', 'url' => '/api/mobile/v1/deals', 'verb' => 'GET'],
-		['name' => 'mobile#dealStage', 'url' => '/api/mobile/v1/deals/{id}/stage', 'verb' => 'POST', 'requirements' => ['id' => '\d+']],
-		['name' => 'mobile#agreements', 'url' => '/api/mobile/v1/agreements', 'verb' => 'GET'],
+		['name' => 'mobile#workspaces', 'url' => '/api/mobile/v1/workspaces', 'verb' => 'GET'],
+		['name' => 'mobile#today', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/today', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\d+']],
+		['name' => 'mobile#companies', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/companies', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\d+']],
+		['name' => 'mobile#companyDetail', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/companies/{id}', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\d+', 'id' => '\d+']],
+		['name' => 'mobile#activities', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/activities', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\d+']],
+		['name' => 'mobile#createActivity', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/activities', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\d+']],
+		['name' => 'mobile#updateActivity', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/activities/{id}', 'verb' => 'PUT', 'requirements' => ['workspaceId' => '\d+', 'id' => '\d+']],
+		['name' => 'mobile#doneActivity', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/activities/{id}/done', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\d+', 'id' => '\d+']],
+		['name' => 'mobile#deals', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/deals', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\d+']],
+		['name' => 'mobile#dealStage', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/deals/{id}/stage', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\d+', 'id' => '\d+']],
+		['name' => 'mobile#agreements', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/agreements', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\d+']],
 		['name' => 'mobile#registerPush', 'url' => '/api/mobile/v1/push', 'verb' => 'POST'],
 		['name' => 'mobile#unregisterPush', 'url' => '/api/mobile/v1/push', 'verb' => 'DELETE'],
 
 		// ── Public token routes (no session; token validated in controller) ──
 		['name' => 'feed#renewals', 'url' => '/feed/{token}/renewals.ics', 'verb' => 'GET'],
+		['name' => 'feed#workspaceRenewals', 'url' => '/feed/w/{workspaceId}/{token}/renewals.ics', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\d+']],
+		['name' => 'settings_api#rotateWorkspaceIcs', 'url' => '/api/v1/workspaces/{workspaceId}/ics-token/rotate', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\d+']],
 		['name' => 'lead_webhook#receive', 'url' => '/hooks/lead/{token}', 'verb' => 'POST'],
 		['name' => 'website_order_webhook#receive', 'url' => '/hooks/order/{token}', 'verb' => 'POST'],
 	],

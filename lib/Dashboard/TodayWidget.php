@@ -8,6 +8,7 @@ use OCA\CustomerCheck\AppInfo\Application;
 use OCA\CustomerCheck\Service\AccessControlService;
 use OCA\CustomerCheck\Service\AppIconService;
 use OCA\CustomerCheck\Service\TodayService;
+use OCA\CustomerCheck\Service\WorkspaceAccessService;
 use OCP\Dashboard\IAPIWidgetV2;
 use OCP\Dashboard\IConditionalWidget;
 use OCP\Dashboard\IIconWidget;
@@ -30,6 +31,7 @@ class TodayWidget implements IAPIWidgetV2, IIconWidget, IConditionalWidget, IRel
 		private readonly IURLGenerator $urlGenerator,
 		private readonly TodayService $todayService,
 		private readonly AccessControlService $accessControl,
+		private readonly WorkspaceAccessService $workspaces,
 		private readonly IUserSession $userSession,
 		private readonly AppIconService $appIconService,
 	) {
@@ -90,7 +92,14 @@ class TodayWidget implements IAPIWidgetV2, IIconWidget, IConditionalWidget, IRel
 		}
 
 		$limit = max(1, min(20, $limit));
-		$queue = $this->todayService->build();
+		$wsId = 0;
+		try {
+			$ctx = $this->workspaces->resolveForUser($userId);
+			$wsId = (int)$ctx['workspace']->getId();
+		} catch (\Throwable) {
+			$wsId = 0;
+		}
+		$queue = $this->todayService->build(null, $wsId > 0 ? $wsId : null);
 		$items = [];
 		$url = $this->getUrl() ?? '';
 		$icon = $this->getIconUrl();

@@ -7,11 +7,13 @@
  *   click “Upgrade via web” on large instances.
  * - Do NOT call occ upgrade on the happy path — maintenance mode mid-submit
  *   leaves Playwright stuck on /login until timeout.
+ * - Never treat Nextcloud `#app-content` alone as CRM-ready (Dashboard has it too).
+ * - Never look for `#user` when storageState already redirected `/login` → Dashboard.
  */
 
 import { ensureUpgraded } from './ensure-upgraded.js';
 
-async function dismissOrFailOnUpdateNeeded(page) {
+export async function dismissOrFailOnUpdateNeeded(page) {
   const updateHeading = page.getByRole('heading', { name: /update needed|aktualisierung erforderlich/i });
   if (!(await updateHeading.isVisible({ timeout: 800 }).catch(() => false))) {
     return;
@@ -26,23 +28,60 @@ async function dismissOrFailOnUpdateNeeded(page) {
   }
 }
 
-export async function login(page, { username, password }) {
-  // Fast path: storageState / existing session already inside the app.
-  await page.goto('/apps/customercheck/today', { waitUntil: 'domcontentloaded' });
+/**
+ * Navigate to a CustomerCheck path and heal “Update needed” from sibling app bumps.
+ * Prefer this over bare page.goto for CRM pages after login.
+ */
+export async function gotoCrm(page, path, { ready = '#crm-main-content', timeout = 30000 } = {}) {
+  await page.goto(path, { waitUntil: 'domcontentloaded', timeout: 45000 });
   await dismissOrFailOnUpdateNeeded(page);
-  if (!page.url().includes('/login') && await page.locator('#crm-main-content, #app-content').first().isVisible().catch(() => false)) {
+  if (page.url().includes('/login')) {
+    throw new Error(`CRM navigation to ${path} bounced to login`);
+  }
+  if (ready) {
+    await page.waitForSelector(ready, { timeout });
+  }
+}
+
+/** @returns {Promise<boolean>} true when CustomerCheck shell is visible */
+async function ensureCrmShell(page) {
+  await page.goto('/apps/customercheck/today', { waitUntil: 'domcontentloaded', timeout: 45000 });
+  await dismissOrFailOnUpdateNeeded(page);
+  if (page.url().includes('/login')) {
+    return false;
+  }
+  await page.locator('#crm-main-content').waitFor({ state: 'visible', timeout: 30000 });
+  return true;
+}
+
+export async function login(page, { username, password }) {
+  if (await ensureCrmShell(page).catch(() => false)) {
     return;
   }
 
-  await page.goto('/login', { waitUntil: 'domcontentloaded' });
+  await page.goto('/login', { waitUntil: 'domcontentloaded', timeout: 45000 });
   await dismissOrFailOnUpdateNeeded(page);
+
+  // storageState / existing session: /login bounces to Dashboard — do not hunt #user.
+  if (!page.url().includes('/login')) {
+    if (!(await ensureCrmShell(page))) {
+      throw new Error('Session is authenticated but CustomerCheck shell did not load.');
+    }
+    return;
+  }
 
   const startUpdate = page.getByRole('button', { name: /start update|update starten/i });
   if (await startUpdate.isVisible({ timeout: 1500 }).catch(() => false)) {
     await startUpdate.click();
     await page.waitForTimeout(2000);
-    await page.goto('/login', { waitUntil: 'domcontentloaded' });
+    await page.goto('/login', { waitUntil: 'domcontentloaded', timeout: 45000 });
     await dismissOrFailOnUpdateNeeded(page);
+    if (!page.url().includes('/login')) {
+      if (!(await ensureCrmShell(page))) {
+        throw new Error('Session is authenticated but CustomerCheck shell did not load.');
+      }
+      return;
+    }
   }
 
   const fillAndSubmit = async () => {
@@ -85,9 +124,19 @@ export async function login(page, { username, password }) {
     if (String(err?.message || err).includes('Update needed') || String(err?.message || err).includes('Login rejected')) {
       throw err;
     }
-    await page.goto('/login', { waitUntil: 'domcontentloaded' });
+    await page.goto('/login', { waitUntil: 'domcontentloaded', timeout: 45000 });
     await dismissOrFailOnUpdateNeeded(page);
+    if (!page.url().includes('/login')) {
+      if (!(await ensureCrmShell(page))) {
+        throw new Error('Session is authenticated but CustomerCheck shell did not load.');
+      }
+      return;
+    }
     await fillAndSubmit();
+  }
+
+  if (!(await ensureCrmShell(page))) {
+    throw new Error('Login succeeded but CustomerCheck shell did not load.');
   }
 }
 

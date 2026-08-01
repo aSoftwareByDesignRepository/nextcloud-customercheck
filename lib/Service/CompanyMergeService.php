@@ -17,6 +17,7 @@ use OCA\CustomerCheck\Exception\NotFoundException;
 use OCA\CustomerCheck\Exception\ValidationException;
 use OCA\CustomerCheck\Support\OptimisticLock;
 use OCP\AppFramework\Utility\ITimeFactory;
+use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\IDBConnection;
 use OCP\IL10N;
 
@@ -60,7 +61,13 @@ class CompanyMergeService
 	 *     deals: int,
 	 *     activities: int,
 	 *     emailTouches: int,
-	 *     timelineEvents: int
+	 *     timelineEvents: int,
+	 *     promises: int,
+	 *     accountPlans: int,
+	 *     escalations: int,
+	 *     commitments: int,
+	 *     sharedMailMessages: int,
+	 *     sharedMailDrafts: int
 	 *   },
 	 *   company: Company
 	 * }
@@ -136,6 +143,15 @@ class CompanyMergeService
 				'emailTouches' => $this->emailTouchMapper->reassignCompany($sourceId, $intoCompanyId),
 				'timelineEvents' => $this->timelineEventMapper->reassignCompany($sourceId, $intoCompanyId),
 			];
+			// Persona ledgers denormalise workspace_id — re-home company_id AND
+			// stamp the keeper’s book so Today/Strategy never keep orphans.
+			$keeperWs = (int)($keeper->getWorkspaceId() ?? 0);
+			$persona = $this->reassignPersonaLedgers($sourceId, $intoCompanyId, $keeperWs);
+			$moved = array_merge($moved, $persona);
+			// Shared IMAP rows + drafts are keyed by company_id for 360 Communication —
+			// re-home onto the keeper so history does not vanish with the archived source.
+			$mail = $this->reassignSharedMail($sourceId, $intoCompanyId);
+			$moved = array_merge($moved, $mail);
 			// Hours / remlog / seqlog / pay_watch follow agreements & deals via FK.
 
 			$this->transferSiblingLinks($source, $keeper);
@@ -173,6 +189,104 @@ class CompanyMergeService
 			'moved' => $moved,
 			'company' => $keeper,
 		];
+	}
+
+	/**
+	 * Re-home promises / plans / escalations / commitments onto the keeper.
+	 *
+	 * @return array{promises: int, accountPlans: int, escalations: int, commitments: int}
+	 */
+	private function reassignPersonaLedgers(int $fromCompanyId, int $toCompanyId, int $toWorkspaceId): array
+	{
+		$out = [
+			'promises' => 0,
+			'accountPlans' => 0,
+			'escalations' => 0,
+			'commitments' => 0,
+		];
+		if ($fromCompanyId === $toCompanyId) {
+			return $out;
+		}
+
+		if ($this->db->tableExists('crm_cust_prm')) {
+			$qb = $this->db->getQueryBuilder();
+			$qb->update('crm_cust_prm')
+				->set('company_id', $qb->createNamedParameter($toCompanyId, IQueryBuilder::PARAM_INT))
+				->where($qb->expr()->eq('company_id', $qb->createNamedParameter($fromCompanyId, IQueryBuilder::PARAM_INT)));
+			if ($toWorkspaceId > 0) {
+				$qb->set('workspace_id', $qb->createNamedParameter($toWorkspaceId, IQueryBuilder::PARAM_INT));
+			}
+			$out['promises'] = $qb->executeStatement();
+		}
+
+		if ($this->db->tableExists('crm_acct_plan')) {
+			$qb = $this->db->getQueryBuilder();
+			$qb->update('crm_acct_plan')
+				->set('company_id', $qb->createNamedParameter($toCompanyId, IQueryBuilder::PARAM_INT))
+				->where($qb->expr()->eq('company_id', $qb->createNamedParameter($fromCompanyId, IQueryBuilder::PARAM_INT)));
+			if ($toWorkspaceId > 0) {
+				$qb->set('workspace_id', $qb->createNamedParameter($toWorkspaceId, IQueryBuilder::PARAM_INT));
+			}
+			$out['accountPlans'] = $qb->executeStatement();
+		}
+
+		if ($this->db->tableExists('crm_escal')) {
+			$qb = $this->db->getQueryBuilder();
+			$qb->update('crm_escal')
+				->set('company_id', $qb->createNamedParameter($toCompanyId, IQueryBuilder::PARAM_INT))
+				->where($qb->expr()->eq('company_id', $qb->createNamedParameter($fromCompanyId, IQueryBuilder::PARAM_INT)));
+			if ($toWorkspaceId > 0) {
+				$qb->set('workspace_id', $qb->createNamedParameter($toWorkspaceId, IQueryBuilder::PARAM_INT));
+			}
+			$out['escalations'] = $qb->executeStatement();
+		}
+
+		if ($this->db->tableExists('crm_commit')) {
+			$qb = $this->db->getQueryBuilder();
+			$qb->update('crm_commit')
+				->set('company_id', $qb->createNamedParameter($toCompanyId, IQueryBuilder::PARAM_INT))
+				->where($qb->expr()->eq('company_id', $qb->createNamedParameter($fromCompanyId, IQueryBuilder::PARAM_INT)));
+			if ($toWorkspaceId > 0) {
+				$qb->set('workspace_id', $qb->createNamedParameter($toWorkspaceId, IQueryBuilder::PARAM_INT));
+			}
+			$out['commitments'] = $qb->executeStatement();
+		}
+
+		return $out;
+	}
+
+	/**
+	 * Re-home shared mailbox matches and drafts onto the keeper (same-WS merge).
+	 *
+	 * @return array{sharedMailMessages: int, sharedMailDrafts: int}
+	 */
+	private function reassignSharedMail(int $fromCompanyId, int $toCompanyId): array
+	{
+		$out = [
+			'sharedMailMessages' => 0,
+			'sharedMailDrafts' => 0,
+		];
+		if ($fromCompanyId === $toCompanyId) {
+			return $out;
+		}
+
+		if ($this->db->tableExists('crm_mail_msg')) {
+			$qb = $this->db->getQueryBuilder();
+			$out['sharedMailMessages'] = $qb->update('crm_mail_msg')
+				->set('company_id', $qb->createNamedParameter($toCompanyId, IQueryBuilder::PARAM_INT))
+				->where($qb->expr()->eq('company_id', $qb->createNamedParameter($fromCompanyId, IQueryBuilder::PARAM_INT)))
+				->executeStatement();
+		}
+
+		if ($this->db->tableExists('crm_mail_dft')) {
+			$qb = $this->db->getQueryBuilder();
+			$out['sharedMailDrafts'] = $qb->update('crm_mail_dft')
+				->set('company_id', $qb->createNamedParameter($toCompanyId, IQueryBuilder::PARAM_INT))
+				->where($qb->expr()->eq('company_id', $qb->createNamedParameter($fromCompanyId, IQueryBuilder::PARAM_INT)))
+				->executeStatement();
+		}
+
+		return $out;
 	}
 
 	/**

@@ -10,6 +10,7 @@ use OCA\CustomerCheck\Service\AccessControlService;
 use OCA\CustomerCheck\Service\SettingsService;
 use OCP\IConfig;
 use OCP\IURLGenerator;
+use OCP\IUserManager;
 use OCP\Security\ISecureRandom;
 use PHPUnit\Framework\TestCase;
 
@@ -34,7 +35,7 @@ class SettingsServiceTokenTest extends TestCase
 
 		$access = $this->createMock(AccessControlService::class);
 		$url = $this->createMock(IURLGenerator::class);
-		$svc = new SettingsService($config, $access, $random, $url);
+		$svc = new SettingsService($config, $access, $random, $url, $this->createMock(IUserManager::class));
 		$svc->ensureTokensExist();
 
 		$this->assertSame(str_repeat('a', 64), $stored[Constants::CONFIG_ICS_TOKEN] ?? null);

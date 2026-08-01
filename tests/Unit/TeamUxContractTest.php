@@ -20,7 +20,8 @@ final class TeamUxContractTest extends TestCase
 		$this->assertStringContainsString('data-crm-team-capacity', $html);
 		$this->assertStringContainsString('Who needs help', $html);
 		$this->assertStringContainsString('Capacity tools', $html);
-		$this->assertStringContainsString('Green = fine. Amber = coach.', $html);
+		$this->assertStringContainsString('On track = fine. Needs help = coach them.', $html);
+		$this->assertStringNotContainsString('Green = fine. Amber = coach.', $html);
 		$this->assertStringNotContainsString('No team rows to show.', $html);
 	}
 
@@ -63,5 +64,10 @@ final class TeamUxContractTest extends TestCase
 		$this->assertStringContainsString('ensureViewerIsMember', $src);
 		$this->assertStringContainsString('Planning labels — not expected cash.', $src);
 		$this->assertStringContainsString('if (!$isAppAdmin)', $src);
+		// O(members × myChase) must never return — Today embeds this board.
+		$this->assertStringContainsString('chaseByOwnerForWorkspace', $src);
+		$this->assertStringNotContainsString('->myChase(', $src);
+		$this->assertStringContainsString('gapCountsByAccountOwner', $src);
+		$this->assertStringNotContainsString('->myAccounts(', $src);
 	}
 }

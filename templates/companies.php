@@ -12,7 +12,9 @@ $companiesUrl = $urlGenerator->linkToRoute('customercheck.page.companies');
 include __DIR__ . '/common/page-start.php';
 ?>
 <div class="crm-page-actions-source header-actions" hidden>
+	<?php if (!empty($_['canWrite'])): ?>
 	<a class="crm-btn crm-btn--primary" href="<?php p($_['urls']['companyNew'] ?? '#'); ?>"><?php p($l->t('Add company')); ?></a>
+	<?php endif; ?>
 	<button type="button" class="crm-btn crm-btn--secondary" id="crm-companies-filter-toggle" aria-expanded="<?php p(($filterQ !== '' || $filterStatus !== '' || $filterArchived) ? 'true' : 'false'); ?>" aria-controls="crm-companies-filter"><?php p($l->t('More filters')); ?></button>
 </div>
 <div class="crm-page-stack">
@@ -55,8 +57,8 @@ include __DIR__ . '/common/page-start.php';
 						</select>
 					</div>
 					<div class="crm-filter-field crm-filter-field--actions">
-						<button type="submit" class="crm-btn crm-btn--primary" id="btn-apply-filter"><?php p($l->t('Apply')); ?></button>
-						<a class="crm-btn crm-btn--secondary" id="btn-clear-filter" href="<?php p($companiesUrl); ?>"><?php p($l->t('Clear')); ?></a>
+						<button type="submit" class="crm-btn crm-btn--secondary" id="btn-apply-filter"><?php p($l->t('Refresh')); ?></button>
+						<a class="crm-btn crm-btn--ghost" id="btn-clear-filter" href="<?php p($companiesUrl); ?>"><?php p($l->t('Clear')); ?></a>
 					</div>
 				</div>
 			</form>
@@ -69,6 +71,7 @@ include __DIR__ . '/common/page-start.php';
 				<table class="table table--hover">
 					<thead><tr>
 						<th scope="col"><?php p($l->t('Name')); ?></th>
+						<th scope="col"><?php p($l->t('Owner')); ?></th>
 						<th scope="col"><?php p($l->t('Status')); ?></th>
 						<th scope="col"><?php p($l->t('Last touch')); ?></th>
 						<th scope="col"><?php p($l->t('Next expiry')); ?></th>
@@ -91,6 +94,11 @@ include __DIR__ . '/common/page-start.php';
 						$moneyLabel = $labels instanceof \OCA\CustomerCheck\Service\DisplayLabelService
 							? $labels->billingState($moneyState)
 							: $moneyState;
+						$accountOwner = trim((string)($c->getAccountOwnerUserId() ?? ''));
+						$ownerNames = is_array($_['ownerDisplayNames'] ?? null) ? $_['ownerDisplayNames'] : [];
+						$ownerLabel = $accountOwner !== ''
+							? (string)($ownerNames[$accountOwner] ?? $accountOwner)
+							: '';
 						?>
 						<tr>
 							<td data-label="<?php p($l->t('Name')); ?>"><?php
@@ -99,6 +107,13 @@ include __DIR__ . '/common/page-start.php';
 								include __DIR__ . '/common/crm-company-link.php';
 								if (!empty($h['inConversation'])): ?> <span class="crm-badge crm-badge--info"><?php p($l->t('In conversation')); ?></span><?php endif;
 							?></td>
+							<td data-label="<?php p($l->t('Owner')); ?>">
+								<?php if ($ownerLabel !== ''): ?>
+									<span class="crm-owner" data-crm-account-owner="<?php p($accountOwner); ?>"><?php p($ownerLabel); ?></span>
+								<?php else: ?>
+									<span class="crm-muted"><?php p($l->t('Unassigned')); ?></span>
+								<?php endif; ?>
+							</td>
 							<td data-label="<?php p($l->t('Status')); ?>"><span class="crm-badge crm-badge--<?php p($c->getStatus() === 'active' ? 'success' : 'neutral'); ?>"><?php
 								p($labels instanceof \OCA\CustomerCheck\Service\DisplayLabelService
 									? $labels->companyStatus((string)$c->getStatus())
@@ -111,13 +126,15 @@ include __DIR__ . '/common/page-start.php';
 						</tr>
 					<?php endforeach; ?>
 					<?php if (($_['companies'] ?? []) === []): ?>
-						<tr><td class="crm-table-empty" colspan="6">
+						<tr><td class="crm-table-empty" colspan="7">
 							<div class="crm-empty-state" role="status">
 								<h3 class="crm-empty-state__title"><?php p($l->t('No companies yet')); ?></h3>
 								<p class="crm-empty-state__text"><?php p($l->t('Add a company or import a list. ProjectCheck and InvoicingCheck are optional — CustomerCheck works alone.')); ?></p>
 								<div class="crm-empty-state__actions">
+									<?php if (!empty($_['canWrite'])): ?>
 									<a class="crm-btn crm-btn--primary crm-btn--lg" href="<?php p($_['urls']['companyNew'] ?? '#'); ?>"><?php p($l->t('Add company')); ?></a>
 									<a class="crm-btn crm-btn--secondary" href="<?php p($_['urls']['import'] ?? '#'); ?>"><?php p($l->t('Import')); ?></a>
+									<?php endif; ?>
 								</div>
 							</div>
 						</td></tr>

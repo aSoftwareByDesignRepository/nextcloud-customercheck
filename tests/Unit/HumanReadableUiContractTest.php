@@ -64,4 +64,13 @@ final class HumanReadableUiContractTest extends TestCase
 		$this->assertStringContainsString('unknownCompany', $src);
 		$this->assertStringContainsString('siblingLinkOptions', $src);
 	}
+
+	public function testCompanyFeedUsesHumanKindLabels(): void
+	{
+		$js = (string)file_get_contents(dirname(__DIR__, 2) . '/js/pages/company-detail.js');
+		$this->assertStringContainsString('feedKindLabel', $js);
+		$this->assertStringContainsString("t('Shared mail')", $js);
+		$this->assertStringContainsString("t('Logged email')", $js);
+		$this->assertStringNotContainsString('badge.textContent = item.kind || \'\'', $js);
+	}
 }

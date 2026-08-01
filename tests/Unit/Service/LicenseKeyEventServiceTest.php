@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace OCA\CustomerCheck\Tests\Unit\Service;
 
+use OCA\CustomerCheck\Constants;
 use OCA\CustomerCheck\Db\Agreement;
 use OCA\CustomerCheck\Db\AgreementMapper;
 use OCA\CustomerCheck\Db\Company;
@@ -88,6 +89,7 @@ class LicenseKeyEventServiceTest extends TestCase
 		$company->setId(4);
 		$company->setSlug('acme-gmbh');
 		$company->setName('Acme GmbH');
+		$company->setWorkspaceId(3);
 
 		$agreement = new Agreement();
 		$agreement->setId(11);
@@ -104,7 +106,14 @@ class LicenseKeyEventServiceTest extends TestCase
 			}),
 			'system',
 		)->willReturn($agreement);
-		$this->notifications->expects($this->once())->method('notifyCrmUsers');
+		$this->notifications->expects($this->once())->method('notifyWorkspaceUsers')->with(
+			3,
+			Constants::NOTIFY_KEY_GENERATED,
+			'agreement',
+			'11',
+			$this->callback(static fn (array $p): bool => ($p['companyName'] ?? '') === 'Acme GmbH'),
+		);
+		$this->notifications->expects($this->never())->method('notifyCrmUsers');
 		$this->importJobs->expects($this->never())->method('insert');
 
 		$result = $this->service->handle([

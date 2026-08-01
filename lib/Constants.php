@@ -23,6 +23,8 @@ final class Constants
 	public const CONFIG_DIGEST_HOUR = 'digest_hour';
 	public const CONFIG_REMINDER_HOUR = 'reminder_hour';
 	public const CONFIG_ICS_TOKEN = 'ics_token';
+	/** JSON map workspaceId => token for per-book ICS feeds (§15.2 optional multi-book). */
+	public const CONFIG_ICS_WORKSPACE_TOKENS = 'ics_workspace_tokens';
 	public const CONFIG_LEAD_TOKEN = 'lead_token';
 	/** Website order intake token (§14.4 order path). */
 	public const CONFIG_ORDER_TOKEN = 'order_token';
@@ -42,6 +44,7 @@ final class Constants
 		self::CONFIG_DIGEST_HOUR => '7',
 		self::CONFIG_REMINDER_HOUR => '5',
 		self::CONFIG_ICS_TOKEN => '',
+		self::CONFIG_ICS_WORKSPACE_TOKENS => '{}',
 		self::CONFIG_LEAD_TOKEN => '',
 		self::CONFIG_ORDER_TOKEN => '',
 		self::CONFIG_CADENCE_ENABLED => '1',
@@ -52,6 +55,7 @@ final class Constants
 	/** Keys whose value is secret and must be redacted for non–app-admins (§10.3). */
 	public const SECRET_CONFIG_KEYS = [
 		self::CONFIG_ICS_TOKEN,
+		self::CONFIG_ICS_WORKSPACE_TOKENS,
 		self::CONFIG_LEAD_TOKEN,
 		self::CONFIG_ORDER_TOKEN,
 	];
@@ -229,12 +233,36 @@ final class Constants
 	public const MAILBOX_MAX_FOLDERS = 20;
 	public const MAILBOX_SYNC_CAP = 500;
 	public const MAIL_PREVIEW_MAX_BYTES = 51200;
+	/** Shared-mailbox index retention floor + purge batch (§5.10 / §18.9). */
+	public const MAIL_RETENTION_DAYS_MIN = 30;
+	public const MAIL_PURGE_BATCH = 500;
+	/** Safety ceiling per workspace; wall-clock budget usually stops earlier. */
+	public const MAIL_PURGE_MAX_ROUNDS = 100;
+	/** Soft wall-clock budget (seconds) for one purge pass across all workspaces. */
+	public const MAIL_PURGE_BUDGET_SECONDS = 12;
 
 	/** Mail send rate limits (§14.3 / §17.4). */
 	public const MAIL_SEND_USER_LIMIT = 30;
 	public const MAIL_SEND_USER_WINDOW = 3600;
 	public const MAIL_SEND_WS_LIMIT = 200;
 	public const MAIL_SEND_WS_WINDOW = 3600;
+
+	/** Shared SMTP Files attachments (§14.3 / §18.4). */
+	public const MAIL_ATTACH_MAX_COUNT = 5;
+	public const MAIL_ATTACH_MAX_BYTES = 10485760; // 10 MiB per file
+	public const MAIL_ATTACH_MAX_TOTAL_BYTES = 15728640; // 15 MiB combined
+	/** @var list<string> */
+	public const MAIL_ATTACH_ALLOWED_MIMES = [
+		'application/pdf',
+		'image/png',
+		'image/jpeg',
+		'text/plain',
+	];
+	/** @var list<string> */
+	public const QUOTE_FILE_ALLOWED_MIMES = [
+		'application/pdf',
+	];
+	public const QUOTE_FILE_MAX_BYTES = 10485760;
 
 	/** Lead SLA default hours (§11.8). */
 	public const LEAD_SLA_HOURS_DEFAULT = 24;
@@ -293,6 +321,7 @@ final class Constants
 	public const ERR_AGREEMENT_ILLEGAL_TRANSITION = 'AGREEMENT_ILLEGAL_TRANSITION';
 	public const ERR_AGREEMENT_LIMITS_INVALID = 'AGREEMENT_LIMITS_INVALID';
 	public const ERR_DEAL_TERMINAL = 'DEAL_TERMINAL';
+	public const ERR_DEAL_OWNED = 'DEAL_OWNED';
 	public const ERR_LOST_REASON_REQUIRED = 'LOST_REASON_REQUIRED';
 	public const ERR_CANCEL_REASON_REQUIRED = 'CANCEL_REASON_REQUIRED';
 	public const ERR_HOURS_WRONG_KIND = 'HOURS_WRONG_KIND';
@@ -322,6 +351,9 @@ final class Constants
 	public const ERR_FILES_PERMISSION_DENIED = 'FILES_PERMISSION_DENIED';
 	public const ERR_FILES_NOT_FOUND = 'FILES_NOT_FOUND';
 	public const ERR_FILES_NOT_FOLDER = 'FILES_NOT_FOLDER';
+	public const ERR_FILES_NOT_FILE = 'FILES_NOT_FILE';
+	public const ERR_ATTACHMENT_TOO_LARGE = 'ATTACHMENT_TOO_LARGE';
+	public const ERR_ATTACHMENT_DENIED = 'ATTACHMENT_DENIED';
 	public const ERR_TASKS_PUSH_FAILED = 'TASKS_PUSH_FAILED';
 	public const ERR_TASKS_UNAVAILABLE = 'TASKS_UNAVAILABLE';
 	public const ERR_CONTACTS_UNAVAILABLE = 'CONTACTS_UNAVAILABLE';

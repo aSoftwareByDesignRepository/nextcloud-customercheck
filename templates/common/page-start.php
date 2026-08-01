@@ -50,6 +50,12 @@ $urlsJson = htmlspecialchars(json_encode($urls, JSON_THROW_ON_ERROR | JSON_UNESC
 	lang="<?php p($htmlLang); ?>"
 	data-crm-page="<?php p($pageId); ?>"
 	data-crm-role="<?php p($roleSlug); ?>"
+	data-crm-can-write="<?php p(!empty($_['canWrite']) ? '1' : '0'); ?>"
+	data-crm-can-delete="<?php p(!empty($_['canDelete']) ? '1' : '0'); ?>"
+	data-crm-can-move="<?php p(!empty($_['canMove']) ? '1' : '0'); ?>"
+	data-crm-can-brief="<?php p(!empty($_['canBriefConfirm']) ? '1' : '0'); ?>"
+	data-crm-can-coach="<?php p(!empty($_['canTeamCoach']) ? '1' : '0'); ?>"
+	data-crm-can-bulk="<?php p(!empty($_['canBulk']) ? '1' : '0'); ?>"
 	data-crm-urls="<?php print_unescaped($urlsJson); ?>"
 	data-crm-timezone="<?php p($timezone); ?>">
 	<a class="crm-skip-link" href="#crm-main-content"><?php p($l->t('Skip to main content')); ?></a>

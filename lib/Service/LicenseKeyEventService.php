@@ -117,16 +117,21 @@ class LicenseKeyEventService
 			'status' => 'draft',
 		], 'system');
 
-		$this->notificationService->notifyCrmUsers(
-			Constants::NOTIFY_KEY_GENERATED,
-			'agreement',
-			(string)$agreement->getId(),
-			[
-				'companyName' => (string)$company->getName(),
-				'companyId' => (int)$company->getId(),
-				'agreementId' => (int)$agreement->getId(),
-			],
-		);
+		$params = [
+			'companyName' => (string)$company->getName(),
+			'companyId' => (int)$company->getId(),
+			'agreementId' => (int)$agreement->getId(),
+		];
+		$workspaceId = (int)($company->getWorkspaceId() ?? 0);
+		if ($workspaceId > 0) {
+			$this->notificationService->notifyWorkspaceUsers(
+				$workspaceId,
+				Constants::NOTIFY_KEY_GENERATED,
+				'agreement',
+				(string)$agreement->getId(),
+				$params,
+			);
+		}
 
 		return [
 			'action' => 'draft',

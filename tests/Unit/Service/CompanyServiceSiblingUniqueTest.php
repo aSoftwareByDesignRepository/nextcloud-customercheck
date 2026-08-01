@@ -49,6 +49,8 @@ final class CompanyServiceSiblingUniqueTest extends TestCase
 		$l10n = $this->createMock(IL10N::class);
 		$l10n->method('t')->willReturnCallback(static fn (string $t, array $a = []): string => $t);
 
+		$this->companies->method('lockRow')->willReturn(true);
+
 		return new CompanyService(
 			$this->companies,
 			$this->createMock(PersonMapper::class),

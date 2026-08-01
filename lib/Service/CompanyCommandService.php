@@ -8,6 +8,7 @@ use OCA\CustomerCheck\Constants;
 use OCA\CustomerCheck\Db\ActivityMapper;
 use OCA\CustomerCheck\Db\AgreementMapper;
 use OCA\CustomerCheck\Db\EmailTouchMapper;
+use OCA\CustomerCheck\Db\WorkspaceMapper;
 use OCA\CustomerCheck\Integration\SiblingFacadeContracts;
 use OCA\CustomerCheck\Support\DateMath;
 use OCA\CustomerCheck\Support\DensityCounts;
@@ -36,6 +37,7 @@ class CompanyCommandService
 		private readonly MailRelatedService $mailRelated,
 		private readonly CoverageService $coverage,
 		private readonly MailboxService $mailbox,
+		private readonly WorkspaceMapper $workspaces,
 		private readonly IAppManager $appManager,
 		private readonly ITimeFactory $timeFactory,
 		private readonly IL10N $l10n,
@@ -270,7 +272,18 @@ class CompanyCommandService
 		}
 		if ($boxes !== [] || $hasSharedRow) {
 			$label = $boxes !== [] ? (string)$boxes[0]['label'] : 'shared';
-			$disclosure = $this->mailbox->disclosure($label, $this->l10n->t('this workspace'));
+			$workspaceName = $this->l10n->t('this workspace');
+			if ($wsId > 0) {
+				try {
+					$workspaceName = (string)$this->workspaces->findById($wsId)->getName();
+					if (trim($workspaceName) === '') {
+						$workspaceName = $this->l10n->t('this workspace');
+					}
+				} catch (\Throwable) {
+					$workspaceName = $this->l10n->t('this workspace');
+				}
+			}
+			$disclosure = $this->mailbox->disclosure($label, $workspaceName);
 		}
 		$page['disclosure'] = $disclosure;
 		$page['privateNote'] = $this->l10n->t('Messages from your Mail accounts only.');

@@ -62,9 +62,8 @@ class ActivityApiController extends Controller
 	private function gateActivity(int $id, string $capability = 'write'): array
 	{
 		$activity = $this->activities->get($id);
-		$this->requireCompanyInResolvedWorkspace((int)$activity->getCompanyId());
 
-		return $this->requireWorkspaceCapability($capability);
+		return $this->requireCompanyCapability((int)$activity->getCompanyId(), $capability);
 	}
 
 	#[NoAdminRequired]
@@ -91,9 +90,8 @@ class ActivityApiController extends Controller
 	public function create(): JSONResponse
 	{
 		try {
-			$ctx = $this->requireWorkspaceCapability('write');
 			$b = $this->jsonBody();
-			$this->requireCompanyInResolvedWorkspace((int)($b['companyId'] ?? 0));
+			$ctx = $this->requireCompanyCapability((int)($b['companyId'] ?? 0), 'write');
 
 			return $this->ok($this->ser($this->activities->create($b, $ctx['uid'])), Http::STATUS_CREATED);
 		} catch (\Throwable $e) {
@@ -144,8 +142,7 @@ class ActivityApiController extends Controller
 	{
 		try {
 			$deal = $this->deals->get($dealId);
-			$this->requireCompanyInResolvedWorkspace((int)$deal->getCompanyId());
-			$ctx = $this->requireWorkspaceCapability('write');
+			$ctx = $this->requireCompanyCapability((int)$deal->getCompanyId(), 'write');
 
 			return $this->ok($this->activities->dismissRemainingFollowUps($dealId, $ctx['uid']));
 		} catch (\Throwable $e) {

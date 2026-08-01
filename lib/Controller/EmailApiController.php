@@ -79,7 +79,7 @@ class EmailApiController extends Controller
 	{
 		try {
 			$company = $this->requireCompanyInResolvedWorkspace($id);
-			$ws = $this->assertLoadedCompanyInWorkspace($company, 'read');
+			$ws = $this->assertLoadedCompanyInWorkspace($company, 'write');
 			$body = json_decode(file_get_contents('php://input') ?: '{}', true) ?: [];
 			$agreementId = isset($body['agreementId']) ? (int)$body['agreementId'] : null;
 			if ($agreementId !== null && $agreementId <= 0) {

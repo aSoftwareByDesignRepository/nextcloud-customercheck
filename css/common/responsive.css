@@ -35,8 +35,8 @@
 
   #app-navigation,
   .customercheck-navigation-wrapper {
-    width: 280px;
-    min-width: 280px;
+    width: var(--crm-nav-width, 280px);
+    min-width: var(--crm-nav-width, 280px);
     flex-shrink: 0;
     /* Use the Nextcloud CSS variable for header height when available;
        fall back to the conventional 50px. dvh is used where supported so
@@ -268,10 +268,10 @@
 @media (min-width: 1024px) and (max-width: 1280px) {
   #content.app-customercheck #app-navigation,
   .customercheck-navigation-wrapper {
-    width: 240px;
-    min-width: 240px;
-    max-width: 240px;
-    flex: 0 0 240px;
+    width: var(--crm-nav-width-compact, 240px);
+    min-width: var(--crm-nav-width-compact, 240px);
+    max-width: var(--crm-nav-width-compact, 240px);
+    flex: 0 0 var(--crm-nav-width-compact, 240px);
   }
 
   #app-content-wrapper,

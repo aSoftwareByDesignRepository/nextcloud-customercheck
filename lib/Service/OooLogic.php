@@ -14,7 +14,7 @@ use OCA\CustomerCheck\Constants;
 final class OooLogic
 {
 	/**
-	 * @param list<array{primaryUserId: string, startsOn: string, endsOn: string, id?: int}> $existing
+	 * @param list<array{primaryUserId: string, startsOn: string, endsOn: string, id?: int, status?: string}> $existing
 	 */
 	public static function validate(
 		string $primaryUserId,
@@ -48,6 +48,10 @@ final class OooLogic
 
 		foreach ($existing as $row) {
 			if ($ignoreId !== null && isset($row['id']) && (int)$row['id'] === $ignoreId) {
+				continue;
+			}
+			// Ended covers must not permanently block rescheduling the same primary.
+			if (isset($row['status']) && (string)$row['status'] === 'ended') {
 				continue;
 			}
 			if ((string)$row['primaryUserId'] !== $primaryUserId) {

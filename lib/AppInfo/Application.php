@@ -37,6 +37,7 @@ use OCA\CustomerCheck\Service\EmailTouchService;
 use OCA\CustomerCheck\Service\FacadeProbeService;
 use OCA\CustomerCheck\Service\LeadWebhookService;
 use OCA\CustomerCheck\Service\WebsiteOrderWebhookService;
+use OCA\CustomerCheck\Service\WorkspaceService;
 use OCA\CustomerCheck\Service\MobileIdempotencyService;
 use OCA\CustomerCheck\Service\MobilePushService;
 use OCA\CustomerCheck\Service\MoneyService;
@@ -54,6 +55,7 @@ use OCA\CustomerCheck\Service\TimelineService;
 use OCA\CustomerCheck\Service\TodayService;
 use OCA\CustomerCheck\Service\VTodoService;
 use OCA\CustomerCheck\Service\WeeklyDigestService;
+use OCA\CustomerCheck\Service\WorkspaceAccessService;
 use OCP\AppFramework\App;
 use OCP\AppFramework\Bootstrap\IBootContext;
 use OCP\AppFramework\Bootstrap\IBootstrap;
@@ -104,6 +106,7 @@ class Application extends App implements IBootstrap
 		$context->registerService(NotificationService::class, fn ($c) => new NotificationService(
 			$c->get(\OCP\Notification\IManager::class),
 			$c->get(AccessControlService::class),
+			$c->get(WorkspaceAccessService::class),
 			$c->get(\OCP\AppFramework\Utility\ITimeFactory::class),
 			$c->get(\Psr\Log\LoggerInterface::class),
 			$c->get(MobilePushService::class),
@@ -133,11 +136,13 @@ class Application extends App implements IBootstrap
 			$c->get(AccessControlService::class),
 			$c->get(\OCP\Security\ISecureRandom::class),
 			$c->get(IURLGenerator::class),
+			$c->get(\OCP\IUserManager::class),
 		));
 		$context->registerService(WebsiteOrderWebhookService::class, fn ($c) => new WebsiteOrderWebhookService(
 			$c->get(SettingsService::class),
 			$c->get(RateLimitService::class),
 			$c->get(CompanyService::class),
+			$c->get(WorkspaceService::class),
 			$c->get(SlugService::class),
 			$c->get(PersonService::class),
 			$c->get(\OCA\CustomerCheck\Db\PersonMapper::class),
@@ -186,6 +191,7 @@ class Application extends App implements IBootstrap
 			$c->get(IURLGenerator::class),
 			$c->get(TodayService::class),
 			$c->get(AccessControlService::class),
+			$c->get(WorkspaceAccessService::class),
 			$c->get(IUserSession::class),
 			$c->get(\OCA\CustomerCheck\Service\AppIconService::class),
 		));
@@ -194,6 +200,7 @@ class Application extends App implements IBootstrap
 			$c->get(IURLGenerator::class),
 			$c->get(CompanyService::class),
 			$c->get(AccessControlService::class),
+			$c->get(WorkspaceAccessService::class),
 			$c->get(\OCA\CustomerCheck\Service\AppIconService::class),
 		));
 		$context->registerService(PersonSearchProvider::class, fn ($c) => new PersonSearchProvider(
@@ -201,6 +208,7 @@ class Application extends App implements IBootstrap
 			$c->get(IURLGenerator::class),
 			$c->get(PersonService::class),
 			$c->get(AccessControlService::class),
+			$c->get(WorkspaceAccessService::class),
 			$c->get(\OCA\CustomerCheck\Service\AppIconService::class),
 		));
 		$context->registerService(DealSearchProvider::class, fn ($c) => new DealSearchProvider(
@@ -208,6 +216,7 @@ class Application extends App implements IBootstrap
 			$c->get(IURLGenerator::class),
 			$c->get(DealService::class),
 			$c->get(AccessControlService::class),
+			$c->get(WorkspaceAccessService::class),
 			$c->get(\OCA\CustomerCheck\Service\AppIconService::class),
 		));
 
@@ -244,6 +253,10 @@ class Application extends App implements IBootstrap
 			$c->get(\OCP\AppFramework\Utility\ITimeFactory::class),
 			$c->get(\OCA\CustomerCheck\Service\MailboxSyncService::class),
 		));
+		$context->registerService(\OCA\CustomerCheck\BackgroundJob\MailRetentionPurgeJob::class, fn ($c) => new \OCA\CustomerCheck\BackgroundJob\MailRetentionPurgeJob(
+			$c->get(\OCP\AppFramework\Utility\ITimeFactory::class),
+			$c->get(\OCA\CustomerCheck\Service\MailboxSyncService::class),
+		));
 		$context->registerService(\OCA\CustomerCheck\BackgroundJob\PersonaMaintenanceJob::class, fn ($c) => new \OCA\CustomerCheck\BackgroundJob\PersonaMaintenanceJob(
 			$c->get(\OCP\AppFramework\Utility\ITimeFactory::class),
 			$c->get(\OCA\CustomerCheck\Service\PersonaMaintenanceService::class),
@@ -275,6 +288,7 @@ class Application extends App implements IBootstrap
 			$c->get(ActivityService::class),
 			$c->get(TimelineService::class),
 			$c->get(NotificationService::class),
+			$c->get(\OCA\CustomerCheck\Db\CompanyMapper::class),
 			$c->get(FacadeProbeService::class),
 			$c->get(\OCP\IDBConnection::class),
 			$c->get(\OCP\AppFramework\Utility\ITimeFactory::class),
@@ -332,6 +346,7 @@ class Application extends App implements IBootstrap
 		));
 		$context->registerService(UserDeletedListener::class, fn ($c) => new UserDeletedListener(
 			$c->get(\OCA\CustomerCheck\Db\MobileSeatMapper::class),
+			$c->get(\OCP\IConfig::class),
 			$c->get(\Psr\Log\LoggerInterface::class),
 		));
 		$context->registerEventListener(UserDeletedEvent::class, UserDeletedListener::class);
@@ -339,9 +354,16 @@ class Application extends App implements IBootstrap
 
 	public function boot(IBootContext $context): void
 	{
+		// Token seeding must never block navigation registration — a write failure
+		// (read-only period, upgrade lock, etc.) previously swallowed the whole boot
+		// try/catch and hid CustomerCheck from every user, including Open mode.
+		try {
+			$this->getContainer()->get(SettingsService::class)->ensureTokensExist();
+		} catch (\Throwable) {
+		}
+
 		try {
 			$container = $this->getContainer();
-			$container->get(SettingsService::class)->ensureTokensExist();
 			$user = $container->get(IUserSession::class)->getUser();
 			if ($user === null) {
 				return;

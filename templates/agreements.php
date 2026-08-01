@@ -11,10 +11,13 @@ $kinds = ['license', 'partner', 'onetime'];
 $statuses = ['draft', 'active', 'expiring', 'expired', 'superseded', 'cancelled', 'completed'];
 $labels = $_['labels'] ?? null;
 $agreementsUrl = $urlGenerator->linkToRoute('customercheck.page.agreements');
+$canWrite = !empty($_['canWrite']);
 include __DIR__ . '/common/page-start.php';
 ?>
 <div class="crm-page-actions-source header-actions" hidden>
+	<?php if ($canWrite): ?>
 	<a class="crm-btn crm-btn--primary" href="<?php p($urlGenerator->linkToRoute('customercheck.page.agreementNew')); ?>"><?php p($l->t('New agreement')); ?></a>
+	<?php endif; ?>
 	<button type="button" class="crm-btn crm-btn--secondary" id="crm-agreements-filter-toggle" aria-expanded="<?php p($filterOpen ? 'true' : 'false'); ?>" aria-controls="crm-agreements-filter"><?php p($l->t('More filters')); ?></button>
 </div>
 <div class="crm-page-stack">
@@ -79,7 +82,9 @@ include __DIR__ . '/common/page-start.php';
 				<div class="crm-empty-state" role="status">
 					<h3 class="crm-empty-state__title"><?php p($l->t('No agreements yet')); ?></h3>
 					<p class="crm-empty-state__text"><?php p($l->t('Create one or import from CSV / ProjectCheck.')); ?></p>
+					<?php if (!empty($_['canWrite'])): ?>
 					<a class="crm-btn crm-btn--primary" href="<?php p($urlGenerator->linkToRoute('customercheck.page.agreementNew')); ?>"><?php p($l->t('New agreement')); ?></a>
+					<?php endif; ?>
 				</div>
 			<?php else: ?>
 			<div class="table-container crm-table--responsive">
@@ -97,7 +102,7 @@ include __DIR__ . '/common/page-start.php';
 					<tbody>
 					<?php foreach ($_['agreements'] as $a): ?>
 						<tr>
-							<td data-label="<?php p($l->t('Label')); ?>"><a href="<?php p($urlGenerator->linkToRoute('customercheck.page.agreementEdit', ['id' => $a['id']])); ?>"><?php p($a['label']); ?></a></td>
+							<td data-label="<?php p($l->t('Label')); ?>"><?php if ($canWrite): ?><a href="<?php p($urlGenerator->linkToRoute('customercheck.page.agreementEdit', ['id' => $a['id']])); ?>"><?php p($a['label']); ?></a><?php else: ?><?php p($a['label']); ?><?php endif; ?></td>
 							<td data-label="<?php p($l->t('Company')); ?>">
 								<?php
 								$crmCompanyLinkId = (int)($a['companyId'] ?? 0);
@@ -119,15 +124,19 @@ include __DIR__ . '/common/page-start.php';
 							?></td>
 							<td data-label="<?php p($l->t('Amount')); ?>"><?php p(number_format(($a['amountCents'] ?? 0)/100, 2)); ?> €</td>
 							<td data-label="<?php p($l->t('Actions')); ?>" class="actions-cell crm-table-actions-col">
+								<?php if ($canWrite): ?>
 								<div class="crm-table-actions">
 									<?php if (($a['kind'] ?? '') === 'partner'): ?>
-										<button type="button" class="crm-btn crm-btn--sm crm-btn--primary" data-crm-partner-session="<?php p($a['id']); ?>"><?php p($l->t('Mail & log hours')); ?></button>
+										<button type="button" class="crm-btn crm-btn--sm crm-btn--primary" data-crm-partner-session="<?php p($a['id']); ?>" data-company-id="<?php p((int)($a['companyId'] ?? 0)); ?>"><?php p($l->t('Mail & log hours')); ?></button>
 										<button type="button" class="crm-btn crm-btn--sm crm-btn--ghost" data-crm-log-hours="<?php p($a['id']); ?>"><?php p($l->t('Hours only')); ?></button>
 									<?php endif; ?>
 									<?php if (($a['kind'] ?? '') === 'license' && (!empty($a['salesLogId']) || !empty($a['keyFingerprint']))): ?>
-										<button type="button" class="crm-btn crm-btn--sm crm-btn--secondary" data-crm-delivery-pack="<?php p($a['id']); ?>"><?php p($l->t('Delivery pack')); ?></button>
+										<button type="button" class="crm-btn crm-btn--sm crm-btn--secondary" data-crm-delivery-pack="<?php p($a['id']); ?>" data-company-id="<?php p((int)($a['companyId'] ?? 0)); ?>"><?php p($l->t('Delivery pack')); ?></button>
 									<?php endif; ?>
 								</div>
+								<?php else: ?>
+									<span class="crm-muted" aria-hidden="true">—</span>
+								<?php endif; ?>
 							</td>
 						</tr>
 					<?php endforeach; ?>

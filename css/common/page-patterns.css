@@ -20,6 +20,26 @@
 	padding: var(--crm-space-6) var(--crm-space-5);
 }
 
+#app-content.crm-app .crm-access-denied {
+	text-align: center;
+}
+
+#app-content.crm-app .crm-access-denied__message {
+	margin: 0 0 var(--crm-space-3);
+	line-height: 1.45;
+}
+
+#app-content.crm-app .crm-access-denied__hint {
+	margin: 0 0 var(--crm-space-4);
+	color: var(--color-text-maxcontrast, #666);
+	font-size: 0.95rem;
+	line-height: 1.45;
+}
+
+#app-content.crm-app .crm-access-denied__actions {
+	margin: var(--crm-space-4) 0 0;
+}
+
 /* ── Page stack (vertical rhythm inside main) ───────────────── */
 #app-content.crm-app .crm-page-stack {
 	display: flex;

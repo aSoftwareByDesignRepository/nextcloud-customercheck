@@ -8,6 +8,7 @@ use OCA\CustomerCheck\Constants;
 use OCA\CustomerCheck\Db\AgreementMapper;
 use OCA\CustomerCheck\Db\CompanyMapper;
 use OCA\CustomerCheck\Db\DealMapper;
+use OCA\CustomerCheck\Support\TicketCompanyLink;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\IL10N;
 
@@ -85,17 +86,27 @@ class PulseService
 
 		$waiting = 0;
 		if ($this->facades->ticketcheckAvailable()) {
-			$waiting = PulseLogic::countWaiting(
-				array_map(static fn ($t) => [
+			$tcIndex = TicketCompanyLink::tcIndexForWorkspace($companies);
+			$companyIdsInWorkspace = [];
+			foreach ($companies as $c) {
+				$companyIdsInWorkspace[(int)$c->getId()] = true;
+			}
+			$inBook = [];
+			foreach ($this->facades->listWaitingTickets(50) as $ticket) {
+				if (!TicketCompanyLink::belongsToWorkspace($ticket, $tcIndex, $companyIdsInWorkspace)) {
+					continue;
+				}
+				$inBook[] = [
 					'waiting' => true,
-					'status' => (string)($t['status'] ?? 'waiting'),
-				], $this->facades->listWaitingTickets(50))
-			);
+					'status' => (string)($ticket['status'] ?? 'waiting'),
+				];
+			}
+			$waiting = PulseLogic::countWaiting($inBook);
 		}
 
 		$renewals30 = 0;
 		$attention = [];
-		foreach ($this->agreementMapper->findRenewalCandidates(2000, 0) as $a) {
+		foreach ($this->agreementMapper->findRenewalCandidates(2000, 0, $workspaceId) as $a) {
 			$co = null;
 			try {
 				$co = $this->companyMapper->findById((int)$a->getCompanyId());
@@ -126,15 +137,7 @@ class PulseService
 		}
 
 		$pipelineCents = 0;
-		foreach ($this->dealMapper->search(['openOnly' => true], 500) as $d) {
-			try {
-				$co = $this->companyMapper->findById((int)$d->getCompanyId());
-			} catch (\Throwable) {
-				continue;
-			}
-			if ((int)($co->getWorkspaceId() ?? 0) !== $workspaceId) {
-				continue;
-			}
+		foreach ($this->dealMapper->search(['openOnly' => true, 'workspaceId' => $workspaceId], 500) as $d) {
 			$pipelineCents += max(0, (int)$d->getValueCents());
 		}
 

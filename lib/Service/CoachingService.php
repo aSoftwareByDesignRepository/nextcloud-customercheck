@@ -9,6 +9,7 @@ use OCA\CustomerCheck\Exception\ValidationException;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\IDBConnection;
 use OCP\IL10N;
+use OCP\Lock\ILockingProvider;
 
 /** Team Coaching Board — product §13. */
 class CoachingService
@@ -25,6 +26,7 @@ class CoachingService
 		private readonly ITimeFactory $timeFactory,
 		private readonly IL10N $l10n,
 		private readonly \OCP\IUserManager $userManager,
+		private readonly ILockingProvider $locking,
 	) {
 	}
 
@@ -40,6 +42,14 @@ class CoachingService
 		$members = $this->ensureViewerIsMember($workspaceId, $userId, $isAppAdmin);
 		$today = $this->timeFactory->getDateTime();
 		$plans = $this->plans->listForWorkspace($workspaceId);
+		// One workspace chase pass — never N× myChase (Today embeds this board).
+		$chaseByOwner = $this->chase->chaseByOwnerForWorkspace($workspaceId, $today);
+		$promisesDue = $this->promises->dueSoon($workspaceId, $today, 0);
+		$oooActive = $this->oooCover->listActive($workspaceId, $today);
+		$missedByOwner = $this->missedCommitmentsByOwner($workspaceId, $today);
+		// Coverage gaps are display-only on Team (not StuckLogic). Compute once per
+		// owned company — never N× myAccounts (each scans the whole workspace).
+		$coverageGapsByOwner = $this->coverageGapCountsByOwner($workspaceId);
 		$rows = [];
 		$stuckCount = 0;
 		foreach ($members as $m) {
@@ -48,7 +58,7 @@ class CoachingService
 				continue;
 			}
 			// Stuck truth must use direct ownership — never inflate via OOO cover (§13.4).
-			$chase = $this->chase->myChase($uid, $workspaceId, $today, false);
+			$chase = $chaseByOwner[$uid] ?? [];
 			$quoteOld = 0;
 			$commitCents = 0;
 			foreach ($chase as $d) {
@@ -59,33 +69,27 @@ class CoachingService
 					$commitCents += max(0, (int)($d['valueCents'] ?? 0));
 				}
 			}
-			$promises = $this->promises->dueSoon($workspaceId, $today, 0);
 			$promiseOverdue = 0;
-			foreach ($promises as $p) {
+			foreach ($promisesDue as $p) {
 				if (($p['ownerUserId'] ?? '') === $uid) {
 					$promiseOverdue++;
 				}
 			}
-			$coverageGaps = 0;
+			$coverageGaps = (int)($coverageGapsByOwner[$uid] ?? 0);
 			$planStalled = false;
-			foreach ($this->coverage->myAccounts($uid, $workspaceId, false) as $acct) {
-				if (!empty($acct['gap'])) {
-					$coverageGaps++;
-				}
-			}
 			foreach ($plans as $plan) {
 				if (($plan['ownerUserId'] ?? '') === $uid && ($plan['health'] ?? '') === 'stalled') {
 					$planStalled = true;
 				}
 			}
-			$commitmentMissed = $this->countMissedCommitments($workspaceId, $uid, $today);
+			$commitmentMissed = (int)($missedByOwner[$uid] ?? 0);
 			$signals = [
 				'chaseCount' => count($chase),
 				'promiseOverdue' => $promiseOverdue,
 				'planStalled' => $planStalled,
 				'commitmentMissed' => $commitmentMissed,
 			];
-			$ooo = $this->activeOoo($workspaceId, $uid, $today);
+			$ooo = $this->oooRowForUser($oooActive, $uid);
 			$stuck = StuckLogic::isStuck($signals);
 			if ($stuck) {
 				$stuckCount++;
@@ -172,25 +176,33 @@ class CoachingService
 		$backup = trim((string)($data['backupUserId'] ?? ''));
 		$starts = new \DateTimeImmutable((string)($data['startsOn'] ?? ''));
 		$ends = new \DateTimeImmutable((string)($data['endsOn'] ?? ''));
-		$existing = $this->oooCover->listAll($workspaceId);
-		$err = OooLogic::validate($primary, $backup, $starts, $ends, $existing);
-		if ($err !== null) {
-			throw ValidationException::field($err, 'ooo', $this->l10n->t('OOO cover could not be saved.'));
+		// Serialize validate+insert per primary so two managers cannot land overlapping
+		// covers for the same person (TOCTOU on listAll → INSERT).
+		$lockKey = 'crm_ooo/' . $workspaceId . '/' . $primary;
+		$this->locking->acquireLock($lockKey, ILockingProvider::LOCK_EXCLUSIVE);
+		try {
+			$existing = $this->oooCover->listAll($workspaceId);
+			$err = OooLogic::validate($primary, $backup, $starts, $ends, $existing);
+			if ($err !== null) {
+				throw ValidationException::field($err, 'ooo', $this->l10n->t('OOO cover could not be saved.'));
+			}
+			$now = $this->timeFactory->getDateTime()->format('Y-m-d H:i:s');
+			$ins = $this->db->getQueryBuilder();
+			$ins->insert('crm_ooo')->values([
+				'workspace_id' => $ins->createNamedParameter($workspaceId),
+				'primary_user_id' => $ins->createNamedParameter($primary),
+				'backup_user_id' => $ins->createNamedParameter($backup),
+				'starts_on' => $ins->createNamedParameter($starts->format('Y-m-d')),
+				'ends_on' => $ins->createNamedParameter($ends->format('Y-m-d')),
+				'status' => $ins->createNamedParameter('scheduled'),
+				'created_by' => $ins->createNamedParameter($actor),
+				'created_at' => $ins->createNamedParameter($now),
+				'updated_at' => $ins->createNamedParameter($now),
+			])->executeStatement();
+			return ['id' => (int)$this->db->lastInsertId('crm_ooo'), 'primaryUserId' => $primary, 'backupUserId' => $backup];
+		} finally {
+			$this->locking->releaseLock($lockKey, ILockingProvider::LOCK_EXCLUSIVE);
 		}
-		$now = $this->timeFactory->getDateTime()->format('Y-m-d H:i:s');
-		$ins = $this->db->getQueryBuilder();
-		$ins->insert('crm_ooo')->values([
-			'workspace_id' => $ins->createNamedParameter($workspaceId),
-			'primary_user_id' => $ins->createNamedParameter($primary),
-			'backup_user_id' => $ins->createNamedParameter($backup),
-			'starts_on' => $ins->createNamedParameter($starts->format('Y-m-d')),
-			'ends_on' => $ins->createNamedParameter($ends->format('Y-m-d')),
-			'status' => $ins->createNamedParameter('scheduled'),
-			'created_by' => $ins->createNamedParameter($actor),
-			'created_at' => $ins->createNamedParameter($now),
-			'updated_at' => $ins->createNamedParameter($now),
-		])->executeStatement();
-		return ['id' => (int)$this->db->lastInsertId('crm_ooo'), 'primaryUserId' => $primary, 'backupUserId' => $backup];
 	}
 
 	/**
@@ -212,7 +224,7 @@ class CoachingService
 		$to = trim((string)($data['toUserId'] ?? $data['toUser'] ?? ''));
 		$confirm = trim((string)($data['confirmName'] ?? $data['confirmFromUserName'] ?? ''));
 		if ($from === '' || $to === '' || !hash_equals($from, $confirm)) {
-			throw ValidationException::field(Constants::ERR_VALIDATION, 'confirmName', $this->l10n->t('Type the from-user id exactly to confirm.'));
+			throw ValidationException::field(Constants::ERR_VALIDATION, 'confirmName', $this->l10n->t('Confirm reassignment from the selected colleague before continuing.'));
 		}
 		$dealIds = array_values(array_map('intval', $data['dealIds'] ?? []));
 		$companyIds = array_values(array_map('intval', $data['companyIds'] ?? []));
@@ -236,64 +248,83 @@ class CoachingService
 		}
 
 		$scopedDealIds = $this->filterDealIdsInWorkspace($workspaceId, $dealIds, $from);
+		$scopedCompanyIds = $this->filterOwnedRowsInWorkspace($workspaceId, 'crm_company', 'account_owner_user_id', $companyIds, $from);
+		$scopedPromiseIds = $this->filterOwnedRowsInWorkspace($workspaceId, 'crm_cust_prm', 'owner_user_id', $promiseIds, $from);
+		$scopedCommitmentIds = $this->filterOwnedRowsInWorkspace($workspaceId, 'crm_commit', 'owner_user_id', $commitmentIds, $from);
 		// Recompute total after ACL filter so cross-WS junk cannot pad the count.
-		$total = count($scopedDealIds) + count($companyIds) + count($promiseIds) + count($commitmentIds);
+		$total = count($scopedDealIds) + count($scopedCompanyIds) + count($scopedPromiseIds) + count($scopedCommitmentIds);
 		if ($total === 0 || $total > Constants::BULK_REASSIGN_MAX) {
 			throw ValidationException::field(Constants::ERR_BULK_TOO_LARGE, 'bulk', $this->l10n->t('Select 1–200 items to reassign.'));
 		}
 
 		$this->db->beginTransaction();
 		try {
+			$dealAffected = 0;
+			$companyAffected = 0;
+			$promiseAffected = 0;
+			$commitmentAffected = 0;
 			foreach ($scopedDealIds as $id) {
 				$qb = $this->db->getQueryBuilder();
-				$qb->update('crm_deal')
+				$dealAffected += $qb->update('crm_deal')
 					->set('owner_user_id', $qb->createNamedParameter($to))
 					->where($qb->expr()->eq('id', $qb->createNamedParameter($id)))
 					->andWhere($qb->expr()->eq('owner_user_id', $qb->createNamedParameter($from)))
 					->executeStatement();
 			}
-			foreach ($companyIds as $id) {
+			foreach ($scopedCompanyIds as $id) {
 				$qb = $this->db->getQueryBuilder();
-				$qb->update('crm_company')
+				$companyAffected += $qb->update('crm_company')
 					->set('account_owner_user_id', $qb->createNamedParameter($to))
 					->where($qb->expr()->eq('id', $qb->createNamedParameter($id)))
 					->andWhere($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId)))
 					->andWhere($qb->expr()->eq('account_owner_user_id', $qb->createNamedParameter($from)))
 					->executeStatement();
 			}
-			foreach ($promiseIds as $id) {
+			foreach ($scopedPromiseIds as $id) {
 				$qb = $this->db->getQueryBuilder();
-				$qb->update('crm_cust_prm')
+				$promiseAffected += $qb->update('crm_cust_prm')
 					->set('owner_user_id', $qb->createNamedParameter($to))
 					->where($qb->expr()->eq('id', $qb->createNamedParameter($id)))
 					->andWhere($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId)))
 					->andWhere($qb->expr()->eq('owner_user_id', $qb->createNamedParameter($from)))
 					->executeStatement();
 			}
-			foreach ($commitmentIds as $id) {
+			foreach ($scopedCommitmentIds as $id) {
 				$qb = $this->db->getQueryBuilder();
-				$qb->update('crm_commit')
+				$commitmentAffected += $qb->update('crm_commit')
 					->set('owner_user_id', $qb->createNamedParameter($to))
 					->where($qb->expr()->eq('id', $qb->createNamedParameter($id)))
 					->andWhere($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId)))
 					->andWhere($qb->expr()->eq('owner_user_id', $qb->createNamedParameter($from)))
 					->executeStatement();
+			}
+			$affected = $dealAffected + $companyAffected + $promiseAffected + $commitmentAffected;
+			// Concurrent claim/edit between filter and UPDATE must not report fake success.
+			if ($affected !== $total) {
+				$this->db->rollBack();
+				throw ValidationException::field(
+					Constants::ERR_CONFLICT_STALE,
+					'bulk',
+					$this->l10n->t('Ownership changed while reassigning. Refresh and try again.'),
+				);
 			}
 			$this->db->commit();
 		} catch (\Throwable $e) {
-			$this->db->rollBack();
+			if ($this->db->inTransaction()) {
+				$this->db->rollBack();
+			}
 			throw $e;
 		}
 		return [
-			'reassigned' => $total,
+			'reassigned' => $affected,
 			'fromUserId' => $from,
 			'toUserId' => $to,
 			'actor' => $actor,
 			'counts' => [
-				'deals' => count($scopedDealIds),
-				'accounts' => count($companyIds),
-				'promises' => count($promiseIds),
-				'commitments' => count($commitmentIds),
+				'deals' => $dealAffected,
+				'accounts' => $companyAffected,
+				'promises' => $promiseAffected,
+				'commitments' => $commitmentAffected,
 			],
 		];
 	}
@@ -328,6 +359,43 @@ class CoachingService
 		}
 		$r->closeCursor();
 		return $ids;
+	}
+
+	/**
+	 * Restrict explicit row ids to this workspace + from-owner.
+	 *
+	 * @param list<int> $ids
+	 * @return list<int>
+	 */
+	private function filterOwnedRowsInWorkspace(
+		int $workspaceId,
+		string $table,
+		string $ownerCol,
+		array $ids,
+		string $from,
+	): array {
+		$ids = array_values(array_unique(array_filter(array_map('intval', $ids), static fn (int $id): bool => $id > 0)));
+		if ($ids === [] || !$this->db->tableExists($table)) {
+			return [];
+		}
+		$qb = $this->db->getQueryBuilder();
+		$params = [];
+		foreach ($ids as $i => $id) {
+			$params[] = $qb->createNamedParameter($id, null, 'rid' . $i);
+		}
+		$qb->select('id')
+			->from($table)
+			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId)))
+			->andWhere($qb->expr()->eq($ownerCol, $qb->createNamedParameter($from)))
+			->andWhere($qb->expr()->in('id', $params));
+		$r = $qb->executeQuery();
+		$out = [];
+		while ($row = $r->fetch()) {
+			$out[] = (int)$row['id'];
+		}
+		$r->closeCursor();
+
+		return $out;
 	}
 
 	/** @return list<int>
@@ -380,34 +448,72 @@ class CoachingService
 		return $ids;
 	}
 
-	private function activeOoo(int $workspaceId, string $userId, \DateTimeInterface $today): ?array
+	/**
+	 * @param list<array<string, mixed>> $oooActive
+	 * @return array<string, mixed>|null
+	 */
+	private function oooRowForUser(array $oooActive, string $userId): ?array
 	{
-		foreach ($this->oooCover->listActive($workspaceId, $today) as $row) {
-			if ($row['primaryUserId'] === $userId) {
+		foreach ($oooActive as $row) {
+			if (($row['primaryUserId'] ?? '') === $userId) {
 				return $row + ['covering' => false];
 			}
-			if ($row['backupUserId'] === $userId) {
+			if (($row['backupUserId'] ?? '') === $userId) {
 				return $row + ['covering' => true, 'coveringPrimary' => $row['primaryUserId']];
 			}
 		}
+
 		return null;
+	}
+
+	/** @deprecated kept for callers; prefer {@see oooRowForUser} with a hoisted list */
+	private function activeOoo(int $workspaceId, string $userId, \DateTimeInterface $today): ?array
+	{
+		return $this->oooRowForUser($this->oooCover->listActive($workspaceId, $today), $userId);
+	}
+
+	/**
+	 * @return array<string, int> owner uid → gap count
+	 */
+	private function coverageGapCountsByOwner(int $workspaceId): array
+	{
+		$counts = [];
+		foreach ($this->coverage->gapCountsByAccountOwner($workspaceId) as $uid => $n) {
+			$counts[(string)$uid] = (int)$n;
+		}
+
+		return $counts;
+	}
+
+	/**
+	 * @return array<string, int>
+	 */
+	private function missedCommitmentsByOwner(int $workspaceId, \DateTimeInterface $today): array
+	{
+		if (!$this->db->tableExists('crm_commit')) {
+			return [];
+		}
+		$weekKey = BriefLogic::isoWeekKey((clone \DateTimeImmutable::createFromInterface($today))->modify('-7 days'));
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('owner_user_id')
+			->selectAlias($qb->func()->count('*'), 'cnt')
+			->from('crm_commit')
+			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId)))
+			->andWhere($qb->expr()->eq('week_key', $qb->createNamedParameter($weekKey)))
+			->andWhere($qb->expr()->eq('status', $qb->createNamedParameter('missed')))
+			->groupBy('owner_user_id');
+		$r = $qb->executeQuery();
+		$out = [];
+		while ($row = $r->fetch()) {
+			$out[(string)$row['owner_user_id']] = (int)$row['cnt'];
+		}
+		$r->closeCursor();
+
+		return $out;
 	}
 
 	private function countMissedCommitments(int $workspaceId, string $userId, \DateTimeInterface $today): int
 	{
-		if (!$this->db->tableExists('crm_commit')) {
-			return 0;
-		}
-		$weekKey = BriefLogic::isoWeekKey((clone \DateTimeImmutable::createFromInterface($today))->modify('-7 days'));
-		$qb = $this->db->getQueryBuilder();
-		$qb->select($qb->func()->count('*', 'cnt'))->from('crm_commit')
-			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId)))
-			->andWhere($qb->expr()->eq('week_key', $qb->createNamedParameter($weekKey)))
-			->andWhere($qb->expr()->eq('owner_user_id', $qb->createNamedParameter($userId)))
-			->andWhere($qb->expr()->eq('status', $qb->createNamedParameter('missed')));
-		$r = $qb->executeQuery();
-		$n = (int)$r->fetchOne();
-		$r->closeCursor();
-		return $n;
+		return (int)($this->missedCommitmentsByOwner($workspaceId, $today)[$userId] ?? 0);
 	}
 }

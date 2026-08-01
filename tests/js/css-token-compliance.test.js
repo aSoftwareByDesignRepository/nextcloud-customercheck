@@ -117,6 +117,7 @@ describe('CSS design-token compliance (no hardcoded colors)', () => {
     for (const token of [
       '--crm-bg-soft',
       '--crm-bg-card',
+      '--crm-surface-muted',
       '--crm-text',
       '--crm-muted',
       '--crm-border',
@@ -129,6 +130,22 @@ describe('CSS design-token compliance (no hardcoded colors)', () => {
     ]) {
       expect(bodyBlocks, `${token} must be defined inside body {}`).toContain(`${token}:`);
     }
+  });
+
+  it('legacy --space-* aliases map to design-system --crm-space-* (px grid)', () => {
+    const tokens = stripComments(readFileSync(join(cssRoot, 'common', 'tokens.css'), 'utf8'));
+    expect(tokens).toContain('--space-1: var(--crm-space-1)');
+    expect(tokens).toContain('--space-5: var(--crm-space-5)');
+    expect(tokens).toContain('--space-8: var(--crm-space-8)');
+    expect(tokens).toContain('--crm-nav-width: 280px');
+    // Must not redefine space-5 as the old rem/20px drift.
+    expect(tokens).not.toMatch(/--space-5:\s*1\.25rem/);
+    expect(tokens).not.toMatch(/--crm-space-5:\s*1\.25rem/);
+  });
+
+  it('modals use main text colour (not muted) for AA body contrast', () => {
+    const css = stripComments(readFileSync(join(cssRoot, 'common', 'components.css'), 'utf8'));
+    expect(css).toMatch(/\.modal,\s*\n?\s*\.crm-dialog\s*\{[\s\S]*?color:\s*var\(--crm-text/);
   });
 
   it('theme-bound tokens derive from Nextcloud --color-* variables', () => {

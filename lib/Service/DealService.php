@@ -7,13 +7,17 @@ namespace OCA\CustomerCheck\Service;
 use OCA\CustomerCheck\Constants;
 use OCA\CustomerCheck\Db\Deal;
 use OCA\CustomerCheck\Db\DealMapper;
+use OCA\CustomerCheck\Db\AgreementMapper;
+use OCA\CustomerCheck\Exception\ConflictException;
 use OCA\CustomerCheck\Exception\NotFoundException;
 use OCA\CustomerCheck\Exception\ValidationException;
+use OCA\CustomerCheck\Support\CompanyScopedFk;
 use OCA\CustomerCheck\Support\DateMath;
 use OCA\CustomerCheck\Support\OptimisticLock;
 use OCP\AppFramework\Db\DoesNotExistException;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\IConfig;
+use OCP\IDBConnection;
 use OCP\IL10N;
 
 /**
@@ -24,11 +28,15 @@ class DealService
 	public function __construct(
 		private readonly DealMapper $dealMapper,
 		private readonly CompanyService $companyService,
+		private readonly WorkspaceService $workspaces,
 		private readonly StageSequenceService $stageSequences,
 		private readonly TimelineService $timelineService,
+		private readonly FilesAccessService $filesAccess,
 		private readonly IConfig $config,
 		private readonly ITimeFactory $timeFactory,
 		private readonly IL10N $l10n,
+		private readonly IDBConnection $db,
+		private readonly AgreementMapper $agreementMapper,
 	) {
 	}
 
@@ -50,7 +58,7 @@ class DealService
 	public function create(array $data, string $actor): Deal
 	{
 		$companyId = (int)($data['companyId'] ?? 0);
-		$this->companyService->get($companyId);
+		$company = $this->companyService->get($companyId);
 
 		$title = trim((string)($data['title'] ?? ''));
 		if ($title === '') {
@@ -79,7 +87,9 @@ class DealService
 		}
 		$deal->setForecastBucket($bucket !== '' ? $bucket : null);
 		if ($stage === 'lead') {
-			$slaHours = max(1, (int)($data['leadSlaHours'] ?? Constants::LEAD_SLA_HOURS_DEFAULT));
+			$slaHours = isset($data['leadSlaHours'])
+				? max(1, (int)$data['leadSlaHours'])
+				: $this->leadSlaHoursForCompany($company);
 			$deal->setLeadSlaDueAt((clone $now)->modify('+' . $slaHours . ' hours'));
 		}
 		$deal->setStageChangedAt($now);
@@ -98,67 +108,211 @@ class DealService
 		return $deal;
 	}
 
-	public function update(int $id, array $data, string $actor): Deal
+	/**
+	 * Workspace lead SLA hours, falling back to the product default (§11.8).
+	 */
+	public function leadSlaHoursForCompany(\OCA\CustomerCheck\Db\Company $company): int
 	{
+		$wsId = (int)($company->getWorkspaceId() ?? 0);
+		if ($wsId <= 0) {
+			return Constants::LEAD_SLA_HOURS_DEFAULT;
+		}
+		return max(1, (int)$this->workspaces->getSettings($wsId)['leadSlaHours']);
+	}
+
+	public function update(int $id, array $data, string $actor, bool $canReassignOwners = false): Deal
+	{
+		$this->db->beginTransaction();
+		try {
+			if (!$this->dealMapper->lockRow($id)) {
+				throw new NotFoundException($this->l10n->t('This deal no longer exists.'));
+			}
+			$deal = $this->dealMapper->findById($id);
+			OptimisticLock::assertFresh($deal->getUpdatedAt(), isset($data['updatedAt']) ? (string)$data['updatedAt'] : null);
+
+			if (isset($data['title'])) {
+				$title = trim((string)$data['title']);
+				if ($title === '') {
+					throw ValidationException::field(Constants::ERR_VALIDATION, 'title', $this->l10n->t('Enter a deal title.'));
+				}
+				$deal->setTitle($title);
+			}
+			if (array_key_exists('valueCents', $data)) {
+				$deal->setValueCents(max(0, (int)$data['valueCents']));
+			}
+			if (array_key_exists('products', $data)) {
+				$deal->setProducts($data['products'] === null ? null : trim((string)$data['products']));
+			}
+			if (array_key_exists('expectedClose', $data)) {
+				$close = DateMath::parseStrictDate((string)($data['expectedClose'] ?? ''));
+				$deal->setExpectedClose($close !== null ? new \DateTime($close->format('Y-m-d')) : null);
+			}
+			if (array_key_exists('agreementId', $data)) {
+				if ($data['agreementId'] === null || (int)$data['agreementId'] <= 0) {
+					$deal->setAgreementId(null);
+				} else {
+					$agreementId = (int)$data['agreementId'];
+					try {
+						$agreement = $this->agreementMapper->findById($agreementId);
+					} catch (DoesNotExistException) {
+						throw ValidationException::field(
+							Constants::ERR_VALIDATION,
+							'agreementId',
+							$this->l10n->t('Pick an agreement that belongs to this company.'),
+						);
+					}
+					CompanyScopedFk::assertSameCompany(
+						(int)$deal->getCompanyId(),
+						(int)$agreement->getCompanyId(),
+						'agreementId',
+						$this->l10n,
+						$this->l10n->t('Pick an agreement that belongs to this company.'),
+					);
+					$deal->setAgreementId($agreementId);
+				}
+			}
+			if (array_key_exists('ownerUserId', $data)) {
+				$newOwner = trim((string)($data['ownerUserId'] ?? ''));
+				$current = trim((string)($deal->getOwnerUserId() ?? ''));
+				if ($newOwner !== $current) {
+					// Steal guard (§13.5 / §18.7): owner or manager/app-admin (bulk) may reassign;
+					// unowned deals may be assigned by any writer (CAS / claim()).
+					$mayReassign = $canReassignOwners || ($current !== '' && $current === $actor);
+					if ($current !== '' && !$mayReassign) {
+						throw ValidationException::field(
+							Constants::ERR_DEAL_OWNED,
+							'ownerUserId',
+							$this->l10n->t('This deal already has an owner. Ask them or a manager to reassign it.'),
+						);
+					}
+					if ($current === '') {
+						if ($newOwner !== '') {
+							$expectedStamp = $deal->getUpdatedAt();
+							if ($expectedStamp === null) {
+								throw new ConflictException(
+									$this->l10n->t('This deal changed. Reload and try again.'),
+								);
+							}
+							$nowStamp = $this->timeFactory->getDateTime();
+							$affected = $this->dealMapper->claimUnowned($id, $newOwner, $expectedStamp, $nowStamp);
+							if ($affected !== 1) {
+								throw new ConflictException(
+									$this->l10n->t('Someone else just claimed this deal. Reload and try again.'),
+									Constants::ERR_DEAL_OWNED,
+								);
+							}
+							$deal = $this->dealMapper->findById($id);
+						}
+					} else {
+						$deal->setOwnerUserId($newOwner !== '' ? $newOwner : null);
+					}
+				}
+			}
+			if (array_key_exists('forecastBucket', $data)) {
+				$bucket = $data['forecastBucket'] === null ? null : trim((string)$data['forecastBucket']);
+				if ($bucket !== null && $bucket !== '' && !in_array($bucket, Constants::FORECAST_BUCKETS, true)) {
+					throw ValidationException::field(Constants::ERR_VALIDATION, 'forecastBucket', $this->l10n->t('Unknown forecast bucket.'));
+				}
+				$deal->setForecastBucket($bucket !== '' ? $bucket : null);
+			}
+			if (array_key_exists('quoteSentOn', $data)) {
+				$qs = DateMath::parseStrictDate((string)($data['quoteSentOn'] ?? ''));
+				$deal->setQuoteSentOn($qs !== null ? new \DateTime($qs->format('Y-m-d')) : null);
+			}
+			if (array_key_exists('quoteFileId', $data)) {
+				if ($data['quoteFileId'] === null || $data['quoteFileId'] === '' || (int)$data['quoteFileId'] === 0) {
+					$deal->setQuoteFileId(null);
+				} else {
+					$fileId = (int)$data['quoteFileId'];
+					// Actor-scoped ACL — never trust a raw filecache id (§18.4 / Files).
+					$this->filesAccess->resolveReadableFile(
+						$actor,
+						$fileId,
+						Constants::QUOTE_FILE_ALLOWED_MIMES,
+						Constants::QUOTE_FILE_MAX_BYTES,
+					);
+					$deal->setQuoteFileId($fileId);
+				}
+			}
+			if (array_key_exists('nextActionSkipUntil', $data)) {
+				$skip = DateMath::parseStrictDate((string)($data['nextActionSkipUntil'] ?? ''));
+				$skipDt = $skip !== null ? new \DateTime($skip->format('Y-m-d')) : null;
+				if (!ChaseLogic::isSkipAllowed($skipDt, $this->timeFactory->getDateTime())) {
+					throw ValidationException::field(
+						Constants::ERR_SKIP_TOO_FAR,
+						'nextActionSkipUntil',
+						$this->l10n->t('Skip date cannot be more than 7 days ahead.'),
+					);
+				}
+				$deal->setNextActionSkipUntil($skipDt);
+			}
+			if (array_key_exists('leadFirstTouchAt', $data) && $data['leadFirstTouchAt']) {
+				$deal->setLeadFirstTouchAt($this->timeFactory->getDateTime());
+			}
+
+			$deal->setUpdatedAt($this->timeFactory->getDateTime());
+			$stored = $this->dealMapper->update($deal);
+			$this->db->commit();
+
+			return $stored;
+		} catch (\Throwable $e) {
+			$this->db->rollBack();
+			throw $e;
+		}
+	}
+
+	/**
+	 * Claim an unowned deal for the actor (§18.7). Idempotent if already owned by actor.
+	 * Uses a CAS update so two claimers cannot both win.
+	 */
+	public function claim(int $id, string $actor, ?string $updatedAt): Deal
+	{
+		$actor = trim($actor);
+		if ($actor === '') {
+			throw ValidationException::field(
+				Constants::ERR_VALIDATION,
+				'ownerUserId',
+				$this->l10n->t('You must be signed in to claim a deal.'),
+			);
+		}
+
 		$deal = $this->get($id);
-		OptimisticLock::assertFresh($deal->getUpdatedAt(), isset($data['updatedAt']) ? (string)$data['updatedAt'] : null);
+		OptimisticLock::assertFresh($deal->getUpdatedAt(), $updatedAt);
 
-		if (isset($data['title'])) {
-			$title = trim((string)$data['title']);
-			if ($title === '') {
-				throw ValidationException::field(Constants::ERR_VALIDATION, 'title', $this->l10n->t('Enter a deal title.'));
-			}
-			$deal->setTitle($title);
+		$current = trim((string)($deal->getOwnerUserId() ?? ''));
+		if ($current === $actor) {
+			return $deal;
 		}
-		if (array_key_exists('valueCents', $data)) {
-			$deal->setValueCents(max(0, (int)$data['valueCents']));
-		}
-		if (array_key_exists('products', $data)) {
-			$deal->setProducts($data['products'] === null ? null : trim((string)$data['products']));
-		}
-		if (array_key_exists('expectedClose', $data)) {
-			$close = DateMath::parseStrictDate((string)($data['expectedClose'] ?? ''));
-			$deal->setExpectedClose($close !== null ? new \DateTime($close->format('Y-m-d')) : null);
-		}
-		if (array_key_exists('agreementId', $data)) {
-			$deal->setAgreementId($data['agreementId'] === null ? null : (int)$data['agreementId']);
-		}
-		if (array_key_exists('ownerUserId', $data)) {
-			$owner = trim((string)($data['ownerUserId'] ?? ''));
-			$deal->setOwnerUserId($owner !== '' ? $owner : null);
-		}
-		if (array_key_exists('forecastBucket', $data)) {
-			$bucket = $data['forecastBucket'] === null ? null : trim((string)$data['forecastBucket']);
-			if ($bucket !== null && $bucket !== '' && !in_array($bucket, Constants::FORECAST_BUCKETS, true)) {
-				throw ValidationException::field(Constants::ERR_VALIDATION, 'forecastBucket', $this->l10n->t('Unknown forecast bucket.'));
-			}
-			$deal->setForecastBucket($bucket !== '' ? $bucket : null);
-		}
-		if (array_key_exists('quoteSentOn', $data)) {
-			$qs = DateMath::parseStrictDate((string)($data['quoteSentOn'] ?? ''));
-			$deal->setQuoteSentOn($qs !== null ? new \DateTime($qs->format('Y-m-d')) : null);
-		}
-		if (array_key_exists('quoteFileId', $data)) {
-			$deal->setQuoteFileId($data['quoteFileId'] === null ? null : (int)$data['quoteFileId']);
-		}
-		if (array_key_exists('nextActionSkipUntil', $data)) {
-			$skip = DateMath::parseStrictDate((string)($data['nextActionSkipUntil'] ?? ''));
-			$skipDt = $skip !== null ? new \DateTime($skip->format('Y-m-d')) : null;
-			if (!ChaseLogic::isSkipAllowed($skipDt, $this->timeFactory->getDateTime())) {
-				throw ValidationException::field(
-					Constants::ERR_SKIP_TOO_FAR,
-					'nextActionSkipUntil',
-					$this->l10n->t('Skip date cannot be more than 7 days ahead.'),
-				);
-			}
-			$deal->setNextActionSkipUntil($skipDt);
-		}
-		if (array_key_exists('leadFirstTouchAt', $data) && $data['leadFirstTouchAt']) {
-			$deal->setLeadFirstTouchAt($this->timeFactory->getDateTime());
+		if ($current !== '') {
+			throw ValidationException::field(
+				Constants::ERR_DEAL_OWNED,
+				'ownerUserId',
+				$this->l10n->t('This deal already has an owner. Ask them or a manager to reassign it.'),
+			);
 		}
 
-		$deal->setUpdatedAt($this->timeFactory->getDateTime());
-		return $this->dealMapper->update($deal);
+		$now = $this->timeFactory->getDateTime();
+		$expectedStamp = $deal->getUpdatedAt();
+		if ($expectedStamp === null) {
+			throw new ConflictException(
+				$this->l10n->t('This deal changed. Reload and try again.'),
+			);
+		}
+		$affected = $this->dealMapper->claimUnowned($id, $actor, $expectedStamp, $now);
+		if ($affected !== 1) {
+			throw new ConflictException(
+				$this->l10n->t('Someone else just claimed this deal. Reload and try again.'),
+				Constants::ERR_DEAL_OWNED,
+			);
+		}
+
+		$deal = $this->get($id);
+		$this->timelineService->append((int)$deal->getCompanyId(), 'deal.claimed', $actor, [
+			'dealId' => $id,
+			'ownerUserId' => $actor,
+		]);
+
+		return $deal;
 	}
 
 	/**
@@ -212,11 +366,38 @@ class DealService
 		}
 
 		$now = $this->timeFactory->getDateTime();
-		$deal->setStage($stage);
-		$deal->setStageChangedAt($now);
-		$deal->setUpdatedAt($now);
-		$deal = $this->dealMapper->update($deal);
+		$expectedUpdatedAt = $deal->getUpdatedAt();
+		if ($expectedUpdatedAt === null) {
+			throw new ConflictException(
+				$this->l10n->t('This deal changed. Reload and try again.'),
+			);
+		}
 
+		$lostReasonCode = $stage === 'lost' ? $deal->getLostReasonCode() : null;
+		$lostReasonDetail = $stage === 'lost' ? $deal->getLostReason() : null;
+		$wonReasonCode = null;
+		if ($stage === 'won' && isset($extra['wonReasonCode'])) {
+			$wonReasonCode = trim((string)$extra['wonReasonCode']);
+		}
+
+		// CAS on updated_at — two concurrent stage moves with the same optimistic
+		// token must not both win (sequences / terminal transitions).
+		$affected = $this->dealMapper->updateStageCas(
+			$id,
+			$expectedUpdatedAt,
+			$stage,
+			$now,
+			$lostReasonCode,
+			$lostReasonDetail,
+			$wonReasonCode,
+		);
+		if ($affected !== 1) {
+			throw new ConflictException(
+				$this->l10n->t('Someone else just updated this deal. Reload and try again.'),
+			);
+		}
+
+		$deal = $this->get($id);
 		$fired = $this->stageSequences->fireForStage($deal, $stage, $actor);
 		$this->timelineService->append((int)$deal->getCompanyId(), 'deal.stage', $actor, [
 			'dealId' => (int)$deal->getId(),

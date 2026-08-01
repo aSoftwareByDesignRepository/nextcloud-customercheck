@@ -88,4 +88,46 @@ final class EmailTouchServiceSimpleLogTest extends TestCase
 		$this->expectException(ValidationException::class);
 		$svc->createManual(1, ['personId' => 5, 'subject' => 'Hi'], 'admin');
 	}
+
+	public function testForeignPersonRejectedEvenWithAddresses(): void
+	{
+		$company = $this->createMock(CompanyService::class);
+		$company->method('get');
+
+		$person = new Person();
+		$person->setId(5);
+		$person->setCompanyId(99);
+		$person->setName('Eve');
+		$person->setEmail('eve@other.example');
+
+		$persons = $this->createMock(PersonService::class);
+		$persons->method('get')->with(5)->willReturn($person);
+
+		$mapper = $this->createMock(EmailTouchMapper::class);
+		$mapper->expects($this->never())->method('insert');
+
+		$l10n = $this->createMock(IL10N::class);
+		$l10n->method('t')->willReturnCallback(static fn (string $s) => $s);
+
+		$svc = new EmailTouchService(
+			$mapper,
+			$company,
+			$persons,
+			$this->createMock(TimelineService::class),
+			$this->createMock(ITimeFactory::class),
+			$l10n,
+		);
+
+		try {
+			$svc->createManual(1, [
+				'personId' => 5,
+				'subject' => 'Hi',
+				'fromAddr' => 'ae@crm.example',
+				'toAddr' => 'eve@other.example',
+			], 'admin');
+			$this->fail('foreign person must fail');
+		} catch (ValidationException $e) {
+			$this->assertArrayHasKey('personId', $e->getFields());
+		}
+	}
 }

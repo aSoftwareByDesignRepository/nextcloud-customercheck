@@ -89,6 +89,31 @@ trait WorkspaceScopedTrait
 	}
 
 	/**
+	 * Mutating gate: capability must hold on the **company's** workspace, never last-used.
+	 *
+	 * A multi-workspace member who is viewer in book A and manager in book B must not
+	 * mutate A's people/deals via last-used=B (product §3.3 / §21.1).
+	 *
+	 * @return array{uid: string, workspaceId: int, role: string, isAppAdmin: bool, ctx: array, company: Company}
+	 * @throws NotFoundException
+	 */
+	protected function requireCompanyCapability(int $companyId, string $capability, ?int $requestedWorkspaceId = null): array
+	{
+		$company = $this->companies->get($companyId);
+		$companyWsId = (int)($company->getWorkspaceId() ?? 0);
+		if ($companyWsId <= 0) {
+			throw new NotFoundException('Company not found.');
+		}
+		if ($requestedWorkspaceId !== null && $requestedWorkspaceId > 0 && $requestedWorkspaceId !== $companyWsId) {
+			throw new NotFoundException('Company not found.');
+		}
+		$ctx = $this->assertLoadedCompanyInWorkspace($company, $capability);
+		$ctx['company'] = $company;
+
+		return $ctx;
+	}
+
+	/**
 	 * Assert an already-loaded company is in the caller's workspace.
 	 *
 	 * @return array{uid: string, workspaceId: int, role: string, isAppAdmin: bool, ctx: array}

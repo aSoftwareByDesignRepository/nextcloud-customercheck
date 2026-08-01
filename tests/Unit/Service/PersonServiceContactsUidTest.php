@@ -140,6 +140,9 @@ final class PersonServiceContactsUidTest extends TestCase
 		$person->setName('Ada');
 		$person->setUpdatedAt(new \DateTime('2026-07-27T10:00:00+00:00'));
 		$this->mapper->method('findById')->with(9)->willReturn($person);
+		$this->companies->expects(self::once())->method('lockRow')->with(7);
+		$this->db->expects(self::once())->method('beginTransaction');
+		$this->db->expects(self::once())->method('commit');
 		$this->mapper->expects(self::once())->method('delete')->with($person);
 		$this->timeline->expects(self::once())->method('append');
 

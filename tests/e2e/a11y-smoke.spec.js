@@ -11,6 +11,12 @@ const pages = [
   '/apps/customercheck/money',
   '/apps/customercheck/activities',
   '/apps/customercheck/companies/new',
+  '/apps/customercheck/pulse',
+  '/apps/customercheck/team',
+  '/apps/customercheck/brief',
+  '/apps/customercheck/my-accounts',
+  '/apps/customercheck/mail-triage',
+  '/apps/customercheck/settings',
 ];
 
 for (const path of pages) {

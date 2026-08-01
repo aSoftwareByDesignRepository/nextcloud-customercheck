@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace OCA\CustomerCheck\Service;
 
 use OCA\CustomerCheck\Constants;
+use OCA\CustomerCheck\Exception\ConflictException;
+use OCA\CustomerCheck\Exception\NotFoundException;
 use OCA\CustomerCheck\Exception\ValidationException;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\IDBConnection;
 use OCP\IL10N;
+use OCP\Lock\ILockingProvider;
 
 /**
  * Weekly Brief + CEO commitments — product §10.
@@ -23,6 +26,7 @@ class BriefService
 		private readonly AgreementRenewalMoney $agreements,
 		private readonly ITimeFactory $timeFactory,
 		private readonly IL10N $l10n,
+		private readonly ILockingProvider $locking,
 	) {
 	}
 
@@ -133,52 +137,89 @@ class BriefService
 	 */
 	public function confirm(int $workspaceId, array $data, string $actor): array
 	{
-		$settings = $this->workspaces->getSettings($workspaceId);
-		$weekKey = (string)($data['weekKey'] ?? BriefLogic::isoWeekKey($this->timeFactory->getDateTime()));
-		$commits = $this->listCommitments($workspaceId, $weekKey);
-		$wip = 0;
-		foreach ($commits as $c) {
-			if ($c['status'] === 'committed' && !empty($c['countsWip'])) {
-				$wip++;
+		if ($workspaceId <= 0) {
+			throw new NotFoundException($this->l10n->t('Workspace not found.'));
+		}
+
+		$lockKey = 'crm_brief_wip/' . $workspaceId;
+		$this->locking->acquireLock($lockKey, ILockingProvider::LOCK_EXCLUSIVE);
+		try {
+			$settings = $this->workspaces->getSettings($workspaceId);
+			$weekKey = (string)($data['weekKey'] ?? BriefLogic::isoWeekKey($this->timeFactory->getDateTime()));
+			$commits = $this->listCommitments($workspaceId, $weekKey);
+			$wip = 0;
+			foreach ($commits as $c) {
+				if ($c['status'] === 'committed' && !empty($c['countsWip'])) {
+					$wip++;
+				}
 			}
-		}
-		if (!BriefLogic::canConfirm($wip, $settings['wipLimit'])) {
-			throw ValidationException::field(
-				Constants::ERR_WIP_FULL,
-				'wip',
-				$this->l10n->t('Weekly WIP limit reached. Finish or abandon a commitment first.'),
-			);
-		}
+			if (!BriefLogic::canConfirm($wip, $settings['wipLimit'])) {
+				throw ValidationException::field(
+					Constants::ERR_WIP_FULL,
+					'wip',
+					$this->l10n->t('Your week is full. Finish or drop a promise first.'),
+				);
+			}
 
-		$kind = (string)($data['kind'] ?? 'custom');
-		if (!in_array($kind, Constants::COMMIT_KINDS, true)) {
-			throw ValidationException::field(Constants::ERR_VALIDATION, 'kind', $this->l10n->t('Unknown commitment kind.'));
-		}
-		$title = trim((string)($data['title'] ?? ''));
-		if ($title === '') {
-			throw ValidationException::field(Constants::ERR_VALIDATION, 'title', $this->l10n->t('Enter a commitment title.'));
-		}
-		$owner = trim((string)($data['ownerUserId'] ?? $actor));
-		$now = $this->timeFactory->getDateTime()->format('Y-m-d H:i:s');
-		$ins = $this->db->getQueryBuilder();
-		$ins->insert('crm_commit')->values([
-			'workspace_id' => $ins->createNamedParameter($workspaceId),
-			'week_key' => $ins->createNamedParameter($weekKey),
-			'kind' => $ins->createNamedParameter($kind),
-			'title' => $ins->createNamedParameter($title),
-			'company_id' => $ins->createNamedParameter(isset($data['companyId']) ? (int)$data['companyId'] : null),
-			'owner_user_id' => $ins->createNamedParameter($owner),
-			'status' => $ins->createNamedParameter('committed'),
-			'due_on' => $ins->createNamedParameter($data['dueOn'] ?? null),
-			'carry_streak' => $ins->createNamedParameter(0),
-			'counts_wip' => $ins->createNamedParameter(1),
-			'created_by' => $ins->createNamedParameter($actor),
-			'created_at' => $ins->createNamedParameter($now),
-			'updated_at' => $ins->createNamedParameter($now),
-		])->executeStatement();
+			$kind = (string)($data['kind'] ?? 'custom');
+			if (!in_array($kind, Constants::COMMIT_KINDS, true)) {
+				throw ValidationException::field(Constants::ERR_VALIDATION, 'kind', $this->l10n->t('Unknown commitment kind.'));
+			}
+			$title = trim((string)($data['title'] ?? ''));
+			if ($title === '') {
+				throw ValidationException::field(Constants::ERR_VALIDATION, 'title', $this->l10n->t('Enter a commitment title.'));
+			}
+			$companyId = isset($data['companyId']) ? (int)$data['companyId'] : 0;
+			if ($companyId > 0) {
+				$this->assertCompanyInWorkspace($workspaceId, $companyId);
+			} else {
+				$companyId = 0;
+			}
+			$owner = trim((string)($data['ownerUserId'] ?? $actor));
+			$now = $this->timeFactory->getDateTime()->format('Y-m-d H:i:s');
+			$ins = $this->db->getQueryBuilder();
+			$ins->insert('crm_commit')->values([
+				'workspace_id' => $ins->createNamedParameter($workspaceId),
+				'week_key' => $ins->createNamedParameter($weekKey),
+				'kind' => $ins->createNamedParameter($kind),
+				'title' => $ins->createNamedParameter($title),
+				'company_id' => $ins->createNamedParameter($companyId > 0 ? $companyId : null),
+				'owner_user_id' => $ins->createNamedParameter($owner),
+				'status' => $ins->createNamedParameter('committed'),
+				'due_on' => $ins->createNamedParameter($data['dueOn'] ?? null),
+				'carry_streak' => $ins->createNamedParameter(0),
+				'counts_wip' => $ins->createNamedParameter(1),
+				'created_by' => $ins->createNamedParameter($actor),
+				'created_at' => $ins->createNamedParameter($now),
+				'updated_at' => $ins->createNamedParameter($now),
+			])->executeStatement();
 
-		$id = (int)$this->db->lastInsertId('crm_commit');
-		return ['id' => $id, 'status' => 'committed', 'weekKey' => $weekKey];
+			$id = (int)$this->db->lastInsertId('crm_commit');
+			return ['id' => $id, 'status' => 'committed', 'weekKey' => $weekKey];
+		} finally {
+			$this->locking->releaseLock($lockKey, ILockingProvider::LOCK_EXCLUSIVE);
+		}
+	}
+
+	/**
+	 * Fail closed when a commitment tries to attach a foreign-book company.
+	 */
+	private function assertCompanyInWorkspace(int $workspaceId, int $companyId): void
+	{
+		if (!$this->db->tableExists('crm_company')) {
+			throw new NotFoundException($this->l10n->t('This company is not in the current workspace.'));
+		}
+		$check = $this->db->getQueryBuilder();
+		$check->select('id')->from('crm_company')
+			->where($check->expr()->eq('id', $check->createNamedParameter($companyId)))
+			->andWhere($check->expr()->eq('workspace_id', $check->createNamedParameter($workspaceId)))
+			->setMaxResults(1);
+		$r = $check->executeQuery();
+		$row = $r->fetch();
+		$r->closeCursor();
+		if ($row === false) {
+			throw new NotFoundException($this->l10n->t('This company is not in the current workspace.'));
+		}
 	}
 
 	public function verify(
@@ -195,6 +236,15 @@ class BriefService
 		$carry = (int)$row['carry_streak'];
 		$owner = (string)($row['owner_user_id'] ?? '');
 		$role = WorkspaceCapability::normalizeRole($actorRole);
+
+		// Terminal rows are closed — re-verify would overwrite the audit trail.
+		if (!in_array($status, ['committed', 'carried', 'missed'], true)) {
+			throw ValidationException::field(
+				Constants::ERR_VALIDATION,
+				'id',
+				$this->l10n->t('This commitment is already closed. Reload the Brief.'),
+			);
+		}
 
 		// Members: limited verify — own commitments only; no manager_override (§3.2).
 		if ($role === 'member') {
@@ -243,10 +293,17 @@ class BriefService
 		if ($action === 'carry' && $new === 'carried') {
 			$qb->set('carry_streak', $qb->createNamedParameter($carry + 1));
 		}
-		$qb->where($qb->expr()->eq('id', $qb->createNamedParameter($id)))
+		// Status CAS: concurrent verifies with different outcomes cannot both win.
+		$affected = $qb->where($qb->expr()->eq('id', $qb->createNamedParameter($id)))
 			->andWhere($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId)))
+			->andWhere($qb->expr()->eq('status', $qb->createNamedParameter($status)))
 			->executeStatement();
-		unset($actor, $status);
+		if ($affected !== 1) {
+			throw new ConflictException(
+				$this->l10n->t('Someone else just updated this commitment. Reload and try again.'),
+			);
+		}
+		unset($actor);
 	}
 
 	/** @return array<string, mixed> */

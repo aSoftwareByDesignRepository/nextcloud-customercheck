@@ -66,7 +66,7 @@ Kein Salesforce. Buchungen bleiben in ProjectCheck, InvoiceCheck, TicketCheck, F
 - **Barrierefreiheit** — WCAG 2.1 AA; responsiv ab 320 px · DE + EN
 - **Web frei (AGPL)** — Companion-Sitze sperren die Web-App nie
 	]]></description>
-	<version>1.5.17</version>
+	<version>1.5.48</version>
 	<licence>AGPL-3.0-or-later</licence>
 	<author mail="info@software-by-design.de" homepage="https://nextcloud.software-by-design.de">Alexander Mäule</author>
 	<namespace>CustomerCheck</namespace>
@@ -85,10 +85,12 @@ Kein Salesforce. Buchungen bleiben in ProjectCheck, InvoiceCheck, TicketCheck, F
 		<job>OCA\CustomerCheck\BackgroundJob\InvoicePaidPollJob</job>
 		<job>OCA\CustomerCheck\BackgroundJob\AgreementStatusRecomputeJob</job>
 		<job>OCA\CustomerCheck\BackgroundJob\MailboxSyncJob</job>
+		<job>OCA\CustomerCheck\BackgroundJob\MailRetentionPurgeJob</job>
 		<job>OCA\CustomerCheck\BackgroundJob\PersonaMaintenanceJob</job>
 	</background-jobs>
 	<commands>
 		<command>OCA\CustomerCheck\Command\UpgradeBackupCommand</command>
+		<command>OCA\CustomerCheck\Command\SeedPlayReviewerCommand</command>
 	</commands>
 	<repair-steps>
 		<install>

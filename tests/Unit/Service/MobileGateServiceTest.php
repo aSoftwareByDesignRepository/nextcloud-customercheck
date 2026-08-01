@@ -61,7 +61,8 @@ final class MobileGateServiceTest extends TestCase
 
 		$this->assertSame('customercheck', $payload['appId']);
 		$this->assertSame('1.0.7', $payload['serverVersion']);
-		$this->assertSame(1, $payload['companionApi']);
+		$this->assertSame(2, $payload['companionApi']);
+		$this->assertSame(MobileGateService::COMPANION_API_VERSION, $payload['companionApi']);
 		$this->assertSame(MobileGateService::MIN_APP_VERSION, $payload['minAppVersion']);
 		$this->assertSame(MobileGateService::MIN_APP_VERSION, $payload['minApp']);
 		$this->assertNull($payload['licensing']);
@@ -97,6 +98,8 @@ final class MobileGateServiceTest extends TestCase
 		$this->assertTrue($caps['deals']);
 		$this->assertTrue($caps['agreements']);
 		$this->assertTrue($caps['push'], 'P2 advertises push capability');
+		$this->assertTrue($caps['workspaces'], 'API v2 advertises workspaces capability');
+		$this->assertSame(2, $caps['customercheck.companion.min']);
 		$this->assertTrue($caps['projectcheck']);
 		$this->assertFalse($caps['invoicecheck']);
 		$this->assertTrue($caps['ticketcheck']);
