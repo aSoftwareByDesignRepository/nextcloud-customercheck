@@ -19,6 +19,7 @@ include __DIR__ . '/common/page-start.php';
 		</header>
 		<div class="crm-card__body">
 			<form id="crm-agreement-form" class="crm-form" data-mode="<?php p($mode); ?>" data-id="<?php p($a ? $a->getId() : ''); ?>" data-updated-at="<?php p($a && $a->getUpdatedAt() ? $a->getUpdatedAt()->format(\DateTimeInterface::ATOM) : ''); ?>" novalidate>
+				<p class="crm-callout" role="status"><?php p($l->t('Company, label, and kind are enough to start. Open More for dates and amounts.')); ?></p>
 				<div class="form-group">
 					<label class="form-label" for="crm-ag-company"><?php p($l->t('Company')); ?></label>
 					<select id="crm-ag-company" name="companyId" class="crm-input form-select" required <?php if ($mode === 'edit'): ?>disabled<?php endif; ?>>
@@ -42,6 +43,8 @@ include __DIR__ . '/common/page-start.php';
 						<?php endforeach; ?>
 					</select>
 				</div>
+				<details class="crm-advanced" id="crm-agreement-advanced"<?php if ($mode === 'edit'): ?> open<?php endif; ?>>
+					<summary><?php p($l->t('More — product, dates, amount')); ?></summary>
 				<div class="form-group">
 					<label class="form-label" for="crm-ag-product"><?php p($l->t('Product code')); ?></label>
 					<select id="crm-ag-product" name="productCode" class="crm-input form-select" required>
@@ -86,6 +89,7 @@ include __DIR__ . '/common/page-start.php';
 						<?php endforeach; ?>
 					</select>
 				</div>
+				</details>
 				<div class="crm-form-actions">
 					<button type="submit" class="crm-btn crm-btn--primary crm-btn--lg"><?php p($l->t('Save')); ?></button>
 					<a class="crm-btn crm-btn--secondary" href="<?php p($cancelHref); ?>"><?php p($l->t('Back')); ?></a>

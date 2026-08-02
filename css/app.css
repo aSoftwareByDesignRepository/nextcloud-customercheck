@@ -425,6 +425,10 @@
 	padding: var(--crm-space-5);
 	box-shadow: var(--crm-shadow-sm);
 }
+.crm-card.crm-card--focus {
+	outline: 2px solid var(--color-primary-element, #0082c9);
+	outline-offset: 2px;
+}
 #app-content.crm-app .crm-card:has(.crm-card__header),
 #app-content.crm-app .crm-card:has(.crm-card__body) {
 	padding: 0;
@@ -1735,6 +1739,40 @@ dialog.entitlement-explain-dialog::backdrop {
 }
 #app-content.crm-app .crm-kanban__card-owner {
 	font-size: 0.85rem;
+	display: inline-flex;
+	align-items: center;
+	gap: 0.35rem;
+}
+#app-content.crm-app .crm-kanban__card-company {
+	color: var(--color-primary-element, #0082c9);
+	text-decoration: none;
+	font-size: 0.9rem;
+	line-height: 1.3;
+}
+#app-content.crm-app .crm-kanban__card-company:hover,
+#app-content.crm-app .crm-kanban__card-company:focus-visible {
+	text-decoration: underline;
+	outline: 2px solid var(--color-primary-element, #0082c9);
+	outline-offset: 2px;
+}
+#app-content.crm-app .crm-avatar {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.75rem;
+	height: 1.75rem;
+	min-width: 1.75rem;
+	border-radius: 50%;
+	background: var(--color-primary-element-light, #e6f3fa);
+	color: var(--color-primary-element-text, #00639a);
+	font-size: 0.7rem;
+	font-weight: 700;
+	letter-spacing: 0.02em;
+	flex-shrink: 0;
+}
+#app-content.crm-app .crm-kanban__card-due {
+	font-size: 0.85rem;
+	color: var(--color-text-maxcontrast, #666);
 }
 #app-content.crm-app .crm-owner {
 	font-weight: 600;
@@ -2691,10 +2729,35 @@ dialog.entitlement-explain-dialog::backdrop {
 	gap: var(--crm-space-4, 1rem);
 	min-width: 0;
 }
-#app-content.crm-app .crm-persona-mount > .crm-card,
-#app-content.crm-app .crm-persona-mount > .crm-quick-filters {
-	margin: 0;
+#app-content.crm-app .crm-review-primary {
+	display: flex;
+	flex-direction: column;
+	gap: var(--crm-space-3, 0.75rem);
+	min-width: min(100%, 22rem);
 }
+#app-content.crm-app .crm-review-primary__actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--crm-space-2, 0.5rem);
+}
+#app-content.crm-app .crm-review-suggest-chip {
+	margin: 0 0 var(--crm-space-2, 0.5rem);
+}
+#app-content.crm-app .crm-review-more,
+#app-content.crm-app .crm-review-assign .crm-advanced {
+	margin-top: var(--crm-space-2, 0.5rem);
+}
+#app-content.crm-app .crm-conflict-manual {
+	margin-top: var(--crm-space-2, 0.5rem);
+}
+#app-content.crm-app #crm-emails > details > summary {
+	list-style: none;
+	cursor: pointer;
+}
+#app-content.crm-app #crm-emails > details > summary::-webkit-details-marker {
+	display: none;
+}
+
 @media (prefers-reduced-motion: no-preference) {
 	#app-content.crm-app .crm-skeleton[aria-busy="true"] {
 		animation: crm-skeleton-shimmer 1.4s ease-in-out infinite;
@@ -2710,11 +2773,22 @@ dialog.entitlement-explain-dialog::backdrop {
 	}
 }
 
+/*
+ * Muted body copy — class was used widely without a color rule, so some
+ * status lines (e.g. pipeline forecast disclaimer) inherited inverse/white
+ * ink and failed WCAG 2.1 AA contrast on light shells.
+ */
+#app-content.crm-app .crm-muted,
+#content.app-customercheck .crm-muted {
+	color: var(--crm-muted, var(--color-text-maxcontrast, #4d4d4d));
+}
+
 #app-content.crm-app #crm-forecast-disclaimer {
 	margin: 0 0 var(--crm-space-3, 0.75rem);
 	font-size: var(--crm-font-size-sm, 0.875rem);
 	line-height: 1.4;
 	max-width: 42rem;
+	color: var(--crm-muted, var(--color-text-maxcontrast, #4d4d4d));
 }
 
 /* ── Quick start how-tos (DutyCheck-style, dismissible) ─────── */

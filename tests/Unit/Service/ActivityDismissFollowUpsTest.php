@@ -71,6 +71,8 @@ final class ActivityDismissFollowUpsTest extends TestCase
 		$result = $this->service->dismissRemainingFollowUps(42, 'alice');
 		$this->assertSame(4, $result['dismissed']);
 		$this->assertSame([1, 2, 5, 6], $casIds);
+		$this->assertContains(5, $casIds, 'sequence_contacted must be dismissed');
+		$this->assertContains(6, $casIds, 'sequence_negotiation must be dismissed');
 	}
 
 	public function testDismissSkipsCasMissWithoutCounting(): void

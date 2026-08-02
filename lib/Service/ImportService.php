@@ -27,7 +27,7 @@ class ImportService
 {
 	/** @var list<string> */
 	public const CSV_COLUMNS = [
-		'customerId', 'companyName', 'contactName', 'email',
+		'customerId', 'companyName', 'contactName', 'email', 'country',
 		'productCode',
 		'mobileSeats', 'terminalDevices', 'validUntil', 'invoiceId',
 		'amountEur', 'paidAt', 'keyIssuedAt', 'renewalDue', 'notes',
@@ -47,6 +47,8 @@ class ImportService
 		private readonly IDBConnection $db,
 		private readonly ITimeFactory $timeFactory,
 		private readonly IL10N $l10n,
+		private readonly ?ReviewService $review = null,
+		private readonly ?ValueMapService $valueMaps = null,
 	) {
 	}
 
@@ -142,6 +144,17 @@ class ImportService
 			if ($action === 'needs_decision') {
 				$summary['skipped']++;
 				$summary['errors'][] = ['index' => $index, 'reason' => Constants::ERR_IMPORT_AMBIGUOUS];
+				$name = trim((string)($proposal['row']['companyName'] ?? ''));
+				if ($name !== '' && $this->review !== null && $workspaceId > 0) {
+					try {
+						$this->review->enqueueImportAnomaly($workspaceId, 'company_name', $name, [
+							'importIndex' => $index,
+							'source' => (string)($scan['source'] ?? 'csv'),
+						]);
+					} catch (\Throwable) {
+						// Never fail the import apply on Review enqueue.
+					}
+				}
 				continue;
 			}
 			if ($action === 'skip') {
@@ -158,15 +171,29 @@ class ImportService
 			try {
 				$this->db->beginTransaction();
 				$companyId = null;
+				$countryAnomaly = null;
 				if ($action === 'create') {
-					$company = $this->companies->create([
+					$createInput = [
 						'name' => (string)($row['companyName'] ?? $row['name'] ?? 'Imported'),
 						'slug' => (string)($proposal['match']['suggestedSlug'] ?? ''),
 						'status' => 'active',
 						'lang' => 'de',
 						'notes' => isset($row['notes']) ? (string)$row['notes'] : null,
 						'workspaceId' => $workspaceId,
-					], $actor);
+					];
+					$rawCountry = trim((string)($row['country'] ?? ''));
+					if ($rawCountry !== '') {
+						$mapped = $this->valueMaps !== null
+							? $this->valueMaps->resolve($workspaceId, 'country', $rawCountry)
+							: ValueMapLogic::builtinCountryCanonical($rawCountry);
+						if ($mapped !== null && ValueMapLogic::isValidIsoCountry($mapped)) {
+							$createInput['country'] = $mapped;
+						} else {
+							// Unmapped vocabulary → Review import_anomaly (GNQ §7); still create the company.
+							$countryAnomaly = $rawCountry;
+						}
+					}
+					$company = $this->companies->create($createInput, $actor);
 					$companyId = (int)$company->getId();
 					$summary['created']++;
 					$this->maybeCreatePerson($companyId, $row, $actor, $now);
@@ -214,6 +241,18 @@ class ImportService
 					'index' => $index,
 				]);
 				$this->db->commit();
+
+				if ($countryAnomaly !== null && $this->review !== null && $workspaceId > 0) {
+					try {
+						$this->review->enqueueImportAnomaly($workspaceId, 'country', $countryAnomaly, [
+							'importIndex' => $index,
+							'source' => (string)($scan['source'] ?? 'csv'),
+							'companyId' => $companyId,
+						]);
+					} catch (\Throwable) {
+						// Never fail the import apply on Review enqueue.
+					}
+				}
 			} catch (\Throwable $e) {
 				$this->db->rollBack();
 				$summary['errors'][] = [
@@ -455,6 +494,7 @@ class ImportService
 			'companyName' => trim($row['companyName'] ?? ''),
 			'contactName' => trim($row['contactName'] ?? ''),
 			'email' => mb_strtolower(trim($row['email'] ?? '')),
+			'country' => trim($row['country'] ?? ''),
 			'product' => mb_strtolower(trim($row['product'] ?? $row['productCode'] ?? '')),
 			'productCode' => mb_strtolower(trim($row['productCode'] ?? $row['product'] ?? '')),
 			'mobileSeats' => (int)($row['mobileSeats'] ?? 0),

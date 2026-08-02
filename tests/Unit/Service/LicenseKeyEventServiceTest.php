@@ -148,4 +148,91 @@ class LicenseKeyEventServiceTest extends TestCase
 		$this->assertSame('skip', $result['action']);
 		$this->assertSame(7, $result['agreementId']);
 	}
+
+	/**
+	 * InvoiceCheck (IC2) must map to CRM product `ic`, never InventoryCheck `iv`.
+	 *
+	 * @dataProvider invoiceCheckProductAliases
+	 */
+	public function testInvoiceCheckMapsToIcNotIv(string $productAlias): void
+	{
+		$company = new Company();
+		$company->setId(4);
+		$company->setSlug('acme-gmbh');
+		$company->setName('Acme GmbH');
+		$company->setWorkspaceId(3);
+
+		$agreement = new Agreement();
+		$agreement->setId(22);
+		$agreement->setCompanyId(4);
+
+		$this->agreements->method('findBySalesLogId')->willReturn(null);
+		$this->companies->method('findBySlug')->willReturn($company);
+		$this->agreementService->expects($this->once())->method('create')->with(
+			$this->callback(static function (array $input): bool {
+				return ($input['productCode'] ?? '') === 'ic';
+			}),
+			'system',
+		)->willReturn($agreement);
+		$this->notifications->method('notifyWorkspaceUsers');
+
+		$result = $this->service->handle([
+			'salesLogId' => 9,
+			'customerId' => 'acme-gmbh',
+			'product' => $productAlias,
+			'companyName' => 'Acme GmbH',
+			'fingerprint' => 'IC2.abc',
+			'validUntil' => '2027-07-25',
+			'limits' => ['mobileSeats' => 5],
+			'amountEurCents' => 3000,
+		]);
+
+		$this->assertSame('draft', $result['action']);
+		$this->assertSame(22, $result['agreementId']);
+	}
+
+	/** @return list<array{0: string}> */
+	public static function invoiceCheckProductAliases(): array
+	{
+		return [
+			['invoicecheck'],
+			['ic'],
+			['ic2'],
+			['IC2'],
+		];
+	}
+
+	public function testInventoryCheckMapsToIvNotIc(): void
+	{
+		$company = new Company();
+		$company->setId(4);
+		$company->setSlug('acme-gmbh');
+		$company->setName('Acme GmbH');
+		$company->setWorkspaceId(3);
+
+		$agreement = new Agreement();
+		$agreement->setId(23);
+		$agreement->setCompanyId(4);
+
+		$this->agreements->method('findBySalesLogId')->willReturn(null);
+		$this->companies->method('findBySlug')->willReturn($company);
+		$this->agreementService->expects($this->once())->method('create')->with(
+			$this->callback(static function (array $input): bool {
+				return ($input['productCode'] ?? '') === 'iv';
+			}),
+			'system',
+		)->willReturn($agreement);
+		$this->notifications->method('notifyWorkspaceUsers');
+
+		$result = $this->service->handle([
+			'salesLogId' => 10,
+			'customerId' => 'acme-gmbh',
+			'product' => 'inventorycheck',
+			'fingerprint' => 'IV2.abc',
+			'validUntil' => '2027-07-25',
+			'limits' => ['mobileSeats' => 5, 'terminalDevices' => 1],
+		]);
+
+		$this->assertSame('draft', $result['action']);
+	}
 }

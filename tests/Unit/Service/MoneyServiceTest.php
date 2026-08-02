@@ -218,4 +218,86 @@ final class MoneyServiceTest extends TestCase
 		$this->assertSame(2, $out['groups']['overdue'][0]['agreementId']);
 		$this->assertSame(9, $out['groups']['overdue'][0]['companyId']);
 	}
+
+	public function testIcOverdueFeatureDetectsAgingNullSafe(): void
+	{
+		$agreements = $this->createMock(AgreementMapper::class);
+		$agreements->method('search')->willReturn([]);
+		$agreements->method('findByInvoiceRef')->willReturn([]);
+
+		$company = new Company();
+		$company->setId(9);
+		$company->setName('Acme');
+		$company->setPcCustomerId(44);
+		$company->setWorkspaceId(1);
+		$companies = $this->createMock(CompanyMapper::class);
+		$companies->method('search')->willReturn([$company]);
+		$companies->method('findById')->willReturn($company);
+		$companies->method('findByPcCustomerId')->with(44)->willReturn($company);
+
+		$facades = $this->createMock(FacadeProbeService::class);
+		$facades->method('invoicecheckAvailable')->willReturn(true);
+		// v2-style payload without aging keys — must stay null, never invent.
+		$facades->method('listOverdueInvoices')->willReturn([[
+			'icInvoiceId' => 100,
+			'invoiceRef' => 'INV-V2',
+			'grossTotalCents' => 5000,
+			'paidTotalCents' => 0,
+			'pcCustomerId' => 44,
+			'dueDate' => '2026-01-01',
+		]]);
+
+		$time = $this->createMock(ITimeFactory::class);
+		$time->method('getDateTime')->willReturn(new \DateTime('2026-07-25'));
+
+		$svc = new MoneyService($agreements, $companies, $facades, $time);
+		$out = $svc->overview(50, 'overdue', 1);
+		$this->assertCount(1, $out['groups']['overdue']);
+		$this->assertNull($out['groups']['overdue'][0]['agingBucket']);
+		$this->assertNull($out['groups']['overdue'][0]['daysPastDue']);
+	}
+
+	public function testIcOverduePassesFacadeV3AgingWhenPresent(): void
+	{
+		$agreements = $this->createMock(AgreementMapper::class);
+		$agreements->method('search')->willReturn([]);
+		$agreements->method('findByInvoiceRef')->willReturn([]);
+
+		$company = new Company();
+		$company->setId(9);
+		$company->setName('Acme');
+		$company->setPcCustomerId(44);
+		$company->setWorkspaceId(1);
+		$companies = $this->createMock(CompanyMapper::class);
+		$companies->method('search')->willReturn([$company]);
+		$companies->method('findById')->willReturn($company);
+		$companies->method('findByPcCustomerId')->with(44)->willReturn($company);
+
+		$facades = $this->createMock(FacadeProbeService::class);
+		$facades->method('invoicecheckAvailable')->willReturn(true);
+		$facades->method('listOverdueInvoices')->willReturn([[
+			'icInvoiceId' => 101,
+			'invoiceRef' => 'INV-V3',
+			'grossTotalCents' => 11900,
+			'paidTotalCents' => 0,
+			'remainingCents' => 11900,
+			'pcCustomerId' => 44,
+			'dueDate' => '2026-01-01',
+			'agingBucket' => '90+',
+			'daysPastDue' => 205,
+			'writtenOff' => false,
+			'facadeVersion' => 3,
+		]]);
+
+		$time = $this->createMock(ITimeFactory::class);
+		$time->method('getDateTime')->willReturn(new \DateTime('2026-07-25'));
+
+		$svc = new MoneyService($agreements, $companies, $facades, $time);
+		$out = $svc->overview(50, 'overdue', 1);
+		$row = $out['groups']['overdue'][0];
+		$this->assertSame('90+', $row['agingBucket']);
+		$this->assertSame(205, $row['daysPastDue']);
+		$this->assertSame(11900, $row['amountCents']);
+		$this->assertSame(11900, $row['remainingCents']);
+	}
 }

@@ -10,10 +10,12 @@ Part of the Check app family by [Software by Design](https://nextcloud.software-
 ## Features
 
 - **Workspaces** — circles of responsibility with roles (viewer/member/manager); cross-workspace access returns 404
-- **Today Command Board** — chase, commitments, KAM touches, promises, renewals, unmatched mail, team stuck
+- **Today Command Board** — chase, commitments, KAM touches, promises, renewals, Review & Conflicts chips, team stuck
+- **Universal Review** — unmatched shared mail plus opt-in Contacts / Files / Calendar / Tasks / import anomalies
+- **Edit Conflicts** — three-way queue with reason for Company / Person / Deal / Agreement
 - **Business Pulse** — twelve book-health questions; unbilled never fakes €0 (`honesty_blocked`)
 - **Weekly Brief** — WIP-limited CEO commitments + cash calendar that excludes pipeline
-- **My Chase / Pipeline** — quote age, loss codes, forecast labels (not cash), contacted/negotiation/won sequences
+- **My Chase / Pipeline** — quote age, loss codes, forecast labels (not cash), kanban period chips, contacted/negotiation/won sequences
 - **Coverage & My Accounts** — buying roles, next touch, customer promises, prepare-meeting pack
 - **Team Coaching** — stuck board, OOO cover (never steals ownership), bulk reassign
 - **Shared mailbox** — workspace IMAP index with unavoidable disclosure; personal Mail stays Private
@@ -80,12 +82,14 @@ bash scripts/check-custom-apps-db.sh --gate=full --strict-warnings --app=custome
 php scripts/check-repair-step-di.php --app=customercheck
 ```
 
-## Product bible status (v1.5.22)
+## Product bible status (v1.6.9)
 
 Implements `planning/app-ideas/customercheck/CUSTOMERCHECK-PRODUCT.md` including workspaces,
 Pulse/Brief/Chase/Coverage/Team/Strategy, shared mail sync+send with Private-to-you badges,
 Brief done-evidence gate, Digest v2 Brief deep-links, Circles roll-call, OOO/escalation
-maintenance jobs, and workspace-scoped money (no cross-WS € blend).
+maintenance jobs, workspace-scoped money (no cross-WS € blend), Universal Review (DSGVO-gated
+sources including import anomalies), edit-conflict NC notifications, and Bachus progressive UX
+(Review chips / Conflicts plain language / first-class Review sources).
 
 ## License
 

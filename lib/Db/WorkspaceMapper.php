@@ -29,6 +29,27 @@ class WorkspaceMapper extends QBMapper
 		return $this->findEntity($qb);
 	}
 
+	/**
+	 * Write-lock the workspace row. Callers MUST already be inside a DB transaction.
+	 * Serialises concurrent member inserts so the WS_MAX_MEMBERS cap cannot be raced.
+	 */
+	public function lockRow(int $id): bool
+	{
+		if ($id <= 0) {
+			return false;
+		}
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('id')
+			->from($this->getTableName())
+			->where($qb->expr()->eq('id', $qb->createNamedParameter($id, IQueryBuilder::PARAM_INT)))
+			->forUpdate();
+		$result = $qb->executeQuery();
+		$row = $result->fetch();
+		$result->closeCursor();
+
+		return $row !== false;
+	}
+
 	/** @throws DoesNotExistException */
 	public function findBySlug(string $slug): Workspace
 	{

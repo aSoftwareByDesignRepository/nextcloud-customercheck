@@ -307,7 +307,10 @@ final class WorkspaceAclSurfaceContractTest extends TestCase
 			'update',
 		);
 		$this->assertStringContainsString('lockRow($id)', $deal);
-		$this->assertStringContainsString('beginTransaction', $deal);
+		$this->assertTrue(
+			str_contains($deal, 'DbTransaction::begin') || str_contains($deal, 'beginTransaction'),
+			'deal update must open a DB transaction',
+		);
 		$actMapper = (string)file_get_contents($this->root . '/lib/Db/ActivityMapper.php');
 		$this->assertStringContainsString('function lockRow', $actMapper);
 		$dealMapper = (string)file_get_contents($this->root . '/lib/Db/DealMapper.php');
@@ -371,7 +374,10 @@ final class WorkspaceAclSurfaceContractTest extends TestCase
 	{
 		$src = (string)file_get_contents($this->root . '/lib/Service/AgreementService.php');
 		$update = $this->extractMethod($src, 'update');
-		$this->assertStringContainsString('beginTransaction', $update);
+		$this->assertTrue(
+			str_contains($update, 'DbTransaction::begin') || str_contains($update, 'beginTransaction'),
+			'agreement update must open a DB transaction',
+		);
 		$this->assertStringContainsString('lockRow($id)', $update);
 		$this->assertStringContainsString('AGREEMENT_TERMINAL_STATUSES', $update);
 	}
@@ -442,6 +448,7 @@ final class WorkspaceAclSurfaceContractTest extends TestCase
 		$this->assertStringContainsString('beginTransaction', $upsert);
 		$this->assertStringContainsString('lockRow($companyId)', $upsert);
 		$this->assertStringContainsString('REASON_UNIQUE_CONSTRAINT_VIOLATION', $upsert);
+		$this->assertStringContainsString('OptimisticLock::assertFresh', $upsert);
 	}
 
 	public function testMoneyDisplayScopesInvoiceRefMatches(): void
@@ -450,6 +457,27 @@ final class WorkspaceAclSurfaceContractTest extends TestCase
 		$this->assertStringContainsString('function matchScopedInvoiceRef', $src);
 		$this->assertStringContainsString('matchScopedInvoiceRef(', $src);
 		$this->assertStringNotContainsString('$matchedAgreementId = (int)$matches[0]->getId()', $src);
+	}
+
+	public function testMemberImportEndpointsRequireMembersCapabilityAndLock(): void
+	{
+		$ctrl = (string)file_get_contents($this->root . '/lib/Controller/PersonaApiController.php');
+		$group = $this->extractMethod($ctrl, 'importWorkspaceMembersFromGroup');
+		$circle = $this->extractMethod($ctrl, 'importWorkspaceMembersFromCircle');
+		$this->assertStringContainsString("assertCapability(\$uid, \$workspaceId, 'members')", $group);
+		$this->assertStringContainsString("assertCapability(\$uid, \$workspaceId, 'members')", $circle);
+		$routes = (string)file_get_contents($this->root . '/appinfo/routes.php');
+		$this->assertStringContainsString('members/import-group', $routes);
+		$this->assertStringContainsString('members/import-circle', $routes);
+		$add = $this->extractMethod(
+			(string)file_get_contents($this->root . '/lib/Service/WorkspaceService.php'),
+			'addMember',
+		);
+		$this->assertStringContainsString('beginTransaction', $add);
+		$this->assertStringContainsString('lockRow($workspaceId)', $add);
+		$mapper = (string)file_get_contents($this->root . '/lib/Db/WorkspaceMapper.php');
+		$this->assertStringContainsString('function lockRow(int $id): bool', $mapper);
+		$this->assertStringContainsString('->forUpdate()', $mapper);
 	}
 
 	private function extractMethod(string $src, string $name): string

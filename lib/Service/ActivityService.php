@@ -236,6 +236,7 @@ class ActivityService
 		if ($claimed !== 1) {
 			$fresh = $this->get($id);
 			$uri = $fresh->getTodoUri();
+
 			return [
 				'pushed' => false,
 				'todoUri' => ($uri !== null && $uri !== '') ? $uri : null,

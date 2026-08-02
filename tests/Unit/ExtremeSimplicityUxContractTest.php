@@ -331,6 +331,6 @@ final class ExtremeSimplicityUxContractTest extends TestCase
 		$this->assertStringContainsString('class="crm-choice"', $import);
 		$this->assertStringContainsString('type="radio"', $import);
 		$info = (string)file_get_contents(dirname(__DIR__, 2) . '/appinfo/info.xml');
-		$this->assertMatchesRegularExpression('/<version>1\.5\.(1[6-9]|[2-9]\d)</', $info, 'Bump app version when shipping CSS cache-sensitive choice alignment');
+		$this->assertMatchesRegularExpression('/<version>1\.(5\.(1[6-9]|[2-9]\d)|[6-9]\.\d+)/', $info, 'Bump app version when shipping CSS cache-sensitive choice alignment');
 	}
 }

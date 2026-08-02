@@ -26,13 +26,15 @@ class MobileApiService
 		private readonly ActivityService $activityService,
 		private readonly AgreementMapper $agreementMapper,
 		private readonly FacadeProbeService $facades,
+		private readonly ?ReviewService $review = null,
+		private readonly ?EditConflictService $editConflicts = null,
 	) {
 	}
 
 	/**
 	 * Today queue mapped to the companion contract (Appendix B.1).
 	 *
-	 * @return array{items: list<array<string, mixed>>, meta: array{truncated: bool, total: int}}
+	 * @return array{items: list<array<string, mixed>>, meta: array{truncated: bool, total: int, reviewOpenCount: int, conflictsOpenCount: int}}
 	 */
 	public function today(int $workspaceId): array
 	{
@@ -41,8 +43,11 @@ class MobileApiService
 		foreach ($built['items'] as $item) {
 			$items[] = self::mapTodayItem($item);
 		}
+		$meta = $built['meta'];
+		$meta['reviewOpenCount'] = $this->review?->countOpen($workspaceId) ?? 0;
+		$meta['conflictsOpenCount'] = $this->editConflicts?->countOpen($workspaceId) ?? 0;
 
-		return ['items' => $items, 'meta' => $built['meta']];
+		return ['items' => $items, 'meta' => $meta];
 	}
 
 	/**

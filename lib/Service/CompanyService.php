@@ -23,6 +23,7 @@ use OCA\CustomerCheck\Db\TimelineEventMapper;
 use OCA\CustomerCheck\Exception\ConflictException;
 use OCA\CustomerCheck\Exception\NotFoundException;
 use OCA\CustomerCheck\Exception\ValidationException;
+use OCA\CustomerCheck\Support\DbTransaction;
 use OCA\CustomerCheck\Support\OptimisticLock;
 use OCP\AppFramework\Db\DoesNotExistException;
 use OCP\AppFramework\Utility\ITimeFactory;
@@ -55,6 +56,9 @@ class CompanyService
 		private readonly IDBConnection $db,
 		private readonly ITimeFactory $timeFactory,
 		private readonly IL10N $l10n,
+		private readonly ?EditConflictService $editConflicts = null,
+		private readonly ?EntityRevisionService $entityRevisions = null,
+		private readonly ?ValueMapService $valueMaps = null,
 	) {
 	}
 
@@ -197,10 +201,11 @@ class CompanyService
 		string $actor,
 		?string $updatedAtPrecondition,
 		bool $canReassignOwners = false,
+		bool $skipOptimistic = false,
 	): Company
 	{
 		// Serialize vs archive/restore/move/erase — stamp alone last-write-wins.
-		$this->db->beginTransaction();
+		$ownsTxn = DbTransaction::begin($this->db);
 		try {
 			if (!$this->companyMapper->lockRow($id)) {
 				throw new NotFoundException(
@@ -209,7 +214,60 @@ class CompanyService
 				);
 			}
 			$company = $this->companyMapper->findById($id);
-			OptimisticLock::assertFresh($company->getUpdatedAt(), $updatedAtPrecondition);
+			$currentSnap = $this->companyConflictSnapshot($company);
+			// User-facing updates always require updatedAt; conflict apply sets skipOptimistic (GNQ §6.4).
+			$requirePrecondition = !$skipOptimistic;
+			try {
+				OptimisticLock::assertFresh($company->getUpdatedAt(), $updatedAtPrecondition, $requirePrecondition);
+			} catch (ConflictException $stale) {
+				if (!$requirePrecondition || $this->editConflicts === null) {
+					throw $stale;
+				}
+				$baseSnap = $this->entityRevisions?->snapshotAt('company', $id, $updatedAtPrecondition)
+					?? $currentSnap;
+				$incoming = $this->companyIncomingPatch($input);
+				if ($incoming === []) {
+					throw $stale;
+				}
+				$wsId = (int)($company->getWorkspaceId() ?? 0);
+				$classified = ConflictFieldLogic::classifyPatch($baseSnap, $currentSnap, $incoming);
+				if ($classified['conflicts'] !== []) {
+					// Persist conflict outside this aborted update txn (GNQ §6.3).
+					DbTransaction::rollBack($this->db, $ownsTxn);
+					if (!$ownsTxn) {
+						throw $stale;
+					}
+					$conflictId = $this->editConflicts->recordOpenConflict(
+						$wsId,
+						'company',
+						$id,
+						$baseSnap,
+						$currentSnap,
+						$incoming,
+						$classified['conflicts'],
+						(string)($baseSnap['_actor'] ?? 'unknown'),
+						$actor,
+					);
+					throw new ConflictException(
+						$this->l10n->t('Parallel edits need a resolution with a reason.'),
+						Constants::ERR_EDIT_CONFLICT,
+						['conflictId' => $conflictId, 'fields' => $classified['conflicts']],
+					);
+				}
+				// Non-overlapping: apply only takeIncoming fields.
+				$filtered = [];
+				foreach ($classified['takeIncoming'] as $field) {
+					if (array_key_exists($field, $incoming)) {
+						$filtered[$this->companyApiFieldToInput($field)] = $incoming[$field];
+					}
+				}
+				if ($filtered === []) {
+					DbTransaction::commit($this->db, $ownsTxn);
+
+					return $company;
+				}
+				$input = $filtered;
+			}
 
 			$before = [
 				'name' => (string)$company->getName(),
@@ -253,11 +311,20 @@ class CompanyService
 				$this->rethrowMappedUniqueViolation($e, (string)$company->getSlug());
 			}
 
-			$this->db->commit();
+			DbTransaction::commit($this->db, $ownsTxn);
 		} catch (\Throwable $e) {
-			$this->db->rollBack();
+			DbTransaction::rollBack($this->db, $ownsTxn);
 			throw $e;
 		}
+
+		$this->entityRevisions?->append(
+			(int)($stored->getWorkspaceId() ?? 0),
+			'company',
+			(int)$stored->getId(),
+			$stored->getUpdatedAt() ?? $this->timeFactory->getDateTime(),
+			$actor,
+			$this->companyConflictSnapshot($stored) + ['_actor' => $actor],
+		);
 
 		$this->timelineService->append($id, 'company.updated', $actor, [
 			'changed' => $this->diffKeys($before, [
@@ -700,6 +767,17 @@ class CompanyService
 
 			$agreementIds = $this->agreementMapper->findIdsByCompany($id);
 
+			$dealIds = [];
+			foreach ($this->dealMapper->findByCompany($id) as $deal) {
+				$dealIds[] = (int)$deal->getId();
+			}
+			$personIds = [];
+			foreach ($this->personMapper->findByCompany($id) as $person) {
+				$personIds[] = (int)$person->getId();
+			}
+			$wsId = (int)($company->getWorkspaceId() ?? 0);
+			$this->eraseReviewAndConflicts($wsId, $id, $dealIds, $personIds, $agreementIds);
+
 			$now = $this->timeFactory->getDateTime();
 			$company->setVatId(null);
 			$company->setAddrStreet(null);
@@ -772,6 +850,141 @@ class CompanyService
 			'mapStepsDeleted' => $persona['mapStepsDeleted'],
 			'mailUnmatched' => $persona['mailUnmatched'],
 		];
+	}
+
+	/**
+	 * Cancel open edit conflicts and scrub Review PII for an erased company (GNQ §5 / §18.9).
+	 * Uses raw QB to avoid circular DI with ReviewService.
+	 *
+	 * @param list<int> $dealIds
+	 * @param list<int> $personIds
+	 * @param list<int> $agreementIds
+	 */
+	private function eraseReviewAndConflicts(
+		int $workspaceId,
+		int $companyId,
+		array $dealIds,
+		array $personIds,
+		array $agreementIds = [],
+	): void {
+		$now = $this->timeFactory->getDateTime()->format('Y-m-d H:i:s');
+		$erasedSnap = json_encode(['erased' => true, 'at' => $now], JSON_THROW_ON_ERROR);
+
+		if ($this->db->tableExists('crm_edit_conflict')) {
+			$this->cancelOpenConflicts('company', [$companyId], $now, $erasedSnap);
+			if ($dealIds !== []) {
+				$this->cancelOpenConflicts('deal', $dealIds, $now, $erasedSnap);
+			}
+			if ($personIds !== []) {
+				$this->cancelOpenConflicts('person', $personIds, $now, $erasedSnap);
+			}
+			if ($agreementIds !== []) {
+				$this->cancelOpenConflicts('agreement', $agreementIds, $now, $erasedSnap);
+			}
+		}
+
+		if (!$this->db->tableExists('crm_review_item')) {
+			return;
+		}
+		$emptyRef = json_encode(['erased' => true], JSON_THROW_ON_ERROR);
+		$qb = $this->db->getQueryBuilder();
+		$qb->update('crm_review_item')
+			->set('subject', $qb->createNamedParameter('[erased]'))
+			->set('snippet', $qb->createNamedParameter(''))
+			->set('source_ref', $qb->createNamedParameter($emptyRef))
+			->set('suggestion_json', $qb->createNamedParameter(null, IQueryBuilder::PARAM_NULL))
+			->set('resolution_note', $qb->createNamedParameter(null, IQueryBuilder::PARAM_NULL))
+			->set('company_id', $qb->createNamedParameter(null, IQueryBuilder::PARAM_NULL))
+			->set('deal_id', $qb->createNamedParameter(null, IQueryBuilder::PARAM_NULL))
+			->set('status', $qb->createNamedParameter('no_relation'))
+			->set('assigned_at', $qb->createNamedParameter($now))
+			->set('updated_at', $qb->createNamedParameter($now))
+			->where($qb->expr()->eq('company_id', $qb->createNamedParameter($companyId, IQueryBuilder::PARAM_INT)));
+		if ($workspaceId > 0) {
+			$qb->andWhere($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, IQueryBuilder::PARAM_INT)));
+		}
+		$qb->executeStatement();
+
+		// Open items that only *suggest* this company (not yet assigned) — drop that suggestion.
+		if ($workspaceId > 0) {
+			$this->scrubReviewSuggestionsForCompany($workspaceId, $companyId, $now);
+		}
+	}
+
+	/**
+	 * @param list<int> $entityIds
+	 */
+	private function cancelOpenConflicts(string $entityType, array $entityIds, string $now, string $erasedSnap): void
+	{
+		$entityIds = array_values(array_filter(array_map('intval', $entityIds), static fn (int $id): bool => $id > 0));
+		if ($entityIds === []) {
+			return;
+		}
+		$qb = $this->db->getQueryBuilder();
+		$params = [];
+		foreach ($entityIds as $i => $eid) {
+			$params[] = $qb->createNamedParameter($eid, IQueryBuilder::PARAM_INT, 'ceid' . $i);
+		}
+		$qb->update('crm_edit_conflict')
+			->set('status', $qb->createNamedParameter('cancelled'))
+			->set('reason', $qb->createNamedParameter('gdpr_erase'))
+			->set('resolved_by', $qb->createNamedParameter('system'))
+			->set('resolved_at', $qb->createNamedParameter($now))
+			->set('base_json', $qb->createNamedParameter($erasedSnap))
+			->set('current_json', $qb->createNamedParameter($erasedSnap))
+			->set('incoming_json', $qb->createNamedParameter($erasedSnap))
+			->set('fields_json', $qb->createNamedParameter('[]'))
+			->set('updated_at', $qb->createNamedParameter($now))
+			->where($qb->expr()->eq('entity_type', $qb->createNamedParameter($entityType)))
+			->andWhere($qb->expr()->in('entity_id', $params))
+			->andWhere($qb->expr()->eq('status', $qb->createNamedParameter('open')))
+			->executeStatement();
+	}
+
+	/**
+	 * Remove suggestion entries pointing at an erased company from still-open Review rows.
+	 */
+	private function scrubReviewSuggestionsForCompany(int $workspaceId, int $companyId, string $now): void
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('id', 'suggestion_json')->from('crm_review_item')
+			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, IQueryBuilder::PARAM_INT)))
+			->andWhere($qb->expr()->in('status', $qb->createNamedParameter(
+				['open', 'follow_up', 'snoozed'],
+				IQueryBuilder::PARAM_STR_ARRAY,
+			)))
+			->andWhere($qb->expr()->isNull('company_id'))
+			->setMaxResults(500);
+		$r = $qb->executeQuery();
+		while ($row = $r->fetch()) {
+			$raw = $row['suggestion_json'] ?? null;
+			if ($raw === null || $raw === '') {
+				continue;
+			}
+			$decoded = json_decode((string)$raw, true);
+			if (!is_array($decoded)) {
+				continue;
+			}
+			$filtered = array_values(array_filter(
+				$decoded,
+				static fn ($s): bool => !is_array($s) || (int)($s['companyId'] ?? 0) !== $companyId,
+			));
+			if (count($filtered) === count($decoded)) {
+				continue;
+			}
+			$upd = $this->db->getQueryBuilder();
+			$upd->update('crm_review_item')
+				->set(
+					'suggestion_json',
+					$filtered === []
+						? $upd->createNamedParameter(null, IQueryBuilder::PARAM_NULL)
+						: $upd->createNamedParameter(json_encode($filtered, JSON_THROW_ON_ERROR)),
+				)
+				->set('updated_at', $upd->createNamedParameter($now))
+				->where($upd->expr()->eq('id', $upd->createNamedParameter((int)$row['id'], IQueryBuilder::PARAM_INT)))
+				->executeStatement();
+		}
+		$r->closeCursor();
 	}
 
 	/**
@@ -1319,8 +1532,12 @@ class CompanyService
 		}
 
 		if (array_key_exists('country', $input)) {
-			$country = strtoupper(trim((string)$input['country']));
-			if (!preg_match('/^[A-Z]{2}$/', $country)) {
+			$rawCountry = trim((string)$input['country']);
+			$wsId = (int)($company->getWorkspaceId() ?? 0);
+			$country = $this->valueMaps !== null && $wsId > 0
+				? $this->valueMaps->resolve($wsId, 'country', $rawCountry)
+				: ValueMapLogic::builtinCountryCanonical($rawCountry);
+			if ($country === null || !preg_match('/^[A-Z]{2}$/', $country)) {
 				$fields['country'] = $this->l10n->t('Use the two-letter country code, for example DE.');
 			} else {
 				$company->setCountry($country);
@@ -1532,5 +1749,80 @@ class CompanyService
 		}
 
 		return $diff;
+	}
+
+	/**
+	 * Apply field choices from a resolved edit conflict (GNQ §6.4).
+	 * Skips optimistic precondition — the conflict row is the authority.
+	 *
+	 * @param array<string, mixed> $appliedPatch snap-field => value
+	 */
+	public function applyConflictResolution(int $id, array $appliedPatch, string $actor, bool $canReassignOwners = false): Company
+	{
+		$input = [];
+		foreach ($appliedPatch as $field => $value) {
+			$input[$this->companyApiFieldToInput((string)$field)] = $value;
+		}
+		if ($input === []) {
+			return $this->get($id);
+		}
+
+		return $this->update($id, $input, $actor, null, $canReassignOwners, true);
+	}
+
+	/**
+	 * Protected company fields for GNQ conflict three-way (§6.2).
+	 *
+	 * @return array<string, mixed>
+	 */
+	private function companyConflictSnapshot(Company $company): array
+	{
+		return [
+			'name' => (string)$company->getName(),
+			'status' => (string)$company->getStatus(),
+			'accountOwnerUserId' => method_exists($company, 'getAccountOwnerUserId')
+				? (string)($company->getAccountOwnerUserId() ?? '')
+				: '',
+			'kamTier' => method_exists($company, 'getKamTier') ? (string)$company->getKamTier() : 'standard',
+			'touchIntervalDays' => method_exists($company, 'getTouchIntervalDays')
+				? (int)($company->getTouchIntervalDays() ?? 0)
+				: 0,
+			'nextTouchOn' => method_exists($company, 'getNextTouchOn') && $company->getNextTouchOn() !== null
+				? $company->getNextTouchOn()->format('Y-m-d')
+				: '',
+			'filesFolderId' => method_exists($company, 'getFilesFolderId')
+				? (int)($company->getFilesFolderId() ?? 0)
+				: 0,
+		];
+	}
+
+	/**
+	 * @param array<string, mixed> $input
+	 * @return array<string, mixed>
+	 */
+	private function companyIncomingPatch(array $input): array
+	{
+		$map = [
+			'name' => 'name',
+			'status' => 'status',
+			'accountOwnerUserId' => 'accountOwnerUserId',
+			'kamTier' => 'kamTier',
+			'touchIntervalDays' => 'touchIntervalDays',
+			'nextTouchOn' => 'nextTouchOn',
+			'filesFolderId' => 'filesFolderId',
+		];
+		$out = [];
+		foreach ($map as $api => $snap) {
+			if (array_key_exists($api, $input)) {
+				$out[$snap] = $input[$api];
+			}
+		}
+
+		return $out;
+	}
+
+	private function companyApiFieldToInput(string $snapField): string
+	{
+		return $snapField;
 	}
 }

@@ -109,6 +109,39 @@ final class DisplayLabelService
 	}
 
 	/**
+	 * InvoiceCheck facade v3 aging bucket — text+chip only when present; never invent.
+	 */
+	public function agingBucket(?string $bucket): ?string
+	{
+		if ($bucket === null) {
+			return null;
+		}
+		$bucket = trim($bucket);
+		if ($bucket === '') {
+			return null;
+		}
+		return match ($bucket) {
+			'current' => $this->l10n->t('Current'),
+			'1-30' => $this->l10n->t('1–30 days'),
+			'31-60' => $this->l10n->t('31–60 days'),
+			'61-90' => $this->l10n->t('61–90 days'),
+			'90+' => $this->l10n->t('90+ days'),
+			default => $bucket,
+		};
+	}
+
+	/**
+	 * Days past due accompanying aging chip (null-safe).
+	 */
+	public function daysPastDueLabel(?int $days): ?string
+	{
+		if ($days === null) {
+			return null;
+		}
+		return $this->l10n->n('%n day past due', '%n days past due', $days);
+	}
+
+	/**
 	 * Unbilled Pulse metric hint — granny-readable; never machine states in chrome.
 	 */
 	public function unbilledHint(string $state): string
@@ -213,6 +246,7 @@ final class DisplayLabelService
 			'email.logged' => $this->l10n->t('Email logged'),
 			'email.composed' => $this->l10n->t('Email composed'),
 			'mail_sent' => $this->l10n->t('Email sent'),
+			'review.assigned' => $this->l10n->t('Review item assigned'),
 			'invoice.paid' => $this->l10n->t('Invoice marked paid'),
 			'invoice.paid.ambiguous' => $this->l10n->t('Invoice payment needs review'),
 			'lead.webhook' => $this->l10n->t('Lead received'),

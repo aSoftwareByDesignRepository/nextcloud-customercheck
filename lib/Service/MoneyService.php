@@ -186,14 +186,22 @@ class MoneyService
 				'companyId' => $company !== null ? (int)$company->getId() : 0,
 				'companyName' => $company !== null ? (string)$company->getName() : '',
 				'label' => $ref !== '' ? $ref : (string)($inv['icInvoiceId'] ?? 'invoice'),
-				'amountCents' => (int)($inv['grossTotalCents'] ?? 0) - (int)($inv['paidTotalCents'] ?? 0),
-				'invoiceStatus' => 'overdue',
+				'amountCents' => array_key_exists('remainingCents', $inv)
+					? (int)$inv['remainingCents']
+					: ((int)($inv['grossTotalCents'] ?? 0) - (int)($inv['paidTotalCents'] ?? 0)),
+				'invoiceStatus' => !empty($inv['writtenOff']) ? 'written_off' : 'overdue',
 				'invoiceRef' => $ref !== '' ? $ref : null,
 				'bucket' => 'overdue',
 				'source' => 'invoicecheck',
 				'icInvoiceId' => (int)($inv['icInvoiceId'] ?? 0),
 				'dueDate' => $inv['dueDate'] ?? null,
 				'updatedAt' => null,
+				// Facade v3 fields — feature-detect; never invent amounts if keys missing.
+				'agingBucket' => array_key_exists('agingBucket', $inv) ? $inv['agingBucket'] : null,
+				'daysPastDue' => array_key_exists('daysPastDue', $inv) ? (int)$inv['daysPastDue'] : null,
+				'writtenOff' => array_key_exists('writtenOff', $inv) ? (bool)$inv['writtenOff'] : false,
+				'remainingCents' => array_key_exists('remainingCents', $inv) ? (int)$inv['remainingCents'] : null,
+				'facadeVersion' => array_key_exists('facadeVersion', $inv) ? (int)$inv['facadeVersion'] : null,
 			];
 			if (count($fromIc) >= $limit) {
 				break;

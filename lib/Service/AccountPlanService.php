@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace OCA\CustomerCheck\Service;
 
 use OCA\CustomerCheck\Constants;
+use OCA\CustomerCheck\Exception\ConflictException;
 use OCA\CustomerCheck\Exception\ValidationException;
+use OCA\CustomerCheck\Support\OptimisticLock;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\DB\Exception as DbException;
 use OCP\IDBConnection;
@@ -86,6 +88,7 @@ class AccountPlanService
 		$nextReview = trim((string)($data['nextReviewOn'] ?? ''));
 		$now = $this->timeFactory->getDateTime()->format('Y-m-d H:i:s');
 		$status = (string)($data['status'] ?? 'active');
+		$clientStamp = array_key_exists('updatedAt', $data) ? (string)$data['updatedAt'] : null;
 
 		$this->db->beginTransaction();
 		try {
@@ -93,7 +96,27 @@ class AccountPlanService
 			$this->companies->lockRow($companyId);
 			$existing = $this->forCompany($companyId);
 			if ($existing !== null) {
-				$this->updatePlanRow((int)$existing['id'], $goal, $priority, $owner, $horizon, $nextReview, $status, $now);
+				$stored = null;
+				if (!empty($existing['updatedAt'])) {
+					try {
+						$stored = new \DateTimeImmutable((string)$existing['updatedAt']);
+					} catch (\Exception) {
+						$stored = null;
+					}
+				}
+				// Existing plans require If-Match stamp — closes Strategy LWW race (GNQ §6 light).
+				OptimisticLock::assertFresh($stored, $clientStamp);
+				$this->updatePlanRow(
+					(int)$existing['id'],
+					$goal,
+					$priority,
+					$owner,
+					$horizon,
+					$nextReview,
+					$status,
+					$now,
+					(string)$existing['updatedAt'],
+				);
 			} else {
 				try {
 					$this->insertPlanRow($companyId, $ws, $goal, $priority, $owner, $horizon, $nextReview, $now);
@@ -106,7 +129,22 @@ class AccountPlanService
 					if ($existing === null) {
 						throw $e;
 					}
-					$this->updatePlanRow((int)$existing['id'], $goal, $priority, $owner, $horizon, $nextReview, $status, $now);
+					OptimisticLock::assertFresh(
+						!empty($existing['updatedAt']) ? new \DateTimeImmutable((string)$existing['updatedAt']) : null,
+						$clientStamp,
+						false,
+					);
+					$this->updatePlanRow(
+						(int)$existing['id'],
+						$goal,
+						$priority,
+						$owner,
+						$horizon,
+						$nextReview,
+						$status,
+						$now,
+						!empty($existing['updatedAt']) ? (string)$existing['updatedAt'] : null,
+					);
 				}
 			}
 			$this->db->commit();
@@ -129,6 +167,7 @@ class AccountPlanService
 		string $nextReview,
 		string $status,
 		string $now,
+		?string $expectedUpdatedAt = null,
 	): void {
 		$qb = $this->db->getQueryBuilder();
 		$qb->update('crm_acct_plan')
@@ -139,8 +178,24 @@ class AccountPlanService
 			->set('next_review_on', $qb->createNamedParameter($nextReview !== '' ? $nextReview : null))
 			->set('status', $qb->createNamedParameter($status))
 			->set('updated_at', $qb->createNamedParameter($now))
-			->where($qb->expr()->eq('id', $qb->createNamedParameter($planId)))
-			->executeStatement();
+			->where($qb->expr()->eq('id', $qb->createNamedParameter($planId)));
+		if ($expectedUpdatedAt !== null && trim($expectedUpdatedAt) !== '') {
+			try {
+				$sqlStamp = (new \DateTimeImmutable(trim($expectedUpdatedAt)))->format('Y-m-d H:i:s');
+			} catch (\Exception) {
+				$sqlStamp = trim($expectedUpdatedAt);
+			}
+			$qb->andWhere($qb->expr()->eq(
+				'updated_at',
+				$qb->createNamedParameter($sqlStamp),
+			));
+		}
+		$affected = $qb->executeStatement();
+		if ($affected < 1) {
+			throw new ConflictException(
+				$this->l10n->t('Someone else changed this account plan. Reload and try again.'),
+			);
+		}
 	}
 
 	private function insertPlanRow(
@@ -249,6 +304,9 @@ class AccountPlanService
 			'ownerUserId' => $row['owner_user_id'] ?? null,
 			'status' => (string)$row['status'],
 			'nextReviewOn' => $row['next_review_on'] ?? null,
+			'updatedAt' => isset($row['updated_at']) && $row['updated_at'] !== null && (string)$row['updated_at'] !== ''
+				? OptimisticLock::format(new \DateTimeImmutable((string)$row['updated_at']))
+				: null,
 			'health' => $health,
 			'healthLabel' => $this->labels->planHealth($health),
 			'mapSteps' => $this->mapSteps($planId),

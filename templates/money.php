@@ -103,7 +103,12 @@ include __DIR__ . '/common/page-start.php';
 								p($labels instanceof \OCA\CustomerCheck\Service\DisplayLabelService
 									? $labels->invoiceStatus((string)$row['invoiceStatus'])
 									: (string)$row['invoiceStatus']);
-							?></span></td>
+							?></span><?php
+								$agingBucket = array_key_exists('agingBucket', $row) ? $row['agingBucket'] : null;
+								$daysPastDue = array_key_exists('daysPastDue', $row) && $row['daysPastDue'] !== null
+									? (int)$row['daysPastDue'] : null;
+								include __DIR__ . '/common/aging-chip.php';
+							?></td>
 							<td data-label="<?php p($l->t('Reference')); ?>"><?php p($row['invoiceRef'] ?? '—'); ?></td>
 							<td data-label="<?php p($l->t('Amount')); ?>"><?php p(number_format(($row['amountCents'] ?? 0)/100, 2)); ?> €</td>
 							<?php if ($key !== 'paid30d'): ?>

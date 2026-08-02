@@ -279,6 +279,8 @@ final class CompanyServiceMoveWorkspaceTest extends TestCase
 	): CompanyService {
 		$l10n = $this->createMock(IL10N::class);
 		$l10n->method('t')->willReturnCallback(static fn (string $s, array $a = []): string => $s);
+		$conn = $db ?? $this->createMock(IDBConnection::class);
+		$conn->method('inTransaction')->willReturn(false);
 		return new CompanyService(
 			$mapper,
 			$this->createMock(PersonMapper::class),
@@ -290,7 +292,7 @@ final class CompanyServiceMoveWorkspaceTest extends TestCase
 			$this->createMock(TimelineEventMapper::class),
 			$this->createMock(SlugService::class),
 			$timeline ?? $this->createMock(TimelineService::class),
-			$db ?? $this->createMock(IDBConnection::class),
+			$conn,
 			$time ?? $this->createMock(ITimeFactory::class),
 			$l10n,
 		);

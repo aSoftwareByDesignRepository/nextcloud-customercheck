@@ -49,14 +49,31 @@ class Notifier implements INotifier
 				[(string)($p['companyName'] ?? $l->t('company'))],
 			),
 			Constants::NOTIFY_ACTIVITY_DUE => $this->activityDueSubject($l, $company, (string)($p['title'] ?? ''), (int)($p['daysLate'] ?? 0)),
+			Constants::NOTIFY_EDIT_CONFLICT => $l->t(
+				'Parallel edits on %1$s #%2$d need a resolution with a reason.',
+				[(string)($p['entityType'] ?? $l->t('record')), (int)($p['entityId'] ?? 0)],
+			),
 			default => $l->t('CustomerCheck'),
 		};
 		$companyId = (int)($p['companyId'] ?? 0);
 		$activityId = (int)($p['activityId'] ?? 0);
-		$link = $companyId > 0
-			? $this->url->linkToRouteAbsolute('customercheck.page.companyDetail', ['id' => $companyId])
-			: $this->url->linkToRouteAbsolute('customercheck.page.today');
-		if ($notification->getSubject() === Constants::NOTIFY_ACTIVITY_DUE && $activityId > 0) {
+		$conflictId = (int)($p['conflictId'] ?? 0);
+		$workspaceId = (int)($p['workspaceId'] ?? 0);
+		$subject = $notification->getSubject();
+		if ($subject === Constants::NOTIFY_EDIT_CONFLICT) {
+			$params = [];
+			if ($workspaceId > 0) {
+				$params['workspaceId'] = $workspaceId;
+			}
+			if ($conflictId > 0) {
+				$params['conflictId'] = $conflictId;
+			}
+			$link = $this->url->linkToRouteAbsolute('customercheck.page.conflicts', $params);
+		} elseif ($subject === Constants::NOTIFY_ACTIVITY_DUE && $activityId > 0) {
+			$link = $this->url->linkToRouteAbsolute('customercheck.page.today');
+		} elseif ($companyId > 0) {
+			$link = $this->url->linkToRouteAbsolute('customercheck.page.companyDetail', ['id' => $companyId]);
+		} else {
 			$link = $this->url->linkToRouteAbsolute('customercheck.page.today');
 		}
 		$notification->setParsedSubject($text)->setLink($link);

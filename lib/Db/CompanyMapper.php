@@ -209,7 +209,9 @@ class CompanyMapper extends QBMapper
 	 */
 	private function applyFilters(IQueryBuilder $qb, array $filters): void
 	{
-		if (($filters['archived'] ?? false) === true) {
+		if (($filters['includeArchived'] ?? false) === true) {
+			// Both active and archived — Review re-link / historical books (GNQ §5.5).
+		} elseif (($filters['archived'] ?? false) === true) {
 			$qb->andWhere($qb->expr()->isNotNull('archived_at'));
 		} else {
 			$qb->andWhere($qb->expr()->isNull('archived_at'));

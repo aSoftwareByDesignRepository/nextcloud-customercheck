@@ -13,6 +13,7 @@ use OCA\CustomerCheck\Exception\NotFoundException;
 use OCA\CustomerCheck\Exception\ValidationException;
 use OCA\CustomerCheck\Support\CompanyScopedFk;
 use OCA\CustomerCheck\Support\DateMath;
+use OCA\CustomerCheck\Support\DbTransaction;
 use OCA\CustomerCheck\Support\OptimisticLock;
 use OCP\AppFramework\Db\DoesNotExistException;
 use OCP\AppFramework\Utility\ITimeFactory;
@@ -37,6 +38,8 @@ class DealService
 		private readonly IL10N $l10n,
 		private readonly IDBConnection $db,
 		private readonly AgreementMapper $agreementMapper,
+		private readonly ?EditConflictService $editConflicts = null,
+		private readonly ?EntityRevisionService $entityRevisions = null,
 	) {
 	}
 
@@ -120,15 +123,77 @@ class DealService
 		return max(1, (int)$this->workspaces->getSettings($wsId)['leadSlaHours']);
 	}
 
-	public function update(int $id, array $data, string $actor, bool $canReassignOwners = false): Deal
+	public function update(int $id, array $data, string $actor, bool $canReassignOwners = false, bool $skipOptimistic = false): Deal
 	{
-		$this->db->beginTransaction();
+		$stageFired = null;
+		$stageFrom = null;
+		$ownsTxn = DbTransaction::begin($this->db);
 		try {
 			if (!$this->dealMapper->lockRow($id)) {
 				throw new NotFoundException($this->l10n->t('This deal no longer exists.'));
 			}
 			$deal = $this->dealMapper->findById($id);
-			OptimisticLock::assertFresh($deal->getUpdatedAt(), isset($data['updatedAt']) ? (string)$data['updatedAt'] : null);
+			$currentSnap = $this->dealConflictSnapshot($deal);
+			$requirePrecondition = !$skipOptimistic;
+			$precondition = array_key_exists('updatedAt', $data) ? (string)$data['updatedAt'] : null;
+			try {
+				// Conflict apply sets skipOptimistic — skip required stamp (GNQ §6.4).
+				OptimisticLock::assertFresh($deal->getUpdatedAt(), $precondition, $requirePrecondition);
+			} catch (ConflictException $stale) {
+				if (!$requirePrecondition || $this->editConflicts === null || $precondition === null || $precondition === '') {
+					throw $stale;
+				}
+				$baseSnap = $this->entityRevisions?->snapshotAt('deal', $id, (string)$precondition) ?? $currentSnap;
+				$incoming = $this->dealIncomingPatch($data);
+				if ($incoming === []) {
+					throw $stale;
+				}
+				$company = $this->companyService->get((int)$deal->getCompanyId());
+				$wsId = (int)($company->getWorkspaceId() ?? 0);
+				$classified = ConflictFieldLogic::classifyPatch($baseSnap, $currentSnap, $incoming);
+				if ($classified['conflicts'] !== []) {
+					DbTransaction::rollBack($this->db, $ownsTxn);
+					if (!$ownsTxn) {
+						throw $stale;
+					}
+					$conflictId = $this->editConflicts->recordOpenConflict(
+						$wsId,
+						'deal',
+						$id,
+						$baseSnap,
+						$currentSnap,
+						$incoming,
+						$classified['conflicts'],
+						(string)($baseSnap['_actor'] ?? 'unknown'),
+						$actor,
+					);
+					throw new ConflictException(
+						$this->l10n->t('Parallel edits need a resolution with a reason.'),
+						Constants::ERR_EDIT_CONFLICT,
+						['conflictId' => $conflictId, 'fields' => $classified['conflicts']],
+					);
+				}
+				$filtered = [];
+				foreach ($classified['takeIncoming'] as $field) {
+					if (array_key_exists($field, $data)) {
+						$filtered[$field] = $data[$field];
+					} elseif (array_key_exists($field, $incoming)) {
+						$filtered[$field] = $incoming[$field];
+					}
+				}
+				// Preserve non-protected keys (agreementId, products, …) that cannot conflict.
+				foreach ($data as $k => $v) {
+					if (!array_key_exists($k, $incoming) && $k !== 'updatedAt') {
+						$filtered[$k] = $v;
+					}
+				}
+				if ($filtered === []) {
+					DbTransaction::commit($this->db, $ownsTxn);
+
+					return $deal;
+				}
+				$data = $filtered;
+			}
 
 			if (isset($data['title'])) {
 				$title = trim((string)$data['title']);
@@ -250,15 +315,130 @@ class DealService
 				$deal->setLeadFirstTouchAt($this->timeFactory->getDateTime());
 			}
 
+			// Conflict apply may include stage (GNQ §6 / §8.4) — never via normal PUT.
+			if (array_key_exists('stage', $data) && $skipOptimistic) {
+				$stage = trim((string)$data['stage']);
+				$currentStage = (string)$deal->getStage();
+				if ($stage !== $currentStage) {
+					if (in_array($currentStage, Constants::DEAL_TERMINAL_STAGES, true)) {
+						throw ValidationException::field(
+							Constants::ERR_DEAL_TERMINAL,
+							'stage',
+							$this->l10n->t('Won and lost deals cannot be reopened. Create a new deal instead.'),
+						);
+					}
+					if (!in_array($stage, Constants::DEAL_STAGES, true)) {
+						throw ValidationException::field(
+							Constants::ERR_VALIDATION,
+							'stage',
+							$this->l10n->t('Unknown pipeline stage.'),
+						);
+					}
+					if ($stage === 'lost') {
+						$code = trim((string)($data['lostReasonCode'] ?? $deal->getLostReasonCode() ?? ''));
+						$detail = trim((string)($data['lostReason'] ?? $deal->getLostReason() ?? ''));
+						if ($code === '' || !in_array($code, Constants::LOSS_REASON_CODES, true)) {
+							throw ValidationException::field(
+								Constants::ERR_LOSS_CODE_REQUIRED,
+								'lostReasonCode',
+								$this->l10n->t('Pick a loss reason code.'),
+							);
+						}
+						$deal->setLostReasonCode($code);
+						if ($code === 'other' && $detail === '') {
+							throw ValidationException::field(
+								Constants::ERR_LOST_REASON_REQUIRED,
+								'lostReason',
+								$this->l10n->t('Explain why the deal was lost.'),
+							);
+						}
+						$deal->setLostReason($detail !== '' ? $detail : $code);
+					}
+					$stageFrom = $currentStage;
+					$deal->setStage($stage);
+					$deal->setStageChangedAt($this->timeFactory->getDateTime());
+					$stageFired = $stage;
+				}
+			}
+
 			$deal->setUpdatedAt($this->timeFactory->getDateTime());
 			$stored = $this->dealMapper->update($deal);
-			$this->db->commit();
-
-			return $stored;
+			DbTransaction::commit($this->db, $ownsTxn);
 		} catch (\Throwable $e) {
-			$this->db->rollBack();
+			DbTransaction::rollBack($this->db, $ownsTxn);
 			throw $e;
 		}
+
+		if ($stageFired !== null) {
+			$fired = $this->stageSequences->fireForStage($stored, $stageFired, $actor);
+			$this->timelineService->append((int)$stored->getCompanyId(), 'deal.stage', $actor, [
+				'dealId' => (int)$stored->getId(),
+				'from' => $stageFrom,
+				'to' => $stageFired,
+				'sequencesFired' => $fired,
+				'via' => 'conflict_resolve',
+			]);
+		}
+
+		if ($this->entityRevisions !== null) {
+			$company = $this->companyService->get((int)$stored->getCompanyId());
+			$this->entityRevisions->append(
+				(int)($company->getWorkspaceId() ?? 0),
+				'deal',
+				(int)$stored->getId(),
+				$stored->getUpdatedAt() ?? $this->timeFactory->getDateTime(),
+				$actor,
+				$this->dealConflictSnapshot($stored) + ['_actor' => $actor],
+			);
+		}
+
+		return $stored;
+	}
+
+	/**
+	 * Apply field choices from a resolved edit conflict (GNQ §6.4).
+	 *
+	 * @param array<string, mixed> $appliedPatch
+	 */
+	public function applyConflictResolution(int $id, array $appliedPatch, string $actor, bool $canReassignOwners = false): Deal
+	{
+		if ($appliedPatch === []) {
+			return $this->get($id);
+		}
+
+		return $this->update($id, $appliedPatch, $actor, $canReassignOwners, true);
+	}
+
+	/** @return array<string, mixed> */
+	private function dealConflictSnapshot(Deal $deal): array
+	{
+		return [
+			'title' => (string)$deal->getTitle(),
+			'ownerUserId' => (string)($deal->getOwnerUserId() ?? ''),
+			'valueCents' => (int)$deal->getValueCents(),
+			'quoteSentOn' => $deal->getQuoteSentOn() !== null ? $deal->getQuoteSentOn()->format('Y-m-d') : '',
+			'forecastBucket' => (string)($deal->getForecastBucket() ?? ''),
+			'nextActionSkipUntil' => $deal->getNextActionSkipUntil() !== null
+				? $deal->getNextActionSkipUntil()->format('Y-m-d')
+				: '',
+			'stage' => (string)$deal->getStage(),
+		];
+	}
+
+	/**
+	 * @param array<string, mixed> $data
+	 * @return array<string, mixed>
+	 */
+	private function dealIncomingPatch(array $data): array
+	{
+		$out = [];
+		foreach (['title', 'ownerUserId', 'valueCents', 'quoteSentOn', 'forecastBucket', 'nextActionSkipUntil', 'stage'] as $field) {
+			if (array_key_exists($field, $data)) {
+				$out[$field] = $data[$field];
+			}
+		}
+
+		return $out;
 	}
 
 	/**
@@ -392,6 +572,34 @@ class DealService
 			$wonReasonCode,
 		);
 		if ($affected !== 1) {
+			// Stale stage move → three-way conflict queue when another writer changed stage (GNQ §6).
+			if ($this->editConflicts !== null && $updatedAt !== null && trim($updatedAt) !== '') {
+				$fresh = $this->get($id);
+				$currentSnap = $this->dealConflictSnapshot($fresh);
+				$baseSnap = $this->entityRevisions?->snapshotAt('deal', $id, $updatedAt) ?? $currentSnap;
+				$incoming = ['stage' => $stage];
+				$classified = ConflictFieldLogic::classifyPatch($baseSnap, $currentSnap, $incoming);
+				if ($classified['conflicts'] !== []) {
+					$company = $this->companyService->get((int)$fresh->getCompanyId());
+					$wsId = (int)($company->getWorkspaceId() ?? 0);
+					$conflictId = $this->editConflicts->recordOpenConflict(
+						$wsId,
+						'deal',
+						$id,
+						$baseSnap,
+						$currentSnap,
+						$incoming,
+						$classified['conflicts'],
+						(string)($baseSnap['_actor'] ?? 'unknown'),
+						$actor,
+					);
+					throw new ConflictException(
+						$this->l10n->t('Parallel edits need a resolution with a reason.'),
+						Constants::ERR_EDIT_CONFLICT,
+						['conflictId' => $conflictId, 'fields' => $classified['conflicts']],
+					);
+				}
+			}
 			throw new ConflictException(
 				$this->l10n->t('Someone else just updated this deal. Reload and try again.'),
 			);

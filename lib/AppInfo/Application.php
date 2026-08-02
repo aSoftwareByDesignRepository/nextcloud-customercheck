@@ -159,6 +159,10 @@ class Application extends App implements IBootstrap
 			$c->get(\OCP\IGroupManager::class),
 			$c->get(\OCP\IUserManager::class),
 		));
+		$context->registerService(\OCA\CustomerCheck\Service\CirclesDirectoryService::class, fn ($c) => new \OCA\CustomerCheck\Service\CirclesDirectoryService(
+			$c->get(\OCP\App\IAppManager::class),
+			$c->get(\Psr\Log\LoggerInterface::class),
+		));
 		$context->registerService(FacadeProbeService::class, fn ($c) => new FacadeProbeService(
 			$c->get(\OCP\App\IAppManager::class),
 			$c->get(\Psr\Log\LoggerInterface::class),
@@ -246,6 +250,8 @@ class Application extends App implements IBootstrap
 			return new \OCA\CustomerCheck\Service\ContactsSuggestService(
 				$c->get(\OCP\App\IAppManager::class),
 				$contacts,
+				$c->get(\OCP\IUserSession::class),
+				$c->get(\OCP\IUserManager::class),
 			);
 		});
 		$context->registerService(WeeklyDigestJob::class, fn ($c) => new WeeklyDigestJob($c->get(\OCP\AppFramework\Utility\ITimeFactory::class), $c->get(WeeklyDigestService::class)));
@@ -260,6 +266,14 @@ class Application extends App implements IBootstrap
 		$context->registerService(\OCA\CustomerCheck\BackgroundJob\PersonaMaintenanceJob::class, fn ($c) => new \OCA\CustomerCheck\BackgroundJob\PersonaMaintenanceJob(
 			$c->get(\OCP\AppFramework\Utility\ITimeFactory::class),
 			$c->get(\OCA\CustomerCheck\Service\PersonaMaintenanceService::class),
+		));
+		$context->registerService(\OCA\CustomerCheck\BackgroundJob\ReviewIngressJob::class, fn ($c) => new \OCA\CustomerCheck\BackgroundJob\ReviewIngressJob(
+			$c->get(\OCP\AppFramework\Utility\ITimeFactory::class),
+			$c->get(\OCA\CustomerCheck\Service\ReviewIngressService::class),
+		));
+		$context->registerService(\OCA\CustomerCheck\BackgroundJob\EntityRevisionPurgeJob::class, fn ($c) => new \OCA\CustomerCheck\BackgroundJob\EntityRevisionPurgeJob(
+			$c->get(\OCP\AppFramework\Utility\ITimeFactory::class),
+			$c->get(\OCA\CustomerCheck\Service\EntityRevisionService::class),
 		));
 		$context->registerService(AgreementStatusRecomputeJob::class, fn ($c) => new AgreementStatusRecomputeJob($c->get(\OCP\AppFramework\Utility\ITimeFactory::class), $c->get(ReminderScheduler::class)));
 		$context->registerService(\OCA\CustomerCheck\Service\ImportMatcher::class, fn ($c) => new \OCA\CustomerCheck\Service\ImportMatcher(
@@ -281,6 +295,7 @@ class Application extends App implements IBootstrap
 			$c->get(\OCP\IDBConnection::class),
 			$c->get(\OCP\AppFramework\Utility\ITimeFactory::class),
 			$c->get(\OCP\IL10N::class),
+			$c->get(\OCA\CustomerCheck\Service\ReviewService::class),
 		));
 		$context->registerService(\OCA\CustomerCheck\Service\InvoicePaidSyncService::class, fn ($c) => new \OCA\CustomerCheck\Service\InvoicePaidSyncService(
 			$c->get(\OCA\CustomerCheck\Db\AgreementMapper::class),
@@ -337,12 +352,20 @@ class Application extends App implements IBootstrap
 			$c->get(\OCA\CustomerCheck\Service\LicenseService::class),
 			$c->get(FacadeProbeService::class),
 		));
+		$context->registerService(\OCA\CustomerCheck\Service\EditConflictService::class, fn ($c) => new \OCA\CustomerCheck\Service\EditConflictService(
+			$c->get(\OCP\IDBConnection::class),
+			$c->get(\OCP\AppFramework\Utility\ITimeFactory::class),
+			$c->get(\OCP\IL10N::class),
+			$c->get(NotificationService::class),
+		));
 		$context->registerService(\OCA\CustomerCheck\Service\MobileApiService::class, fn ($c) => new \OCA\CustomerCheck\Service\MobileApiService(
 			$c->get(TodayService::class),
 			$c->get(CompanyService::class),
 			$c->get(ActivityService::class),
 			$c->get(\OCA\CustomerCheck\Db\AgreementMapper::class),
 			$c->get(FacadeProbeService::class),
+			$c->get(\OCA\CustomerCheck\Service\ReviewService::class),
+			$c->get(\OCA\CustomerCheck\Service\EditConflictService::class),
 		));
 		$context->registerService(UserDeletedListener::class, fn ($c) => new UserDeletedListener(
 			$c->get(\OCA\CustomerCheck\Db\MobileSeatMapper::class),

@@ -4,6 +4,9 @@
 /** @var \OCP\IURLGenerator $urlGenerator */
 $pipelineView = $_['pipelineView'] ?? 'table';
 $stageFilter = (string)($_['stageFilter'] ?? '');
+$periodFilter = (string)($_['periodFilter'] ?? '');
+$periodFrom = (string)($_['periodFrom'] ?? '');
+$periodTo = (string)($_['periodTo'] ?? '');
 $stages = ['lead', 'contacted', 'quoted', 'negotiation', 'won', 'lost'];
 $stageLabels = [
 	'lead' => $l->t('Lead'),
@@ -36,6 +39,32 @@ include __DIR__ . '/common/page-start.php';
 		<button type="button" class="crm-btn crm-btn--sm <?php p($pipelineView === 'table' ? 'crm-btn--primary' : 'crm-btn--secondary'); ?>" data-crm-pipeline-view="table"><?php p($l->t('Table')); ?></button>
 		<button type="button" class="crm-btn crm-btn--sm <?php p($pipelineView === 'board' ? 'crm-btn--primary' : 'crm-btn--secondary'); ?>" data-crm-pipeline-view="board"><?php p($l->t('Board')); ?></button>
 	</div>
+	<div class="crm-btn-group" role="group" aria-label="<?php p($l->t('Period')); ?>">
+		<?php
+		$periodChips = [
+			'' => $l->t('All'),
+			'month' => $l->t('This month'),
+			'quarter' => $l->t('This quarter'),
+		];
+		foreach ($periodChips as $pval => $plabel):
+			$active = $periodFilter === $pval;
+			$href = $urlGenerator->linkToRoute('customercheck.page.pipeline', array_filter([
+				'view' => $pipelineView !== 'table' ? $pipelineView : null,
+				'stage' => $stageFilter !== '' ? $stageFilter : null,
+				'period' => $pval !== '' ? $pval : null,
+				'workspaceId' => $_['workspaceId'] ?? null,
+			], static fn ($v) => $v !== null && $v !== ''));
+			?>
+		<a class="crm-btn crm-btn--sm <?php p($active ? 'crm-btn--primary' : 'crm-btn--secondary'); ?>"
+			href="<?php p($href); ?>"
+			aria-current="<?php p($active ? 'true' : 'false'); ?>"
+			style="min-height:44px"><?php p($plabel); ?></a>
+		<?php endforeach; ?>
+		<button type="button" class="crm-btn crm-btn--sm crm-btn--secondary" id="crm-pipeline-period-custom"
+			aria-expanded="<?php p($periodFilter === 'custom' ? 'true' : 'false'); ?>"
+			aria-controls="crm-pipeline-filter"
+			style="min-height:44px"><?php p($l->t('Custom')); ?></button>
+	</div>
 	<button type="button" class="crm-btn crm-btn--secondary" id="crm-pipeline-filter-toggle" aria-expanded="false" aria-controls="crm-pipeline-filter"><?php p($l->t('Filter')); ?></button>
 	<?php if (!empty($_['canWrite'])): ?>
 	<button type="button" class="crm-btn crm-btn--primary" id="crm-pipeline-new-deal"><?php p($l->t('New deal')); ?></button>
@@ -44,7 +73,7 @@ include __DIR__ . '/common/page-start.php';
 <div class="crm-page-stack">
 	<p class="crm-muted" role="status" id="crm-forecast-disclaimer"><?php p($forecastDisclaimer); ?></p>
 
-	<section id="crm-pipeline-filter" class="crm-card crm-filter-panel" <?php if ($stageFilter === ''): ?>hidden<?php endif; ?>>
+	<section id="crm-pipeline-filter" class="crm-card crm-filter-panel" <?php if ($stageFilter === '' && $periodFilter === ''): ?>hidden<?php endif; ?>>
 		<header class="crm-card__header"><h2 class="crm-card__title"><?php p($l->t('Filter deals')); ?></h2></header>
 		<div class="crm-card__body">
 			<form method="get" class="crm-form" action="<?php p($urlGenerator->linkToRoute('customercheck.page.pipeline')); ?>">
@@ -55,6 +84,18 @@ include __DIR__ . '/common/page-start.php';
 						<option value="<?php p($s); ?>" <?php if ($stageFilter === $s): ?>selected<?php endif; ?>><?php p($stageLabels[$s]); ?></option>
 					<?php endforeach; ?>
 				</select>
+				<label for="crm-filter-period" class="form-label"><?php p($l->t('Period')); ?></label>
+				<select id="crm-filter-period" name="period" class="form-select crm-input">
+					<option value=""><?php p($l->t('Any time')); ?></option>
+					<option value="month" <?php if ($periodFilter === 'month'): ?>selected<?php endif; ?>><?php p($l->t('This month')); ?></option>
+					<option value="quarter" <?php if ($periodFilter === 'quarter'): ?>selected<?php endif; ?>><?php p($l->t('This quarter')); ?></option>
+					<option value="year" <?php if ($periodFilter === 'year'): ?>selected<?php endif; ?>><?php p($l->t('This year')); ?></option>
+					<option value="custom" <?php if ($periodFilter === 'custom'): ?>selected<?php endif; ?>><?php p($l->t('Custom range')); ?></option>
+				</select>
+				<label for="crm-filter-from" class="form-label"><?php p($l->t('From')); ?></label>
+				<input type="date" id="crm-filter-from" name="from" class="form-input crm-input" value="<?php p($periodFrom); ?>" style="min-height:44px">
+				<label for="crm-filter-to" class="form-label"><?php p($l->t('To')); ?></label>
+				<input type="date" id="crm-filter-to" name="to" class="form-input crm-input" value="<?php p($periodTo); ?>" style="min-height:44px">
 				<div class="crm-form-actions">
 					<button type="submit" class="crm-btn crm-btn--primary"><?php p($l->t('Apply')); ?></button>
 					<a class="crm-btn crm-btn--secondary" href="<?php p($urlGenerator->linkToRoute('customercheck.page.pipeline')); ?>"><?php p($l->t('Clear')); ?></a>
@@ -221,15 +262,54 @@ include __DIR__ . '/common/page-start.php';
 							data-forecast-bucket="<?php p($forecast); ?>"
 							data-title="<?php p($d['title']); ?>">
 							<strong><?php p($d['title']); ?></strong>
-							<span class="crm-muted"><?php p($d['companyName'] ?? ''); ?></span>
+							<?php
+							$companyId = (int)($d['companyId'] ?? 0);
+							$companyName = (string)($d['companyName'] ?? '');
+							if ($companyId > 0 && $companyName !== ''): ?>
+								<a class="crm-kanban__card-company" href="<?php p($urlGenerator->linkToRoute('customercheck.page.companyDetail', ['id' => $companyId])); ?>"><?php p($companyName); ?></a>
+							<?php else: ?>
+								<span class="crm-muted"><?php p($companyName); ?></span>
+							<?php endif; ?>
 							<span class="crm-kanban__card-value"><?php
 								$cents = (int)($d['valueCents'] ?? 0);
 								p($cents > 0 ? number_format($cents / 100, 2) . ' €' : '—');
 							?></span>
 							<span class="crm-kanban__card-owner<?php p($owner === '' ? ' crm-muted' : ''); ?>">
-								<?php p($l->t('Owner')); ?>:
+								<?php
+								$initials = '';
+								if ($ownerLabel !== '') {
+									$parts = preg_split('/\s+/u', trim($ownerLabel)) ?: [];
+									foreach (array_slice($parts, 0, 2) as $part) {
+										$initials .= mb_strtoupper(mb_substr($part, 0, 1));
+									}
+								}
+								?>
+								<span class="crm-avatar" aria-hidden="true"><?php p($initials !== '' ? $initials : '?'); ?></span>
+								<span class="crm-sr-only"><?php p($l->t('Owner')); ?>:</span>
 								<?php p($ownerLabel !== '' ? $ownerLabel : $l->t('Unassigned')); ?>
 							</span>
+							<?php
+							$dueRaw = (string)($d['expectedClose'] ?? $d['nextActionOn'] ?? '');
+							if ($dueRaw !== ''):
+								$dueDay = substr($dueRaw, 0, 10);
+								$dueDt = \DateTimeImmutable::createFromFormat('Y-m-d', $dueDay) ?: null;
+								$today = new \DateTimeImmutable('today');
+								$dueLabel = $l->t('Due %s', [$dueDay]);
+								if ($dueDt instanceof \DateTimeImmutable) {
+									$days = (int)$today->diff($dueDt)->format('%r%a');
+									if ($days === 0) {
+										$dueLabel = $l->t('Due today');
+									} elseif ($days === 1) {
+										$dueLabel = $l->t('Due tomorrow');
+									} elseif ($days > 1 && $days < 60) {
+										$dueLabel = $l->n('in %n day', 'in %n days', $days);
+									} elseif ($days < 0 && $days > -60) {
+										$dueLabel = $l->n('%n day past due', '%n days past due', abs($days));
+									}
+								}
+								?>
+								<span class="crm-kanban__card-due crm-muted"><?php p($dueLabel); ?></span>
+							<?php endif; ?>
 							<?php if ($quoteAge !== null): ?>
 								<span class="crm-badge <?php echo ((int)$quoteAge >= 14) ? 'crm-badge--warning' : 'crm-badge--neutral'; ?>" title="<?php p($quoteSent); ?>">
 									<?php p($l->t('Quote %s d', [(string)(int)$quoteAge])); ?>
@@ -244,6 +324,15 @@ include __DIR__ . '/common/page-start.php';
 							<?php endif; ?>
 							<?php if (!empty($d['stale'])): ?>
 								<span class="crm-badge crm-badge--warning" title="<?php p($l->t('No stage change for a while')); ?>"><?php p($l->t('Stale')); ?></span>
+							<?php endif; ?>
+							<?php
+							$filesFolderId = (int)($d['companyFilesFolderId'] ?? $d['filesFolderId'] ?? 0);
+							$quoteFileId = (int)($d['quoteFileId'] ?? 0);
+							$fileLinkId = $quoteFileId > 0 ? $quoteFileId : $filesFolderId;
+							if ($fileLinkId > 0):
+								$filesUrl = $urlGenerator->linkToRouteAbsolute('files.viewcontroller.showFile', ['fileid' => $fileLinkId]);
+								?>
+								<a class="crm-kanban__card-files" href="<?php p($filesUrl); ?>"><?php p($quoteFileId > 0 ? $l->t('Quote file') : $l->t('Files')); ?></a>
 							<?php endif; ?>
 							<?php if ($canWrite && !in_array($stage, ['won', 'lost'], true)): ?>
 							<div class="crm-kanban__stage-control">

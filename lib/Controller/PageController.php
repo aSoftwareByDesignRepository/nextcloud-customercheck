@@ -10,6 +10,7 @@ use OCA\CustomerCheck\Service\CompanyCommandService;
 use OCA\CustomerCheck\Service\CompanyHealthService;
 use OCA\CustomerCheck\Service\ContactsSuggestService;
 use OCA\CustomerCheck\Service\CompanyService;
+use OCA\CustomerCheck\Service\CirclesDirectoryService;
 use OCA\CustomerCheck\Service\DealService;
 use OCA\CustomerCheck\Service\DirectoryOptionsService;
 use OCA\CustomerCheck\Service\DisplayLabelService;
@@ -29,6 +30,7 @@ use OCA\CustomerCheck\Support\DensityCounts;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
+use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\RedirectResponse;
 use OCP\AppFramework\Http\TemplateResponse;
 use OCP\AppFramework\Utility\ITimeFactory;
@@ -61,6 +63,7 @@ class PageController extends Controller
 		private readonly MoneyService $money,
 		private readonly SettingsService $settings,
 		private readonly DirectoryOptionsService $directory,
+		private readonly CirclesDirectoryService $circlesDirectory,
 		private readonly QuotaService $quota,
 		private readonly FacadeProbeService $facades,
 		private readonly DisplayLabelService $labels,
@@ -195,13 +198,39 @@ class PageController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
-	public function mailTriage(): TemplateResponse
+	public function mailTriage(): RedirectResponse
+	{
+		return new RedirectResponse(
+			$this->urlGenerator->linkToRouteAbsolute('customercheck.page.review') . '?kind=shared_mail',
+			Http::STATUS_MOVED_PERMANENTLY,
+		);
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function review(): TemplateResponse
 	{
 		$this->registerFrontEndAssets('pages/persona');
-		return new TemplateResponse('customercheck', 'mail-triage', $this->mergeShellPageParams(
-			'mail-triage',
-			$this->l10n->t('Mail triage'),
-			$this->l10n->t('Assign unmatched shared mailbox messages.'),
+		$kind = trim((string)$this->request->getParam('kind', ''));
+
+		return new TemplateResponse('customercheck', 'review', $this->mergeShellPageParams(
+			'review',
+			$this->l10n->t('Review'),
+			$this->l10n->t('Assign unmatched shared mail and other review items to a company.'),
+			['reviewKind' => $kind],
+		));
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function conflicts(): TemplateResponse
+	{
+		$this->registerFrontEndAssets('pages/persona');
+
+		return new TemplateResponse('customercheck', 'conflicts', $this->mergeShellPageParams(
+			'conflicts',
+			$this->l10n->t('Conflicts'),
+			$this->l10n->t('Parallel edits are detected with a three-way compare — not last-write-wins. Every resolution needs a reason.'),
 		));
 	}
 
@@ -603,6 +632,9 @@ class PageController extends Controller
 			$row['companyName'] = $company !== null
 				? $this->labels->companyOrUnknown($company->getName())
 				: $this->labels->unknownCompany();
+			$row['companyFilesFolderId'] = $company !== null && method_exists($company, 'getFilesFolderId')
+				? (int)($company->getFilesFolderId() ?? 0)
+				: 0;
 			$ownerUid = trim((string)($row['ownerUserId'] ?? ''));
 			if ($ownerUid !== '') {
 				$ownerUids[] = $ownerUid;
@@ -627,6 +659,44 @@ class PageController extends Controller
 				static fn (array $d): bool => ($d['stage'] ?? '') === $stageFilter,
 			));
 		}
+		$periodFilter = trim((string)$this->request->getParam('period', ''));
+		$periodFromParam = trim((string)$this->request->getParam('from', ''));
+		$periodToParam = trim((string)$this->request->getParam('to', ''));
+		$fromS = '';
+		$toS = '';
+		if ($periodFilter === 'custom' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $periodFromParam) === 1
+			&& preg_match('/^\d{4}-\d{2}-\d{2}$/', $periodToParam) === 1
+			&& $periodFromParam <= $periodToParam) {
+			$fromS = $periodFromParam;
+			$toS = $periodToParam;
+		} elseif (in_array($periodFilter, ['month', 'quarter', 'year'], true)) {
+			$now = new \DateTimeImmutable('today');
+			$from = match ($periodFilter) {
+				'month' => $now->modify('first day of this month'),
+				'quarter' => $now->modify('first day of this month')->modify('-' . (((int)$now->format('n') - 1) % 3) . ' months'),
+				'year' => $now->setDate((int)$now->format('Y'), 1, 1),
+			};
+			$to = match ($periodFilter) {
+				'month' => $now->modify('last day of this month'),
+				'quarter' => $from->modify('+3 months')->modify('-1 day'),
+				'year' => $now->setDate((int)$now->format('Y'), 12, 31),
+			};
+			$fromS = $from->format('Y-m-d');
+			$toS = $to->format('Y-m-d');
+		}
+		if ($fromS !== '' && $toS !== '') {
+			$dealRows = array_values(array_filter(
+				$dealRows,
+				static function (array $d) use ($fromS, $toS): bool {
+					$close = (string)($d['expectedClose'] ?? $d['updatedAt'] ?? '');
+					if ($close === '') {
+						return false;
+					}
+					$day = substr($close, 0, 10);
+					return $day >= $fromS && $day <= $toS;
+				},
+			));
+		}
 		$companyOptions = [];
 		foreach ($this->companies->search(['workspaceId' => $wsId], 500, 0) as $company) {
 			$companyOptions[] = [
@@ -643,6 +713,9 @@ class PageController extends Controller
 				'deals' => $dealRows,
 				'pipelineView' => $settings['pipelineView'] ?? 'table',
 				'stageFilter' => $stageFilter,
+				'periodFilter' => $periodFilter,
+				'periodFrom' => $periodFromParam,
+				'periodTo' => $periodToParam,
 				'companyOptions' => $companyOptions,
 				'forecastDisclaimer' => $this->l10n->t('Planning labels — not expected cash.'),
 				'lossReasonCodes' => \OCA\CustomerCheck\Constants::LOSS_REASON_CODES,
@@ -897,6 +970,13 @@ class PageController extends Controller
 			'members',
 			$canManage,
 		);
+		$shell['availableGroups'] = !empty($shell['canManageWorkspace'])
+			? $this->directory->availableGroups()
+			: [];
+		$shell['circlesAvailable'] = $this->circlesDirectory->isAvailable();
+		$shell['availableCircles'] = (!empty($shell['canManageWorkspace']) && $shell['circlesAvailable'])
+			? $this->circlesDirectory->availableCirclesForUser($this->accessControl->currentUserId())
+			: [];
 
 		return new TemplateResponse('customercheck', 'settings', $shell);
 	}

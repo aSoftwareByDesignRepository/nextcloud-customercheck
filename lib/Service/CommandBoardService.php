@@ -40,6 +40,8 @@ class CommandBoardService
 		private readonly ITimeFactory $timeFactory,
 		private readonly IL10N $l10n,
 		private readonly DisplayLabelService $labels,
+		private readonly ?ReviewService $review = null,
+		private readonly ?EditConflictService $editConflicts = null,
 	) {
 	}
 
@@ -200,6 +202,46 @@ class CommandBoardService
 					'shared' => true,
 				], $this->mailbox->unmatched($workspaceId, 25)),
 			];
+
+			$reviewOpen = $this->review?->countOpen($workspaceId) ?? 0;
+			if ($reviewOpen > 0) {
+				$sections[] = [
+					'id' => 'review_open',
+					'title' => $this->l10n->t('Review inbox'),
+					'items' => [[
+						'companyId' => null,
+						'companyName' => '',
+						'why' => $this->l10n->n(
+							'%n review item needs a decision',
+							'%n review items need a decision',
+							$reviewOpen,
+						),
+						'dueDate' => null,
+						'cta' => 'review',
+						'openCount' => $reviewOpen,
+					]],
+				];
+			}
+
+			$conflictOpen = $this->editConflicts?->countOpen($workspaceId) ?? 0;
+			if ($conflictOpen > 0 && WorkspaceCapability::allows($role, 'conflicts.resolve', $isAppAdmin)) {
+				$sections[] = [
+					'id' => 'conflicts_open',
+					'title' => $this->l10n->t('Conflicts'),
+					'items' => [[
+						'companyId' => null,
+						'companyName' => '',
+						'why' => $this->l10n->n(
+							'%n open edit conflict',
+							'%n open edit conflicts',
+							$conflictOpen,
+						),
+						'dueDate' => null,
+						'cta' => 'conflicts',
+						'openCount' => $conflictOpen,
+					]],
+				];
+			}
 
 			if (WorkspaceCapability::canOpenTeamBoard($role, $isAppAdmin) && WorkspaceCapability::teamSeesAllRows($role, $isAppAdmin)) {
 				try {

@@ -50,6 +50,10 @@ final class EnsureCustomerCheckSchema implements IRepairStep
 		'crm_escal',
 		'crm_ooo',
 		'crm_1on1',
+		'crm_review_item',
+		'crm_edit_conflict',
+		'crm_entity_rev',
+		'crm_value_map',
 	];
 
 	public function __construct(

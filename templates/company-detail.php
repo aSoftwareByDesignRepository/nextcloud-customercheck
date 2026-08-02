@@ -309,7 +309,7 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 <section class="crm-card" id="crm-contracts" aria-labelledby="crm-contracts-title">
 		<header class="crm-card__header">
 			<div class="crm-card__header-text">
-				<h2 id="crm-agreements-title" class="crm-card__title"><?php p($l->t('Agreements')); ?></h2>
+				<h2 id="crm-contracts-title" class="crm-card__title"><?php p($l->t('Agreements')); ?></h2>
 				<p class="crm-card__lead"><?php p($l->t('Licenses and Check Partner packages.')); ?></p>
 			</div>
 			<?php if (!empty($_['canWrite'])): ?>
@@ -563,7 +563,12 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 								<?php endif; ?>
 							</td>
 							<td data-label="<?php p($l->t('Status')); ?>">
-								<span class="crm-badge <?php echo !empty($inv['overdue']) ? 'crm-badge--danger' : 'crm-badge--neutral'; ?>"><?php p($inv['status'] ?? ''); ?></span>
+								<span class="crm-badge <?php echo !empty($inv['overdue']) ? 'crm-badge--danger' : 'crm-badge--neutral'; ?>"><?php p($inv['status'] ?? ''); ?></span><?php
+									$agingBucket = array_key_exists('agingBucket', $inv) ? $inv['agingBucket'] : null;
+									$daysPastDue = array_key_exists('daysPastDue', $inv) && $inv['daysPastDue'] !== null
+										? (int)$inv['daysPastDue'] : null;
+									include __DIR__ . '/common/aging-chip.php';
+								?>
 							</td>
 							<td data-label="<?php p($l->t('Issue')); ?>"><?php p($inv['issueDate'] ?? '—'); ?></td>
 							<td data-label="<?php p($l->t('Gross')); ?>"><?php p(number_format(((int)($inv['grossTotalCents'] ?? 0)) / 100, 2)); ?> €</td>

@@ -63,6 +63,9 @@ class NotificationService
 			throw new \InvalidArgumentException('Unknown CustomerCheck notification subject: ' . $subject);
 		}
 		$recipients = $this->workspaces->listWorkspaceMemberUserIds($workspaceId);
+		if (!isset($subjectParameters['workspaceId']) && $workspaceId > 0) {
+			$subjectParameters = array_merge($subjectParameters, ['workspaceId' => $workspaceId]);
+		}
 		return $this->notifyUsers($recipients, $subject, $objectType, $objectId, $subjectParameters);
 	}
 

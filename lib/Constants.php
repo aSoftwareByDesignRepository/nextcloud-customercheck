@@ -302,6 +302,8 @@ final class Constants
 	public const NOTIFY_KEY_GENERATED = 'crm_key_generated';
 	/** Companion P2 — open activity due today / overdue (exactly-once ledger). */
 	public const NOTIFY_ACTIVITY_DUE = 'crm_activity_due';
+	/** Parallel edit conflict opened — notify both actors (GNQ §6). */
+	public const NOTIFY_EDIT_CONFLICT = 'crm_edit_conflict';
 
 	/** @var list<string> */
 	public const NOTIFICATION_SUBJECTS = [
@@ -312,6 +314,7 @@ final class Constants
 		self::NOTIFY_INVOICE_PAID,
 		self::NOTIFY_KEY_GENERATED,
 		self::NOTIFY_ACTIVITY_DUE,
+		self::NOTIFY_EDIT_CONFLICT,
 	];
 
 	// ── Error codes (§10.2, complete v1 set) ────────────────────────────
@@ -368,7 +371,7 @@ final class Constants
 		'today', 'pulse', 'brief', 'my-accounts', 'team', 'companies',
 		'company-detail', 'company-form', 'prepare-meeting', 'strategy',
 		'pipeline', 'agreements', 'agreement-form', 'money', 'activities',
-		'mail-triage', 'import', 'settings', 'support-us', 'access-denied',
+		'mail-triage', 'review', 'conflicts', 'import', 'settings', 'support-us', 'access-denied',
 		'workload',
 	];
 
@@ -388,6 +391,13 @@ final class Constants
 	public const ERR_MAIL_SEND_DENIED = 'MAIL_SEND_DENIED';
 	public const ERR_ESCALATION_LIMIT = 'ESCALATION_LIMIT';
 	public const ERR_FORECAST_AS_CASH = 'FORECAST_AS_CASH';
+	public const ERR_DEAL_NOT_IN_COMPANY = 'DEAL_NOT_IN_COMPANY';
+	public const ERR_ALREADY_TERMINAL = 'ALREADY_TERMINAL';
+	public const ERR_SNOOZE_TOO_LONG = 'SNOOZE_TOO_LONG';
+	public const ERR_REASON_REQUIRED = 'REASON_REQUIRED';
+	public const ERR_REVIEW_SOURCE_DISABLED = 'REVIEW_SOURCE_DISABLED';
+	public const ERR_FINGERPRINT_SUPPRESSED = 'FINGERPRINT_SUPPRESSED';
+	public const ERR_EDIT_CONFLICT = 'EDIT_CONFLICT';
 
 	private function __construct()
 	{

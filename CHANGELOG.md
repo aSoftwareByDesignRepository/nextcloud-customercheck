@@ -5,6 +5,186 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0/).
 
+## 1.6.9 - 2026-08-02
+
+### UX (Bachus simplify)
+
+- **Review:** one disclosure, source kind chips, progressive Assign / No relation (snooze & follow-up under More)
+- **Conflicts:** plain-language choices, manual field hidden until chosen, empty CTA → Today, human `entityLabel`
+- **Settings:** Review sources as first-class card (deep-link `#crm-review-sources`)
+- **Agreement create:** name/kind first; product/dates/amount under More
+- **Company 360:** email log collapsed until there is history; contracts title id aligned
+- Quick starts + page help for Review and Conflicts
+
+## 1.6.8 - 2026-08-02
+
+### Security
+
+- **Import anomalies** default **off** until manager DSGVO ack; enqueue requires `dsgvoAckAt`
+- Edit conflicts **notify both actors** (NC notification → Conflicts deep-link) and withdraw on resolve
+
+### Added
+
+- Review **Include archived companies in suggestions** (opt-in, fail-closed default)
+- Settings toggle for import anomaly Review source
+- Website EN/DE blurbs for Universal Review & Conflicts
+- Companion **1.0.11**
+
+### Fixed
+
+- Product/GNQ: person cadence SoT is company `next_touch_on` (no phantom person `next_touch`)
+
+## 1.6.7 - 2026-08-02
+
+### Security
+
+- Account plan upsert requires **optimistic `updatedAt`** + CAS (closes Strategy LWW race)
+
+### Fixed
+
+- Review **disclosure** always shown (unfiltered / shared mail / platform kinds) — GNQ §5.6
+- Import `company_name` anomalies feed **org suggestions** and clear Assign / No-relation UX (no dead-end Apply&learn)
+- Review suggestions include **companyName** (not bare `#id`) and prefill the search box
+
+### Added
+
+- Companion **1.0.10** (Play docs server floor ≥ 1.6.7)
+- E2E: Review keyboard assign / unfiltered disclosure
+
+## 1.6.6 - 2026-08-02
+
+### Security
+
+- Entity updates use **owned transactions** (`DbTransaction`) so conflict resolve outer txns are never rolled back by nested writers
+- Review person stub creates under **company row lock** (idempotent email re-check)
+
+### Fixed
+
+- Apply once / Apply & learn now **updates company country** when the import anomaly has `companyId` (`POST …/apply-country`)
+- Companion push switches **workspaceId** before opening company/Today
+- Review assign optional **deal picker** (overhead only when no deal)
+- Pipeline template no longer calls removed `OC::$server->getURLGenerator()` (NC 34) — board view loads again
+
+### Added
+
+- Pipeline period chips: All · This month · This quarter · Custom
+- Companion **1.0.9**
+
+## 1.6.5 - 2026-08-02
+
+### Security
+
+- Conflict resolve is **atomic**: mark + entity apply share one DB transaction (rollback on apply failure); `conflict.resolved` timeline after commit
+- Deal **stage** participates in the three-way edit-conflict queue (CAS miss → `EDIT_CONFLICT` with `conflictId`)
+
+### Added
+
+- Review assign creates an idempotent **person stub** (contact / calendar / shared mail)
+- Import **country** column → value-map resolve or `import_anomaly`; Review **Apply once** (no learn) beside Apply & learn
+- Calendar ingress scores **ATTENDEE** emails for company suggestions
+- Companion **1.0.8**: push payload `workspaceId`; Conflicts deep-link `?conflictId=`; deal-stage 409 opens Conflicts in browser
+
+## 1.6.4 - 2026-08-02
+
+### Security
+
+- Company / Person / Agreement updates **require** `updatedAt` (parity with Deal); conflict apply uses explicit `skipOptimistic`
+- Companion **1.0.7**: Review / Conflicts / company browser links include `?workspaceId=`
+
+### Added
+
+- Entity revision **90-day purge** job (`EntityRevisionPurgeJob`)
+- Contacts Review ingress when source enabled + DSGVO + workspace-member `scanActor`
+- Pipeline **custom date range** filter; mail-triage → Review **HTTP 301**
+- Review overhead UX copy + timeline `review.assigned` metadata (GNQ §5.4)
+
+## 1.6.3 - 2026-08-02
+
+### Added
+
+- Value-map **DELETE** API + Settings “Data quality — country maps” list/remove UI
+- Review snooze presets **1d / 7d / 30d**, accessible inline follow-up note (no native `prompt`), empty CTA → `#crm-review-sources`
+- Conflicts UI: entity labels (company/deal/person/agreement) + **manual** field choice
+- Import anomaly **Apply & learn** → value-map then close as no-relation
+
+### Security
+
+- GDPR erase cancels **agreement** open conflicts and blanks conflict `base`/`current`/`incoming`/`fields` JSON plus Review `source_ref` / suggestion scrub for erased company
+- Conflict resolve compensator: CAS on `status` + `resolved_by` + `row_version`; throws if restore fails (no silent orphan)
+
+### Fixed
+
+- `.crm-muted` now sets theme-safe muted ink (pipeline forecast disclaimer no longer fails WCAG AA contrast)
+
+## 1.6.2 - 2026-08-01
+
+### Added
+
+- Agreement edit-conflict three-way + apply-on-resolve (parity with Company/Deal/Person)
+- Calendar/Tasks Review ingress when manager configures URIs + DSGVO + workspace-member scan actor
+- Review empty-state CTA to source settings; j/k/a/s/n keyboard; Contacts Send-to-Review when enabled
+- Kanban company link, relative due labels, owner initials avatar, quote/files link polish
+- Companion **1.0.6**: Today web-queue opens Review / Conflicts in the browser
+
+### Fixed
+
+- Conflict resolve compensator re-opens the queue row when entity apply fails (no orphan “resolved”)
+- File/calendar/task `scanActor` must be a workspace member (settings + ingress)
+- Settings form loads/saves Files folder id, calendar/task URIs, and scan actors
+- License key events: map `invoicecheck` / `ic` / `ic2` → CRM product `ic` (was wrongly collapsing to InventoryCheck `iv`); map `inventorycheck` explicitly to `iv`; add DutyCheck / CustomerCheck aliases
+
+## 1.6.1 - 2026-08-01
+
+### Added
+
+- Deal and Person edit-conflict three-way + apply-on-resolve (parity with Company)
+- Manager Review **reopen** API + UI; Review **enqueue** for opt-in sources
+- Review ingress job (shared-mail sync + opt-in Files folder walk with DSGVO + scan actor)
+- Import ambiguous rows enqueue `import_anomaly` Review items; value-map country resolve on company save
+- GDPR erase cancels open conflicts and scrubs Review PII for the company
+
+### Fixed
+
+- Conflict resolve no longer failed optimistic lock when applying field choices (null precondition)
+
+## 1.6.0 - 2026-08-01
+
+### Added — GNQ Bordmittel delta (CUC-GNQ-DELTA)
+
+- **Universal Review Inbox** (`/review`) with shared-mail sync, suggestions, assign/snooze/no-relation/follow-up, overhead flag, fingerprint suppress (180d)
+- **Edit conflict queue** (`/conflicts`) with three-way field compare, mandatory reason, apply-on-resolve (no LWW)
+- **Workspace value-map learn** (`crm_value_map`) for country normalisation
+- Entity revision snapshots (`crm_entity_rev`) for conflict base recovery
+- Review source settings (`review_sources_json`) — non-mail sources default OFF + DSGVO ack
+- Pipeline period filter (month/quarter/year) + kanban due line
+- Today Command Board counts for open review / conflicts; companion Today meta `reviewOpenCount` / `conflictsOpenCount`
+- Mail triage URL redirects to `/review?kind=shared_mail`
+
+### Security
+
+- Review mutations require workspace `write` (viewers read-only)
+- Conflict resolve limited to managers or participating actors
+- Cross-workspace company assign → 404; conflict insert survives aborted update transaction
+
+## 1.5.50 - 2026-08-01
+
+### Security
+
+- Workspace **member add/import** now serialises on the workspace row (`SELECT … FOR UPDATE`) so concurrent inserts cannot race past `WS_MAX_MEMBERS`
+- Restored Activity **pushToTasks** `claimTodoUri` CAS so concurrent VTODO pushes cannot double-create calendar tasks
+
+### Tests
+
+- Import `limitReached` + Circles/group unit coverage; member-import ACL contract; companion auto-lock edge cases; settings E2E for one-shot import UI
+
+## 1.5.49 - 2026-08-01
+
+### Added
+
+- Workspace **one-shot Nextcloud group member import** (product §6 optional — not live sync)
+- Workspace **one-shot Circles member import** when Circles is enabled (soft-dep; actor must belong to the Circle)
+- Companion **auto-lock** after background (with timeout choices) when Require unlock is on
+
 ## 1.5.48 - 2026-08-01
 
 ### Changed / Granny UX (Bachus)
@@ -14,6 +194,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Company 360: **Call tomorrow** one-tap (no modal); next steps / High·Normal·Low instead of MAP / P1
 - Chase badge: “New lead waiting too long” instead of Lead SLA
 - Companion: Today **Done** one-tap; Deals inline stage chips; Settings segmented Appearance/Language
+
+### Added / InvoiceCheck facade v3 aging (WP-ECO-CRM)
+
+- Money + company invoice rows + Pulse overdue attention show `agingBucket` / days past due when present (text+chip); MoneyService stays null-safe if keys missing
+
+### Fixed / Companion 1.0.4 (Aristoteles)
+
+- Parse CUC `{ error: CODE, message }` so ACL refresh + conflict UX use real codes/messages
+- Epoch-gate license demotion / recheck saves so sign-out cannot resurrect SecureStore
+- Push deep-links wait until tab routes exist (WorkspaceGate no longer drops cold-start taps)
+- Today read-only callout; Log activity type radiogroup; Settings full-width choices; Deals pull-to-refresh
 
 ## 1.5.47 - 2026-08-01
 

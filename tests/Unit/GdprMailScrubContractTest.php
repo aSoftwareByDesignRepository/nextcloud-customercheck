@@ -11,6 +11,27 @@ use PHPUnit\Framework\TestCase;
  */
 final class GdprMailScrubContractTest extends TestCase
 {
+	public function testEraseCancelsConflictsAndScrubsReview(): void
+	{
+		$src = (string)file_get_contents(dirname(__DIR__, 2) . '/lib/Service/CompanyService.php');
+		$erase = $this->extractMethod($src, 'gdprErase');
+		$this->assertStringContainsString('eraseReviewAndConflicts', $erase);
+		$this->assertStringContainsString('$agreementIds', $erase);
+		$method = $this->extractMethod($src, 'eraseReviewAndConflicts');
+		$this->assertStringContainsString('cancelOpenConflicts', $method);
+		$this->assertStringContainsString("'agreement'", $method);
+		$this->assertStringContainsString("update('crm_review_item')", $method);
+		$this->assertStringContainsString("set('source_ref'", $method);
+		$this->assertStringContainsString('[erased]', $method);
+		$this->assertStringContainsString('scrubReviewSuggestionsForCompany', $method);
+		$cancel = $this->extractMethod($src, 'cancelOpenConflicts');
+		$this->assertStringContainsString("update('crm_edit_conflict')", $cancel);
+		$this->assertStringContainsString("'cancelled'", $cancel);
+		$this->assertStringContainsString("set('base_json'", $cancel);
+		$this->assertStringContainsString("set('current_json'", $cancel);
+		$this->assertStringContainsString("set('incoming_json'", $cancel);
+	}
+
 	public function testEraseScrubsSharedMailFields(): void
 	{
 		$src = (string)file_get_contents(dirname(__DIR__, 2) . '/lib/Service/CompanyService.php');

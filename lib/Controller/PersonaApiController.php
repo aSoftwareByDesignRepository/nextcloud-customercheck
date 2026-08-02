@@ -192,6 +192,52 @@ class PersonaApiController extends Controller
 		}
 	}
 
+	/**
+	 * One-shot import members from a Nextcloud group (product §6 optional — not live sync).
+	 */
+	#[NoAdminRequired]
+	public function importWorkspaceMembersFromGroup(int $workspaceId): JSONResponse
+	{
+		try {
+			$uid = $this->access->currentUserId();
+			$this->workspaces->assertCapability($uid, $workspaceId, 'members');
+			$body = $this->requestBody();
+
+			return $this->ok($this->workspaceService->importMembersFromGroup(
+				$workspaceId,
+				trim((string)($body['groupId'] ?? '')),
+				(string)($body['role'] ?? 'member'),
+				!array_key_exists('canMailSend', $body) || !empty($body['canMailSend']),
+				$uid,
+			));
+		} catch (\Throwable $e) {
+			return $this->fromThrowable($e);
+		}
+	}
+
+	/**
+	 * One-shot import members from a Circles circle (product §6 optional — not live sync).
+	 */
+	#[NoAdminRequired]
+	public function importWorkspaceMembersFromCircle(int $workspaceId): JSONResponse
+	{
+		try {
+			$uid = $this->access->currentUserId();
+			$this->workspaces->assertCapability($uid, $workspaceId, 'members');
+			$body = $this->requestBody();
+
+			return $this->ok($this->workspaceService->importMembersFromCircle(
+				$workspaceId,
+				trim((string)($body['circleId'] ?? '')),
+				(string)($body['role'] ?? 'member'),
+				!array_key_exists('canMailSend', $body) || !empty($body['canMailSend']),
+				$uid,
+			));
+		} catch (\Throwable $e) {
+			return $this->fromThrowable($e);
+		}
+	}
+
 	#[NoAdminRequired]
 	public function workspaceSettings(int $workspaceId): JSONResponse
 	{

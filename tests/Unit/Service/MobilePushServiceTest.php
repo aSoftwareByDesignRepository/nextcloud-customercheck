@@ -128,4 +128,15 @@ final class MobilePushServiceTest extends TestCase
 		self::assertSame(Constants::NOTIFY_REMINDER, $data['type']);
 		self::assertSame(12, $data['companyId']);
 	}
+
+	public function testPushDataCarriesWorkspaceId(): void
+	{
+		$data = MobilePushService::pushData(Constants::NOTIFY_DIGEST, [
+			'workspaceId' => 7,
+			'renewals' => 1,
+			'overdue' => 0,
+		]);
+		self::assertSame(7, $data['workspaceId']);
+		self::assertArrayNotHasKey('companyId', $data);
+	}
 }

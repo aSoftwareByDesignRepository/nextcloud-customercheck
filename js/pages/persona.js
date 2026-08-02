@@ -347,6 +347,15 @@
       if (kindLabel) metaParts.push(String(kindLabel));
       if (a.daysUntil != null) metaParts.push(t('%s days left', [String(a.daysUntil)]));
       if (a.amountCents != null) metaParts.push(euros(a.amountCents));
+      // IC overdue aging — only when facade v3 fields are present (never invent).
+      if (a.kind === 'overdue_invoice' && a.agingBucket != null && String(a.agingBucket) !== '') {
+        const agingLabel = a.agingBucketLabel || String(a.agingBucket);
+        if (a.daysPastDue != null) {
+          metaParts.push(agingLabel + ' · ' + t('%s days past due', [String(a.daysPastDue)]));
+        } else {
+          metaParts.push(agingLabel);
+        }
+      }
       return {
         title: a.label || a.why || t('Attention'),
         meta: metaParts.join(' · '),
@@ -1214,7 +1223,8 @@
           (p.nextReviewOn ? ' · ' + p.nextReviewOn : '')) + '</span></div>' +
         editBtn +
         '<form class="crm-form crm-form--inline" hidden data-plan-form="' +
-        escapeHtml(String(p.companyId)) + '" aria-label="' + escapeHtml(t('Edit account plan')) + '">' +
+        escapeHtml(String(p.companyId)) + '" data-plan-updated-at="' + escapeHtml(p.updatedAt || '') +
+        '" aria-label="' + escapeHtml(t('Edit account plan')) + '">' +
         '<label>' + t('Goal') + '<textarea name="goal" class="crm-input" rows="2" maxlength="2000">' +
         escapeHtml(p.goal || '') + '</textarea></label>' +
         '<label>' + t('Priority') +
@@ -1277,6 +1287,7 @@
             priority: String(fd.get('priority') || 'p2'),
             nextReviewOn: String(fd.get('nextReviewOn') || ''),
             status: String(fd.get('status') || 'active'),
+            updatedAt: form.getAttribute('data-plan-updated-at') || '',
           });
           await loadStrategy(mount);
         } catch (e) {
@@ -1697,6 +1708,781 @@
     mount.appendChild(ctaBlock);
   }
 
+  async function loadReview(mount) {
+    const ws = await resolveWorkspaceId();
+    const kind = (mount.getAttribute('data-crm-review-kind') || '').trim();
+    const includeArchived = !!(document.getElementById('crm-review-include-archived') || {}).checked
+      || mount.getAttribute('data-crm-include-archived') === '1';
+    let qs = [];
+    if (kind) qs.push('kind=' + encodeURIComponent(kind));
+    if (includeArchived) qs.push('includeArchived=1');
+    const qsKind = qs.length ? ('?' + qs.join('&')) : '';
+    const data = await apiGet('/api/v1/workspaces/' + ws + '/review/items' + qsKind);
+    clearMountBusy(mount);
+    mount.innerHTML = '';
+    const canWrite = data.canWrite !== false && shellCan('write');
+    const canReopen = !!data.canReopen;
+    const items = data.items || [];
+    const openCount = data.openCount || 0;
+
+    function sourceKindLabel(code) {
+      const map = {
+        shared_mail: t('Shared mail'),
+        contact_suggest: t('Contacts'),
+        calendar_event: t('Calendar'),
+        file: t('Files'),
+        task: t('Tasks'),
+        import_anomaly: t('Import'),
+      };
+      return map[code] || code || t('Review');
+    }
+
+    function statusLabel(code) {
+      const map = {
+        open: t('Needs a decision'),
+        snoozed: t('Snoozed'),
+        assigned: t('Assigned'),
+        no_relation: t('No relation'),
+        follow_up: t('Follow-up'),
+      };
+      return map[code] || code || '';
+    }
+
+    function setDisclosureText(text) {
+      const el = document.getElementById('crm-review-disclosure');
+      if (el) {
+        el.textContent = text;
+        return;
+      }
+      const disclosure = document.createElement('p');
+      disclosure.className = 'crm-callout';
+      disclosure.id = 'crm-review-disclosure';
+      disclosure.setAttribute('role', 'status');
+      disclosure.textContent = text;
+      mount.parentNode ? mount.parentNode.insertBefore(disclosure, mount) : mount.appendChild(disclosure);
+    }
+
+    if (kind && kind !== 'shared_mail') {
+      setDisclosureText(t('These items come from %s. Everyone in this workspace with Review access can see them.', [sourceKindLabel(kind)]));
+    } else if (!kind) {
+      const hasNonMail = items.some(function (it) {
+        return it && it.sourceKind && it.sourceKind !== 'shared_mail';
+      });
+      setDisclosureText(hasNonMail
+        ? t('This inbox may include shared mail and platform sources (Contacts, Files, Calendar, Tasks, import). Everyone in this workspace with Review access can see them.')
+        : t('Shared mailbox items are visible to everyone in this workspace with Review access.'));
+    } else {
+      setDisclosureText(t('Shared mailbox items are visible to everyone in this workspace with Review access.'));
+    }
+
+    const head = document.createElement('p');
+    head.className = 'crm-muted';
+    head.setAttribute('role', 'status');
+    head.textContent = openCount === 1
+      ? t('1 item needs a decision')
+      : t('%s items need a decision', [String(openCount)]);
+    mount.appendChild(head);
+
+    const kindChips = document.createElement('nav');
+    kindChips.className = 'crm-quick-filters';
+    kindChips.setAttribute('aria-label', t('Filter by source'));
+    [
+      { id: '', label: t('All') },
+      { id: 'shared_mail', label: t('Shared mail') },
+      { id: 'contact_suggest', label: t('Contacts') },
+      { id: 'file', label: t('Files') },
+      { id: 'calendar_event', label: t('Calendar') },
+      { id: 'task', label: t('Tasks') },
+      { id: 'import_anomaly', label: t('Import') },
+    ].forEach(function (chip) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'crm-btn crm-btn--sm' + (kind === chip.id ? ' crm-btn--primary' : ' crm-btn--secondary');
+      btn.setAttribute('aria-pressed', kind === chip.id ? 'true' : 'false');
+      btn.textContent = chip.label;
+      btn.addEventListener('click', function () {
+        mount.setAttribute('data-crm-review-kind', chip.id);
+        try {
+          const url = new URL(window.location.href);
+          if (chip.id) url.searchParams.set('kind', chip.id);
+          else url.searchParams.delete('kind');
+          window.history.replaceState({}, '', url.pathname + url.search + url.hash);
+        } catch (e) { /* ignore */ }
+        void loadReview(mount);
+      });
+      kindChips.appendChild(btn);
+    });
+    mount.appendChild(kindChips);
+
+    const filterBar = document.createElement('details');
+    filterBar.className = 'crm-advanced';
+    filterBar.innerHTML =
+      '<summary>' + escapeHtml(t('More options')) + '</summary>' +
+      '<label class="crm-switch" for="crm-review-include-archived">' +
+      '<input type="checkbox" id="crm-review-include-archived" class="crm-input" ' + (includeArchived ? 'checked ' : '') + '/>' +
+      '<span>' + escapeHtml(t('Include archived companies in suggestions')) + '</span></label>';
+    mount.appendChild(filterBar);
+    const archToggle = filterBar.querySelector('#crm-review-include-archived');
+    if (archToggle) {
+      archToggle.addEventListener('change', function () {
+        mount.setAttribute('data-crm-include-archived', archToggle.checked ? '1' : '0');
+        void loadReview(mount);
+      });
+    }
+
+    const body = document.createElement('div');
+    body.setAttribute('data-crm-review-body', '');
+    mount.appendChild(body);
+
+    function reasonText(code) {
+      const map = {
+        person_email_exact: t('Exact person email match'),
+        domain_unique: t('Unique company domain match'),
+        org_name_unique: t('Organisation name unique'),
+        org_name_fuzzy: t('Organisation name close match'),
+      };
+      return map[code] || code || t('Suggested match');
+    }
+
+    renderSuiteTable(
+      body,
+      items.map(function (item) {
+        const top = (item.suggestions && item.suggestions[0]) || null;
+        const companyLabel = top && top.companyName
+          ? String(top.companyName)
+          : (top ? ('#' + String(top.companyId)) : '');
+        const suggestLabel = top
+          ? (companyLabel + ' · ' + t('%s percent match', [String(top.score)]) + ' — ' + reasonText(top.reasonCode))
+          : t('No suggestion');
+        const prefillId = top ? String(top.companyId) : '';
+        const prefillName = top && top.companyName ? String(top.companyName) : '';
+        const searchId = 'crm-review-search-' + item.id;
+        const suggestId = 'crm-review-suggest-' + item.id;
+        const hiddenId = 'crm-review-company-' + item.id;
+        let actions = '<span class="crm-muted">' + escapeHtml(t('View only')) + '</span>';
+        const terminal = item.status === 'assigned' || item.status === 'no_relation';
+        const overheadHint = escapeHtml(t('Logged without a deal — counts as overhead for chase hygiene, not as finance.'));
+        const ref = item.sourceRef || {};
+        const anomalyField = String(ref.fieldKey || '');
+        const anomalyRaw = String(ref.raw || item.snippet || '');
+        const companyNameHint = (item.sourceKind === 'import_anomaly' && anomalyField === 'company_name' && anomalyRaw)
+          ? ('<p class="crm-callout" role="status">' +
+            escapeHtml(t('Ambiguous company name from import: “%s”. Pick the matching company or mark no relation.', [anomalyRaw])) +
+            '</p>')
+          : '';
+        if (terminal && item.overhead) {
+          actions =
+            '<p class="crm-callout" role="status">' + overheadHint + '</p>' +
+            (canReopen
+              ? '<button type="button" class="crm-btn crm-btn--secondary" data-crm-review-reopen="' +
+                escapeHtml(String(item.id)) + '">' +
+                escapeHtml(t('Reopen')) +
+                '</button>'
+              : '');
+        } else if (terminal && canReopen) {
+          actions =
+            '<button type="button" class="crm-btn crm-btn--secondary" data-crm-review-reopen="' +
+            escapeHtml(String(item.id)) + '">' +
+            escapeHtml(t('Reopen')) +
+            '</button>';
+        } else if (canWrite && !terminal) {
+          const searchValue = prefillName || (anomalyField === 'company_name' ? anomalyRaw : '');
+          const suggestChip = top
+            ? ('<p class="crm-callout crm-review-suggest-chip" role="status">' +
+              escapeHtml(t('Suggested: %s', [companyLabel])) + ' · ' +
+              escapeHtml(t('%s percent match', [String(top.score)])) + '</p>')
+            : '';
+          actions =
+            companyNameHint +
+            suggestChip +
+            '<form class="crm-form crm-review-assign" data-review-id="' + escapeHtml(String(item.id)) + '" data-crm-review-row tabindex="-1">' +
+            '<div class="crm-review-primary">' +
+            '<label class="form-label" for="' + escapeHtml(searchId) + '">' + escapeHtml(t('Company')) + '</label>' +
+            '<div class="user-picker">' +
+            '<input type="search" id="' + escapeHtml(searchId) + '" class="form-input crm-input user-picker__search" ' +
+            'role="combobox" aria-autocomplete="list" aria-controls="' + escapeHtml(suggestId) + '" aria-expanded="false" ' +
+            'autocomplete="off" placeholder="' + escapeHtml(t('Search by company name…')) + '" value="' + escapeHtml(searchValue) + '" />' +
+            '<ul id="' + escapeHtml(suggestId) + '" class="user-picker__list" role="listbox" hidden></ul>' +
+            '<input type="hidden" id="' + escapeHtml(hiddenId) + '" name="companyId" value="' + escapeHtml(prefillId) + '" />' +
+            '</div>' +
+            '<div class="crm-inline-actions crm-review-primary__actions">' +
+            '<button type="submit" class="crm-btn crm-btn--primary">' + escapeHtml(t('Assign')) + '</button>' +
+            '<button type="button" class="crm-btn crm-btn--secondary" data-crm-review-none>' + escapeHtml(t('No relation')) + '</button>' +
+            '</div></div>' +
+            '<details class="crm-advanced crm-review-more">' +
+            '<summary>' + escapeHtml(t('More options')) + '</summary>' +
+            '<p class="crm-muted" data-crm-review-overhead-hint>' + overheadHint + '</p>' +
+            '<label class="form-label" for="crm-review-deal-' + escapeHtml(String(item.id)) + '">' + escapeHtml(t('Deal (optional)')) + '</label>' +
+            '<select id="crm-review-deal-' + escapeHtml(String(item.id)) + '" name="dealId" class="form-select crm-input" data-crm-review-deal>' +
+            '<option value="">' + escapeHtml(t('No deal — mark as overhead')) + '</option>' +
+            '</select>' +
+            '<div class="crm-inline-actions">' +
+            '<button type="button" class="crm-btn crm-btn--secondary" data-crm-review-snooze="1d" title="' + escapeHtml(t('Tomorrow')) + '">' + escapeHtml(t('1 day')) + '</button>' +
+            '<button type="button" class="crm-btn crm-btn--secondary" data-crm-review-snooze="7d" title="' + escapeHtml(t('Later')) + '">' + escapeHtml(t('7 days')) + '</button>' +
+            '<button type="button" class="crm-btn crm-btn--secondary" data-crm-review-snooze="30d">' + escapeHtml(t('30 days')) + '</button>' +
+            '</div>' +
+            '<label class="form-label" for="crm-review-fu-' + escapeHtml(String(item.id)) + '">' + escapeHtml(t('Follow-up')) + '</label>' +
+            '<input type="text" id="crm-review-fu-' + escapeHtml(String(item.id)) + '" class="form-input crm-input" ' +
+            'name="followUpNote" autocomplete="off" minlength="3" ' +
+            'placeholder="' + escapeHtml(t('Short follow-up note (at least 3 characters)')) + '" />' +
+            '<button type="button" class="crm-btn crm-btn--secondary" data-crm-review-followup>' + escapeHtml(t('Follow-up')) + '</button>' +
+            '</details>' +
+            '</form>';
+        }
+        if (canWrite && item.sourceKind === 'import_anomaly' && !terminal) {
+          const fieldKey = String(ref.fieldKey || 'country');
+          const raw = String(ref.raw || item.snippet || '');
+          if (fieldKey === 'country' && raw) {
+            actions +=
+              '<details class="crm-advanced"><summary>' + escapeHtml(t('Fix country mapping')) + '</summary>' +
+              '<form class="crm-form crm-form--row" data-crm-review-learn="' + escapeHtml(String(item.id)) + '">' +
+              '<label class="form-label" for="crm-learn-' + escapeHtml(String(item.id)) + '">' + escapeHtml(t('ISO country')) + '</label>' +
+              '<input type="text" id="crm-learn-' + escapeHtml(String(item.id)) + '" class="form-input crm-input" maxlength="2" ' +
+              'placeholder="DE" autocomplete="off" />' +
+              '<button type="button" class="crm-btn crm-btn--secondary" data-crm-review-apply-once>' +
+              escapeHtml(t('Apply once')) + '</button>' +
+              '<button type="submit" class="crm-btn crm-btn--primary">' + escapeHtml(t('Apply & learn')) + '</button>' +
+              '</form></details>';
+          }
+        }
+        return {
+          title: item.subject || item.snippet || t('Review item'),
+          meta: sourceKindLabel(item.sourceKind) + ' · ' + statusLabel(item.status) +
+            (item.overhead ? (' · ' + t('Overhead')) : '') + ' · ' + suggestLabel,
+          actionHtml: actions,
+        };
+      }),
+      t('Nothing to review'),
+      t('Review inbox'),
+    );
+
+    if (items.length === 0) {
+      const emptyCta = document.createElement('div');
+      emptyCta.className = 'crm-empty-state';
+      emptyCta.setAttribute('role', 'status');
+      emptyCta.innerHTML =
+        '<h3 class="crm-empty-state__title">' + escapeHtml(t('Nothing to review')) + '</h3>' +
+        '<p class="crm-empty-state__text">' + escapeHtml(t('When shared mail or other sources need a company, they show up here.')) + '</p>' +
+        '<p class="crm-empty-state__actions"><a class="crm-btn crm-btn--primary" href="' +
+        escapeHtml(OC.generateUrl('/apps/customercheck/settings') + '#crm-review-sources') +
+        '">' + escapeHtml(t('Open review source settings')) + '</a></p>';
+      body.appendChild(emptyCta);
+    }
+
+    const sources = data.sources || {};
+    if (canWrite && sources.contact_suggest && sources.contact_suggest.enabled) {
+      const send = document.createElement('details');
+      send.className = 'crm-advanced';
+      send.innerHTML =
+        '<summary>' + escapeHtml(t('Send a contact to Review')) + '</summary>';
+      const sendForm = document.createElement('form');
+      sendForm.className = 'crm-form crm-form--row';
+      sendForm.setAttribute('aria-label', t('Send contact to Review'));
+      sendForm.innerHTML =
+        '<label class="form-label" for="crm-review-contact-q">' + escapeHtml(t('Send a contact to Review')) + '</label>' +
+        '<input type="search" id="crm-review-contact-q" class="form-input crm-input" autocomplete="off" ' +
+        'placeholder="' + escapeHtml(t('Name or email…')) + '" />' +
+        '<button type="submit" class="crm-btn crm-btn--secondary">' + escapeHtml(t('Send to Review')) + '</button>';
+      send.appendChild(sendForm);
+      mount.appendChild(send);
+      sendForm.addEventListener('submit', async function (ev) {
+        ev.preventDefault();
+        const q = (sendForm.querySelector('#crm-review-contact-q') || {}).value || '';
+        if (String(q).trim().length < 2) {
+          showAlert(mount, t('Type at least 2 characters.'));
+          return;
+        }
+        try {
+          const hits = await apiGet('/api/v1/contacts/suggest?q=' + encodeURIComponent(String(q).trim()));
+          const row = (Array.isArray(hits) ? hits : (hits.items || hits.data || []))[0];
+          if (!row) {
+            showAlert(mount, t('No contact found.'));
+            return;
+          }
+          await apiPost('/api/v1/workspaces/' + ws + '/review/enqueue', {
+            sourceKind: 'contact_suggest',
+            refKey: String(row.uid || row.email || row.name || q),
+            sourceRef: { uid: row.uid || null, email: row.email || null },
+            subject: row.name || row.email || String(q),
+            snippet: row.email || '',
+            email: row.email || null,
+            org: row.name || null,
+          });
+          await loadReview(mount);
+        } catch (e) {
+          showAlert(mount, e.message || String(e));
+        }
+      });
+    }
+
+    // GNQ §5.6 keyboard: j/k move focus; a assign; s snooze; n no relation.
+    const rows = Array.from(body.querySelectorAll('[data-crm-review-row], [data-review-id]'));
+    let focusIdx = 0;
+    function focusRow(i) {
+      if (!rows.length) return;
+      focusIdx = (i + rows.length) % rows.length;
+      rows[focusIdx].focus();
+    }
+    if (typeof mount._crmReviewKeydown === 'function') {
+      mount.removeEventListener('keydown', mount._crmReviewKeydown);
+    }
+    mount._crmReviewKeydown = function (ev) {
+      if (!rows.length) return;
+      const tag = (ev.target && ev.target.tagName) || '';
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') {
+        if (ev.key !== 'Escape') return;
+      }
+      if (ev.key === 'j' || ev.key === 'ArrowDown') {
+        ev.preventDefault();
+        focusRow(focusIdx + 1);
+      } else if (ev.key === 'k' || ev.key === 'ArrowUp') {
+        ev.preventDefault();
+        focusRow(focusIdx - 1);
+      } else if (ev.key === 'a' && rows[focusIdx]) {
+        const btn = rows[focusIdx].querySelector('button[type="submit"]');
+        if (btn) {
+          ev.preventDefault();
+          btn.click();
+        }
+      } else if (ev.key === 's' && rows[focusIdx]) {
+        const btn = rows[focusIdx].querySelector('[data-crm-review-snooze="7d"]')
+          || rows[focusIdx].querySelector('[data-crm-review-snooze]');
+        if (btn) {
+          ev.preventDefault();
+          btn.click();
+        }
+      } else if (ev.key === 'n' && rows[focusIdx]) {
+        const btn = rows[focusIdx].querySelector('[data-crm-review-none]');
+        if (btn) {
+          ev.preventDefault();
+          btn.click();
+        }
+      } else if (ev.key === 'Enter' && rows[focusIdx]) {
+        const search = rows[focusIdx].querySelector('.user-picker__search');
+        if (search) {
+          ev.preventDefault();
+          search.focus();
+        }
+      }
+    };
+    mount.addEventListener('keydown', mount._crmReviewKeydown);
+
+    if (canReopen) {
+      body.querySelectorAll('[data-crm-review-reopen]').forEach(function (btn) {
+        btn.addEventListener('click', async function () {
+          const rid = btn.getAttribute('data-crm-review-reopen');
+          try {
+            await apiPost('/api/v1/workspaces/' + ws + '/review/items/' + rid + '/reopen', {});
+            await loadReview(mount);
+          } catch (e) {
+            showAlert(mount, e.message || String(e));
+          }
+        });
+      });
+    }
+
+    if (!canWrite) {
+      return;
+    }
+
+    body.querySelectorAll('[data-review-id]').forEach(function (form) {
+      const rid = form.getAttribute('data-review-id');
+      const search = form.querySelector('.user-picker__search');
+      const suggest = form.querySelector('.user-picker__list');
+      const hidden = form.querySelector('[name="companyId"]');
+      const dealSelect = form.querySelector('[data-crm-review-deal]');
+      const overheadHintEl = form.querySelector('[data-crm-review-overhead-hint]');
+
+      async function loadDealsForCompany(companyId) {
+        if (!dealSelect) {
+          return;
+        }
+        dealSelect.innerHTML = '<option value="">' + escapeHtml(t('No deal — mark as overhead')) + '</option>';
+        if (!companyId || companyId < 1) {
+          return;
+        }
+        try {
+          const deals = await apiGet('/api/v1/deals?companyId=' + encodeURIComponent(String(companyId)) + '&workspaceId=' + encodeURIComponent(String(ws)));
+          const rows = Array.isArray(deals) ? deals : (deals && deals.items) || [];
+          rows.forEach(function (d) {
+            if (!d || !d.id) {
+              return;
+            }
+            const opt = document.createElement('option');
+            opt.value = String(d.id);
+            opt.textContent = (d.title || t('Deal')) + ' · ' + (d.stage || '');
+            dealSelect.appendChild(opt);
+          });
+        } catch (e) {
+          const soft = document.createElement('p');
+          soft.className = 'crm-muted';
+          soft.setAttribute('role', 'status');
+          soft.textContent = t('Deals could not be loaded — you can still assign without a deal.');
+          if (dealSelect && dealSelect.parentNode) {
+            dealSelect.parentNode.insertBefore(soft, dealSelect);
+          }
+        }
+      }
+
+      if (dealSelect) {
+        dealSelect.addEventListener('change', function () {
+          if (!overheadHintEl) {
+            return;
+          }
+          const hasDeal = String(dealSelect.value || '') !== '';
+          overheadHintEl.textContent = hasDeal
+            ? t('Assigned to a deal — not overhead.')
+            : t('No deal selected — this stays overhead (display only, not a cost).');
+        });
+      }
+
+      if (search && suggest && hidden) {
+        const nav = (window.CustomerCheckUserPickerNav && window.CustomerCheckUserPickerNav.bindListboxKeyboard)
+          ? window.CustomerCheckUserPickerNav.bindListboxKeyboard(search, suggest)
+          : { reset: function () {} };
+        let timer = null;
+        if (hidden.value) {
+          void loadDealsForCompany(parseInt(hidden.value, 10));
+        }
+        search.addEventListener('input', function () {
+          if (hidden.value) hidden.value = '';
+          if (dealSelect) {
+            dealSelect.innerHTML = '<option value="">' + escapeHtml(t('No deal — mark as overhead')) + '</option>';
+          }
+          clearTimeout(timer);
+          const q = search.value.trim();
+          if (q.length < 2) {
+            suggest.hidden = true;
+            suggest.innerHTML = '';
+            search.setAttribute('aria-expanded', 'false');
+            nav.reset();
+            return;
+          }
+          timer = setTimeout(async function () {
+            try {
+              const list = await apiGet('/api/v1/companies?q=' + encodeURIComponent(q) + '&limit=20&workspaceId=' + encodeURIComponent(String(ws)));
+              const rows = Array.isArray(list) ? list : [];
+              suggest.innerHTML = '';
+              rows.forEach(function (c) {
+                const opt = document.createElement('li');
+                opt.className = 'user-picker__item';
+                opt.setAttribute('role', 'option');
+                opt.textContent = c.name || c.slug || String(c.id);
+                opt.addEventListener('click', function () {
+                  hidden.value = String(c.id || '');
+                  search.value = c.name || '';
+                  suggest.hidden = true;
+                  search.setAttribute('aria-expanded', 'false');
+                  nav.reset();
+                  void loadDealsForCompany(parseInt(hidden.value, 10));
+                });
+                suggest.appendChild(opt);
+              });
+              suggest.hidden = rows.length === 0;
+              search.setAttribute('aria-expanded', rows.length === 0 ? 'false' : 'true');
+              nav.reset();
+            } catch (e) {
+              suggest.hidden = true;
+            }
+          }, 250);
+        });
+      }
+      form.addEventListener('submit', async function (ev) {
+        ev.preventDefault();
+        const companyId = parseInt(hidden ? hidden.value : '0', 10);
+        if (!companyId || companyId < 1) {
+          showAlert(mount, t('Pick a company from the search results first.'));
+          return;
+        }
+        const dealRaw = dealSelect ? String(dealSelect.value || '').trim() : '';
+        const payload = { companyId: companyId };
+        if (dealRaw !== '') {
+          payload.dealId = parseInt(dealRaw, 10);
+        }
+        try {
+          await apiPost('/api/v1/workspaces/' + ws + '/review/items/' + rid + '/assign', payload);
+          await loadReview(mount);
+        } catch (e) {
+          showAlert(form, e.message || String(e));
+        }
+      });
+      form.querySelectorAll('[data-crm-review-snooze]').forEach(function (snoozeBtn) {
+        snoozeBtn.addEventListener('click', async function () {
+          const preset = snoozeBtn.getAttribute('data-crm-review-snooze') || '7d';
+          try {
+            await apiPost('/api/v1/workspaces/' + ws + '/review/items/' + rid + '/snooze', { preset: preset });
+            await loadReview(mount);
+          } catch (e) {
+            showAlert(form, e.message || String(e));
+          }
+        });
+      });
+      const followBtn = form.querySelector('[data-crm-review-followup]');
+      if (followBtn) {
+        followBtn.addEventListener('click', async function () {
+          const noteInput = form.querySelector('[name="followUpNote"]');
+          const note = noteInput ? String(noteInput.value || '').trim() : '';
+          if (note.length < 3) {
+            showAlert(form, t('Short follow-up note (at least 3 characters)'));
+            if (noteInput) noteInput.focus();
+            return;
+          }
+          try {
+            await apiPost('/api/v1/workspaces/' + ws + '/review/items/' + rid + '/follow-up', { note: note });
+            await loadReview(mount);
+          } catch (e) {
+            showAlert(form, e.message || String(e));
+          }
+        });
+      }
+      const noneBtn = form.querySelector('[data-crm-review-none]');
+      if (noneBtn) {
+        noneBtn.addEventListener('click', async function () {
+          try {
+            await apiPost('/api/v1/workspaces/' + ws + '/review/items/' + rid + '/no-relation', { note: '' });
+            await loadReview(mount);
+          } catch (e) {
+            showAlert(form, e.message || String(e));
+          }
+        });
+      }
+    });
+
+    body.querySelectorAll('[data-crm-review-learn]').forEach(function (learnForm) {
+      async function applyCountryMap(learn, closeNote) {
+        const input = learnForm.querySelector('input');
+        const canonical = input ? String(input.value || '').trim() : '';
+        const itemId = learnForm.getAttribute('data-crm-review-learn');
+        await apiPost('/api/v1/workspaces/' + ws + '/review/items/' + itemId + '/apply-country', {
+          canonical: canonical,
+          learn: !!learn,
+        });
+        void closeNote;
+        await loadReview(mount);
+      }
+      learnForm.addEventListener('submit', async function (ev) {
+        ev.preventDefault();
+        try {
+          await applyCountryMap(true, t('Mapped via Apply & learn'));
+        } catch (e) {
+          showAlert(learnForm, e.message || String(e));
+        }
+      });
+      const onceBtn = learnForm.querySelector('[data-crm-review-apply-once]');
+      if (onceBtn) {
+        onceBtn.addEventListener('click', async function () {
+          try {
+            await applyCountryMap(false, t('Applied once without learning'));
+          } catch (e) {
+            showAlert(learnForm, e.message || String(e));
+          }
+        });
+      }
+    });
+  }
+
+  async function loadConflicts(mount) {
+    const ws = await resolveWorkspaceId();
+    const data = await apiGet('/api/v1/workspaces/' + ws + '/conflicts');
+    clearMountBusy(mount);
+    mount.innerHTML = '';
+
+    const lead = document.getElementById('crm-conflicts-lead');
+    if (lead) {
+      lead.textContent = t('Two people changed the same thing. Pick what to keep, write a short reason, then Resolve.');
+    }
+
+    const items = data.items || [];
+    if (items.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'crm-empty-state';
+      empty.setAttribute('role', 'status');
+      empty.innerHTML =
+        '<h3 class="crm-empty-state__title">' + escapeHtml(t('No open conflicts')) + '</h3>' +
+        '<p class="crm-empty-state__text">' + escapeHtml(t('When two people edit the same field at once, the choice shows up here.')) + '</p>' +
+        '<p class="crm-empty-state__actions"><a class="crm-btn crm-btn--primary" href="' +
+        escapeHtml(OC.generateUrl('/apps/customercheck/')) + '">' + escapeHtml(t('Back to Today')) + '</a></p>';
+      mount.appendChild(empty);
+      return;
+    }
+
+    function entityLabel(c) {
+      const name = String(c.entityLabel || '').trim();
+      const type = c.entityType || 'record';
+      const typeLabels = {
+        company: t('Company'),
+        deal: t('Deal'),
+        person: t('Person'),
+        agreement: t('Agreement'),
+      };
+      const typeLabel = typeLabels[type] || type;
+      if (name !== '') {
+        return typeLabel + ': ' + name;
+      }
+      return typeLabel + ' #' + String(c.entityId || '');
+    }
+
+    function fieldLabel(field) {
+      const map = {
+        name: t('Name'),
+        status: t('Status'),
+        accountOwnerUserId: t('Account owner'),
+        kamTier: t('KAM tier'),
+        touchIntervalDays: t('Touch interval'),
+        nextTouchOn: t('Next touch'),
+        filesFolderId: t('Files folder'),
+        title: t('Title'),
+        stage: t('Stage'),
+        label: t('Label'),
+      };
+      return map[field] || field;
+    }
+
+    items.forEach(function (c) {
+      const card = document.createElement('section');
+      card.className = 'crm-card';
+      card.id = 'crm-conflict-' + String(c.id);
+      card.setAttribute('data-crm-conflict-id', String(c.id));
+      const title = document.createElement('h3');
+      title.className = 'crm-card__title';
+      const fields = c.fields || [];
+      title.textContent = entityLabel(c) + (fields.length ? (' · ' + fields.map(fieldLabel).join(', ')) : '');
+      card.appendChild(title);
+
+      if (c.entityType === 'company' && c.entityId) {
+        const openLink = document.createElement('p');
+        openLink.className = 'crm-inline-actions';
+        openLink.innerHTML = '<a class="crm-btn crm-btn--secondary crm-btn--sm" href="' +
+          escapeHtml(OC.generateUrl('/apps/customercheck/companies/' + c.entityId)) + '">' +
+          escapeHtml(t('Open company')) + '</a>';
+        card.appendChild(openLink);
+      }
+
+      const body = document.createElement('div');
+      body.className = 'crm-card__body';
+      fields.forEach(function (field) {
+        const fs = document.createElement('fieldset');
+        fs.className = 'crm-form';
+        const legend = document.createElement('legend');
+        legend.textContent = fieldLabel(field);
+        fs.appendChild(legend);
+        const base = document.createElement('p');
+        base.className = 'crm-muted';
+        base.textContent = t('Before both edits') + ': ' + String((c.base && c.base[field]) != null ? c.base[field] : '—');
+        fs.appendChild(base);
+
+        const manualWrap = document.createElement('div');
+        manualWrap.className = 'crm-conflict-manual';
+        manualWrap.hidden = true;
+
+        ['keep_current', 'take_incoming', 'manual'].forEach(function (choice) {
+          const id = 'crm-cf-' + c.id + '-' + field + '-' + choice;
+          const label = document.createElement('label');
+          label.className = 'crm-switch';
+          label.setAttribute('for', id);
+          const input = document.createElement('input');
+          input.type = 'radio';
+          input.name = 'crm-cf-' + c.id + '-' + field;
+          input.id = id;
+          input.value = choice;
+          if (choice === 'keep_current') input.checked = true;
+          label.appendChild(input);
+          const span = document.createElement('span');
+          if (choice === 'keep_current') {
+            span.textContent = t('Keep what’s saved now') + ': ' + String((c.current && c.current[field]) != null ? c.current[field] : '—');
+          } else if (choice === 'take_incoming') {
+            span.textContent = t('Take the other edit') + ': ' + String((c.incoming && c.incoming[field]) != null ? c.incoming[field] : '—');
+          } else {
+            span.textContent = t('Type a different value');
+          }
+          label.appendChild(span);
+          fs.appendChild(label);
+          input.addEventListener('change', function () {
+            manualWrap.hidden = choice !== 'manual' || !input.checked;
+            if (!manualWrap.hidden) {
+              const manualInput = manualWrap.querySelector('input');
+              if (manualInput) manualInput.focus();
+            }
+          });
+        });
+
+        const manualId = 'crm-cf-manual-' + c.id + '-' + field;
+        const manualLabel = document.createElement('label');
+        manualLabel.className = 'form-label';
+        manualLabel.setAttribute('for', manualId);
+        manualLabel.textContent = t('Your value for %s', [fieldLabel(field)]);
+        const manual = document.createElement('input');
+        manual.type = 'text';
+        manual.id = manualId;
+        manual.className = 'form-input crm-input';
+        manual.setAttribute('data-crm-cf-manual', field);
+        manual.autocomplete = 'off';
+        manualWrap.appendChild(manualLabel);
+        manualWrap.appendChild(manual);
+        fs.appendChild(manualWrap);
+        body.appendChild(fs);
+      });
+      const reasonLabel = document.createElement('label');
+      reasonLabel.className = 'form-label';
+      reasonLabel.setAttribute('for', 'crm-cf-reason-' + c.id);
+      reasonLabel.textContent = t('Reason (at least 10 characters)');
+      body.appendChild(reasonLabel);
+      const reason = document.createElement('textarea');
+      reason.id = 'crm-cf-reason-' + c.id;
+      reason.className = 'form-input crm-input';
+      reason.rows = 2;
+      reason.required = true;
+      reason.minLength = 10;
+      reason.setAttribute('aria-required', 'true');
+      reason.placeholder = t('Why this choice is right…');
+      body.appendChild(reason);
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'crm-btn crm-btn--primary';
+      btn.textContent = t('Resolve');
+      btn.addEventListener('click', async function () {
+        const choices = {};
+        fields.forEach(function (field) {
+          const picked = body.querySelector('input[name="crm-cf-' + c.id + '-' + field + '"]:checked');
+          const choice = picked ? picked.value : 'keep_current';
+          const entry = { choice: choice };
+          if (choice === 'manual') {
+            const manual = body.querySelector('[data-crm-cf-manual="' + field + '"]');
+            entry.value = manual ? manual.value : '';
+          }
+          choices[field] = entry;
+        });
+        try {
+          await apiPost('/api/v1/workspaces/' + ws + '/conflicts/' + c.id + '/resolve', {
+            choices: choices,
+            reason: reason.value || '',
+            rowVersion: c.rowVersion || 1,
+          });
+          await loadConflicts(mount);
+        } catch (e) {
+          showAlert(card, e.message || String(e));
+        }
+      });
+      body.appendChild(btn);
+      card.appendChild(body);
+      mount.appendChild(card);
+    });
+
+    const focusId = new URLSearchParams(window.location.search).get('conflictId');
+    if (focusId && /^\d+$/.test(String(focusId))) {
+      const focusCard = mount.querySelector('[data-crm-conflict-id="' + focusId + '"]');
+      if (focusCard) {
+        focusCard.classList.add('crm-card--focus');
+        focusCard.setAttribute('tabindex', '-1');
+        try {
+          focusCard.focus({ preventScroll: false });
+        } catch (e) {
+          focusCard.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+      }
+    }
+  }
+
   async function boot() {
     const mount = qs('[data-crm-persona-mount]');
     if (!mount) return;
@@ -1708,6 +2494,8 @@
       else if (kind === 'team') await loadTeam(mount);
       else if (kind === 'strategy') await loadStrategy(mount);
       else if (kind === 'mail-triage') await loadMail(mount);
+      else if (kind === 'review') await loadReview(mount);
+      else if (kind === 'conflicts') await loadConflicts(mount);
       else if (kind === 'prepare-meeting') await loadPrepare(mount);
       else {
         clearMountBusy(mount);

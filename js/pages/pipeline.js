@@ -42,6 +42,24 @@
 
   const filterToggle = document.getElementById('crm-pipeline-filter-toggle');
   const filterPanel = document.getElementById('crm-pipeline-filter');
+  const periodCustom = document.getElementById('crm-pipeline-period-custom');
+  function openFilterPanel() {
+    if (!filterPanel) return;
+    filterPanel.hidden = false;
+    if (filterToggle) filterToggle.setAttribute('aria-expanded', 'true');
+    if (periodCustom) periodCustom.setAttribute('aria-expanded', 'true');
+    const periodSel = document.getElementById('crm-filter-period');
+    if (periodSel && periodSel.value !== 'custom') {
+      periodSel.value = 'custom';
+    }
+  }
+  if (periodCustom && filterPanel) {
+    periodCustom.addEventListener('click', function () {
+      openFilterPanel();
+      const from = document.getElementById('crm-filter-from');
+      if (from) from.focus();
+    });
+  }
   if (filterToggle && filterPanel) {
     filterToggle.addEventListener('click', () => {
       const open = filterPanel.hasAttribute('hidden');

@@ -12,6 +12,7 @@ use OCA\CustomerCheck\Db\WorkspaceMemberMapper;
 use OCA\CustomerCheck\Exception\ValidationException;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\IDBConnection;
+use OCP\IGroupManager;
 use OCP\IL10N;
 use OCP\IUserManager;
 
@@ -28,6 +29,8 @@ class WorkspaceService
 		private readonly ITimeFactory $timeFactory,
 		private readonly IL10N $l10n,
 		private readonly IUserManager $userManager,
+		private readonly IGroupManager $groupManager,
+		private readonly CirclesDirectoryService $circles,
 	) {
 	}
 
@@ -106,31 +109,237 @@ class WorkspaceService
 				$this->l10n->t('Unknown Nextcloud user. Search the directory and pick a colleague.'),
 			);
 		}
+		if ($workspaceId <= 0) {
+			throw ValidationException::field(
+				Constants::ERR_VALIDATION,
+				'workspaceId',
+				$this->l10n->t('Pick a workspace first.'),
+			);
+		}
 		$role = WorkspaceCapability::normalizeRole($role);
-		$existing = $this->members->findMembershipOrNull($workspaceId, $userId);
 		$now = $this->timeFactory->getDateTime();
-		if ($existing !== null) {
-			$existing->setRole($role);
-			$existing->setCanMailSend($canMailSend ? 1 : 0);
-			$existing->setUpdatedAt($now);
-			return $this->members->update($existing);
+
+		$this->db->beginTransaction();
+		try {
+			if (!$this->workspaces->lockRow($workspaceId)) {
+				throw ValidationException::field(
+					Constants::ERR_VALIDATION,
+					'workspaceId',
+					$this->l10n->t('That workspace was not found.'),
+				);
+			}
+			$existing = $this->members->findMembershipOrNull($workspaceId, $userId);
+			if ($existing !== null) {
+				$existing->setRole($role);
+				$existing->setCanMailSend($canMailSend ? 1 : 0);
+				$existing->setUpdatedAt($now);
+				$updated = $this->members->update($existing);
+				$this->db->commit();
+
+				return $updated;
+			}
+			if ($this->members->countByWorkspace($workspaceId) >= Constants::WS_MAX_MEMBERS) {
+				throw ValidationException::field(Constants::ERR_WS_MEMBER_LIMIT, 'members', $this->l10n->t('Member limit reached for this workspace.'));
+			}
+			$m = new WorkspaceMember();
+			$m->setWorkspaceId($workspaceId);
+			$m->setUserId($userId);
+			$m->setRole($role);
+			$m->setCanMailSend($canMailSend ? 1 : 0);
+			$m->setCreatedAt($now);
+			$m->setUpdatedAt($now);
+			$inserted = $this->members->insert($m);
+			$this->db->commit();
+
+			return $inserted;
+		} catch (\Throwable $e) {
+			$this->db->rollBack();
+			throw $e;
 		}
-		if ($this->members->countByWorkspace($workspaceId) >= Constants::WS_MAX_MEMBERS) {
-			throw ValidationException::field(Constants::ERR_WS_MEMBER_LIMIT, 'members', $this->l10n->t('Member limit reached for this workspace.'));
-		}
-		$m = new WorkspaceMember();
-		$m->setWorkspaceId($workspaceId);
-		$m->setUserId($userId);
-		$m->setRole($role);
-		$m->setCanMailSend($canMailSend ? 1 : 0);
-		$m->setCreatedAt($now);
-		$m->setUpdatedAt($now);
-		return $this->members->insert($m);
 	}
 
 	public function removeMember(int $workspaceId, string $userId): void
 	{
 		$this->members->deleteByWorkspaceAndUser($workspaceId, $userId);
+	}
+
+	/**
+	 * One-shot import of Nextcloud group users into this workspace (product §6 optional).
+	 * Not live sync — managers re-run when the group changes.
+	 *
+	 * @return array{added: int, updated: int, skipped: int, limitReached: bool, groupId: string, groupName: string}
+	 */
+	public function importMembersFromGroup(
+		int $workspaceId,
+		string $groupId,
+		string $role,
+		bool $canMailSend,
+		string $actor,
+	): array {
+		$groupId = trim($groupId);
+		if ($groupId === '') {
+			throw ValidationException::field(
+				Constants::ERR_VALIDATION,
+				'groupId',
+				$this->l10n->t('Pick a Nextcloud group to import.'),
+			);
+		}
+		$group = $this->groupManager->get($groupId);
+		if ($group === null) {
+			throw ValidationException::field(
+				Constants::ERR_VALIDATION,
+				'groupId',
+				$this->l10n->t('That Nextcloud group was not found.'),
+			);
+		}
+		$groupName = trim((string)$group->getDisplayName());
+		if ($groupName === '') {
+			$groupName = $groupId;
+		}
+		$userIds = [];
+		$preSkipped = 0;
+		foreach ($group->getUsers() as $user) {
+			if ($user === null) {
+				$preSkipped++;
+				continue;
+			}
+			if (method_exists($user, 'isEnabled') && !$user->isEnabled()) {
+				$preSkipped++;
+				continue;
+			}
+			$uid = trim((string)$user->getUID());
+			if ($uid === '') {
+				$preSkipped++;
+				continue;
+			}
+			$userIds[] = $uid;
+		}
+		$stats = $this->importUserIds($workspaceId, $userIds, $role, $canMailSend, $actor);
+
+		return [
+			'added' => $stats['added'],
+			'updated' => $stats['updated'],
+			'skipped' => $stats['skipped'] + $preSkipped,
+			'limitReached' => $stats['limitReached'],
+			'groupId' => $groupId,
+			'groupName' => $groupName,
+		];
+	}
+
+	/**
+	 * One-shot import of Circles members into this workspace (product §6 optional).
+	 * Soft-dep: Circles must be enabled; actor must belong to the circle. Not live sync.
+	 *
+	 * @return array{added: int, updated: int, skipped: int, limitReached: bool, circleId: string, circleName: string}
+	 */
+	public function importMembersFromCircle(
+		int $workspaceId,
+		string $circleId,
+		string $role,
+		bool $canMailSend,
+		string $actor,
+	): array {
+		$circleId = trim($circleId);
+		if ($circleId === '') {
+			throw ValidationException::field(
+				Constants::ERR_VALIDATION,
+				'circleId',
+				$this->l10n->t('Pick a Circle to import.'),
+			);
+		}
+		if (!$this->circles->isAvailable()) {
+			throw ValidationException::field(
+				Constants::ERR_VALIDATION,
+				'circleId',
+				$this->l10n->t('Circles is not available on this server.'),
+			);
+		}
+		try {
+			$resolved = $this->circles->localUserIdsInCircle($circleId, $actor);
+		} catch (\Throwable) {
+			throw ValidationException::field(
+				Constants::ERR_VALIDATION,
+				'circleId',
+				$this->l10n->t('That Circle was not found or you cannot see its members.'),
+			);
+		}
+		if ($resolved['circleName'] === '' && $resolved['userIds'] === []) {
+			throw ValidationException::field(
+				Constants::ERR_VALIDATION,
+				'circleId',
+				$this->l10n->t('That Circle was not found or you cannot see its members.'),
+			);
+		}
+		$stats = $this->importUserIds($workspaceId, $resolved['userIds'], $role, $canMailSend, $actor);
+
+		return [
+			'added' => $stats['added'],
+			'updated' => $stats['updated'],
+			'skipped' => $stats['skipped'],
+			'limitReached' => $stats['limitReached'],
+			'circleId' => $resolved['circleId'] !== '' ? $resolved['circleId'] : $circleId,
+			'circleName' => $resolved['circleName'] !== '' ? $resolved['circleName'] : $circleId,
+		];
+	}
+
+	/**
+	 * @param list<string> $userIds
+	 * @return array{added: int, updated: int, skipped: int, limitReached: bool}
+	 */
+	private function importUserIds(
+		int $workspaceId,
+		array $userIds,
+		string $role,
+		bool $canMailSend,
+		string $actor,
+	): array {
+		$role = WorkspaceCapability::normalizeRole($role);
+		$added = 0;
+		$updated = 0;
+		$skipped = 0;
+		$limitReached = false;
+		$seen = [];
+
+		foreach ($userIds as $userId) {
+			$userId = trim((string)$userId);
+			if ($userId === '' || isset($seen[$userId])) {
+				if ($userId === '') {
+					$skipped++;
+				}
+				continue;
+			}
+			$seen[$userId] = true;
+			$user = $this->userManager->get($userId);
+			if ($user === null) {
+				$skipped++;
+				continue;
+			}
+			if (method_exists($user, 'isEnabled') && !$user->isEnabled()) {
+				$skipped++;
+				continue;
+			}
+			$existing = $this->members->findMembershipOrNull($workspaceId, $userId);
+			try {
+				$this->addMember($workspaceId, $userId, $role, $canMailSend, $actor);
+				if ($existing === null) {
+					$added++;
+				} else {
+					$updated++;
+				}
+			} catch (ValidationException $e) {
+				if ($e->getErrorCode() === Constants::ERR_WS_MEMBER_LIMIT) {
+					$limitReached = true;
+				}
+				$skipped++;
+			}
+		}
+
+		return [
+			'added' => $added,
+			'updated' => $updated,
+			'skipped' => $skipped,
+			'limitReached' => $limitReached,
+		];
 	}
 
 	/** @return WorkspaceMember[] */
@@ -167,7 +376,7 @@ class WorkspaceService
 	}
 
 	/**
-	 * @return array{wipLimit: int, leadSlaHours: int, stuckChaseDays: int, mailRetentionDays: int, digestEnabled: bool}
+	 * @return array{wipLimit: int, leadSlaHours: int, stuckChaseDays: int, mailRetentionDays: int, digestEnabled: bool, reviewSources: array<string, array{enabled: bool, dsgvoAckAt: ?string}>}
 	 */
 	public function getSettings(int $workspaceId): array
 	{
@@ -186,7 +395,180 @@ class WorkspaceService
 			'stuckChaseDays' => max(1, (int)($row['stuck_chase_days'] ?? 3)),
 			'mailRetentionDays' => max(Constants::MAIL_RETENTION_DAYS_MIN, (int)($row['mail_retention_days'] ?? 365)),
 			'digestEnabled' => (int)($row['digest_enabled'] ?? 1) === 1,
+			'reviewSources' => $this->decodeReviewSources($row['review_sources_json'] ?? null),
 		];
+	}
+
+	/**
+	 * @return array<string, array{enabled: bool, dsgvoAckAt: ?string}>
+	 */
+	public function getReviewSources(int $workspaceId): array
+	{
+		return $this->getSettings($workspaceId)['reviewSources'];
+	}
+
+	/**
+	 * @param array<string, mixed> $sources
+	 * @return array<string, array{enabled: bool, dsgvoAckAt: ?string}>
+	 */
+	public function updateReviewSources(int $workspaceId, array $sources, string $actor): array
+	{
+		$this->ensureSettingsRow($workspaceId);
+		$current = $this->getReviewSources($workspaceId);
+		$now = $this->timeFactory->getDateTime()->format(DATE_ATOM);
+		$allowed = ['shared_mail', 'contact_suggest', 'calendar_event', 'file', 'task', 'import_anomaly'];
+		foreach ($allowed as $kind) {
+			if (!array_key_exists($kind, $sources)) {
+				continue;
+			}
+			$incoming = $sources[$kind];
+			$enabled = is_array($incoming) ? !empty($incoming['enabled']) : !empty($incoming);
+			$ack = is_array($incoming) && !empty($incoming['dsgvoAck']);
+			if ($enabled && $kind !== 'shared_mail' && !$ack && empty($current[$kind]['dsgvoAckAt'])) {
+				throw ValidationException::field(
+					Constants::ERR_VALIDATION,
+					$kind,
+					$this->l10n->t('Confirm the DSGVO acknowledgement before enabling this review source.'),
+				);
+			}
+			$current[$kind]['enabled'] = $enabled;
+			if ($enabled && $kind !== 'shared_mail' && ($ack || !empty($current[$kind]['dsgvoAckAt']))) {
+				$current[$kind]['dsgvoAckAt'] = $current[$kind]['dsgvoAckAt'] ?? $now;
+				$current[$kind]['dsgvoAckBy'] = $actor;
+			}
+			if (is_array($incoming)) {
+				if ($kind === 'file') {
+					if (array_key_exists('rootFolderId', $incoming)) {
+						$current[$kind]['rootFolderId'] = max(0, (int)$incoming['rootFolderId']);
+					}
+					if (array_key_exists('scanActor', $incoming)) {
+						$actorName = trim((string)$incoming['scanActor']);
+						if ($actorName !== '') {
+							if ($this->members->findMembershipOrNull($workspaceId, $actorName) === null) {
+								throw ValidationException::field(
+									Constants::ERR_VALIDATION,
+									'scanActor',
+									$this->l10n->t('The scan actor must be a member of this workspace.'),
+								);
+							}
+							$current[$kind]['scanActor'] = mb_substr($actorName, 0, 64);
+						} else {
+							$current[$kind]['scanActor'] = null;
+						}
+					}
+				}
+				if ($kind === 'calendar_event' && array_key_exists('calendarUris', $incoming) && is_array($incoming['calendarUris'])) {
+					$uris = [];
+					foreach ($incoming['calendarUris'] as $uri) {
+						$u = trim((string)$uri);
+						if ($u !== '') {
+							$uris[] = mb_substr($u, 0, 255);
+						}
+						if (count($uris) >= 20) {
+							break;
+						}
+					}
+					$current[$kind]['calendarUris'] = $uris;
+				}
+				if ($kind === 'task' && array_key_exists('listIds', $incoming) && is_array($incoming['listIds'])) {
+					$ids = [];
+					foreach ($incoming['listIds'] as $lid) {
+						$id = is_numeric($lid) ? (string)(int)$lid : trim((string)$lid);
+						if ($id !== '' && $id !== '0') {
+							$ids[] = mb_substr($id, 0, 255);
+						}
+						if (count($ids) >= 20) {
+							break;
+						}
+					}
+					$current[$kind]['listIds'] = $ids;
+				}
+				if (in_array($kind, ['calendar_event', 'task', 'contact_suggest'], true) && array_key_exists('scanActor', $incoming)) {
+					$actorName = trim((string)$incoming['scanActor']);
+					if ($actorName !== '') {
+						if ($this->members->findMembershipOrNull($workspaceId, $actorName) === null) {
+							throw ValidationException::field(
+								Constants::ERR_VALIDATION,
+								'scanActor',
+								$this->l10n->t('The scan actor must be a member of this workspace.'),
+							);
+						}
+						$current[$kind]['scanActor'] = mb_substr($actorName, 0, 64);
+					} else {
+						$current[$kind]['scanActor'] = null;
+					}
+				}
+			}
+			if (!$enabled && $kind !== 'shared_mail') {
+				// Keep prior ack timestamp for audit; only toggle enabled.
+			}
+		}
+		// Shared mail stays enabled by default when a mailbox exists — managers may still disable.
+		if (!isset($current['shared_mail'])) {
+			$current['shared_mail'] = ['enabled' => true, 'dsgvoAckAt' => null];
+		}
+		$qb = $this->db->getQueryBuilder();
+		$qb->update('crm_ws_set')
+			->set('review_sources_json', $qb->createNamedParameter(json_encode($current, JSON_THROW_ON_ERROR)))
+			->set('updated_at', $qb->createNamedParameter($this->timeFactory->getDateTime()->format('Y-m-d H:i:s')))
+			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId)))
+			->executeStatement();
+
+		return $this->getReviewSources($workspaceId);
+	}
+
+	/**
+	 * @return array<string, array{enabled: bool, dsgvoAckAt: ?string}>
+	 */
+	private function decodeReviewSources(mixed $raw): array
+	{
+		$defaults = [
+			'shared_mail' => ['enabled' => true, 'dsgvoAckAt' => null],
+			'contact_suggest' => ['enabled' => false, 'dsgvoAckAt' => null],
+			'calendar_event' => ['enabled' => false, 'dsgvoAckAt' => null],
+			'file' => ['enabled' => false, 'dsgvoAckAt' => null],
+			'task' => ['enabled' => false, 'dsgvoAckAt' => null],
+			'import_anomaly' => ['enabled' => false, 'dsgvoAckAt' => null],
+		];
+		if (!is_string($raw) || $raw === '') {
+			return $defaults;
+		}
+		$decoded = json_decode($raw, true);
+		if (!is_array($decoded)) {
+			return $defaults;
+		}
+		foreach ($defaults as $kind => $def) {
+			if (!isset($decoded[$kind]) || !is_array($decoded[$kind])) {
+				continue;
+			}
+			$merged = [
+				'enabled' => !empty($decoded[$kind]['enabled']),
+				'dsgvoAckAt' => isset($decoded[$kind]['dsgvoAckAt']) ? (string)$decoded[$kind]['dsgvoAckAt'] : null,
+			];
+			if (isset($decoded[$kind]['dsgvoAckBy'])) {
+				$merged['dsgvoAckBy'] = (string)$decoded[$kind]['dsgvoAckBy'];
+			}
+			if ($kind === 'file') {
+				if (isset($decoded[$kind]['rootFolderId'])) {
+					$merged['rootFolderId'] = max(0, (int)$decoded[$kind]['rootFolderId']);
+				}
+				if (isset($decoded[$kind]['scanActor'])) {
+					$merged['scanActor'] = (string)$decoded[$kind]['scanActor'];
+				}
+			}
+			if ($kind === 'calendar_event' && isset($decoded[$kind]['calendarUris']) && is_array($decoded[$kind]['calendarUris'])) {
+				$merged['calendarUris'] = array_values(array_map('strval', array_slice($decoded[$kind]['calendarUris'], 0, 20)));
+			}
+			if ($kind === 'task' && isset($decoded[$kind]['listIds']) && is_array($decoded[$kind]['listIds'])) {
+				$merged['listIds'] = array_values(array_map('strval', array_slice($decoded[$kind]['listIds'], 0, 20)));
+			}
+			if (in_array($kind, ['calendar_event', 'task', 'file', 'contact_suggest'], true) && isset($decoded[$kind]['scanActor'])) {
+				$merged['scanActor'] = (string)$decoded[$kind]['scanActor'];
+			}
+			$defaults[$kind] = $merged;
+		}
+
+		return $defaults;
 	}
 
 	public function updateSettings(int $workspaceId, array $data): array
@@ -211,6 +593,10 @@ class WorkspaceService
 			->set('updated_at', $qb->createNamedParameter($this->timeFactory->getDateTime()->format('Y-m-d H:i:s')))
 			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId)))
 			->executeStatement();
+
+		if (isset($data['reviewSources']) && is_array($data['reviewSources'])) {
+			$this->updateReviewSources($workspaceId, $data['reviewSources'], (string)($data['actor'] ?? 'system'));
+		}
 
 		return $this->getSettings($workspaceId);
 	}

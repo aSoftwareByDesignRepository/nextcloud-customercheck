@@ -47,6 +47,9 @@ final class NavClarityContractTest extends TestCase
 		$this->assertStringContainsString('role="region"', $html);
 		$this->assertStringContainsString("\$l->t('Deal stages board')", $html);
 		$this->assertStringNotContainsString('class="crm-kanban" role="list"', $html);
+		$this->assertStringNotContainsString('getURLGenerator()', $html);
+		$this->assertStringContainsString('$urlGenerator->linkToRoute', $html);
+		$this->assertStringContainsString('crm-pipeline-period-custom', $html);
 	}
 
 	public function testPageHelpLeadsWithJob(): void

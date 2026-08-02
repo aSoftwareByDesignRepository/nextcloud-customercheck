@@ -52,6 +52,8 @@ final class PageHelpCatalog
 			'team' => $l->t('Job: see who needs help. One row per teammate in this workspace — green means fine, amber means coach them. Counts come from chase, quotes, promises, and overdue work.'),
 			'strategy' => $l->t('Job: review account plans. Plans are stored in CustomerCheck for this workspace — health and next review dates decide what looks stuck.'),
 			'mail-triage' => $l->t('Job: assign unmatched shared mail. Messages come from the shared workspace mailbox only — personal Nextcloud Mail never appears here.'),
+			'review' => $l->t('Job: decide unmatched items for this workspace. Shared mail plus any Review sources you enabled — assign to a company or mark no relation.'),
+			'conflicts' => $l->t('Job: resolve parallel edits in this workspace. Two people changed the same field — pick what to keep and write a short reason.'),
 			'prepare-meeting' => $l->t('Job: prep one call. One stack for this company: open work, recent talk, coverage gaps, and plan goal from CustomerCheck and linked apps.'),
 			'companies' => $l->t('Job: find any customer. Your registry for this workspace — search, status, and account owner. Filters apply to these companies only.'),
 			'company-detail' => $l->t('Job: run one customer. Everything for this company in the current workspace — people, deals, mail, money, and plan; linked apps show when connected.'),

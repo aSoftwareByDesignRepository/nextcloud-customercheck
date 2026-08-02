@@ -92,15 +92,28 @@ test.describe('Persona Monday operating path', () => {
     if (await icsLabel.count()) {
       await expect(icsLabel).toContainText(/Default|Standard/i);
     }
+    // §6 optional one-shot imports (managers only)
+    const groupImport = page.locator('#crm-ws-member-import');
+    if (await groupImport.count()) {
+      await groupImport.locator('summary').click();
+      await expect(page.locator('#crm-ws-import-group')).toBeVisible();
+      await expect(page.locator('#crm-ws-import-submit')).toBeVisible();
+    }
+    const circleImport = page.locator('#crm-ws-member-import-circle');
+    if (await circleImport.count()) {
+      await circleImport.locator('summary').click();
+      await expect(page.locator('#crm-ws-import-circle')).toBeVisible();
+      await expect(page.locator('#crm-ws-import-circle-submit')).toBeVisible();
+    }
   });
 
-  test('My customers and mail triage expose shared disclosure', async ({ page }) => {
+  test('My customers and Review inbox expose shared disclosure', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await login(page, credsFromEnv('ADMIN'));
 
-    await openPersona(page, '/my-accounts');
-
-    await openPersona(page, '/mail-triage');
-    await expect(page.getByText(/shared mailbox|gemeinsamen Postfach/i).first()).toBeVisible({ timeout: 15000 });
+    await openPersona(page, '/review?kind=shared_mail');
+    const disclosure = page.locator('#crm-review-disclosure, [data-crm-persona-mount="review"] .crm-callout[role="status"], [data-crm-persona-mount="review"] h1, [data-crm-persona-mount="review"] .crm-page-stack').first();
+    await expect(disclosure).toBeVisible({ timeout: 30000 });
+    await expect(page.getByText(/Review|Review-Eingang|shared mailbox|gemeinsamen Postfach|Nothing to review|Nichts zu prüfen/i).first()).toBeVisible({ timeout: 15000 });
   });
 });

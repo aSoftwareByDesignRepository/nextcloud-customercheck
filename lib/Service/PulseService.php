@@ -177,7 +177,7 @@ class PulseService
 				break;
 			}
 			$invoiceLabel = trim((string)($row['label'] ?? $row['companyName'] ?? ''));
-			$attention[] = [
+			$item = [
 				'kind' => 'overdue_invoice',
 				'kindLabel' => $this->labels->pulseAttentionKind('overdue_invoice'),
 				'label' => $invoiceLabel !== ''
@@ -186,6 +186,17 @@ class PulseService
 				'companyId' => $row['companyId'] ?? null,
 				'amountCents' => $row['amountCents'] ?? null,
 			];
+			// Facade v3 — feature-detect only; never invent aging when keys missing.
+			if (array_key_exists('agingBucket', $row) && $row['agingBucket'] !== null && $row['agingBucket'] !== '') {
+				$item['agingBucket'] = $row['agingBucket'];
+				$item['agingBucketLabel'] = $this->labels->agingBucket(
+					is_string($row['agingBucket']) ? $row['agingBucket'] : null
+				);
+			}
+			if (array_key_exists('daysPastDue', $row) && $row['daysPastDue'] !== null) {
+				$item['daysPastDue'] = (int)$row['daysPastDue'];
+			}
+			$attention[] = $item;
 		}
 		try {
 			foreach ($this->plans->listForWorkspace($workspaceId) as $plan) {

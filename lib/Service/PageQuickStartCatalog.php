@@ -52,7 +52,7 @@ final class PageQuickStartCatalog
 	{
 		return [
 			'today', 'pulse', 'brief', 'my-accounts', 'team', 'strategy',
-			'mail-triage', 'prepare-meeting', 'companies', 'company-detail', 'company-form',
+			'mail-triage', 'review', 'conflicts', 'prepare-meeting', 'companies', 'company-detail', 'company-form',
 			'pipeline', 'agreements', 'agreement-form', 'money', 'activities',
 			'import', 'settings', 'app-settings', 'support-us',
 		];
@@ -185,21 +185,59 @@ final class PageQuickStartCatalog
 				],
 			],
 			'mail-triage' => [
-				'lead' => $l->t('Assign unmatched shared mailbox messages to the right company.'),
+				'lead' => $l->t('Assign unmatched shared mail to a company — personal Mail never appears here.'),
 				'steps' => [
 					[
 						'title' => $l->t('1. Open a message'),
-						'text' => $l->t('Only unmatched mail from the shared workspace mailbox waits here — not your personal inbox.'),
+						'text' => $l->t('Only the shared workspace mailbox feeds this list.'),
 					],
 					[
-						'title' => $l->t('2. Match a company'),
-						'text' => $l->t('Pick the customer it belongs to, or create a company if it is new.'),
-						'href' => $link('companyNew'),
-						'linkLabel' => $l->t('New company'),
+						'title' => $l->t('2. Pick a company'),
+						'text' => $l->t('Search or accept the suggestion, then Assign. Or mark No relation.'),
 					],
 					[
-						'title' => $l->t('3. Shared mailbox only'),
-						'text' => $l->t('This queue is for the shared inbox — personal mail stays in Nextcloud Mail.'),
+						'title' => $l->t('3. Need more sources?'),
+						'text' => $l->t('Contacts, Files, Calendar, Tasks, and import anomalies live under Review.'),
+						'href' => $link('review'),
+						'linkLabel' => $l->t('Open Review'),
+					],
+				],
+			],
+			'review' => [
+				'lead' => $l->t('One inbox for unmatched mail and other review items — assign or dismiss.'),
+				'steps' => [
+					[
+						'title' => $l->t('1. Read the suggestion'),
+						'text' => $l->t('When a company is suggested, tap Assign. Use the chips to filter by source.'),
+					],
+					[
+						'title' => $l->t('2. Or say no relation'),
+						'text' => $l->t('No relation closes the item without a company. More options hides snooze and follow-up.'),
+					],
+					[
+						'title' => $l->t('3. Turn sources on'),
+						'text' => $l->t('Managers enable Contacts, Files, Calendar, Tasks, or import anomalies under Workspace settings.'),
+						'href' => $link('settings') . '#crm-review-sources',
+						'linkLabel' => $l->t('Review source settings'),
+					],
+				],
+			],
+			'conflicts' => [
+				'lead' => $l->t('Two people changed the same field — pick what to keep and write why.'),
+				'steps' => [
+					[
+						'title' => $l->t('1. Open the conflict'),
+						'text' => $l->t('Notifications deep-link here. The saved value is pre-selected.'),
+					],
+					[
+						'title' => $l->t('2. Choose and resolve'),
+						'text' => $l->t('Keep what’s saved, take the other edit, or type a value. Reason needs at least 10 characters.'),
+					],
+					[
+						'title' => $l->t('3. Back to work'),
+						'text' => $l->t('When the queue is empty, jump back to Today.'),
+						'href' => $link('today'),
+						'linkLabel' => $l->t('Open Today'),
 					],
 				],
 			],

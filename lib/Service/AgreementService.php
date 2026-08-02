@@ -7,9 +7,11 @@ namespace OCA\CustomerCheck\Service;
 use OCA\CustomerCheck\Constants;
 use OCA\CustomerCheck\Db\Agreement;
 use OCA\CustomerCheck\Db\AgreementMapper;
+use OCA\CustomerCheck\Exception\ConflictException;
 use OCA\CustomerCheck\Exception\NotFoundException;
 use OCA\CustomerCheck\Exception\ValidationException;
 use OCA\CustomerCheck\Support\DateMath;
+use OCA\CustomerCheck\Support\DbTransaction;
 use OCA\CustomerCheck\Support\OptimisticLock;
 use OCP\AppFramework\Db\DoesNotExistException;
 use OCP\AppFramework\Utility\ITimeFactory;
@@ -41,6 +43,8 @@ class AgreementService
 		private readonly IDBConnection $db,
 		private readonly ITimeFactory $timeFactory,
 		private readonly IL10N $l10n,
+		private readonly ?EditConflictService $editConflicts = null,
+		private readonly ?EntityRevisionService $entityRevisions = null,
 	) {
 	}
 
@@ -218,16 +222,73 @@ class AgreementService
 	 * @throws ValidationException
 	 * @throws \OCA\CustomerCheck\Exception\ConflictException
 	 */
-	public function update(int $id, array $input, string $actor, ?string $updatedAtPrecondition): Agreement
+	public function update(int $id, array $input, string $actor, ?string $updatedAtPrecondition, bool $skipOptimistic = false): Agreement
 	{
-		$this->db->beginTransaction();
+		// User-facing updates always require updatedAt; conflict apply sets skipOptimistic (GNQ §6.4).
+		$requirePrecondition = !$skipOptimistic;
+		$previousValidUntil = null;
+		$ownsTxn = DbTransaction::begin($this->db);
 		try {
 			// Serialize vs cancel/supersede — stamp alone can resurrect a closed row.
 			if (!$this->agreementMapper->lockRow($id)) {
 				throw new NotFoundException($this->l10n->t('This agreement no longer exists.'));
 			}
 			$agreement = $this->agreementMapper->findById($id);
-			OptimisticLock::assertFresh($agreement->getUpdatedAt(), $updatedAtPrecondition);
+			$currentSnap = $this->agreementConflictSnapshot($agreement);
+			try {
+				OptimisticLock::assertFresh($agreement->getUpdatedAt(), $updatedAtPrecondition, $requirePrecondition);
+			} catch (ConflictException $stale) {
+				if (!$requirePrecondition || $this->editConflicts === null) {
+					throw $stale;
+				}
+				$baseSnap = $this->entityRevisions?->snapshotAt('agreement', $id, $updatedAtPrecondition) ?? $currentSnap;
+				$incoming = $this->agreementIncomingPatch($input);
+				if ($incoming === []) {
+					throw $stale;
+				}
+				$company = $this->companyService->get((int)$agreement->getCompanyId());
+				$wsId = (int)($company->getWorkspaceId() ?? 0);
+				$classified = ConflictFieldLogic::classifyPatch($baseSnap, $currentSnap, $incoming);
+				if ($classified['conflicts'] !== []) {
+					DbTransaction::rollBack($this->db, $ownsTxn);
+					if (!$ownsTxn) {
+						throw $stale;
+					}
+					$conflictId = $this->editConflicts->recordOpenConflict(
+						$wsId,
+						'agreement',
+						$id,
+						$baseSnap,
+						$currentSnap,
+						$incoming,
+						$classified['conflicts'],
+						(string)($baseSnap['_actor'] ?? 'unknown'),
+						$actor,
+					);
+					throw new ConflictException(
+						$this->l10n->t('Parallel edits need a resolution with a reason.'),
+						Constants::ERR_EDIT_CONFLICT,
+						['conflictId' => $conflictId, 'fields' => $classified['conflicts']],
+					);
+				}
+				$filtered = [];
+				foreach ($classified['takeIncoming'] as $field) {
+					if (array_key_exists($field, $incoming)) {
+						$filtered[$this->agreementSnapToInput($field)] = $incoming[$field];
+					}
+				}
+				foreach ($input as $k => $v) {
+					if (!array_key_exists($k, $this->agreementIncomingPatch([$k => $v])) && $k !== 'updatedAt') {
+						$filtered[$k] = $v;
+					}
+				}
+				if ($filtered === []) {
+					DbTransaction::commit($this->db, $ownsTxn);
+
+					return $agreement;
+				}
+				$input = $filtered;
+			}
 
 			$previousStatus = (string)$agreement->getStatus();
 			if (in_array($previousStatus, Constants::AGREEMENT_TERMINAL_STATUSES, true)) {
@@ -258,25 +319,100 @@ class AgreementService
 			$this->statusService->recompute($agreement, $this->timeFactory->getDateTime());
 			$agreement->setUpdatedAt($this->timeFactory->getDateTime());
 			$stored = $this->agreementMapper->update($agreement);
-			$this->db->commit();
-
-			$newValidUntil = $stored->getValidUntil()?->format('Y-m-d');
-			if ($newValidUntil !== $previousValidUntil) {
-				// The reminder ledger is keyed on the snapshot, so the cadence
-				// re-arms by itself — record why for the audit trail.
-				$this->timelineService->append((int)$stored->getCompanyId(), 'agreement.status', $actor, [
-					'agreementId' => $id,
-					'validUntilFrom' => $previousValidUntil,
-					'validUntilTo' => $newValidUntil,
-					'status' => (string)$stored->getStatus(),
-				]);
-			}
-
-			return $stored;
+			DbTransaction::commit($this->db, $ownsTxn);
 		} catch (\Throwable $e) {
-			$this->db->rollBack();
+			DbTransaction::rollBack($this->db, $ownsTxn);
 			throw $e;
 		}
+
+		if ($this->entityRevisions !== null) {
+			$company = $this->companyService->get((int)$stored->getCompanyId());
+			$this->entityRevisions->append(
+				(int)($company->getWorkspaceId() ?? 0),
+				'agreement',
+				(int)$stored->getId(),
+				$stored->getUpdatedAt() ?? $this->timeFactory->getDateTime(),
+				$actor,
+				$this->agreementConflictSnapshot($stored) + ['_actor' => $actor],
+			);
+		}
+
+		$newValidUntil = $stored->getValidUntil()?->format('Y-m-d');
+		if ($newValidUntil !== $previousValidUntil) {
+			// The reminder ledger is keyed on the snapshot, so the cadence
+			// re-arms by itself — record why for the audit trail.
+			$this->timelineService->append((int)$stored->getCompanyId(), 'agreement.status', $actor, [
+				'agreementId' => $id,
+				'validUntilFrom' => $previousValidUntil,
+				'validUntilTo' => $newValidUntil,
+				'status' => (string)$stored->getStatus(),
+			]);
+		}
+
+		return $stored;
+	}
+
+	/**
+	 * Apply field choices from a resolved edit conflict (GNQ §6.4).
+	 *
+	 * @param array<string, mixed> $appliedPatch
+	 */
+	public function applyConflictResolution(int $id, array $appliedPatch, string $actor): Agreement
+	{
+		$input = [];
+		foreach ($appliedPatch as $field => $value) {
+			$input[$this->agreementSnapToInput((string)$field)] = $value;
+		}
+		if ($input === []) {
+			return $this->get($id);
+		}
+
+		return $this->update($id, $input, $actor, null, true);
+	}
+
+	/** @return array<string, mixed> */
+	private function agreementConflictSnapshot(Agreement $agreement): array
+	{
+		return [
+			'status' => (string)$agreement->getStatus(),
+			'productCode' => (string)$agreement->getProductCode(),
+			'amountCents' => (int)$agreement->getAmountCents(),
+			'validUntil' => $agreement->getValidUntil() !== null
+				? $agreement->getValidUntil()->format('Y-m-d')
+				: '',
+			'label' => (string)($agreement->getLabel() ?? ''),
+		];
+	}
+
+	/**
+	 * @param array<string, mixed> $input
+	 * @return array<string, mixed>
+	 */
+	private function agreementIncomingPatch(array $input): array
+	{
+		$out = [];
+		$map = [
+			'status' => 'status',
+			'productCode' => 'productCode',
+			'amountCents' => 'amountCents',
+			'validUntil' => 'validUntil',
+			'label' => 'label',
+		];
+		foreach ($map as $api => $snap) {
+			if (array_key_exists($api, $input)) {
+				$out[$snap] = $input[$api];
+			}
+		}
+
+		return $out;
+	}
+
+	private function agreementSnapToInput(string $snapField): string
+	{
+		return match ($snapField) {
+			'status', 'productCode', 'amountCents', 'validUntil', 'label' => $snapField,
+			default => $snapField,
+		};
 	}
 
 	/**

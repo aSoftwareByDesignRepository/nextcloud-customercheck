@@ -29,6 +29,7 @@ include __DIR__ . '/common/page-start.php';
 	<?php include __DIR__ . '/settings/preferences.php'; ?>
 
 	<?php if ($canManageWorkspace): ?>
+		<?php include __DIR__ . '/settings/workspace-review-sources.php'; ?>
 		<?php include __DIR__ . '/settings/workspace-mailbox.php'; ?>
 		<?php include __DIR__ . '/settings/circles-roll-call.php'; ?>
 	<?php endif; ?>

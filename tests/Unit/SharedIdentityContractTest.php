@@ -63,6 +63,40 @@ final class SharedIdentityContractTest extends TestCase
 		$this->assertStringContainsString('listByPcCustomer', $src);
 	}
 
+	public function testMoneyServiceFeatureDetectsFacadeV3AgingFields(): void
+	{
+		$src = (string)file_get_contents($this->root . '/lib/Service/MoneyService.php');
+		$this->assertStringContainsString("array_key_exists('agingBucket'", $src);
+		$this->assertStringContainsString("array_key_exists('daysPastDue'", $src);
+		$this->assertStringContainsString("array_key_exists('writtenOff'", $src);
+		$this->assertStringContainsString("array_key_exists('remainingCents'", $src);
+		// Must not invent aging when keys are missing.
+		$this->assertStringContainsString("? \$inv['agingBucket'] : null", $src);
+	}
+
+	public function testMoneyAndCompanyTemplatesShowAgingWhenPresent(): void
+	{
+		$money = (string)file_get_contents($this->root . '/templates/money.php');
+		$company = (string)file_get_contents($this->root . '/templates/company-detail.php');
+		$chip = (string)file_get_contents($this->root . '/templates/common/aging-chip.php');
+		$persona = (string)file_get_contents($this->root . '/js/pages/persona.js');
+		$this->assertStringContainsString('aging-chip.php', $money);
+		$this->assertStringContainsString('aging-chip.php', $company);
+		$this->assertStringContainsString('data-crm-aging-bucket', $chip);
+		$this->assertStringContainsString('agingBucket', $persona);
+		$this->assertStringContainsString("a.kind === 'overdue_invoice'", $persona);
+		// Never invent when field absent — feature-detect only.
+		$this->assertStringContainsString('a.agingBucket != null', $persona);
+	}
+
+	public function testPulseServicePassesAgingOnlyWhenPresent(): void
+	{
+		$src = (string)file_get_contents($this->root . '/lib/Service/PulseService.php');
+		$this->assertStringContainsString("array_key_exists('agingBucket', \$row)", $src);
+		$this->assertStringContainsString("array_key_exists('daysPastDue', \$row)", $src);
+		$this->assertStringContainsString('agingBucketLabel', $src);
+	}
+
 	public function testCompanyMapperCanFindByPcCustomerId(): void
 	{
 		$src = (string)file_get_contents($this->root . '/lib/Db/CompanyMapper.php');

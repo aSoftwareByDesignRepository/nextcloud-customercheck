@@ -1362,7 +1362,7 @@
         body.innerHTML = html;
         return;
       }
-      html = '<form id="crm-account-plan-form" class="crm-form">';
+      html = '<form id="crm-account-plan-form" class="crm-form" data-plan-updated-at="' + escapeHtml(plan.updatedAt || '') + '">';
       html += '<div class="form-group"><label class="form-label" for="crm-plan-goal">' + escapeHtml(t('Goal')) + '</label>';
       html += '<textarea class="crm-input form-input" id="crm-plan-goal" name="goal" rows="3">' + escapeHtml(plan.goal || '') + '</textarea></div>';
       html += '<div class="form-group"><label class="form-label" for="crm-plan-priority">' + escapeHtml(t('Priority')) + '</label>';
@@ -1508,6 +1508,7 @@
               ownerUserId: ownerHidden ? ownerHidden.value : '',
               nextReviewOn: form.elements.nextReviewOn.value,
               status: plan.status || 'active',
+              updatedAt: form.getAttribute('data-plan-updated-at') || plan.updatedAt || '',
             });
             if (liveRegion()) liveRegion().textContent = t('Account plan saved.');
             await loadAccountPlan();

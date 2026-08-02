@@ -177,6 +177,10 @@ class MobilePushService
 		if ($activityId > 0) {
 			$data['activityId'] = $activityId;
 		}
+		$workspaceId = (int)($params['workspaceId'] ?? 0);
+		if ($workspaceId > 0) {
+			$data['workspaceId'] = $workspaceId;
+		}
 
 		return $data;
 	}

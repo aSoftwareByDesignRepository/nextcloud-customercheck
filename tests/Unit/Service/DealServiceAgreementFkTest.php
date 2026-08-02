@@ -46,6 +46,7 @@ final class DealServiceAgreementFkTest extends TestCase
 
 		$db = $this->createMock(IDBConnection::class);
 		$db->method('beginTransaction');
+		$db->method('inTransaction')->willReturn(false);
 		$db->expects($this->once())->method('rollBack');
 
 		$l10n = $this->createMock(IL10N::class);

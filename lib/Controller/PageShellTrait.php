@@ -10,7 +10,8 @@ trait PageShellTrait
 	private const WIDE_SHELL_PAGE_IDS = [
 		'today', 'pulse', 'brief', 'my-accounts', 'team', 'workload', 'strategy',
 		'companies', 'company-detail', 'company-form', 'prepare-meeting', 'pipeline',
-		'agreements', 'agreement-form', 'money', 'activities', 'mail-triage', 'import',
+		'agreements', 'agreement-form', 'money', 'activities', 'mail-triage', 'review',
+		'conflicts', 'import',
 		'settings', 'app-settings', 'support-us',
 	];
 
@@ -176,6 +177,8 @@ trait PageShellTrait
 			'money' => $g->linkToRoute('customercheck.page.money'),
 			'activities' => $g->linkToRoute('customercheck.page.activities'),
 			'mailTriage' => $g->linkToRoute('customercheck.page.mailTriage'),
+			'review' => $g->linkToRoute('customercheck.page.review'),
+			'conflicts' => $g->linkToRoute('customercheck.page.conflicts'),
 			'import' => $g->linkToRoute('customercheck.page.import'),
 			'settings' => $g->linkToRoute('customercheck.page.settings'),
 			'appSettings' => $g->linkToRoute('customercheck.page.appSettings'),

@@ -15,7 +15,8 @@ const pages = [
   '/apps/customercheck/team',
   '/apps/customercheck/brief',
   '/apps/customercheck/my-accounts',
-  '/apps/customercheck/mail-triage',
+  '/apps/customercheck/review',
+  '/apps/customercheck/conflicts',
   '/apps/customercheck/settings',
 ];
 

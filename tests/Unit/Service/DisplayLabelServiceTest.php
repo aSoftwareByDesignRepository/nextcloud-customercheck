@@ -39,6 +39,10 @@ final class DisplayLabelServiceTest extends TestCase
 			}
 			return (string)$data;
 		});
+		$l10n->method('n')->willReturnCallback(static function (string $singular, string $plural, int $count, array $args = []) {
+			$template = $count === 1 ? $singular : $plural;
+			return str_replace('%n', (string)$count, $template);
+		});
 		$this->labels = new DisplayLabelService($l10n);
 	}
 
@@ -78,6 +82,13 @@ final class DisplayLabelServiceTest extends TestCase
 		$this->assertSame('Overdue invoice', $this->labels->pulseAttentionKind('overdue_invoice'));
 		$this->assertSame('Plan stalled', $this->labels->pulseAttentionKind('plan_stalled'));
 		$this->assertSame('Plan at risk', $this->labels->pulseAttentionKind('plan_at_risk'));
+		$this->assertSame('1–30 days', $this->labels->agingBucket('1-30'));
+		$this->assertSame('90+ days', $this->labels->agingBucket('90+'));
+		$this->assertNull($this->labels->agingBucket(null));
+		$this->assertNull($this->labels->agingBucket(''));
+		$this->assertSame('5 days past due', $this->labels->daysPastDueLabel(5));
+		$this->assertSame('1 day past due', $this->labels->daysPastDueLabel(1));
+		$this->assertNull($this->labels->daysPastDueLabel(null));
 		$this->assertSame(
 			'Unbilled hours are not ready yet — we will not guess zero.',
 			$this->labels->unbilledHint('honesty_blocked')

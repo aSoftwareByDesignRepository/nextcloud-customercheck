@@ -10,6 +10,7 @@ use OCA\CustomerCheck\Db\PersonMapper;
 use OCA\CustomerCheck\Exception\NotFoundException;
 use OCA\CustomerCheck\Exception\ValidationException;
 use OCA\CustomerCheck\Support\CompanyScopedFk;
+use OCA\CustomerCheck\Support\DbTransaction;
 use OCA\CustomerCheck\Support\OptimisticLock;
 use OCP\AppFramework\Db\DoesNotExistException;
 use OCP\AppFramework\Utility\ITimeFactory;
@@ -35,6 +36,8 @@ class PersonService
 		private readonly IDBConnection $db,
 		private readonly ITimeFactory $timeFactory,
 		private readonly IL10N $l10n,
+		private readonly ?EditConflictService $editConflicts = null,
+		private readonly ?EntityRevisionService $entityRevisions = null,
 	) {
 	}
 
@@ -109,12 +112,14 @@ class PersonService
 	 * @throws NotFoundException
 	 * @throws \OCA\CustomerCheck\Exception\ConflictException
 	 */
-	public function update(int $id, array $input, string $actor, ?string $updatedAtPrecondition): Person
+	public function update(int $id, array $input, string $actor, ?string $updatedAtPrecondition, bool $skipOptimistic = false): Person
 	{
-		// Fail fast on missing precondition before taking locks (null stored skips time compare).
-		OptimisticLock::assertFresh(null, $updatedAtPrecondition);
+		// User-facing updates always require updatedAt; conflict apply sets skipOptimistic (GNQ §6.4).
+		$requirePrecondition = !$skipOptimistic;
+		// Fail fast on missing precondition before taking locks.
+		OptimisticLock::assertFresh(null, $updatedAtPrecondition, $requirePrecondition);
 
-		$this->db->beginTransaction();
+		$ownsTxn = DbTransaction::begin($this->db);
 		try {
 			$person = $this->get($id);
 			$companyId = (int)$person->getCompanyId();
@@ -122,7 +127,61 @@ class PersonService
 
 			// Re-load under company lock and re-check — closes TOCTOU vs concurrent writers.
 			$person = $this->get($id);
-			OptimisticLock::assertFresh($person->getUpdatedAt(), $updatedAtPrecondition);
+			$currentSnap = $this->personConflictSnapshot($person);
+			try {
+				OptimisticLock::assertFresh($person->getUpdatedAt(), $updatedAtPrecondition, $requirePrecondition);
+			} catch (\OCA\CustomerCheck\Exception\ConflictException $stale) {
+				if (!$requirePrecondition || $this->editConflicts === null) {
+					throw $stale;
+				}
+				$baseSnap = $this->entityRevisions?->snapshotAt('person', $id, $updatedAtPrecondition) ?? $currentSnap;
+				$incoming = $this->personIncomingPatch($input);
+				if ($incoming === []) {
+					throw $stale;
+				}
+				$company = $this->companyService->get($companyId);
+				$wsId = (int)($company->getWorkspaceId() ?? 0);
+				$classified = ConflictFieldLogic::classifyPatch($baseSnap, $currentSnap, $incoming);
+				if ($classified['conflicts'] !== []) {
+					DbTransaction::rollBack($this->db, $ownsTxn);
+					if (!$ownsTxn) {
+						throw $stale;
+					}
+					$conflictId = $this->editConflicts->recordOpenConflict(
+						$wsId,
+						'person',
+						$id,
+						$baseSnap,
+						$currentSnap,
+						$incoming,
+						$classified['conflicts'],
+						(string)($baseSnap['_actor'] ?? 'unknown'),
+						$actor,
+					);
+					throw new \OCA\CustomerCheck\Exception\ConflictException(
+						$this->l10n->t('Parallel edits need a resolution with a reason.'),
+						Constants::ERR_EDIT_CONFLICT,
+						['conflictId' => $conflictId, 'fields' => $classified['conflicts']],
+					);
+				}
+				$filtered = [];
+				foreach ($classified['takeIncoming'] as $field) {
+					if (array_key_exists($field, $input)) {
+						$filtered[$field] = $input[$field];
+					}
+				}
+				foreach ($input as $k => $v) {
+					if (!array_key_exists($k, $incoming)) {
+						$filtered[$k] = $v;
+					}
+				}
+				if ($filtered === []) {
+					DbTransaction::commit($this->db, $ownsTxn);
+
+					return $person;
+				}
+				$input = $filtered;
+			}
 
 			$this->applyInput($person, $input, false);
 			$this->assertSingleEconomicBuyer($companyId, $person->getBuyingRole(), (int)$person->getId());
@@ -135,10 +194,22 @@ class PersonService
 			$person->setIsPrimary($wantsPrimary ? 1 : 0);
 			$stored = $this->personMapper->update($person);
 
-			$this->db->commit();
+			DbTransaction::commit($this->db, $ownsTxn);
 		} catch (\Throwable $e) {
-			$this->db->rollBack();
+			DbTransaction::rollBack($this->db, $ownsTxn);
 			throw $e;
+		}
+
+		if ($this->entityRevisions !== null) {
+			$company = $this->companyService->get((int)$stored->getCompanyId());
+			$this->entityRevisions->append(
+				(int)($company->getWorkspaceId() ?? 0),
+				'person',
+				(int)$stored->getId(),
+				$stored->getUpdatedAt() ?? $this->timeFactory->getDateTime(),
+				$actor,
+				$this->personConflictSnapshot($stored) + ['_actor' => $actor],
+			);
 		}
 
 		$this->timelineService->append((int)$stored->getCompanyId(), 'company.updated', $actor, [
@@ -147,6 +218,46 @@ class PersonService
 		]);
 
 		return $stored;
+	}
+
+	/**
+	 * @param array<string, mixed> $appliedPatch
+	 */
+	public function applyConflictResolution(int $id, array $appliedPatch, string $actor): Person
+	{
+		if ($appliedPatch === []) {
+			return $this->get($id);
+		}
+
+		return $this->update($id, $appliedPatch, $actor, null, true);
+	}
+
+	/** @return array<string, mixed> */
+	private function personConflictSnapshot(Person $person): array
+	{
+		return [
+			'name' => (string)$person->getName(),
+			'email' => (string)($person->getEmail() ?? ''),
+			'buyingRole' => (string)($person->getBuyingRole() ?? ''),
+			'status' => (string)$person->getStatus(),
+			'isPrimary' => $person->isPrimaryContact() ? 1 : 0,
+		];
+	}
+
+	/**
+	 * @param array<string, mixed> $input
+	 * @return array<string, mixed>
+	 */
+	private function personIncomingPatch(array $input): array
+	{
+		$out = [];
+		foreach (['name', 'email', 'buyingRole', 'status', 'isPrimary'] as $field) {
+			if (array_key_exists($field, $input)) {
+				$out[$field] = $input[$field];
+			}
+		}
+
+		return $out;
 	}
 
 	/**

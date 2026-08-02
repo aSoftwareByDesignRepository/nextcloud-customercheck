@@ -34,6 +34,7 @@ final class TimelineHumanLabelsContractTest extends TestCase
 		$this->assertStringContainsString('timelineEventType', $api);
 		$this->assertStringContainsString('eventTypeLabel', $api);
 		$this->assertStringContainsString("'email.logged' => \$this->l10n->t('Email logged')", $labels);
+		$this->assertStringContainsString("'review.assigned' => \$this->l10n->t('Review item assigned')", $labels);
 		$this->assertStringContainsString("default => \$this->l10n->t('Update')", $labels);
 	}
 

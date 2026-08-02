@@ -56,4 +56,33 @@ final class NotifierUnknownAppTest extends TestCase
 		$result = $notifier->prepare($n, 'en');
 		$this->assertSame($n, $result);
 	}
+
+	public function testEditConflictDeepLinksToConflictsPage(): void
+	{
+		$l10n = $this->createMock(IL10N::class);
+		$l10n->method('t')->willReturnCallback(static fn (string $s, array $a = []): string => $s);
+		$factory = $this->createMock(IFactory::class);
+		$factory->method('get')->willReturn($l10n);
+		$url = $this->createMock(IURLGenerator::class);
+		$url->expects($this->once())->method('linkToRouteAbsolute')
+			->with('customercheck.page.conflicts', ['workspaceId' => 7, 'conflictId' => 42])
+			->willReturn('https://example.test/conflicts?workspaceId=7&conflictId=42');
+
+		$n = $this->createMock(INotification::class);
+		$n->method('getApp')->willReturn(Application::APP_ID);
+		$n->method('getSubject')->willReturn(Constants::NOTIFY_EDIT_CONFLICT);
+		$n->method('getSubjectParameters')->willReturn([
+			'conflictId' => 42,
+			'entityType' => 'company',
+			'entityId' => 9,
+			'workspaceId' => 7,
+		]);
+		$n->expects($this->once())->method('setParsedSubject')->willReturnSelf();
+		$n->expects($this->once())->method('setLink')
+			->with('https://example.test/conflicts?workspaceId=7&conflictId=42')
+			->willReturnSelf();
+
+		$notifier = new Notifier($factory, $url);
+		$this->assertSame($n, $notifier->prepare($n, 'en'));
+	}
 }

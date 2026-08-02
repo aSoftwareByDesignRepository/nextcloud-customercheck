@@ -46,18 +46,19 @@ test.describe('Persona suite tables + human labels', () => {
     expect(addSerious, JSON.stringify(addSerious, null, 2)).toEqual([]);
   });
 
-  test('Mail triage uses suite table shell', async ({ page }) => {
+  test('Review inbox uses suite table shell (mail-triage redirects)', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await login(page, credsFromEnv('ADMIN'));
     await page.goto('/apps/customercheck/mail-triage?workspaceId=1');
     await page.waitForSelector('#crm-main-content', { timeout: 30000 });
-    await expect(page.locator('#app-content.crm-app.crm-app--mail-triage')).toBeVisible();
-    await expect(page.locator('[data-crm-mail-triage-body]')).toBeVisible({ timeout: 20000 });
-    await expect(page.locator('[data-crm-mail-triage-body] table.table, [data-crm-mail-triage-body] .crm-callout').first()).toBeVisible();
-    await expect(page.locator('[data-crm-persona-mount="mail-triage"] ul.crm-list')).toHaveCount(0);
+    await expect(page).toHaveURL(/\/review/);
+    await expect(page.locator('#app-content.crm-app.crm-app--review')).toBeVisible();
+    await expect(page.locator('[data-crm-persona-mount="review"]')).toBeVisible({ timeout: 20000 });
+    await expect(page.locator('[data-crm-review-body] table.table, [data-crm-review-body] .crm-callout, [data-crm-persona-mount="review"] .crm-muted').first()).toBeVisible({ timeout: 20000 });
+    await expect(page.locator('[data-crm-persona-mount="review"] ul.crm-list')).toHaveCount(0);
 
     const results = await new AxeBuilder({ page })
-      .include('[data-crm-persona-mount="mail-triage"]')
+      .include('[data-crm-persona-mount="review"]')
       .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
       .analyze();
     const serious = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');

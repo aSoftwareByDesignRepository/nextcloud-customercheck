@@ -34,6 +34,8 @@ $pageIcons = [
 	'workload' => 'user-cog',
 	'strategy' => 'map',
 	'mail-triage' => 'scroll-text',
+	'review' => 'list',
+	'conflicts' => 'alert-triangle',
 	'prepare-meeting' => 'calendar',
 	'companies' => 'building-2', 'company-detail' => 'building-2', 'company-form' => 'building-2',
 	'pipeline' => 'kanban', 'agreements' => 'file-text', 'agreement-form' => 'file-text',

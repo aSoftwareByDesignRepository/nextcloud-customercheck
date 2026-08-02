@@ -23,18 +23,21 @@ $contactCount = (int)($mailSummary['contactCount'] ?? 0);
 $lastAt = (string)($mailSummary['lastContactAt'] ?? '');
 $lastLabel = (string)($mailSummary['lastContactLabel'] ?? '');
 ?>
-<section class="crm-card crm-card--emails" id="crm-emails" aria-labelledby="crm-emails-title" data-crm-mail-mode="<?php p($mailMode); ?>">
-	<header class="crm-card__header">
+<section class="crm-card crm-card--emails crm-card--collapsible" id="crm-emails" aria-labelledby="crm-emails-title" data-crm-mail-mode="<?php p($mailMode); ?>">
+	<details<?php if ($touchCount > 0 || $mailRelated !== [] || $mailDeepLinks !== []): ?> open<?php endif; ?>>
+	<summary class="crm-card__header crm-card__header--summary">
 		<div class="crm-card__header-text">
 			<h2 id="crm-emails-title" class="crm-card__title"><?php p($mailTitle); ?></h2>
 			<?php if ($mailHeadline !== ''): ?>
 				<p class="crm-card__lead"><?php p($mailHeadline); ?></p>
+			<?php else: ?>
+				<p class="crm-card__lead"><?php p($l->t('Full Mail threads and the CRM email log — open when you need them.')); ?></p>
 			<?php endif; ?>
 		</div>
 		<?php if (!empty($_['canWrite'])): ?>
 		<p class="crm-muted crm-emails__log-hint"><?php p($l->t('To log a message, use Log email under Talked above.')); ?></p>
 		<?php endif; ?>
-	</header>
+	</summary>
 	<div class="crm-card__body">
 		<?php if ($mailSteps !== []): ?>
 			<details class="crm-howto">
@@ -174,4 +177,5 @@ $lastLabel = (string)($mailSummary['lastContactLabel'] ?? '');
 			<?php endif; ?>
 		</div>
 	</div>
+	</details>
 </section>

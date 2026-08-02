@@ -847,6 +847,58 @@
           icsUrl.value = '';
         }
       }
+      const sources = s.reviewSources || {};
+      const kindMap = {
+        shared_mail: 'crm-review-src-shared-mail',
+        contact_suggest: 'crm-review-src-contacts',
+        file: 'crm-review-src-files',
+        calendar_event: 'crm-review-src-calendar',
+        task: 'crm-review-src-tasks',
+        import_anomaly: 'crm-review-src-import',
+      };
+      Object.keys(kindMap).forEach((kind) => {
+        const el = document.getElementById(kindMap[kind]);
+        if (el && sources[kind]) {
+          el.checked = !!sources[kind].enabled;
+        }
+      });
+      const contactsActor = document.getElementById('crm-review-contacts-actor');
+      if (contactsActor) {
+        contactsActor.value = (sources.contact_suggest && sources.contact_suggest.scanActor) || '';
+      }
+      const fileFolder = document.getElementById('crm-review-file-folder');
+      const fileActor = document.getElementById('crm-review-file-actor');
+      if (fileFolder) {
+        fileFolder.value = sources.file && sources.file.rootFolderId
+          ? String(sources.file.rootFolderId)
+          : '';
+      }
+      if (fileActor) {
+        fileActor.value = (sources.file && sources.file.scanActor) || '';
+      }
+      const calUris = document.getElementById('crm-review-cal-uris');
+      const calActor = document.getElementById('crm-review-cal-actor');
+      if (calUris) {
+        calUris.value = sources.calendar_event && Array.isArray(sources.calendar_event.calendarUris)
+          ? sources.calendar_event.calendarUris.join('\n')
+          : '';
+      }
+      if (calActor) {
+        calActor.value = (sources.calendar_event && sources.calendar_event.scanActor) || '';
+      }
+      const taskLists = document.getElementById('crm-review-task-lists');
+      const taskActor = document.getElementById('crm-review-task-actor');
+      if (taskLists) {
+        taskLists.value = sources.task && Array.isArray(sources.task.listIds)
+          ? sources.task.listIds.join('\n')
+          : '';
+      }
+      if (taskActor) {
+        taskActor.value = (sources.task && sources.task.scanActor) || '';
+      }
+      if (typeof loadValueMaps === 'function') {
+        await loadValueMaps();
+      }
     } catch (e) {
       showWsError((e.payload && e.payload.message) || e.message || tr('Could not load workspace settings.'));
     }
@@ -961,6 +1013,108 @@
     });
   }
 
+  const wsImportForm = document.getElementById('crm-ws-member-import-form');
+  if (wsImportForm && canManageWorkspace) {
+    wsImportForm.addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      if (!currentWorkspaceId) return;
+      showWsError('');
+      const groupId = String((document.getElementById('crm-ws-import-group') || {}).value || '').trim();
+      if (groupId === '') {
+        showWsError(tr('Pick a Nextcloud group to import.'));
+        const sel = document.getElementById('crm-ws-import-group');
+        if (sel) sel.focus();
+        return;
+      }
+      const role = String((document.getElementById('crm-ws-import-role') || {}).value || 'member');
+      const canMailSend = !!(document.getElementById('crm-ws-import-mail') || {}).checked;
+      const submitBtn = document.getElementById('crm-ws-import-submit');
+      if (submitBtn) submitBtn.disabled = true;
+      try {
+        const res = await Api.post('/workspaces/' + currentWorkspaceId + '/members/import-group', {
+          groupId: groupId,
+          role: role,
+          canMailSend: canMailSend,
+        });
+        const data = res.data || res || {};
+        const added = Number(data.added || 0);
+        const updated = Number(data.updated || 0);
+        const skipped = Number(data.skipped || 0);
+        let msg = tr('Imported %s people from the group.', [String(added)]);
+        if (updated > 0) {
+          msg += ' ' + tr('%s already in the book had their role updated.', [String(updated)]);
+        }
+        if (skipped > 0) {
+          msg += ' ' + tr('%s skipped.', [String(skipped)]);
+        }
+        if (data.limitReached) {
+          msg += ' ' + tr('Member limit reached — some people were not added.');
+        }
+        if (C && C.announce) C.announce(msg);
+        if (wsStatus) {
+          wsStatus.hidden = false;
+          wsStatus.textContent = msg;
+        }
+        await refreshWorkspaceMembers();
+      } catch (e) {
+        showWsError((e.payload && e.payload.message) || e.message);
+      } finally {
+        if (submitBtn) submitBtn.disabled = false;
+      }
+    });
+  }
+
+  const wsImportCircleForm = document.getElementById('crm-ws-member-import-circle-form');
+  if (wsImportCircleForm && canManageWorkspace) {
+    wsImportCircleForm.addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      if (!currentWorkspaceId) return;
+      showWsError('');
+      const circleId = String((document.getElementById('crm-ws-import-circle') || {}).value || '').trim();
+      if (circleId === '') {
+        showWsError(tr('Pick a Circle to import.'));
+        const sel = document.getElementById('crm-ws-import-circle');
+        if (sel) sel.focus();
+        return;
+      }
+      const role = String((document.getElementById('crm-ws-import-circle-role') || {}).value || 'member');
+      const canMailSend = !!(document.getElementById('crm-ws-import-circle-mail') || {}).checked;
+      const submitBtn = document.getElementById('crm-ws-import-circle-submit');
+      if (submitBtn) submitBtn.disabled = true;
+      try {
+        const res = await Api.post('/workspaces/' + currentWorkspaceId + '/members/import-circle', {
+          circleId: circleId,
+          role: role,
+          canMailSend: canMailSend,
+        });
+        const data = res.data || res || {};
+        const added = Number(data.added || 0);
+        const updated = Number(data.updated || 0);
+        const skipped = Number(data.skipped || 0);
+        let msg = tr('Imported %s people from the Circle.', [String(added)]);
+        if (updated > 0) {
+          msg += ' ' + tr('%s already in the book had their role updated.', [String(updated)]);
+        }
+        if (skipped > 0) {
+          msg += ' ' + tr('%s skipped.', [String(skipped)]);
+        }
+        if (data.limitReached) {
+          msg += ' ' + tr('Member limit reached — some people were not added.');
+        }
+        if (C && C.announce) C.announce(msg);
+        if (wsStatus) {
+          wsStatus.hidden = false;
+          wsStatus.textContent = msg;
+        }
+        await refreshWorkspaceMembers();
+      } catch (e) {
+        showWsError((e.payload && e.payload.message) || e.message);
+      } finally {
+        if (submitBtn) submitBtn.disabled = false;
+      }
+    });
+  }
+
   let mailboxTestOk = false;
   const mailboxTest = document.getElementById('crm-mailbox-test');
   const mailboxSave = document.getElementById('crm-mailbox-save');
@@ -1023,6 +1177,116 @@
     });
   }
 
+  async function loadValueMaps() {
+    const list = document.getElementById('crm-value-maps-list');
+    if (!list || !canManageWorkspace || !currentWorkspaceId) return;
+    list.setAttribute('aria-busy', 'true');
+    try {
+      const res = await Api.get('/workspaces/' + currentWorkspaceId + '/value-maps');
+      const items = (res.data && res.data.items) || res.items || [];
+      if (!items.length) {
+        list.innerHTML = '<p class="crm-muted">' + escapeHtml(tr('No learned country maps yet.')) + '</p>';
+        return;
+      }
+      list.innerHTML = items.map((it) => {
+        const id = String(it.id || '');
+        return '<div class="crm-form crm-form--row" data-vm-id="' + escapeHtml(id) + '">' +
+          '<span>' + escapeHtml(String(it.raw || '')) + ' → ' + escapeHtml(String(it.canonical || '')) +
+          ' <span class="crm-muted">(' + escapeHtml(String(it.fieldKey || 'country')) + ')</span></span>' +
+          '<button type="button" class="crm-btn crm-btn--secondary" data-vm-delete="' + escapeHtml(id) +
+          '" style="min-height:44px;min-width:44px">' + escapeHtml(tr('Remove')) + '</button></div>';
+      }).join('');
+      list.querySelectorAll('[data-vm-delete]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const id = btn.getAttribute('data-vm-delete');
+          try {
+            await Api.del('/workspaces/' + currentWorkspaceId + '/value-maps/' + id);
+            await loadValueMaps();
+          } catch (e) {
+            const status = document.getElementById('crm-value-maps-status');
+            if (status) status.textContent = (e.payload && e.payload.message) || e.message;
+          }
+        });
+      });
+    } catch (e) {
+      list.innerHTML = '<p class="form-error" role="alert">' +
+        escapeHtml((e.payload && e.payload.message) || e.message || tr('Could not load maps.')) + '</p>';
+    } finally {
+      list.setAttribute('aria-busy', 'false');
+    }
+  }
+
+  const valueMapsForm = document.getElementById('crm-value-maps-form');
+  if (valueMapsForm && canManageWorkspace) {
+    valueMapsForm.addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      if (!currentWorkspaceId) return;
+      const status = document.getElementById('crm-value-maps-status');
+      const raw = String((document.getElementById('crm-vm-raw') || {}).value || '').trim();
+      const canonical = String((document.getElementById('crm-vm-canonical') || {}).value || '').trim();
+      try {
+        await Api.post('/workspaces/' + currentWorkspaceId + '/value-maps', {
+          fieldKey: 'country',
+          raw: raw,
+          canonical: canonical,
+          learn: true,
+        });
+        if (status) status.textContent = tr('Country map saved.');
+        await loadValueMaps();
+      } catch (e) {
+        if (status) status.textContent = (e.payload && e.payload.message) || e.message;
+      }
+    });
+  }
+
+  const reviewSourcesForm = document.getElementById('crm-review-sources-form');
+  if (reviewSourcesForm && canManageWorkspace) {
+    reviewSourcesForm.addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      if (!currentWorkspaceId) return;
+      const status = document.getElementById('crm-review-sources-status');
+      const dsgvo = !!(document.getElementById('crm-review-src-dsgvo') || {}).checked;
+      const sources = {};
+      reviewSourcesForm.querySelectorAll('[data-review-kind]').forEach((el) => {
+        const kind = el.getAttribute('data-review-kind');
+        sources[kind] = { enabled: !!el.checked, dsgvoAck: dsgvo };
+      });
+      const contactsActor = document.getElementById('crm-review-contacts-actor');
+      if (sources.contact_suggest) {
+        sources.contact_suggest.scanActor = contactsActor ? String(contactsActor.value || '').trim() : '';
+      }
+      const fileFolder = document.getElementById('crm-review-file-folder');
+      const fileActor = document.getElementById('crm-review-file-actor');
+      if (sources.file) {
+        sources.file.rootFolderId = fileFolder ? parseInt(fileFolder.value || '0', 10) : 0;
+        sources.file.scanActor = fileActor ? String(fileActor.value || '').trim() : '';
+      }
+      const calUris = document.getElementById('crm-review-cal-uris');
+      const calActor = document.getElementById('crm-review-cal-actor');
+      if (sources.calendar_event) {
+        sources.calendar_event.calendarUris = calUris
+          ? String(calUris.value || '').split(/\n+/).map((s) => s.trim()).filter(Boolean)
+          : [];
+        sources.calendar_event.scanActor = calActor ? String(calActor.value || '').trim() : '';
+      }
+      const taskLists = document.getElementById('crm-review-task-lists');
+      const taskActor = document.getElementById('crm-review-task-actor');
+      if (sources.task) {
+        sources.task.listIds = taskLists
+          ? String(taskLists.value || '').split(/\n+/).map((s) => s.trim()).filter(Boolean)
+          : [];
+        sources.task.scanActor = taskActor ? String(taskActor.value || '').trim() : '';
+      }
+      try {
+        await Api.put('/workspaces/' + currentWorkspaceId + '/review/sources', { sources: sources });
+        if (status) status.textContent = tr('Review sources saved.');
+        if (C && C.announce) C.announce(tr('Review sources saved.'));
+      } catch (e) {
+        if (status) status.textContent = (e.payload && e.payload.message) || e.message;
+      }
+    });
+  }
+
   bootWorkspaceSection();
 
   async function loadCirclesRollCall() {
@@ -1068,4 +1332,17 @@
   }
 
   loadCirclesRollCall();
+
+  // Deep-link from Review empty CTA — scroll Review sources into view.
+  (function focusReviewSourcesHash() {
+    if (window.location.hash !== '#crm-review-sources') return;
+    const el = document.getElementById('crm-review-sources');
+    if (!el) return;
+    try {
+      el.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      el.classList.add('crm-card--focus');
+      el.setAttribute('tabindex', '-1');
+      el.focus({ preventScroll: true });
+    } catch (e) { /* ignore */ }
+  })();
 })();

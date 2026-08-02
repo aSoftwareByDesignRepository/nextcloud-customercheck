@@ -174,4 +174,19 @@ final class CrmPageShellLayoutTest extends TestCase
 			$this->assertDoesNotMatchRegularExpression('/\bconfirm\s*\(/', $js, $path);
 		}
 	}
+
+	public function testCrmMutedUtilitySetsThemeSafeInk(): void
+	{
+		$css = (string)file_get_contents(dirname(__DIR__, 2) . '/css/app.css');
+		$this->assertMatchesRegularExpression(
+			'/#app-content\.crm-app\s+\.crm-muted[\s\S]*?color:\s*var\(--crm-muted/s',
+			$css,
+			'.crm-muted must set muted ink (WCAG AA on light shells)',
+		);
+		$this->assertMatchesRegularExpression(
+			'/#crm-forecast-disclaimer\s*\{[\s\S]*?color:\s*var\(--crm-muted/s',
+			$css,
+			'Pipeline forecast disclaimer must not inherit inverse/white ink',
+		);
+	}
 }

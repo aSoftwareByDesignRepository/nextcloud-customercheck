@@ -103,12 +103,20 @@ test.describe('Simplified core UX journeys', () => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await login(page, credsFromEnv('ADMIN'));
     await page.goto('/apps/customercheck/pipeline');
-    await page.waitForSelector('#crm-pipeline-table, #crm-pipeline-board', { timeout: 30000 });
+    await page.waitForSelector('#crm-main-content', { timeout: 30000 });
+    // Prefer table view for lean-column assertions (board may be the user default).
+    const tableToggle = page.locator('[data-crm-pipeline-view="table"]');
+    if (await tableToggle.count()) {
+      await tableToggle.click();
+    }
+    await expect(page.locator('#crm-pipeline-table:not([hidden]), #crm-pipeline-board:not([hidden])').first()).toBeVisible({ timeout: 15000 });
     await expect(page.getByText(/Edit chase|Chase bearbeiten/i)).toHaveCount(0);
     const editDeal = page.getByRole('button', { name: /Edit deal|Deal bearbeiten/i });
     const empty = page.getByText(/No deals yet\. Tap New deal|Noch keine Deals\. Tippe auf Neuer Deal/i);
     await expect(editDeal.or(empty).first()).toBeVisible();
     await expect(page.getByText(/website lead webhook/i)).toHaveCount(0);
+    await page.waitForLoadState('networkidle');
+    await expect(page.locator('#crm-main-content')).toBeVisible();
     const results = await new AxeBuilder({ page })
       .include('#crm-main-content')
       .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])

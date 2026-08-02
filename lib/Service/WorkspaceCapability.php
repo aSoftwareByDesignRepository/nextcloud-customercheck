@@ -16,15 +16,16 @@ final class WorkspaceCapability
 	/** @var array<string, list<string>> */
 	private const MATRIX = [
 		'viewer' => [
-			'read', 'mail.read',
+			'read', 'mail.read', 'review.read',
 		],
 		'member' => [
 			// brief.confirm is limited: own commitments only (enforced in PersonaApiController).
-			'read', 'write', 'mail.read', 'mail.send', 'brief.confirm',
+			'read', 'write', 'mail.read', 'mail.send', 'review.read', 'brief.confirm',
 		],
 		'manager' => [
 			'read', 'write', 'delete', 'move', 'members', 'mailbox',
-			'mail.read', 'mail.send', 'brief.confirm', 'team.coach', 'bulk', 'ooo',
+			'mail.read', 'mail.send', 'review.read', 'brief.confirm', 'team.coach', 'bulk', 'ooo',
+			'conflicts.resolve',
 		],
 	];
 

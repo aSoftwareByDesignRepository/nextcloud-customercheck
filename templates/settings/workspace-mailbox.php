@@ -113,6 +113,82 @@ $canManageWorkspace = !empty($_['canManageWorkspace']);
 					</div>
 				</form>
 
+				<details class="crm-advanced" id="crm-ws-member-import">
+					<summary><?php p($l->t('Import a Nextcloud group once')); ?></summary>
+					<p class="crm-muted"><?php p($l->t('Adds everyone in that group to this book now. Not live sync — run again if the group changes.')); ?></p>
+					<form id="crm-ws-member-import-form" class="crm-form crm-form--stack" novalidate>
+						<div class="form-group">
+							<label class="form-label" for="crm-ws-import-group"><?php p($l->t('Nextcloud group')); ?></label>
+							<select id="crm-ws-import-group" name="groupId" class="form-select crm-input" required>
+								<option value=""><?php p($l->t('Choose a group…')); ?></option>
+								<?php foreach (($_['availableGroups'] ?? []) as $g):
+									$gid = (string)($g['id'] ?? '');
+									$glabel = (string)($g['displayName'] ?? $gid);
+									if ($gid === '') {
+										continue;
+									}
+									?>
+									<option value="<?php p($gid); ?>"><?php p($glabel); ?></option>
+								<?php endforeach; ?>
+							</select>
+						</div>
+						<div class="form-group">
+							<label class="form-label" for="crm-ws-import-role"><?php p($l->t('Role for imported people')); ?></label>
+							<select id="crm-ws-import-role" name="role" class="form-select crm-input">
+								<option value="viewer"><?php p($l->t('Viewer')); ?></option>
+								<option value="member" selected><?php p($l->t('Member')); ?></option>
+								<option value="manager"><?php p($l->t('Manager')); ?></option>
+							</select>
+						</div>
+						<label class="crm-switch">
+							<input type="checkbox" id="crm-ws-import-mail" name="can_mail_send" value="1">
+							<span><?php p($l->t('Can send from shared mailbox')); ?></span>
+						</label>
+						<div class="crm-form-actions">
+							<button type="submit" class="crm-btn crm-btn--secondary" id="crm-ws-import-submit"><?php p($l->t('Import group')); ?></button>
+						</div>
+					</form>
+				</details>
+
+				<?php if (!empty($_['circlesAvailable'])): ?>
+				<details class="crm-advanced" id="crm-ws-member-import-circle">
+					<summary><?php p($l->t('Import a Circle once')); ?></summary>
+					<p class="crm-muted"><?php p($l->t('Adds local people from a Circle you belong to. Not live sync — run again if the Circle changes.')); ?></p>
+					<form id="crm-ws-member-import-circle-form" class="crm-form crm-form--stack" novalidate>
+						<div class="form-group">
+							<label class="form-label" for="crm-ws-import-circle"><?php p($l->t('Circle')); ?></label>
+							<select id="crm-ws-import-circle" name="circleId" class="form-select crm-input" required>
+								<option value=""><?php p($l->t('Choose a Circle…')); ?></option>
+								<?php foreach (($_['availableCircles'] ?? []) as $c):
+									$cid = (string)($c['id'] ?? '');
+									$clabel = (string)($c['displayName'] ?? $cid);
+									if ($cid === '') {
+										continue;
+									}
+									?>
+									<option value="<?php p($cid); ?>"><?php p($clabel); ?></option>
+								<?php endforeach; ?>
+							</select>
+						</div>
+						<div class="form-group">
+							<label class="form-label" for="crm-ws-import-circle-role"><?php p($l->t('Role for imported people')); ?></label>
+							<select id="crm-ws-import-circle-role" name="role" class="form-select crm-input">
+								<option value="viewer"><?php p($l->t('Viewer')); ?></option>
+								<option value="member" selected><?php p($l->t('Member')); ?></option>
+								<option value="manager"><?php p($l->t('Manager')); ?></option>
+							</select>
+						</div>
+						<label class="crm-switch">
+							<input type="checkbox" id="crm-ws-import-circle-mail" name="can_mail_send" value="1">
+							<span><?php p($l->t('Can send from shared mailbox')); ?></span>
+						</label>
+						<div class="crm-form-actions">
+							<button type="submit" class="crm-btn crm-btn--secondary" id="crm-ws-import-circle-submit"><?php p($l->t('Import Circle')); ?></button>
+						</div>
+					</form>
+				</details>
+				<?php endif; ?>
+
 				<h3 class="crm-card__title"><?php p($l->t('Shared mailbox')); ?></h3>
 				<p class="crm-callout" role="status"><?php p($l->t('Messages from a connected mailbox are shared with everyone in this workspace who can read mail. Do not connect a personal inbox.')); ?></p>
 				<form id="crm-mailbox-form" class="crm-form" novalidate>
@@ -164,6 +240,26 @@ $canManageWorkspace = !empty($_['canManageWorkspace']);
 						<button type="submit" class="crm-btn crm-btn--primary" id="crm-mailbox-save" disabled><?php p($l->t('Save mailbox')); ?></button>
 					</div>
 				</form>
+
+				<details class="crm-advanced" id="crm-value-maps">
+					<summary><?php p($l->t('Data quality — country maps')); ?></summary>
+					<p class="crm-muted"><?php p($l->t('Learned country aliases for this workspace. Remove a mapping if it was wrong.')); ?></p>
+					<div id="crm-value-maps-list" class="crm-stack" role="region" aria-live="polite" aria-busy="false"></div>
+					<form id="crm-value-maps-form" class="crm-form crm-form--stack" novalidate>
+						<div class="form-group">
+							<label class="form-label" for="crm-vm-raw"><?php p($l->t('Raw value')); ?></label>
+							<input type="text" id="crm-vm-raw" class="form-input crm-input" autocomplete="off" placeholder="<?php p($l->t('e.g. Deutschland')); ?>">
+						</div>
+						<div class="form-group">
+							<label class="form-label" for="crm-vm-canonical"><?php p($l->t('ISO country')); ?></label>
+							<input type="text" id="crm-vm-canonical" class="form-input crm-input" maxlength="2" autocomplete="off" placeholder="<?php p($l->t('DE')); ?>">
+						</div>
+						<p id="crm-value-maps-status" class="form-help" role="status" aria-live="polite"></p>
+						<div class="crm-form-actions">
+							<button type="submit" class="crm-btn crm-btn--secondary" id="crm-value-maps-learn" style="min-height:44px"><?php p($l->t('Apply & learn')); ?></button>
+						</div>
+					</form>
+				</details>
 			</div>
 		</div>
 	</section>

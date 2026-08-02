@@ -147,7 +147,10 @@ class LicenseKeyEventService
 			'arbeitszeitcheck', 'azc', 'azc2' => 'azc',
 			'projectcheck', 'pc', 'pc2' => 'pc',
 			'maintenancecheck', 'mn', 'mn2' => 'mn',
-			'invoicecheck', 'iv', 'iv2' => 'iv',
+			'inventorycheck', 'iv', 'iv2' => 'iv',
+			'invoicecheck', 'ic', 'ic2' => 'ic',
+			'dutycheck', 'dty', 'dty2' => 'dty',
+			'customercheck', 'cuc', 'cuc2' => 'cuc',
 			default => in_array($p, Constants::PRODUCT_CODES, true) ? $p : 'azc',
 		};
 	}

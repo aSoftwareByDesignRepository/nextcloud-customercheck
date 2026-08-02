@@ -80,7 +80,7 @@ final class NotificationServicePushBridgeTest extends TestCase
 		$push = $this->createMock(MobilePushService::class);
 		$push->expects($this->once())
 			->method('dispatch')
-			->with(['bob'], Constants::NOTIFY_REMINDER, ['companyName' => 'Acme']);
+			->with(['bob'], Constants::NOTIFY_REMINDER, ['companyName' => 'Acme', 'workspaceId' => 7]);
 
 		$svc = new NotificationService(
 			$manager,
