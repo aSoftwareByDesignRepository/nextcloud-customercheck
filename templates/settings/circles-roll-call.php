@@ -5,8 +5,8 @@
 <section class="crm-card" id="section-circles-roll-call" aria-labelledby="section-circles-heading">
 		<header class="crm-card__header">
 			<div class="crm-card__header-text">
-				<h2 id="section-circles-heading" class="crm-card__title"><?php p($l->t('Circles roll-call')); ?></h2>
-				<p class="crm-card__lead"><?php p($l->t('Weekly commitment completeness per workspace. No summed overdue € — that would blend books unsafely.')); ?></p>
+				<h2 id="section-circles-heading" class="crm-card__title"><?php p($l->t('Weekly promise check')); ?></h2>
+				<p class="crm-card__lead"><?php p($l->t('Did each workspace keep its weekly promises? Money stays per book — never mixed.')); ?></p>
 			</div>
 		</header>
 		<div class="crm-card__body">

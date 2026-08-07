@@ -19,7 +19,7 @@ include __DIR__ . '/common/page-start.php';
 		</header>
 		<div class="crm-card__body">
 			<form id="crm-agreement-form" class="crm-form" data-mode="<?php p($mode); ?>" data-id="<?php p($a ? $a->getId() : ''); ?>" data-updated-at="<?php p($a && $a->getUpdatedAt() ? $a->getUpdatedAt()->format(\DateTimeInterface::ATOM) : ''); ?>" novalidate>
-				<p class="crm-callout" role="status"><?php p($l->t('Company, label, and kind are enough to start. Open More for dates and amounts.')); ?></p>
+				<p class="crm-callout" role="status"><?php p($l->t('Company, label, and type are enough to start. Open More for dates and amounts.')); ?></p>
 				<div class="form-group">
 					<label class="form-label" for="crm-ag-company"><?php p($l->t('Company')); ?></label>
 					<select id="crm-ag-company" name="companyId" class="crm-input form-select" required <?php if ($mode === 'edit'): ?>disabled<?php endif; ?>>
@@ -34,7 +34,7 @@ include __DIR__ . '/common/page-start.php';
 					<input id="crm-ag-label" name="label" class="crm-input form-input" required maxlength="200" value="<?php p($a ? $a->getLabel() : ''); ?>" autofocus />
 				</div>
 				<div class="form-group">
-					<label class="form-label" for="crm-ag-kind"><?php p($l->t('Kind')); ?></label>
+					<label class="form-label" for="crm-ag-kind"><?php p($l->t('Type')); ?></label>
 					<select id="crm-ag-kind" name="kind" class="crm-input form-select">
 						<?php foreach (['license','partner','onetime'] as $k): ?>
 							<option value="<?php p($k); ?>" <?php if ($a && $a->getKind() === $k): ?>selected<?php endif; ?>><?php
@@ -46,7 +46,7 @@ include __DIR__ . '/common/page-start.php';
 				<details class="crm-advanced" id="crm-agreement-advanced"<?php if ($mode === 'edit'): ?> open<?php endif; ?>>
 					<summary><?php p($l->t('More — product, dates, amount')); ?></summary>
 				<div class="form-group">
-					<label class="form-label" for="crm-ag-product"><?php p($l->t('Product code')); ?></label>
+					<label class="form-label" for="crm-ag-product"><?php p($l->t('Product')); ?></label>
 					<select id="crm-ag-product" name="productCode" class="crm-input form-select" required>
 						<?php
 						$currentCode = $a ? (string)$a->getProductCode() : 'azc';
@@ -62,7 +62,7 @@ include __DIR__ . '/common/page-start.php';
 							$label = (string)($row['label'] ?? $code);
 							?>
 							<option value="<?php p($code); ?>" <?php if ($code === $currentCode): ?>selected<?php endif; ?>>
-								<?php p($label); ?> (<?php p($code); ?>)
+								<?php p($label); ?>
 							</option>
 						<?php endforeach; ?>
 					</select>

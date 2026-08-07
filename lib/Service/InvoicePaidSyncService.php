@@ -36,7 +36,7 @@ class InvoicePaidSyncService
 	}
 
 	/**
-	 * Nightly poll entry point. Idle when InvoicingCheck facade is absent.
+	 * Nightly poll entry point. Idle when InvoiceCheck facade is absent.
 	 *
 	 * @return array{processed:int,paid:int,ambiguous:int,noop:int}
 	 */
@@ -124,7 +124,7 @@ class InvoicePaidSyncService
 		} elseif ($crmCompanyId > 0) {
 			$allowedCompanyId = $crmCompanyId;
 		} else {
-			// No pin from InvoicingCheck — never trust a bare invoice_ref across books.
+			// No pin from InvoiceCheck — never trust a bare invoice_ref across books.
 			return [];
 		}
 

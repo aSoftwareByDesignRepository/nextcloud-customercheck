@@ -8,6 +8,7 @@ use OCA\CustomerCheck\Service\AccessControlService;
 use OCA\CustomerCheck\Service\CompanyMergeService;
 use OCA\CustomerCheck\Service\CompanyService;
 use OCA\CustomerCheck\Service\DisplayLabelService;
+use OCA\CustomerCheck\Service\LinkIdempotencyService;
 use OCA\CustomerCheck\Service\SiblingCustomerWriteService;
 use OCA\CustomerCheck\Service\SlugService;
 use OCA\CustomerCheck\Service\TimelineService;
@@ -37,6 +38,7 @@ class CompanyApiController extends Controller
 		private readonly CompanyService $companies,
 		private readonly CompanyMergeService $merges,
 		private readonly SiblingCustomerWriteService $siblingWrites,
+		private readonly LinkIdempotencyService $linkIdempotency,
 		private readonly SlugService $slugs,
 		private readonly TimelineService $timeline,
 		private readonly DisplayLabelService $labels,
@@ -122,6 +124,7 @@ class CompanyApiController extends Controller
 			unset($body['workspaceId']);
 			// Files folder must go through CompanyDocumentsService (actor ACL).
 			unset($body['filesFolderId'], $body['filesFolderPath']);
+			$previousName = (string)$company->getName();
 			$canReassign = $ctx['isAppAdmin']
 				|| WorkspaceCapability::allows($ctx['role'], 'bulk', false);
 			$updated = $this->companies->update(
@@ -132,7 +135,18 @@ class CompanyApiController extends Controller
 				$canReassign,
 			);
 
-			return $this->ok($this->serialize($updated));
+			$payload = $this->serialize($updated);
+			// Rename push AFTER CRM commit — never inside CRM TX (SHARED-IDENTITY MH-03).
+			if (array_key_exists('name', $body) && (string)$updated->getName() !== $previousName) {
+				$push = $this->siblingWrites->pushDisplayNameAfterRename($updated, $ctx['uid'], $previousName);
+				if (!empty($push['warning'])) {
+					$payload['renamePushWarning'] = $push['warning'];
+					$payload['renamePushCode'] = $push['code'];
+					$payload['pcCustomerId'] = $push['pcCustomerId'];
+				}
+			}
+
+			return $this->ok($payload);
 		} catch (\Throwable $e) {
 			return $this->fromThrowable($e);
 		}
@@ -244,17 +258,20 @@ class CompanyApiController extends Controller
 			$ctx = $this->assertLoadedCompanyInWorkspace($company, 'write');
 			$body = $this->jsonBody();
 			$existing = $this->resolveSiblingLinkId($body, 'pcCustomerId', 'existingPcCustomerId');
+			$idemKey = $this->linkIdempotency->requireKey($this->request, $body);
 			$result = $this->siblingWrites->createOrLinkPcCustomer(
 				$id,
 				$ctx['uid'],
 				$existing,
 				$this->updatedAtPrecondition($body),
+				$idemKey,
 			);
 
 			return $this->ok([
 				'company' => $this->serialize($result['company']),
 				'pcCustomerId' => $result['pcCustomerId'],
 				'created' => $result['created'],
+				'idempotentReplay' => !empty($result['idempotentReplay']),
 			]);
 		} catch (\Throwable $e) {
 			return $this->fromThrowable($e);
@@ -269,18 +286,73 @@ class CompanyApiController extends Controller
 			$ctx = $this->assertLoadedCompanyInWorkspace($company, 'write');
 			$body = $this->jsonBody();
 			$existing = $this->resolveSiblingLinkId($body, 'tcCustomerId', 'existingTcCustomerId');
+			$idemKey = $this->linkIdempotency->requireKey($this->request, $body);
 			$result = $this->siblingWrites->createOrLinkTcCustomer(
 				$id,
 				$ctx['uid'],
 				$existing,
 				$this->updatedAtPrecondition($body),
+				$idemKey,
 			);
 
 			return $this->ok([
 				'company' => $this->serialize($result['company']),
 				'tcCustomerId' => $result['tcCustomerId'],
 				'created' => $result['created'],
+				'idempotentReplay' => !empty($result['idempotentReplay']),
 			]);
+		} catch (\Throwable $e) {
+			return $this->fromThrowable($e);
+		}
+	}
+
+	#[NoAdminRequired]
+	public function unlinkProjectcheck(int $id): JSONResponse
+	{
+		try {
+			$company = $this->requireCompanyInResolvedWorkspace($id);
+			$ctx = $this->assertLoadedCompanyInWorkspace($company, 'write');
+			$body = $this->jsonBody();
+			$updated = $this->siblingWrites->unlinkPcCustomer(
+				$id,
+				$ctx['uid'],
+				$this->updatedAtPrecondition($body),
+			);
+
+			return $this->ok(['company' => $this->serialize($updated)]);
+		} catch (\Throwable $e) {
+			return $this->fromThrowable($e);
+		}
+	}
+
+	#[NoAdminRequired]
+	public function unlinkTicketcheck(int $id): JSONResponse
+	{
+		try {
+			$company = $this->requireCompanyInResolvedWorkspace($id);
+			$ctx = $this->assertLoadedCompanyInWorkspace($company, 'write');
+			$body = $this->jsonBody();
+			$updated = $this->siblingWrites->unlinkTcCustomer(
+				$id,
+				$ctx['uid'],
+				$this->updatedAtPrecondition($body),
+			);
+
+			return $this->ok(['company' => $this->serialize($updated)]);
+		} catch (\Throwable $e) {
+			return $this->fromThrowable($e);
+		}
+	}
+
+	#[NoAdminRequired]
+	public function createFieldCustomer(int $id): JSONResponse
+	{
+		try {
+			$company = $this->requireCompanyInResolvedWorkspace($id);
+			$ctx = $this->assertLoadedCompanyInWorkspace($company, 'write');
+			$result = $this->siblingWrites->createFieldCustomerFromHub($id, $ctx['uid']);
+
+			return $this->ok($result, Http::STATUS_CREATED);
 		} catch (\Throwable $e) {
 			return $this->fromThrowable($e);
 		}

@@ -34,7 +34,7 @@ test.describe('Simplified core UX journeys', () => {
     await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
 
     // Edit primary; Export visible; Erase tucked under More.
-    await expect(page.locator('#crm-page-actions a.crm-btn--primary, .header-actions a.crm-btn--primary').first()).toContainText(/Edit/i);
+    await expect(page.locator('#crm-page-actions a.crm-btn--primary, .header-actions a.crm-btn--primary').first()).toContainText(/Edit|Bearbeiten/i);
     await expect(page.locator('#crm-company-gdpr-export')).toBeVisible();
     const more = page.locator('#crm-page-actions details.crm-more-menu, .crm-page-actions-source details.crm-more-menu').first();
     await expect(more).toBeVisible();
@@ -47,8 +47,8 @@ test.describe('Simplified core UX journeys', () => {
     await expect(jump.locator('.crm-jump-nav__more')).toBeVisible();
     await expect(jump.locator('.crm-jump-nav__link')).toHaveCount(14);
 
-    // New agreement keeps company context.
-    const newAg = page.locator('a', { hasText: /New agreement/i }).first();
+    // New agreement keeps company context (EN or DE label).
+    const newAg = page.locator('a', { hasText: /New agreement|Neue Vereinbarung/i }).first();
     await expect(newAg).toHaveAttribute('href', /companyId=\d+/);
 
     // Add person + simplified log email.

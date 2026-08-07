@@ -27,7 +27,7 @@ $canManage = !empty($_['canManage']);
 						placeholder="<?php p($l->t('Shown on agreements')); ?>">
 				</div>
 				<div class="form-group">
-					<label class="form-label" for="crm-product-code-kind"><?php p($l->t('Kind')); ?></label>
+					<label class="form-label" for="crm-product-code-kind"><?php p($l->t('Type')); ?></label>
 					<select id="crm-product-code-kind" class="form-select crm-input">
 						<option value="onetime"><?php p($l->t('One-time')); ?></option>
 						<option value="license"><?php p($l->t('License')); ?></option>

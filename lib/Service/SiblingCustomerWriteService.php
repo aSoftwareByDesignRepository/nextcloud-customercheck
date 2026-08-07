@@ -50,6 +50,8 @@ class SiblingCustomerWriteService
 		private readonly PersonMapper $personMapper,
 		private readonly IL10N $l10n,
 		private readonly LoggerInterface $logger,
+		private readonly ?LinkIdempotencyService $idempotency = null,
+		private readonly ?IdentityLinkHealthService $identityHealth = null,
 		$pcFacadeFactory = null,
 		$tcFacadeFactory = null,
 		$pcRequestFactory = null,
@@ -74,14 +76,35 @@ class SiblingCustomerWriteService
 	/**
 	 * Create a ProjectCheck customer from a CRM company, or link an existing one.
 	 *
-	 * @return array{company: Company, pcCustomerId: int, created: bool}
+	 * @return array{company: Company, pcCustomerId: int, created: bool, idempotentReplay?: bool}
 	 */
 	public function createOrLinkPcCustomer(
 		int $companyId,
 		string $actorUid,
 		?int $existingPcCustomerId,
 		?string $updatedAtPrecondition,
+		?string $idempotencyKey = null,
 	): array {
+		if ($idempotencyKey !== null && $this->idempotency !== null) {
+			$replay = $this->idempotency->findReplay($actorUid, $idempotencyKey, LinkIdempotencyService::SIBLING_PC);
+			if ($replay !== null) {
+				$company = $this->companies->get($companyId);
+				if ((int)$replay['companyId'] !== $companyId) {
+					throw new ConflictException(
+						$this->l10n->t('This idempotency key was already used for a different company.'),
+						Constants::ERR_LINK_CONFLICT,
+					);
+				}
+
+				return [
+					'company' => $company,
+					'pcCustomerId' => (int)$replay['siblingId'],
+					'created' => false,
+					'idempotentReplay' => true,
+				];
+			}
+		}
+
 		$company = $this->companies->get($companyId);
 		OptimisticLock::assertFresh($company->getUpdatedAt(), $updatedAtPrecondition);
 
@@ -93,7 +116,6 @@ class SiblingCustomerWriteService
 		}
 
 		// Idempotent guard: never create a second PC customer when CRM already linked.
-		// Concurrent create still relies on PC name UNIQUE + CRM optimistic lock.
 		$alreadyLinked = $company->getPcCustomerId();
 		if ($alreadyLinked !== null && (int)$alreadyLinked > 0) {
 			if ($existingPcCustomerId !== null && $existingPcCustomerId > 0
@@ -151,8 +173,9 @@ class SiblingCustomerWriteService
 		$this->assertPcLinkFree($companyId, $pcId);
 
 		$created = (bool)($result->data['created'] ?? false);
-		// Already-linked idempotent path: skip CRM write + timeline noise.
 		if ($alreadyLinked !== null && (int)$alreadyLinked === $pcId) {
+			$this->rememberIdempotency($actorUid, $idempotencyKey, LinkIdempotencyService::SIBLING_PC, $companyId, $pcId, false);
+
 			return [
 				'company' => $company,
 				'pcCustomerId' => $pcId,
@@ -167,6 +190,8 @@ class SiblingCustomerWriteService
 		} catch (\Throwable $e) {
 			$current = $this->companies->get($companyId);
 			if ((int)($current->getPcCustomerId() ?? 0) === $pcId) {
+				$this->rememberIdempotency($actorUid, $idempotencyKey, LinkIdempotencyService::SIBLING_PC, $companyId, $pcId, $created);
+
 				return [
 					'company' => $current,
 					'pcCustomerId' => $pcId,
@@ -174,13 +199,17 @@ class SiblingCustomerWriteService
 				];
 			}
 			$this->logger->error('ProjectCheck customer created but CRM link persistence failed', [
+				'app' => 'customercheck',
+				'facade' => 'CrmCustomerWriteFacade',
+				'code' => Constants::ERR_LINK_INCOMPLETE,
+				'actorUid' => $actorUid,
 				'companyId' => $companyId,
 				'pcCustomerId' => $pcId,
 				'exception' => $e,
 			]);
 			throw new ConflictException(
 				$this->l10n->t('The ProjectCheck customer was created, but CustomerCheck could not save the link. Link the existing ProjectCheck customer on retry.') . ' #' . $pcId,
-				Constants::ERR_LINK_CONFLICT,
+				Constants::ERR_LINK_INCOMPLETE,
 				['existingPcCustomerId' => $pcId],
 			);
 		}
@@ -189,6 +218,7 @@ class SiblingCustomerWriteService
 			'pcCustomerId' => $pcId,
 			'created' => $created,
 		]);
+		$this->rememberIdempotency($actorUid, $idempotencyKey, LinkIdempotencyService::SIBLING_PC, $companyId, $pcId, $created);
 
 		return [
 			'company' => $updated,
@@ -198,14 +228,35 @@ class SiblingCustomerWriteService
 	}
 
 	/**
-	 * @return array{company: Company, tcCustomerId: int, created: bool}
+	 * @return array{company: Company, tcCustomerId: int, created: bool, idempotentReplay?: bool}
 	 */
 	public function createOrLinkTcCustomer(
 		int $companyId,
 		string $actorUid,
 		?int $existingTcCustomerId,
 		?string $updatedAtPrecondition,
+		?string $idempotencyKey = null,
 	): array {
+		if ($idempotencyKey !== null && $this->idempotency !== null) {
+			$replay = $this->idempotency->findReplay($actorUid, $idempotencyKey, LinkIdempotencyService::SIBLING_TC);
+			if ($replay !== null) {
+				$company = $this->companies->get($companyId);
+				if ((int)$replay['companyId'] !== $companyId) {
+					throw new ConflictException(
+						$this->l10n->t('This idempotency key was already used for a different company.'),
+						Constants::ERR_LINK_CONFLICT,
+					);
+				}
+
+				return [
+					'company' => $company,
+					'tcCustomerId' => (int)$replay['siblingId'],
+					'created' => false,
+					'idempotentReplay' => true,
+				];
+			}
+		}
+
 		$company = $this->companies->get($companyId);
 		OptimisticLock::assertFresh($company->getUpdatedAt(), $updatedAtPrecondition);
 
@@ -272,6 +323,8 @@ class SiblingCustomerWriteService
 
 		$created = (bool)($result->data['created'] ?? false);
 		if ($alreadyLinked !== null && (int)$alreadyLinked === $tcId) {
+			$this->rememberIdempotency($actorUid, $idempotencyKey, LinkIdempotencyService::SIBLING_TC, $companyId, $tcId, false);
+
 			return [
 				'company' => $company,
 				'tcCustomerId' => $tcId,
@@ -286,6 +339,8 @@ class SiblingCustomerWriteService
 		} catch (\Throwable $e) {
 			$current = $this->companies->get($companyId);
 			if ((int)($current->getTcCustomerId() ?? 0) === $tcId) {
+				$this->rememberIdempotency($actorUid, $idempotencyKey, LinkIdempotencyService::SIBLING_TC, $companyId, $tcId, $created);
+
 				return [
 					'company' => $current,
 					'tcCustomerId' => $tcId,
@@ -293,13 +348,17 @@ class SiblingCustomerWriteService
 				];
 			}
 			$this->logger->error('TicketCheck customer created but CRM link persistence failed', [
+				'app' => 'customercheck',
+				'facade' => 'CrmHelpdeskWriteFacade',
+				'code' => Constants::ERR_LINK_INCOMPLETE,
+				'actorUid' => $actorUid,
 				'companyId' => $companyId,
 				'tcCustomerId' => $tcId,
 				'exception' => $e,
 			]);
 			throw new ConflictException(
 				$this->l10n->t('The TicketCheck customer was created, but CustomerCheck could not save the link. Link the existing TicketCheck customer on retry.') . ' #' . $tcId,
-				Constants::ERR_LINK_CONFLICT,
+				Constants::ERR_LINK_INCOMPLETE,
 				['existingTcCustomerId' => $tcId],
 			);
 		}
@@ -308,11 +367,175 @@ class SiblingCustomerWriteService
 			'tcCustomerId' => $tcId,
 			'created' => $created,
 		]);
+		$this->rememberIdempotency($actorUid, $idempotencyKey, LinkIdempotencyService::SIBLING_TC, $companyId, $tcId, $created);
 
 		return [
 			'company' => $updated,
 			'tcCustomerId' => $tcId,
 			'created' => $created,
+		];
+	}
+
+	/**
+	 * Clear PC soft link (broken-link repair / unlink). Does not delete PC customer.
+	 */
+	public function unlinkPcCustomer(int $companyId, string $actorUid, ?string $updatedAtPrecondition): Company
+	{
+		$company = $this->companies->get($companyId);
+		OptimisticLock::assertFresh($company->getUpdatedAt(), $updatedAtPrecondition);
+		$prev = (int)($company->getPcCustomerId() ?? 0);
+		$updated = $this->companies->update($companyId, [
+			'pcCustomerId' => null,
+		], $actorUid, $updatedAtPrecondition);
+		if ($prev > 0) {
+			$this->timeline->append($companyId, 'company.pc_unlinked', $actorUid, [
+				'pcCustomerId' => $prev,
+			]);
+		}
+
+		return $updated;
+	}
+
+	/**
+	 * Clear TC soft link. Does not delete TicketCheck customer.
+	 */
+	public function unlinkTcCustomer(int $companyId, string $actorUid, ?string $updatedAtPrecondition): Company
+	{
+		$company = $this->companies->get($companyId);
+		OptimisticLock::assertFresh($company->getUpdatedAt(), $updatedAtPrecondition);
+		$prev = (int)($company->getTcCustomerId() ?? 0);
+		$updated = $this->companies->update($companyId, [
+			'tcCustomerId' => null,
+		], $actorUid, $updatedAtPrecondition);
+		if ($prev > 0) {
+			$this->timeline->append($companyId, 'company.tc_unlinked', $actorUid, [
+				'tcCustomerId' => $prev,
+			]);
+		}
+
+		return $updated;
+	}
+
+	/**
+	 * After CRM rename succeeds: push display name to linked PC (BQ-1a).
+	 * Never rolls back CRM name. Never holds CRM TX across facade call.
+	 *
+	 * @return array{pushed:bool,skipped:bool,warning:?string,code:?string,pcCustomerId:?int}
+	 */
+	public function pushDisplayNameAfterRename(Company $company, string $actorUid, string $previousName): array
+	{
+		$pcId = (int)($company->getPcCustomerId() ?? 0);
+		$newName = (string)$company->getName();
+		if ($pcId <= 0 || $newName === '' || $newName === $previousName) {
+			return ['pushed' => false, 'skipped' => true, 'warning' => null, 'code' => null, 'pcCustomerId' => $pcId > 0 ? $pcId : null];
+		}
+		if ($this->identityHealth !== null && !$this->identityHealth->renamePushEnabled()) {
+			return ['pushed' => false, 'skipped' => true, 'warning' => null, 'code' => null, 'pcCustomerId' => $pcId];
+		}
+		if (!$this->projectWriteAvailable()) {
+			return [
+				'pushed' => false,
+				'skipped' => true,
+				'warning' => $this->l10n->t('Company renamed in CustomerCheck, but ProjectCheck is unavailable so the commercial name was not updated.'),
+				'code' => Constants::ERR_SIBLING_UNAVAILABLE,
+				'pcCustomerId' => $pcId,
+			];
+		}
+
+		try {
+			$facade = $this->resolvePcFacade();
+			$request = $this->buildPcRequest([
+				'actorUid' => $actorUid,
+				'displayName' => $newName,
+				'existingPcCustomerId' => $pcId,
+				'crmCompanyId' => (int)$company->getId(),
+				'crmCompanySlug' => (string)$company->getSlug(),
+			]);
+			$result = $facade->updateDisplayName($request);
+			if (!$result->ok) {
+				$code = (string)($result->code ?? Constants::ERR_VALIDATION);
+				$msg = $result->message !== null && $result->message !== ''
+					? (string)$result->message
+					: $this->l10n->t('Could not update the ProjectCheck customer name.');
+				$this->logger->warning('rename_push_failed', [
+					'app' => 'customercheck',
+					'facade' => 'CrmCustomerWriteFacade::updateDisplayName',
+					'code' => $code,
+					'actorUid' => $actorUid,
+					'companyId' => (int)$company->getId(),
+				]);
+				$this->timeline->append((int)$company->getId(), 'company.pc_rename_push_failed', $actorUid, [
+					'pcCustomerId' => $pcId,
+					'code' => $code,
+				]);
+
+				return [
+					'pushed' => false,
+					'skipped' => false,
+					'warning' => $this->l10n->t('Company renamed in CustomerCheck, but ProjectCheck was not updated (%s). Open ProjectCheck to fix the commercial name.', [$msg]),
+					'code' => $code,
+					'pcCustomerId' => $pcId,
+				];
+			}
+
+			return ['pushed' => true, 'skipped' => false, 'warning' => null, 'code' => null, 'pcCustomerId' => $pcId];
+		} catch (\Throwable $e) {
+			$this->logger->warning('rename_push_failed', [
+				'app' => 'customercheck',
+				'facade' => 'CrmCustomerWriteFacade::updateDisplayName',
+				'code' => 'exception',
+				'actorUid' => $actorUid,
+				'companyId' => (int)$company->getId(),
+				'exception' => $e,
+			]);
+
+			return [
+				'pushed' => false,
+				'skipped' => false,
+				'warning' => $this->l10n->t('Company renamed in CustomerCheck, but ProjectCheck was not updated. Open ProjectCheck to fix the commercial name.'),
+				'code' => Constants::ERR_VALIDATION,
+				'pcCustomerId' => $pcId,
+			];
+		}
+	}
+
+	/**
+	 * Create MN field customer from this CRM company (soft links set).
+	 *
+	 * @return array{mnCustomerId:int,created:bool}
+	 */
+	public function createFieldCustomerFromHub(int $companyId, string $actorUid): array
+	{
+		$company = $this->companies->get($companyId);
+		if (!$this->facades->maintenancecheckIdentityAvailable()) {
+			throw new ValidationException(
+				Constants::ERR_SIBLING_UNAVAILABLE,
+				$this->l10n->t('MaintenanceCheck is not available for creating field customers on this instance.'),
+			);
+		}
+		$contact = $this->primaryContactPayload($companyId);
+		$result = $this->facades->createMaintenanceFieldCustomer([
+			'actorUid' => $actorUid,
+			'displayName' => (string)$company->getName(),
+			'crmCompanyId' => (int)$company->getId(),
+			'pcCustomerId' => $company->getPcCustomerId() !== null ? (int)$company->getPcCustomerId() : null,
+			'street' => $company->getAddrStreet(),
+			'postalCode' => $company->getAddrZip(),
+			'city' => $company->getAddrCity(),
+			'country' => $company->getCountry(),
+			'email' => $contact['email'],
+			'phone' => $contact['phone'],
+		]);
+		if ($result === null || (int)($result['mnCustomerId'] ?? 0) <= 0) {
+			throw new ValidationException(
+				Constants::ERR_VALIDATION,
+				$this->l10n->t('MaintenanceCheck did not return a field customer id.'),
+			);
+		}
+
+		return [
+			'mnCustomerId' => (int)$result['mnCustomerId'],
+			'created' => (bool)($result['created'] ?? true),
 		];
 	}
 
@@ -334,6 +557,20 @@ class SiblingCustomerWriteService
 			'phone' => $phone !== '' ? $phone : null,
 			'contactPerson' => $name !== '' ? $name : null,
 		];
+	}
+
+	private function rememberIdempotency(
+		string $actorUid,
+		?string $key,
+		string $sibling,
+		int $companyId,
+		int $siblingId,
+		bool $created,
+	): void {
+		if ($key === null || $this->idempotency === null) {
+			return;
+		}
+		$this->idempotency->remember($actorUid, $key, $sibling, $companyId, $siblingId, $created);
 	}
 
 	private function resolvePcFacade(): object

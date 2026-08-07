@@ -45,7 +45,7 @@
       const slug = eraseBtn.getAttribute('data-slug') || '';
       const result = await C.confirmDialog({
         title: t('Erase company (GDPR)'),
-        message: t('This permanently deletes personal data for this company. Type the slug to confirm: %s', [slug]),
+        message: t('This permanently deletes personal data for this company. Type the short address to confirm: %s', [slug]),
         confirmLabel: t('Erase'),
         cancelLabel: t('Cancel'),
         variant: 'danger',
@@ -175,7 +175,7 @@
       const destLabel = (options.find((o) => o.value === String(toWs)) || {}).label || String(toWs);
       const ok = await C.confirmDialog({
         title: t('Confirm move'),
-        message: t('Move this company to “%s”? Type the slug to confirm. Files sharing stays as-is.', [destLabel]),
+        message: t('Move this company to “%s”? Type the short address to confirm. Files sharing stays as-is.', [destLabel]),
         confirmLabel: t('Move'),
         cancelLabel: t('Cancel'),
         variant: 'warning',
@@ -208,46 +208,123 @@
   }
 
   async function promptFields(title, fields) {
-    // Lightweight modal form via openDialog
+    // Lightweight modal form via openDialog — supports progressive "More options" and checkboxes.
     return new Promise((resolve) => {
       const id = 'crm-prompt-' + Date.now();
-      let html = '<form id="' + id + '-form" class="crm-form">';
-      fields.forEach((f) => {
-        html += '<div class="form-group"><label class="form-label" for="' + id + '-' + f.name + '">' + f.label + '</label>';
+      const primary = fields.filter((f) => !f.advanced);
+      const advanced = fields.filter((f) => f.advanced);
+      const renderField = (f) => {
+        let html = '<div class="form-group"><label class="form-label" for="' + id + '-' + f.name + '">' + f.label + '</label>';
         if (f.type === 'textarea') {
           html += '<textarea class="crm-input form-input" id="' + id + '-' + f.name + '" name="' + f.name + '" rows="3"' + (f.required ? ' required' : '') + '>' +
             (f.value ? String(f.value).replace(/</g, '&lt;') : '') + '</textarea>';
         } else if (f.type === 'select') {
-          html += '<select class="crm-input form-select" id="' + id + '-' + f.name + '" name="' + f.name + '">' +
+          html += '<select class="crm-input form-select" id="' + id + '-' + f.name + '" name="' + f.name + '"' + (f.required ? ' required' : '') + '>' +
             f.options.map((o) => {
               const value = typeof o === 'object' && o !== null ? String(o.value) : String(o);
               const label = typeof o === 'object' && o !== null ? String(o.label || o.value) : String(o);
               const selected = f.value !== undefined && String(f.value) === value ? ' selected' : '';
               return '<option value="' + value.replace(/"/g, '&quot;') + '"' + selected + '>' + label.replace(/</g, '&lt;') + '</option>';
             }).join('') + '</select>';
+        } else if (f.type === 'checkbox') {
+          const checked = f.value ? ' checked' : '';
+          html = '<div class="form-group crm-choice"><input class="crm-input" id="' + id + '-' + f.name + '" name="' + f.name + '" type="checkbox" value="1"' + checked + ' />' +
+            '<label class="form-label" for="' + id + '-' + f.name + '">' + f.label + '</label>';
         } else {
           const val = f.value !== undefined && f.value !== null ? ' value="' + String(f.value).replace(/"/g, '&quot;') + '"' : '';
-          html += '<input class="crm-input form-input" id="' + id + '-' + f.name + '" name="' + f.name + '" type="' + (f.type || 'text') + '"' + val + ' ' + (f.required ? 'required' : '') + ' />';
+          const inputType = f.type || 'text';
+          html += '<input class="crm-input form-input" id="' + id + '-' + f.name + '" name="' + f.name + '" type="' + inputType + '"' + val +
+            (f.min !== undefined ? ' min="' + f.min + '"' : '') +
+            (f.step !== undefined ? ' step="' + f.step + '"' : '') +
+            (f.maxlength !== undefined ? ' maxlength="' + f.maxlength + '"' : '') +
+            ' ' + (f.required ? 'required' : '') + ' />';
         }
         if (f.hint) {
           html += '<p class="form-help">' + String(f.hint).replace(/</g, '&lt;') + '</p>';
         }
         html += '</div>';
-      });
+        return html;
+      };
+      let html = '<form id="' + id + '-form" class="crm-form crm-form--stack">';
+      primary.forEach((f) => { html += renderField(f); });
+      if (advanced.length) {
+        html += '<details class="crm-advanced"><summary>' + t('More options') + '</summary>';
+        advanced.forEach((f) => { html += renderField(f); });
+        html += '</details>';
+      }
+      html += '<p class="crm-form-inline-error crm-callout crm-callout--danger" role="alert" hidden></p>';
       html += '<div class="crm-form-actions"><button type="submit" class="crm-btn crm-btn--primary">' + t('Save') + '</button> <button type="button" class="crm-btn crm-btn--secondary" data-cancel>' + t('Cancel') + '</button></div></form>';
       C.openDialog({ id: id, title: title, content: html, size: 'md' });
       const form = document.getElementById(id + '-form');
+      const errEl = form.querySelector('.crm-form-inline-error');
       const close = () => C.closeModal(document.getElementById(id));
       form.querySelector('[data-cancel]').addEventListener('click', () => { close(); resolve(null); });
+      const first = form.querySelector('input:not([type="hidden"]):not([type="checkbox"]), textarea, select');
+      if (first && typeof first.focus === 'function') {
+        setTimeout(() => first.focus(), 50);
+      }
       form.addEventListener('submit', (ev) => {
         ev.preventDefault();
+        if (errEl) {
+          errEl.hidden = true;
+          errEl.textContent = '';
+        }
+        const missing = [];
+        fields.forEach((f) => {
+          if (!f.required || f.type === 'checkbox') return;
+          const el = form.elements[f.name];
+          const val = el ? String(el.value || '').trim() : '';
+          if (!val) missing.push(f.label);
+        });
+        if (missing.length) {
+          if (errEl) {
+            errEl.hidden = false;
+            errEl.textContent = t('Please fill in: %s', [missing.join(', ')]);
+          }
+          return;
+        }
         const data = {};
-        fields.forEach((f) => { data[f.name] = form.elements[f.name].value; });
+        fields.forEach((f) => {
+          const el = form.elements[f.name];
+          if (!el) {
+            data[f.name] = f.type === 'checkbox' ? false : '';
+            return;
+          }
+          if (f.type === 'checkbox') {
+            data[f.name] = !!el.checked;
+          } else {
+            data[f.name] = el.value;
+          }
+        });
         close();
         resolve(data);
       });
     });
   }
+
+  function formatDisplayDate(iso) {
+    const raw = String(iso || '').trim();
+    if (!raw || raw === '—') return '—';
+    const hasTime = /T|\s\d{1,2}:/.test(raw);
+    const d = new Date(hasTime ? raw : (raw + 'T12:00:00'));
+    if (Number.isNaN(d.getTime())) return raw;
+    try {
+      const locale = (document.documentElement.lang || navigator.language || undefined);
+      return new Intl.DateTimeFormat(locale, hasTime
+        ? { dateStyle: 'medium', timeStyle: 'short' }
+        : { dateStyle: 'medium' }).format(d);
+    } catch (e) {
+      return raw;
+    }
+  }
+
+  document.querySelectorAll('[data-crm-trigger]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const targetId = btn.getAttribute('data-crm-trigger') || '';
+      const target = targetId ? document.getElementById(targetId) : null;
+      if (target) target.click();
+    });
+  });
 
   const addPerson = document.getElementById('crm-add-person');
   if (addPerson) {
@@ -259,22 +336,23 @@
         const suggest = (suggestPayload && suggestPayload.data) ? suggestPayload.data : suggestPayload;
         contactsAvailable = !!(suggest && suggest.available);
         if (contactsAvailable) {
-          contactsHint = t('Tip: start typing a name — matches from Contacts appear below.');
+          contactsHint = t('Tip: start typing a name — matches from Contacts appear after you save.');
         }
       } catch (e) {
         contactsHint = '';
       }
       const data = await promptFields(t('Add person'), [
-        { name: 'name', label: t('Name'), required: true, hint: contactsHint },
-        { name: 'email', label: t('Email'), type: 'email' },
-        { name: 'phone', label: t('Phone') },
-        { name: 'role', label: t('Role') },
+        { name: 'name', label: t('Name'), required: true, hint: contactsHint || t('Who do you talk to at this company?') },
+        { name: 'email', label: t('Email'), type: 'email', hint: t('Optional — needed to log emails with them.') },
+        { name: 'phone', label: t('Phone'), advanced: true },
+        { name: 'role', label: t('Job title'), advanced: true },
         {
           name: 'buyingRole',
-          label: t('Buying role'),
+          label: t('Role in buying'),
           type: 'select',
           value: '',
           options: buyingRoleOptionsFromDom(),
+          advanced: true,
         },
       ]);
       if (!data) return;
@@ -486,9 +564,9 @@
           sel.setAttribute('data-updated-at', data.updatedAt);
           if (row) row.setAttribute('data-updated-at', data.updatedAt);
         }
-        if (liveRegion()) liveRegion().textContent = t('Buying role updated.');
+        if (liveRegion()) liveRegion().textContent = t('Role in buying updated.');
       } catch (e) {
-        await C.alertDialog({ title: t('Could not update buying role'), message: (e.payload && e.payload.message) || e.message, variant: 'danger' });
+        await C.alertDialog({ title: t('Could not update role in buying'), message: (e.payload && e.payload.message) || e.message, variant: 'danger' });
         location.reload();
       } finally {
         sel.disabled = false;
@@ -549,16 +627,31 @@
   if (addDeal) {
     addDeal.addEventListener('click', async () => {
       const data = await promptFields(t('Add deal'), [
-        { name: 'title', label: t('Title'), required: true },
-        { name: 'valueEur', label: t('Value (EUR)'), type: 'number' },
-        { name: 'products', label: t('Products / SKUs') },
+        {
+          name: 'title',
+          label: t('What is this deal?'),
+          required: true,
+          hint: t('Example: Renewal 2026 or Website project. A title is enough.'),
+          maxlength: 255,
+        },
+        { name: 'valueEur', label: t('Value (EUR, optional)'), type: 'number', min: 0, step: '0.01', advanced: true },
+        { name: 'products', label: t('Products (optional)'), advanced: true, maxlength: 255 },
       ]);
       if (!data) return;
+      const title = String(data.title || '').trim();
+      if (!title) {
+        await C.alertDialog({
+          title: t('Almost there'),
+          message: t('Enter a short title for this deal.'),
+          variant: 'info',
+        });
+        return;
+      }
       const valueCents = Math.round(parseFloat(data.valueEur || '0') * 100) || 0;
       try {
         await Api.post('/deals', {
           companyId,
-          title: data.title,
+          title,
           stage: 'lead',
           valueCents,
           products: data.products || '',
@@ -704,7 +797,7 @@
     btn.addEventListener('click', async () => {
       const dealId = btn.getAttribute('data-crm-dismiss-followups');
       const ok = await C.confirmDialog({
-        title: t('Dismiss follow-ups?'),
+        title: t('Stop reminders?'),
         message: t('Mark remaining auto follow-up activities for this deal as done?'),
         confirmLabel: t('Dismiss'),
         cancelLabel: t('Cancel'),
@@ -919,14 +1012,14 @@
           ? cov.missingLabels.join(', ')
           : ((cov.missing || []).map(coverageMissingLabel).filter(Boolean).join(', '));
         const runwayText = runway.validUntil
-          ? (runway.validUntil + (runway.daysLeft != null ? ' · ' + t('%s days left', [String(runway.daysLeft)]) : ''))
+          ? (formatDisplayDate(runway.validUntil) + (runway.daysLeft != null ? ' · ' + t('%s days left', [String(runway.daysLeft)]) : ''))
           : '—';
         const rows = [
           [t('Company'), (dto.name || '') + ' · ' + (dto.slug || '')],
           [t('Primary contact'), primary ? ((primary.name || '') + (primary.role ? ' · ' + primary.role : '')) : t('No primary person')],
           [t('Coverage'), coverageLabel + (missingText ? ' · ' + missingText : '')],
-          [t('Next touch'), nextTouch || t('Not scheduled')],
-          [t('Last discussion'), last.summary ? ((last.at || '') + ' · ' + last.summary) : t('Nothing logged yet')],
+          [t('Next touch'), nextTouch ? formatDisplayDate(nextTouch) : t('Not scheduled')],
+          [t('Last discussion'), last.summary ? ((last.at ? formatDisplayDate(last.at) + ' · ' : '') + last.summary) : t('Nothing logged yet')],
           [t('Next action'), next.label || t('No urgent action')],
           [t('Money'), billingStateLabel(billing.state || 'unknown') + (billing.overdueCount ? ' · ' + billing.overdueCount + ' ' + t('overdue') : '')],
           [t('Renewal'), runwayText],
@@ -1007,7 +1100,7 @@
             strong.textContent = item.subject || '';
             const meta = document.createElement('span');
             meta.className = 'crm-muted';
-            meta.textContent = ' · ' + (item.occurredAt || '') + (item.personName ? ' · ' + item.personName : '');
+            meta.textContent = ' · ' + (item.occurredAt ? formatDisplayDate(item.occurredAt) : '') + (item.personName ? ' · ' + item.personName : '');
             row.appendChild(document.createTextNode(' '));
             row.appendChild(strong);
             row.appendChild(meta);
@@ -1029,7 +1122,7 @@
             const tasksCell = row.inTasks
               ? ('<a class="crm-btn crm-btn--sm crm-btn--secondary" href="' + (row.tasksDeepLink || '/apps/tasks/') + '">' + t('Open in Tasks') + '</a>')
               : '—';
-            html += '<tr><td>' + (row.title || '') + (row.isCallback ? ' <span class="crm-badge">' + t('Callback') + '</span>' : '') + '</td><td>' + (row.dueDate || '—') + '</td><td>' + tasksCell + '</td></tr>';
+            html += '<tr><td>' + (row.title || '') + (row.isCallback ? ' <span class="crm-badge">' + t('Callback') + '</span>' : '') + '</td><td>' + (row.dueDate ? formatDisplayDate(row.dueDate) : '—') + '</td><td>' + tasksCell + '</td></tr>';
           });
           html += '</tbody></table>';
           table.innerHTML = html;
@@ -1553,7 +1646,7 @@
       items.forEach((p) => {
         html += '<tr data-promise-id="' + escapeHtml(String(p.id)) + '">';
         html += '<td data-label="' + escapeHtml(t('Title')) + '">' + escapeHtml(p.title || '') + '</td>';
-        html += '<td data-label="' + escapeHtml(t('Due')) + '">' + escapeHtml(p.dueOn || '—') + '</td>';
+        html += '<td data-label="' + escapeHtml(t('Due')) + '">' + escapeHtml(p.dueOn ? formatDisplayDate(p.dueOn) : '—') + '</td>';
         html += '<td data-label="' + escapeHtml(t('Status')) + '"><span class="crm-badge">' + escapeHtml(p.statusLabel || p.status || '') + '</span></td>';
         html += '<td data-label="' + escapeHtml(t('Actions')) + '">';
         if (shellCan('write') && (p.status || '') === 'open') {
@@ -1630,3 +1723,125 @@
   }
 
 })();
+
+  // SHARED-IDENTITY W1 — 360 create/link/unlink CTAs (MH-04/05 / NN-12)
+  (function wireIdentityLinks() {
+    const box = document.getElementById('crm-identity-links');
+    if (!box || !Api) return;
+    const alertEl = document.getElementById('crm-identity-alert');
+    let updatedAt = box.getAttribute('data-updated-at') || null;
+    const companyIdLocal = parseInt(box.getAttribute('data-company-id') || '0', 10) || companyId;
+    /** @type {Record<string, string>} Stable keys for in-flight / retry (same click storm → same key). */
+    const pendingKeys = Object.create(null);
+    let inFlight = false;
+
+    function showAlert(msg) {
+      if (!alertEl) return;
+      alertEl.hidden = !msg;
+      alertEl.textContent = msg || '';
+    }
+
+    function setIdentityBusy(busy) {
+      box.querySelectorAll('button[data-crm-identity-create], button[data-crm-identity-link], button[data-crm-identity-unlink], button[data-crm-identity-create-field]').forEach((btn) => {
+        btn.disabled = !!busy;
+        btn.setAttribute('aria-busy', busy ? 'true' : 'false');
+      });
+    }
+
+    function idemHeaders(sibling, mode, existingId) {
+      const slot = String(sibling) + ':' + String(mode || 'create') + ':' + String(existingId || 0);
+      if (!pendingKeys[slot]) {
+        pendingKeys[slot] = Api.makeIdempotencyKey
+          ? Api.makeIdempotencyKey()
+          : ('idem-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10));
+      }
+      return { 'Idempotency-Key': pendingKeys[slot] };
+    }
+
+    async function createOrLink(sibling, mode, existingId) {
+      if (inFlight) return;
+      inFlight = true;
+      setIdentityBusy(true);
+      showAlert('');
+      const path = sibling === 'tc'
+        ? '/companies/' + companyIdLocal + '/create-tc-customer'
+        : '/companies/' + companyIdLocal + '/create-pc-customer';
+      const body = { updatedAt: updatedAt, mode: mode || 'create' };
+      if (existingId) {
+        if (sibling === 'tc') body.existingTcCustomerId = existingId;
+        else body.existingPcCustomerId = existingId;
+        body.mode = 'link';
+      }
+      const slot = String(sibling) + ':' + String(body.mode) + ':' + String(existingId || 0);
+      try {
+        const res = await Api.post(path, body, idemHeaders(sibling, body.mode, existingId));
+        delete pendingKeys[slot];
+        const company = res.data && (res.data.company || res.data);
+        if (company && company.updatedAt) updatedAt = company.updatedAt;
+        window.location.reload();
+      } catch (e) {
+        const fields = (e.payload && e.payload.fields) || {};
+        const existing = parseInt(fields[sibling === 'tc' ? 'existingTcCustomerId' : 'existingPcCustomerId'], 10);
+        showAlert((e.payload && e.payload.message) || e.message);
+        if (Number.isFinite(existing) && existing > 0) {
+          const ok = window.confirm(t('A customer with this name already exists. Link the existing one?'));
+          if (ok) {
+            inFlight = false;
+            setIdentityBusy(false);
+            await createOrLink(sibling, 'link', existing);
+            return;
+          }
+        }
+      } finally {
+        inFlight = false;
+        setIdentityBusy(false);
+      }
+    }
+
+    async function unlink(sibling) {
+      const msg = sibling === 'tc'
+        ? t('Unlink TicketCheck? Tickets will hide until you link again.')
+        : t('Unlink ProjectCheck? Projects and invoices will hide until you link again.');
+      if (!window.confirm(msg)) return;
+      showAlert('');
+      const path = sibling === 'tc'
+        ? '/companies/' + companyIdLocal + '/unlink/ticketcheck'
+        : '/companies/' + companyIdLocal + '/unlink/projectcheck';
+      try {
+        const res = await Api.post(path, { updatedAt: updatedAt });
+        const company = res.data && (res.data.company || res.data);
+        if (company && company.updatedAt) updatedAt = company.updatedAt;
+        window.location.reload();
+      } catch (e) {
+        showAlert((e.payload && e.payload.message) || e.message);
+      }
+    }
+
+    box.querySelectorAll('[data-crm-identity-create]').forEach((btn) => {
+      btn.addEventListener('click', () => createOrLink(btn.getAttribute('data-crm-identity-create'), 'create'));
+    });
+    box.querySelectorAll('[data-crm-identity-link]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const sibling = btn.getAttribute('data-crm-identity-link');
+        const raw = window.prompt(t('Enter the existing customer id to link'));
+        const id = parseInt(raw || '', 10);
+        if (!Number.isFinite(id) || id <= 0) return;
+        await createOrLink(sibling, 'link', id);
+      });
+    });
+    box.querySelectorAll('[data-crm-identity-unlink]').forEach((btn) => {
+      btn.addEventListener('click', () => unlink(btn.getAttribute('data-crm-identity-unlink')));
+    });
+    const fieldBtn = box.querySelector('[data-crm-identity-create-field]');
+    if (fieldBtn) {
+      fieldBtn.addEventListener('click', async () => {
+        showAlert('');
+        try {
+          await Api.post('/companies/' + companyIdLocal + '/create-field-customer', {});
+          showAlert(t('Field customer created in MaintenanceCheck.'));
+        } catch (e) {
+          showAlert((e.payload && e.payload.message) || e.message);
+        }
+      });
+    }
+  })();

@@ -24,13 +24,11 @@ include __DIR__ . '/common/page-start.php';
 		<a class="crm-quick-filter<?php if ($filterState === 'unknown'): ?> is-active<?php endif; ?>" href="<?php p($moneyUrl); ?>?state=unknown"<?php if ($filterState === 'unknown'): ?> aria-current="page"<?php endif; ?>><?php p($l->t('Unknown')); ?></a>
 	</nav>
 	<section id="crm-money-filter" class="crm-card crm-filter-panel" <?php if (!$filterOpen): ?>hidden<?php endif; ?> aria-labelledby="crm-money-filter-title">
-		<header class="crm-card__header">
-			<div class="crm-card__header-text">
-				<h2 id="crm-money-filter-title" class="crm-card__title"><?php p($l->t('Filter by payment state')); ?></h2>
-				<p class="crm-card__lead"><?php p($l->t('Show overdue, unpaid, paid, or agreements without an invoice state — applies instantly.')); ?></p>
-			</div>
+		<header class="crm-filter-panel__head">
+			<h2 id="crm-money-filter-title"><?php p($l->t('Filter by payment state')); ?></h2>
+			<p class="crm-filter-panel__intro"><?php p($l->t('Show overdue, unpaid, paid, or agreements without an invoice state — applies instantly.')); ?></p>
 		</header>
-		<div class="crm-card__body">
+		<div class="crm-filter-panel__body">
 			<form method="get" class="crm-filter-panel__form form" action="<?php p($moneyUrl); ?>" data-crm-live-filter novalidate>
 				<div class="crm-filter-grid" role="group">
 					<div class="crm-filter-field">
@@ -119,7 +117,7 @@ include __DIR__ . '/common/page-start.php';
 									<?php elseif (!empty($row['agreementId'])): ?>
 									<span class="crm-muted" aria-hidden="true">—</span>
 									<?php else: ?>
-									<span class="crm-muted"><?php p($l->t('From InvoicingCheck')); ?></span>
+									<span class="crm-muted"><?php p($l->t('From InvoiceCheck')); ?></span>
 									<?php endif; ?>
 								</div>
 							</td>
@@ -138,7 +136,11 @@ include __DIR__ . '/common/page-start.php';
 		<div class="crm-card__body">
 			<div class="crm-empty-state" role="status">
 				<h3 class="crm-empty-state__title"><?php p($l->t('Nothing unpaid')); ?></h3>
-				<p class="crm-empty-state__text"><?php p($l->t('No sent, overdue or recently paid invoices in CustomerCheck right now.')); ?></p>
+				<p class="crm-empty-state__text"><?php p($l->t('When invoices are overdue or unpaid, they show up here. You can also open agreements or a company.')); ?></p>
+				<div class="crm-empty-state__actions">
+					<a class="crm-btn crm-btn--primary crm-btn--lg" href="<?php p($urlGenerator->linkToRoute('customercheck.page.agreements')); ?>"><?php p($l->t('Open agreements')); ?></a>
+					<a class="crm-btn crm-btn--secondary crm-btn--lg" href="<?php p($urlGenerator->linkToRoute('customercheck.page.companies')); ?>"><?php p($l->t('Open companies')); ?></a>
+				</div>
 			</div>
 		</div>
 	</section>

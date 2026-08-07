@@ -323,7 +323,7 @@ class FacadeProbeService
 	}
 
 	/**
-	 * Overdue receivables from InvoicingCheck (Money overdue bucket).
+	 * Overdue receivables from InvoiceCheck (Money overdue bucket).
 	 *
 	 * @return list<array<string,mixed>>
 	 */
@@ -448,6 +448,162 @@ class FacadeProbeService
 		} catch (\Throwable $e) {
 			$this->warnOnce('mail_compose', 'CustomerCheck Mail compose URL failed', $e);
 			return null;
+		}
+	}
+
+	/** @return array<string, mixed>|null */
+	public function getProjectCheckCustomer(int $pcCustomerId): ?array
+	{
+		if ($pcCustomerId <= 0 || !$this->projectcheckAvailable()) {
+			return null;
+		}
+		try {
+			$facade = \OC::$server->get(SiblingFacadeContracts::PROJECT_CHECK_FACADE);
+			if (!method_exists($facade, 'getCustomer')) {
+				return null;
+			}
+			$result = $facade->getCustomer($pcCustomerId);
+
+			return is_array($result) ? $result : null;
+		} catch (\Throwable $e) {
+			$this->warnOnce('pc_get', 'CustomerCheck ProjectCheck getCustomer failed', $e);
+
+			return null;
+		}
+	}
+
+	/** @return array<string, mixed>|null */
+	public function getTicketCheckCustomer(int $tcCustomerId): ?array
+	{
+		if ($tcCustomerId <= 0 || !$this->ticketcheckAvailable()) {
+			return null;
+		}
+		try {
+			$facade = \OC::$server->get(SiblingFacadeContracts::TICKET_CHECK_FACADE);
+			if (!method_exists($facade, 'getCustomer')) {
+				return null;
+			}
+			$result = $facade->getCustomer($tcCustomerId);
+
+			return is_array($result) ? $result : null;
+		} catch (\Throwable $e) {
+			$this->warnOnce('tc_get', 'CustomerCheck TicketCheck getCustomer failed', $e);
+
+			return null;
+		}
+	}
+
+	/**
+	 * @return array<int, true>
+	 */
+	public function projectCheckCustomerIdSet(int $limit = 5000): array
+	{
+		$set = [];
+		foreach ($this->listProjectCheckCustomers($limit) as $row) {
+			$id = (int)($row['id'] ?? $row['pcCustomerId'] ?? 0);
+			if ($id > 0) {
+				$set[$id] = true;
+			}
+		}
+
+		return $set;
+	}
+
+	/**
+	 * @return array<int, true>
+	 */
+	public function ticketCheckCustomerIdSet(int $limit = 5000): array
+	{
+		$set = [];
+		foreach ($this->listTicketCheckCustomers($limit) as $row) {
+			$id = (int)($row['id'] ?? $row['tcCustomerId'] ?? 0);
+			if ($id > 0) {
+				$set[$id] = true;
+			}
+		}
+
+		return $set;
+	}
+
+	public function projectCheckCustomerDeepLink(int $pcCustomerId): ?string
+	{
+		if ($pcCustomerId <= 0 || $this->urlGenerator === null || !$this->projectcheckAvailable()) {
+			return null;
+		}
+		try {
+			return $this->urlGenerator->linkToRoute('projectcheck.customer.show', ['id' => $pcCustomerId]);
+		} catch (\Throwable) {
+			return null;
+		}
+	}
+
+	public function ticketCheckCustomerDeepLink(int $tcCustomerId): ?string
+	{
+		if ($tcCustomerId <= 0 || $this->urlGenerator === null || !$this->ticketcheckAvailable()) {
+			return null;
+		}
+		try {
+			return $this->urlGenerator->linkToRoute('ticketcheck.customer.show', ['id' => $tcCustomerId]);
+		} catch (\Throwable) {
+			return null;
+		}
+	}
+
+	public function maintenancecheckIdentityAvailable(): bool
+	{
+		return $this->probeApp(
+			SiblingFacadeContracts::MAINTENANCE_CHECK_APP,
+			SiblingFacadeContracts::MAINTENANCE_CHECK_IDENTITY_FACADE,
+			SiblingFacadeContracts::MAINTENANCE_CHECK_IDENTITY_MIN_VERSION,
+		)['usable'];
+	}
+
+	/**
+	 * @return array{mnLinkedPc:int,mnLinkedCrm:int,mnUnlinked:int}
+	 */
+	public function maintenanceIdentityCounts(): array
+	{
+		$empty = ['mnLinkedPc' => 0, 'mnLinkedCrm' => 0, 'mnUnlinked' => 0];
+		if (!$this->maintenancecheckIdentityAvailable()) {
+			return $empty;
+		}
+		try {
+			$facade = \OC::$server->get(SiblingFacadeContracts::MAINTENANCE_CHECK_IDENTITY_FACADE);
+			if (!method_exists($facade, 'identityHealthCounts')) {
+				return $empty;
+			}
+			$result = $facade->identityHealthCounts();
+
+			return is_array($result) ? array_merge($empty, $result) : $empty;
+		} catch (\Throwable $e) {
+			$this->warnOnce('mn_health', 'CustomerCheck MaintenanceCheck identity counts failed', $e);
+
+			return $empty;
+		}
+	}
+
+	/**
+	 * Create MN field customer from hub (name + soft links). Never inserts into mn_* from CRM SQL.
+	 *
+	 * @param array{actorUid:string,displayName:string,crmCompanyId:int,pcCustomerId:?int,street?:?string,postalCode?:?string,city?:?string,country?:?string,email?:?string,phone?:?string} $payload
+	 * @return array{mnCustomerId:int,created:bool}|null
+	 */
+	public function createMaintenanceFieldCustomer(array $payload): ?array
+	{
+		if (!$this->maintenancecheckIdentityAvailable()) {
+			return null;
+		}
+		try {
+			$facade = \OC::$server->get(SiblingFacadeContracts::MAINTENANCE_CHECK_IDENTITY_FACADE);
+			if (!method_exists($facade, 'createFromHub')) {
+				return null;
+			}
+			$result = $facade->createFromHub($payload);
+
+			return is_array($result) ? $result : null;
+		} catch (\Throwable $e) {
+			$this->warnOnce('mn_create', 'CustomerCheck MaintenanceCheck createFromHub failed', $e);
+			throw $e;
 		}
 	}
 }

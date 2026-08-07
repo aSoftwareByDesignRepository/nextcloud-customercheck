@@ -65,7 +65,7 @@ class CommandBoardService
 			$labels = $this->labels;
 			$sections[] = [
 				'id' => 'my_chase',
-				'title' => $this->l10n->t('My Chase'),
+				'title' => $this->l10n->t('Follow up on deals'),
 				'items' => array_map(static function (array $d) use ($labels): array {
 					$reasonCode = (string)($d['primaryReason'] ?? '');
 					$reason = $reasonCode !== '' ? $labels->chaseReason($reasonCode) : '';
@@ -97,7 +97,7 @@ class CommandBoardService
 				));
 				$sections[] = [
 					'id' => 'ceo_commitments',
-					'title' => $this->l10n->t('CEO commitments (this week)'),
+					'title' => $this->l10n->t('My promises this week'),
 					'items' => array_map(static function (array $c) use ($userId): array {
 						$owner = (string)($c['ownerUserId'] ?? '');
 						$covering = $owner !== '' && $owner !== $userId;
@@ -145,7 +145,7 @@ class CommandBoardService
 			}
 			$sections[] = [
 				'id' => 'kam_touches',
-				'title' => $this->l10n->t('KAM touches'),
+				'title' => $this->l10n->t('Customers to contact'),
 				'items' => array_slice($touches, 0, 25),
 			];
 
@@ -185,7 +185,7 @@ class CommandBoardService
 			}
 			$sections[] = [
 				'id' => 'plans_review',
-				'title' => $this->l10n->t('Plans to review / stalled'),
+				'title' => $this->l10n->t('Plans that need a look'),
 				'items' => array_slice($planItems, 0, 25),
 			];
 
@@ -249,7 +249,7 @@ class CommandBoardService
 					$stuck = array_values(array_filter($board['rows'], static fn (array $r): bool => !empty($r['stuck'])));
 					$sections[] = [
 						'id' => 'team_stuck',
-						'title' => $this->l10n->t('Team stuck'),
+						'title' => $this->l10n->t('Teammates who need help'),
 						'items' => array_map(function (array $r): array {
 							$name = trim((string)($r['displayName'] ?? ''));
 							if ($name === '') {
@@ -258,7 +258,7 @@ class CommandBoardService
 							return [
 								'companyId' => null,
 								'companyName' => '',
-								'why' => $this->l10n->t('%s · %d stuck · %d chase', [$name, (int)$r['stuckScore'], (int)$r['chase']]),
+								'why' => $this->l10n->t('%s · %d need attention · %d open deals', [$name, (int)$r['stuckScore'], (int)$r['chase']]),
 								'dueDate' => null,
 								'cta' => 'coach',
 								'userId' => $r['userId'],

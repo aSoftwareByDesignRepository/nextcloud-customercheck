@@ -31,6 +31,8 @@ final class Constants
 	public const CONFIG_CADENCE_ENABLED = 'cadence_enabled';
 	public const CONFIG_VTODO_CALENDAR_URI = 'vtodo_calendar_uri';
 	public const CONFIG_MAIL_RELATED_ENABLED = 'mail_related_enabled';
+	/** Shared-identity W1 — CUC→PC display-name push on rename (MH-16). Default on. */
+	public const CONFIG_IDENTITY_RENAME_PUSH = 'identity_rename_push';
 
 	/** @var array<string, string> AppConfig key => default value */
 	public const CONFIG_DEFAULTS = [
@@ -50,6 +52,7 @@ final class Constants
 		self::CONFIG_CADENCE_ENABLED => '1',
 		self::CONFIG_VTODO_CALENDAR_URI => '',
 		self::CONFIG_MAIL_RELATED_ENABLED => '1',
+		self::CONFIG_IDENTITY_RENAME_PUSH => '1',
 	];
 
 	/** Keys whose value is secret and must be redacted for non–app-admins (§10.3). */
@@ -140,6 +143,8 @@ final class Constants
 		'company.created', 'company.updated', 'company.archived', 'company.restored',
 		self::EVENT_COMPANY_MERGED,
 		'company.pc_linked', 'company.tc_linked',
+		'company.pc_unlinked', 'company.tc_unlinked',
+		'company.pc_rename_push_failed',
 		'agreement.created', 'agreement.status', 'agreement.cancelled', 'agreement.superseded',
 		'reminder.sent', 'reminder.skipped',
 		'deal.stage', 'hours.logged', 'import.linked',
@@ -343,6 +348,9 @@ final class Constants
 	public const ERR_NOT_FOUND = 'NOT_FOUND';
 	public const ERR_VALIDATION = 'VALIDATION';
 	public const ERR_LINK_CONFLICT = 'LINK_CONFLICT';
+	/** PC/TC created but CRM link persist failed — keep sibling row (BQ-4a). */
+	public const ERR_LINK_INCOMPLETE = 'link_incomplete';
+	public const ERR_IDEMPOTENT_REPLAY = 'IDEMPOTENT_REPLAY';
 	public const ERR_SIBLING_UNAVAILABLE = 'SIBLING_UNAVAILABLE';
 	public const ERR_MERGE_SAME = 'MERGE_SAME';
 	public const ERR_MERGE_TARGET_ARCHIVED = 'MERGE_TARGET_ARCHIVED';

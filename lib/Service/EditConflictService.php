@@ -165,11 +165,11 @@ class EditConflictService
 	public function resolve(int $workspaceId, int $id, array $choices, string $reason, string $actor, int $expectedVersion): array
 	{
 		$reason = trim($reason);
-		if (mb_strlen($reason) < 10) {
+		if (mb_strlen($reason) < 3) {
 			throw ValidationException::field(
 				Constants::ERR_REASON_REQUIRED,
 				'reason',
-				$this->l10n->t('Explain the resolution in at least 10 characters.'),
+				$this->l10n->t('Add a short reason (at least 3 characters).'),
 			);
 		}
 		$row = $this->requireRow($workspaceId, $id);

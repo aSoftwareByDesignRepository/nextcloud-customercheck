@@ -216,7 +216,7 @@ final class WorkspaceAclSurfaceContractTest extends TestCase
 		$this->assertStringContainsString('data-crm-partner-session', $agreements);
 		$emails = (string)file_get_contents($this->root . '/templates/common/crm-emails-section.php');
 		$this->assertStringContainsString("if (!empty(\$_['canWrite']))", $emails);
-		$this->assertStringContainsString('Talked above', $emails);
+		$this->assertStringContainsString('Communication above', $emails);
 		$detail = (string)file_get_contents($this->root . '/templates/company-detail.php');
 		$this->assertStringContainsString('id="crm-log-email"', $detail);
 		$this->assertStringContainsString(

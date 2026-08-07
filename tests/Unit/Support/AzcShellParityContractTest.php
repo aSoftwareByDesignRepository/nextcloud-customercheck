@@ -41,7 +41,7 @@ final class AzcShellParityContractTest extends TestCase
 		foreach (['nav-menu', 'nav-item-has-children', 'tools-subnav', 'sidebar-header', 'app-brand'] as $token) {
 			$this->assertStringContainsString($token, $nav, $token);
 		}
-		foreach (['Today', 'Companies', 'Money', 'Pipeline'] as $label) {
+		foreach (['Today', 'Companies', 'Money', 'Deals'] as $label) {
 			$this->assertStringContainsString($label, $nav, $label);
 		}
 	}

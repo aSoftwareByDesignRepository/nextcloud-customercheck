@@ -112,7 +112,7 @@ class PrepareMeetingService
 			'planGoal' => $planGoal,
 			'ctas' => [
 				[
-					'label' => $this->l10n->t('Open company 360'),
+					'label' => $this->l10n->t('Open customer'),
 					'href' => $companyUrl,
 				],
 				[

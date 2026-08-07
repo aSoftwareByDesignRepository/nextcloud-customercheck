@@ -104,6 +104,76 @@ final class ExtremeSimplicityUxContractTest extends TestCase
 		$this->assertStringContainsString('crm-brief-verify__note', $js);
 	}
 
+	public function testCompanyDetailEmptyStatesHavePrimaryCtasAndWelcomeCoach(): void
+	{
+		$detail = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/company-detail.php');
+		$this->assertStringContainsString('crm-welcome-coach', $detail);
+		$this->assertStringContainsString('Next steps for this customer', $detail);
+		$this->assertStringContainsString('data-crm-trigger="crm-add-person"', $detail);
+		$this->assertStringContainsString('data-crm-trigger="crm-add-deal"', $detail);
+		$this->assertStringContainsString('data-crm-trigger="crm-add-activity"', $detail);
+		$this->assertStringContainsString('A deal is a quote or opportunity', $detail);
+		$this->assertStringContainsString('Loading overview…', $detail);
+		$this->assertStringNotContainsString('Loading command view', $detail);
+		$this->assertStringContainsString('Stop reminders', $detail);
+		$js = (string)file_get_contents(dirname(__DIR__, 2) . '/js/pages/company-detail.js');
+		$this->assertStringContainsString("t('What is this deal?')", $js);
+		$this->assertStringContainsString("t('More options')", $js);
+		$this->assertStringContainsString('advanced: true', $js);
+		$this->assertStringContainsString('formatDisplayDate', $js);
+		$this->assertStringContainsString("t('Role in buying')", $js);
+		$this->assertStringContainsString('Please fill in: %s', $js);
+		$this->assertStringContainsString('el.checked', $js);
+		$pipeline = (string)file_get_contents(dirname(__DIR__, 2) . '/js/pages/pipeline.js');
+		$this->assertStringContainsString("t('Almost there')", $pipeline);
+		$this->assertStringContainsString("t('Deal saved.')", $pipeline);
+		$this->assertStringNotContainsString("t('Deal chase fields saved.')", $pipeline);
+		$this->assertStringNotContainsString("t('Products / SKUs')", $pipeline);
+		$this->assertStringContainsString("t('Products (optional)')", $pipeline);
+		$form = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/company-form.php');
+		$this->assertStringContainsString("\$l->t('Short address')", $form);
+		$this->assertStringNotContainsString("\$l->t('Slug')", $form);
+	}
+
+	public function testAppWideGrannyEmptyCtasAndPlainTodayCopy(): void
+	{
+		$money = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/money.php');
+		$this->assertStringContainsString('Open agreements', $money);
+		$this->assertStringContainsString('Open companies', $money);
+		$activities = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/activities.php');
+		$this->assertStringContainsString('Nothing open right now', $activities);
+		$this->assertStringContainsString('Open companies', $activities);
+		$this->assertStringNotContainsString('Inbox is clear', $activities);
+		$this->assertStringNotContainsString("\$l->t('Origin')", $activities);
+		$today = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/today.php');
+		$this->assertStringContainsString('Assign mail', $today);
+		$this->assertStringContainsString('Help teammate', $today);
+		$this->assertStringContainsString("I\\'ll take it", $today);
+		$board = (string)file_get_contents(dirname(__DIR__, 2) . '/lib/Service/CommandBoardService.php');
+		$this->assertStringContainsString('Follow up on deals', $board);
+		$this->assertStringContainsString('Customers to contact', $board);
+		$this->assertStringContainsString('My promises this week', $board);
+		$this->assertStringNotContainsString("'My Chase'", $board);
+		$this->assertStringNotContainsString("'KAM touches'", $board);
+		$qs = (string)file_get_contents(dirname(__DIR__, 2) . '/lib/Service/PageQuickStartCatalog.php');
+		$this->assertStringContainsString('Open Today', $qs);
+		$this->assertStringNotContainsString('Open Command Board', $qs);
+		$import = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/import.php');
+		$this->assertStringContainsString('Import clear rows', $import);
+		$this->assertStringNotContainsString('customerId,companyName', $import);
+		$importJs = (string)file_get_contents(dirname(__DIR__, 2) . '/js/pages/import.js');
+		$this->assertStringContainsString('rows ·', $importJs);
+		$this->assertStringContainsString('actionLabel', $importJs);
+		$pipeline = (string)file_get_contents(dirname(__DIR__, 2) . '/js/pages/pipeline.js');
+		$this->assertStringContainsString('stageLabel', $pipeline);
+		$persona = (string)file_get_contents(dirname(__DIR__, 2) . '/js/pages/persona.js');
+		$this->assertStringContainsString('formatDisplayDate', $persona);
+		$this->assertStringContainsString('Money this month', $persona);
+		$this->assertStringContainsString('Promises left', $persona);
+		$this->assertStringContainsString('Renewals in the next 90 days', $persona);
+		$this->assertStringNotContainsString('Renewals ≤90d', $persona);
+	}
+
 	public function testCompaniesExposeOneClickQuickFilters(): void
 	{
 		$html = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/companies.php');
@@ -118,7 +188,7 @@ final class ExtremeSimplicityUxContractTest extends TestCase
 		$html = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/company-detail.php');
 		$this->assertStringContainsString('crm-linked-bundle', $html);
 		$this->assertStringContainsString('Linked apps', $html);
-		$this->assertStringContainsString('Mail & log hours', $html);
+		$this->assertStringContainsString('Email & log hours', $html);
 		$this->assertStringContainsString('data-crm-partner-session', $html);
 		foreach (['id="crm-tickets"', 'id="crm-invoices"', 'id="crm-projects"', 'id="crm-timeline"'] as $needle) {
 			$this->assertStringContainsString($needle, $html);
@@ -332,5 +402,49 @@ final class ExtremeSimplicityUxContractTest extends TestCase
 		$this->assertStringContainsString('type="radio"', $import);
 		$info = (string)file_get_contents(dirname(__DIR__, 2) . '/appinfo/info.xml');
 		$this->assertMatchesRegularExpression('/<version>1\.(5\.(1[6-9]|[2-9]\d)|[6-9]\.\d+)/', $info, 'Bump app version when shipping CSS cache-sensitive choice alignment');
+	}
+
+	public function testAgreementFormUsesTypeAndProductNotKindCode(): void
+	{
+		$form = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/agreement-form.php');
+		$this->assertStringContainsString("\$l->t('Type')", $form);
+		$this->assertStringContainsString("\$l->t('Product')", $form);
+		$this->assertStringNotContainsString("\$l->t('Kind')", $form);
+		$this->assertStringNotContainsString("\$l->t('Product code')", $form);
+		$this->assertStringNotContainsString('(<?php p($code); ?>)', $form);
+	}
+
+	public function testSettingsMailboxAndTokensUsePlainLabels(): void
+	{
+		$mailbox = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/settings/workspace-mailbox.php');
+		$this->assertStringContainsString("\$l->t('Short address')", $mailbox);
+		$this->assertStringNotContainsString("\$l->t('Slug')", $mailbox);
+		$this->assertStringContainsString("\$l->t('Quoted deals without a follow-up show on Today after this many days.')", $mailbox);
+		$tokens = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/settings/tokens.php');
+		$this->assertStringContainsString("\$l->t('First reply within (hours)')", $mailbox);
+		$this->assertStringContainsString("\$l->t('Calendar feed for renewals')", $mailbox);
+		$this->assertStringContainsString("\$l->t('Website lead link')", $tokens);
+		$this->assertStringContainsString("\$l->t('Calendar feed for renewals (Default book)')", $tokens);
+		$this->assertStringContainsString("\$l->t('Website order link')", $tokens);
+		$this->assertStringNotContainsString("\$l->t('Lead webhook')", $tokens);
+		$settingsJs = (string)file_get_contents(dirname(__DIR__, 2) . '/js/pages/settings.js');
+		$this->assertStringContainsString("tr('Promises')", $settingsJs);
+		$this->assertStringNotContainsString("tr('WIP')", $settingsJs);
+		$persona = (string)file_get_contents(dirname(__DIR__, 2) . '/js/pages/persona.js');
+		$this->assertStringContainsString("t('Needs attention')", $persona);
+		$this->assertStringContainsString("t('Up to date')", $persona);
+		$this->assertStringContainsString("t('Open customer')", $persona);
+		$this->assertStringNotContainsString("t('Open company 360')", $persona);
+		$this->assertStringNotContainsString("t('Missing company id for prepare meeting.')", $persona);
+		$this->assertStringNotContainsString('chase hygiene', $persona);
+		$this->assertStringContainsString("t('Logged without a deal — not counted as sales work.')", $persona);
+		$this->assertStringContainsString("t('Kept what was already saved.')", $persona);
+		$settingsPage = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/settings.php');
+		$mailboxPos = (int)strpos($settingsPage, 'workspace-mailbox.php');
+		$prefsPos = (int)strpos($settingsPage, 'preferences.php');
+		$reviewPos = (int)strpos($settingsPage, 'workspace-review-sources.php');
+		$this->assertNotFalse(strpos($settingsPage, 'workspace-mailbox.php'));
+		$this->assertTrue($mailboxPos < $prefsPos, 'People/mailbox before personal preferences');
+		$this->assertTrue($prefsPos < $reviewPos, 'Preferences before expert Review sources');
 	}
 }

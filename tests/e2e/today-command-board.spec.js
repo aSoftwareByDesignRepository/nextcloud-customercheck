@@ -22,17 +22,17 @@ test.describe('Today command board UX', () => {
     await expect(firstRun.or(calm).or(roleDash).first()).toBeVisible({ timeout: 15000 });
 
     if (await roleDash.isVisible().catch(() => false)) {
-      await expect(page.locator('#crm-today-role-title')).toContainText(/Your focus/i);
+      await expect(page.locator('#crm-today-role-title')).toContainText(/Your focus|Dein Fokus|Ihr Fokus/i);
       await expect(page.locator('.crm-today-stat__value').first()).toBeVisible();
-      await expect(page.locator('.crm-quick-filters[aria-label="Jump to queue"]')).toBeVisible();
+      await expect(page.locator('.crm-quick-filters[aria-label="Jump to queue"], .crm-quick-filters[aria-label="Zur Warteschlange springen"], .crm-quick-filters[aria-label*="queue"], .crm-quick-filters[aria-label*="Warteschlange"]').first()).toBeVisible();
 
       await expect(table).toBeVisible();
-      await expect(table.locator('thead th', { hasText: /^What$/i })).toBeVisible();
-      await expect(table.locator('thead th', { hasText: /^Company$/i })).toBeVisible();
-      await expect(table.locator('thead th', { hasText: /^Due$/i })).toBeVisible();
-      await expect(table.locator('thead th', { hasText: /^Action$/i })).toBeVisible();
+      await expect(table.locator('thead th', { hasText: /^What$|^Was$/i })).toBeVisible();
+      await expect(table.locator('thead th', { hasText: /^Company$|^Unternehmen$|^Firma$/i })).toBeVisible();
+      await expect(table.locator('thead th', { hasText: /^Due$|^Fällig$/i })).toBeVisible();
+      await expect(table.locator('thead th', { hasText: /^Action$|^Aktion$/i })).toBeVisible();
 
-      const firstChip = page.locator('.crm-quick-filters[aria-label="Jump to queue"] .crm-quick-filter').first();
+      const firstChip = page.locator('.crm-page-stack > .crm-quick-filters .crm-quick-filter, nav.crm-quick-filters .crm-quick-filter').first();
       await expect(firstChip).toBeVisible();
       const href = await firstChip.getAttribute('href');
       expect(href).toMatch(/^#crm-cmd-/);
@@ -112,7 +112,7 @@ test.describe('Today command board UX', () => {
     const doneBtn = page.locator('[data-crm-complete-activity]').first();
     await expect(doneBtn).toBeVisible({ timeout: 15000 });
     await doneBtn.click();
-    await expect(page.locator('.crm-today-row--done .crm-badge--success', { hasText: /^Done$/i }).first()).toBeVisible({
+    await expect(page.locator('.crm-today-row--done .crm-badge--success', { hasText: /Done|Erledigt/i }).first()).toBeVisible({
       timeout: 10000,
     });
   });

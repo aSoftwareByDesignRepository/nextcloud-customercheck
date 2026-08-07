@@ -35,7 +35,9 @@
 		"test": "phpunit --testsuite unit",
 		"test:unit": "phpunit --testsuite unit",
 		"test:integration": "phpunit --testsuite integration",
-		"test:mutation:open-access": "php tests/Mutation/run-open-access-door-mutations.php"
+		"test:mutation:open-access": "php tests/Mutation/run-open-access-door-mutations.php",
+		"test:mutation:identity": "php tests/Mutation/run-critical-service-mutations.php",
+		"test:mutation": "composer test:mutation:identity"
 	},
 	"config": {
 		"optimize-autoloader": true,

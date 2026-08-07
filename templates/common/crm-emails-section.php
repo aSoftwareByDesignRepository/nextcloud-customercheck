@@ -35,7 +35,7 @@ $lastLabel = (string)($mailSummary['lastContactLabel'] ?? '');
 			<?php endif; ?>
 		</div>
 		<?php if (!empty($_['canWrite'])): ?>
-		<p class="crm-muted crm-emails__log-hint"><?php p($l->t('To log a message, use Log email under Talked above.')); ?></p>
+		<p class="crm-muted crm-emails__log-hint"><?php p($l->t('To log a message, use Log email under Communication above.')); ?></p>
 		<?php endif; ?>
 	</summary>
 	<div class="crm-card__body">

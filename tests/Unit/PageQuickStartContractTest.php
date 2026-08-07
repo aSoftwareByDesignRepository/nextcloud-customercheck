@@ -55,6 +55,15 @@ final class PageQuickStartContractTest extends TestCase
 		$this->assertStringContainsString('.crm-quickstart__list', $css);
 		$this->assertStringContainsString('.crm-hint-dismiss', $css);
 		$this->assertMatchesRegularExpression('/min-height:\\s*44px/', $css);
+		$this->assertMatchesRegularExpression(
+			'/\.crm-quickstart__item\s+\.crm-btn\s*\{[^}]*align-self:\s*center/s',
+			$css,
+			'Design-system: quickstart CTAs must be centered',
+		);
+		$this->assertDoesNotMatchRegularExpression(
+			'/\.crm-quickstart__item\s+\.crm-btn\s*\{[^}]*align-self:\s*flex-start/s',
+			$css,
+		);
 	}
 
 	public function testAgreementCreateHasPageHelp(): void

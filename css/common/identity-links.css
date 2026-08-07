@@ -1,0 +1,42 @@
+/* Shared-identity 360 CTAs — clear states, spacing, touch targets (WCAG AA). */
+#app-content.crm-app #crm-identity-links {
+	margin-block: 1rem 1.25rem;
+}
+
+#app-content.crm-app #crm-identity-links .crm-identity-row {
+	padding: 0.75rem 0;
+	border-bottom: 1px solid var(--color-border, #ddd);
+}
+
+#app-content.crm-app #crm-identity-links .crm-identity-row:last-child {
+	border-bottom: 0;
+	padding-bottom: 0;
+}
+
+#app-content.crm-app #crm-identity-links .crm-identity-row__status {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.5rem 0.75rem;
+	margin: 0 0 0.75rem;
+	line-height: 1.4;
+	font-size: var(--default-font-size, 1rem);
+	color: var(--color-main-text);
+}
+
+#app-content.crm-app #crm-identity-links .crm-inline-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+}
+
+#app-content.crm-app #crm-identity-links .crm-btn {
+	min-height: 44px;
+	min-width: 44px;
+}
+
+@media (max-width: 480px) {
+	#app-content.crm-app #crm-identity-links .crm-inline-actions .crm-btn {
+		flex: 1 1 100%;
+	}
+}

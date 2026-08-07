@@ -166,4 +166,33 @@ final class L10nCoverageContractTest extends TestCase
 			}
 		}
 	}
+
+	public function testCatalogsContainOnlyLiveLiterals(): void
+	{
+		$live = array_fill_keys(
+			array_filter(array_merge($this->extractPhpLiterals(), $this->extractJsLiterals())),
+			true
+		);
+		$enKeys = array_keys($this->loadJson('en')['translations']);
+		$orphans = array_values(array_filter($enKeys, static fn (string $k): bool => !isset($live[$k])));
+		$this->assertSame(
+			[],
+			$orphans,
+			'Orphan l10n keys (run php scripts/sync-l10n-from-literals.php): '
+			. implode(' | ', array_slice($orphans, 0, 15))
+		);
+
+		$mapPath = dirname(__DIR__, 2) . '/tests/fixtures/l10n-de-map.json';
+		$this->assertFileExists($mapPath);
+		/** @var array<string, string> $map */
+		$map = json_decode((string)file_get_contents($mapPath), true, 512, JSON_THROW_ON_ERROR);
+		$mapOrphans = array_values(array_filter(array_keys($map), static fn (string $k): bool => !isset($live[$k])));
+		$this->assertSame(
+			[],
+			$mapOrphans,
+			'Orphan DE map keys: ' . implode(' | ', array_slice($mapOrphans, 0, 15))
+		);
+		$this->assertStringNotContainsString('"Job:', (string)file_get_contents($mapPath));
+		$this->assertStringNotContainsString('"Job:', (string)file_get_contents(dirname(__DIR__, 2) . '/l10n/en.json'));
+	}
 }

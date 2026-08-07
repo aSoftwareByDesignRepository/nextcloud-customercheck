@@ -8,6 +8,8 @@ $canWrite = !empty($_['canWrite']);
 $roleSlug = (string)($_['roleSlug'] ?? 'member');
 $roleLabel = (string)($_['roleLabel'] ?? '');
 $urls = $_['urls'] ?? [];
+/** @var \OCA\CustomerCheck\Service\DisplayLabelService|null $labels */
+$labels = $_['labels'] ?? null;
 
 $totalItems = 0;
 foreach ($sections as $sec) {
@@ -19,16 +21,16 @@ if ($sections === [] && $queueItems !== []) {
 
 $roleHelp = match ($roleSlug) {
 	'viewer', 'crm-user' => $l->t('Read-only view. Open a company to inspect — editing is locked for viewers.'),
-	'manager', 'app-admin' => $l->t('Your queues plus team stuck. Jump to a section, then take the one action in the row.'),
-	default => $l->t('Your chase, touches, and tasks. Open a row or mark Done — nothing else required.'),
+	'manager', 'app-admin' => $l->t('Your queues plus teammates who need help. Jump to a section, then take the one action in the row.'),
+	default => $l->t('Your follow-ups, contacts, and tasks. Open a row or mark Done — nothing else required.'),
 };
 
 $ctaLabel = static function (string $cta) use ($l): string {
 	return match ($cta) {
 		'done' => $l->t('Done'),
-		'claim' => $l->t('Claim'),
-		'triage' => $l->t('Triage'),
-		'coach' => $l->t('Coach'),
+		'claim' => $l->t('I\'ll take it'),
+		'triage' => $l->t('Assign mail'),
+		'coach' => $l->t('Help teammate'),
 		default => $l->t('Open'),
 	};
 };
@@ -49,7 +51,7 @@ $resolveOpenHref = static function (array $item) use ($urlGenerator, $urls): str
 	return $deep !== '' ? $deep : '';
 };
 
-$renderTodayTable = static function (array $items, bool $allowDone) use ($l, $urlGenerator, $ctaLabel, $resolveOpenHref): void {
+$renderTodayTable = static function (array $items, bool $allowDone) use ($l, $urlGenerator, $ctaLabel, $resolveOpenHref, $labels): void {
 	?>
 	<div class="table-container crm-table--responsive" role="region" aria-label="<?php p($l->t('Attention queue')); ?>">
 		<table class="table table--hover">
@@ -68,7 +70,14 @@ $renderTodayTable = static function (array $items, bool $allowDone) use ($l, $ur
 				$why = trim((string)($item['why'] ?? $item['label'] ?? ''));
 				$companyName = trim((string)($item['companyName'] ?? ''));
 				$companyId = (int)($item['companyId'] ?? 0);
-				$due = trim((string)($item['dueDate'] ?? ''));
+				$dueRaw = trim((string)($item['dueDate'] ?? ''));
+				$due = $dueRaw;
+				if ($dueRaw !== '' && $labels instanceof \OCA\CustomerCheck\Service\DisplayLabelService) {
+					// Prefer date-only when value is Y-m-d; otherwise datetime.
+					$due = str_contains($dueRaw, 'T') || preg_match('/\d{1,2}:\d{2}/', $dueRaw)
+						? $labels->formatDateTime($dueRaw)
+						: $labels->formatDate($dueRaw);
+				}
 				$openHref = $resolveOpenHref($item);
 				$kind = trim((string)($item['kind'] ?? ''));
 				$kindLabel = trim((string)($item['kindLabel'] ?? ''));
@@ -115,7 +124,7 @@ $renderTodayTable = static function (array $items, bool $allowDone) use ($l, $ur
 									data-crm-claim-deal="<?php p((int)$item['dealId']); ?>"
 									data-updated-at="<?php p($item['updatedAt'] ?? ''); ?>"
 									<?php if ($openHref !== ''): ?>data-open-href="<?php p($openHref); ?>"<?php endif; ?>>
-									<?php p($l->t('Claim')); ?>
+									<?php p($ctaLabel('claim')); ?>
 								</button>
 							<?php elseif ($openHref !== ''): ?>
 								<a class="crm-btn crm-btn--sm crm-btn--primary" href="<?php p($openHref); ?>">

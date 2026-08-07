@@ -55,8 +55,8 @@ final class PageHelpCatalogTest extends TestCase
 	public function testTeamHelpExplainsGreenAmberLegend(): void
 	{
 		$help = (string)$this->catalog->forPage('team');
-		$this->assertStringContainsString('green', mb_strtolower($help));
-		$this->assertStringContainsString('amber', mb_strtolower($help));
+		$this->assertStringContainsString('needs help', mb_strtolower($help));
+		$this->assertStringContainsString('on track', mb_strtolower($help));
 		$this->assertStringContainsString('workspace', mb_strtolower($help));
 	}
 

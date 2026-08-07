@@ -167,6 +167,24 @@
     });
   }
 
+  function stageLabel(stage) {
+    const token = String(stage || '');
+    const sel = document.querySelector('[data-crm-deal-stage]');
+    if (sel) {
+      const opt = Array.from(sel.options || []).find((o) => o.value === token);
+      if (opt && opt.textContent) return String(opt.textContent).trim();
+    }
+    const map = {
+      lead: t('Lead'),
+      contacted: t('Contacted'),
+      quoted: t('Quoted'),
+      negotiation: t('Negotiation'),
+      won: t('Won'),
+      lost: t('Lost'),
+    };
+    return map[token] || token;
+  }
+
   async function moveDeal(id, stage, updatedAt, meta) {
     if (!shellCan('write')) {
       return;
@@ -189,7 +207,7 @@
       }, extra));
       const live = document.getElementById('crm-live-region');
       if (live) {
-        live.textContent = t('Deal moved to %s.', [stage]);
+        live.textContent = t('Deal moved to %s.', [stageLabel(stage)]);
       }
       if (stage === 'won') {
         await offerCreateAgreement(Object.assign({ id }, meta || {}));
@@ -502,7 +520,7 @@
           updatedAt: host.getAttribute('data-updated-at') || null,
         });
         const live = document.getElementById('crm-live-region');
-        if (live) live.textContent = t('Deal chase fields saved.');
+        if (live) live.textContent = t('Deal saved.');
         close();
         location.reload();
       } catch (e) {
@@ -537,16 +555,17 @@
         '</option>'
       ).join('');
       const html =
-        '<form id="' + id + '-form" class="crm-form form">' +
+        '<form id="' + id + '-form" class="crm-form form crm-form--stack">' +
         '<div class="form-group"><label class="form-label" for="' + id + '-company">' + t('Company') + '</label>' +
         '<select class="form-select crm-input" id="' + id + '-company" name="companyId" required>' + selectHtml + '</select></div>' +
-        '<div class="form-group"><label class="form-label" for="' + id + '-title">' + t('Title') + '</label>' +
-        '<input class="form-input crm-input" id="' + id + '-title" name="title" required maxlength="255" /></div>' +
+        '<div class="form-group"><label class="form-label" for="' + id + '-title">' + t('What is this deal?') + '</label>' +
+        '<input class="form-input crm-input" id="' + id + '-title" name="title" required maxlength="255" />' +
+        '<p class="form-help">' + t('A title is enough. Value and products are optional.') + '</p></div>' +
         '<details class="crm-advanced">' +
         '<summary>' + t('More options') + '</summary>' +
         '<div class="form-group"><label class="form-label" for="' + id + '-value">' + t('Value (EUR, optional)') + '</label>' +
         '<input class="form-input crm-input" id="' + id + '-value" name="valueEur" type="number" min="0" step="0.01" /></div>' +
-        '<div class="form-group"><label class="form-label" for="' + id + '-products">' + t('Products / SKUs') + '</label>' +
+        '<div class="form-group"><label class="form-label" for="' + id + '-products">' + t('Products (optional)') + '</label>' +
         '<input class="form-input crm-input" id="' + id + '-products" name="products" maxlength="255" /></div>' +
         '</details>' +
         '<div class="crm-form-actions">' +
@@ -556,6 +575,10 @@
       const form = document.getElementById(id + '-form');
       const close = () => C.closeModal(document.getElementById(id));
       form.querySelector('[data-cancel]').addEventListener('click', () => close());
+      const titleInput = form.elements.title;
+      if (titleInput && typeof titleInput.focus === 'function') {
+        setTimeout(() => titleInput.focus(), 50);
+      }
       form.addEventListener('submit', async (ev) => {
         ev.preventDefault();
         const submitBtn = form.querySelector('button[type="submit"]');
@@ -567,7 +590,7 @@
         const valueCents = Math.round(parseFloat(form.elements.valueEur.value || '0') * 100) || 0;
         const products = String(form.elements.products.value || '').trim();
         if (!companyId || title.length < 1) {
-          await C.alertDialog({ title: t('Missing fields'), message: t('Choose a company and enter a title.'), variant: 'danger' });
+          await C.alertDialog({ title: t('Almost there'), message: t('Choose a company and enter a title.'), variant: 'info' });
           return;
         }
         if (submitBtn) submitBtn.disabled = true;

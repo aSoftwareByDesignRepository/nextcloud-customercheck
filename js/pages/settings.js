@@ -1301,10 +1301,10 @@
         return;
       }
       let html = '<div class="table-container crm-table--responsive"><table class="table table--hover" aria-label="' +
-        escapeHtml(tr('Circles roll-call')) + '"><thead><tr>';
+        escapeHtml(tr('Weekly promise check')) + '"><thead><tr>';
       html += '<th scope="col">' + escapeHtml(tr('Workspace')) + '</th>';
       html += '<th scope="col">' + escapeHtml(tr('Week')) + '</th>';
-      html += '<th scope="col">' + escapeHtml(tr('WIP')) + '</th>';
+      html += '<th scope="col">' + escapeHtml(tr('Promises')) + '</th>';
       html += '<th scope="col">' + escapeHtml(tr('Committed')) + '</th>';
       html += '<th scope="col">' + escapeHtml(tr('Done')) + '</th>';
       html += '<th scope="col">' + escapeHtml(tr('Missed')) + '</th>';
@@ -1315,7 +1315,7 @@
         html += '<tr>';
         html += '<td data-label="' + escapeHtml(tr('Workspace')) + '">' + escapeHtml(it.name || '') + '</td>';
         html += '<td data-label="' + escapeHtml(tr('Week')) + '">' + escapeHtml(it.weekKey || '') + '</td>';
-        html += '<td data-label="' + escapeHtml(tr('WIP')) + '">' + escapeHtml(String(it.wipUsed || 0) + '/' + String(it.wipLimit || 5)) + '</td>';
+        html += '<td data-label="' + escapeHtml(tr('Promises')) + '">' + escapeHtml(String(it.wipUsed || 0) + '/' + String(it.wipLimit || 5)) + '</td>';
         html += '<td data-label="' + escapeHtml(tr('Committed')) + '">' + escapeHtml(String(it.committed || 0)) + '</td>';
         html += '<td data-label="' + escapeHtml(tr('Done')) + '">' + escapeHtml(String(it.done || 0)) + '</td>';
         html += '<td data-label="' + escapeHtml(tr('Missed')) + '">' + escapeHtml(String(it.missed || 0)) + '</td>';
@@ -1327,7 +1327,7 @@
       mount.innerHTML = html;
     } catch (e) {
       mount.removeAttribute('aria-busy');
-      mount.innerHTML = '<p role="alert">' + escapeHtml((e.payload && e.payload.message) || e.message || tr('Could not load Circles roll-call.')) + '</p>';
+      mount.innerHTML = '<p role="alert">' + escapeHtml((e.payload && e.payload.message) || e.message || tr('Could not load weekly promise check.')) + '</p>';
     }
   }
 

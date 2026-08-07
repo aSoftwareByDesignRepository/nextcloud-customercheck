@@ -38,7 +38,7 @@ $cases = [
 	],
 	[
 		'file' => $root . '/lib/Service/PageQuickStartCatalog.php',
-		'find' => "\$l->t('Pulse shows health. Open Money when you need overdue and unpaid details.'),",
+		'find' => "\$l->t('Overview shows health. Open Money when you need overdue and unpaid details.'),",
 		'replace' => "\$l->t('Pulse is a planning glance. Money figures are for day-to-day ops — not for tax filing.'),",
 		'test' => 'PageQuickStartCatalogTest',
 		'label' => 'Pulse quickstart reintroduces tax lecture',
@@ -64,6 +64,34 @@ $cases = [
 		'replace' => '[],',
 		'test' => 'SiblingCustomerWriteServiceTest',
 		'label' => 'duplicate_name drops existingPcCustomerId',
+	],
+	[
+		'file' => $root . '/lib/Service/SiblingCustomerWriteService.php',
+		'find' => "if (\$this->identityHealth !== null && !\$this->identityHealth->renamePushEnabled()) {\n\t\t\treturn ['pushed' => false, 'skipped' => true, 'warning' => null, 'code' => null, 'pcCustomerId' => \$pcId];\n\t\t}",
+		'replace' => "if (false && \$this->identityHealth !== null && !\$this->identityHealth->renamePushEnabled()) {\n\t\t\treturn ['pushed' => false, 'skipped' => true, 'warning' => null, 'code' => null, 'pcCustomerId' => \$pcId];\n\t\t}",
+		'test' => 'SiblingCustomerWriteServiceIdentityTest',
+		'label' => 'rename push ignores identity_rename_push flag off',
+	],
+	[
+		'file' => $root . '/lib/Service/SiblingCustomerWriteService.php',
+		'find' => "if (\$idempotencyKey !== null && \$this->idempotency !== null) {\n\t\t\t\$replay = \$this->idempotency->findReplay(\$actorUid, \$idempotencyKey, LinkIdempotencyService::SIBLING_PC);",
+		'replace' => "if (false && \$idempotencyKey !== null && \$this->idempotency !== null) {\n\t\t\t\$replay = \$this->idempotency->findReplay(\$actorUid, \$idempotencyKey, LinkIdempotencyService::SIBLING_PC);",
+		'test' => 'SiblingCustomerWriteServiceIdentityTest',
+		'label' => 'createOrLink ignores Idempotency-Key replay',
+	],
+	[
+		'file' => $root . '/lib/Service/LinkIdempotencyService.php',
+		'find' => "if (\$key === null || \$key === '') {\n\t\t\tthrow ValidationException::field(\n\t\t\t\tConstants::ERR_VALIDATION,\n\t\t\t\t'idempotencyKey',\n\t\t\t\t\$this->l10n->t('Idempotency-Key header (or idempotencyKey) is required for create-or-link.'),\n\t\t\t);\n\t\t}",
+		'replace' => "if (false && (\$key === null || \$key === '')) {\n\t\t\tthrow ValidationException::field(\n\t\t\t\tConstants::ERR_VALIDATION,\n\t\t\t\t'idempotencyKey',\n\t\t\t\t\$this->l10n->t('Idempotency-Key header (or idempotencyKey) is required for create-or-link.'),\n\t\t\t);\n\t\t}",
+		'test' => 'LinkIdempotencyServiceTest',
+		'label' => 'requireKey allows missing Idempotency-Key',
+	],
+	[
+		'file' => $root . '/lib/Service/IdentityLinkHealthService.php',
+		'find' => "if (\$dto === null) {\n\t\t\treturn [\n\t\t\t\t'state' => self::STATE_BROKEN,\n\t\t\t\t'pcCustomerId' => \$pcCustomerId,",
+		'replace' => "if (\$dto === null) {\n\t\t\treturn [\n\t\t\t\t'state' => self::STATE_LINKED,\n\t\t\t\t'pcCustomerId' => \$pcCustomerId,",
+		'test' => 'IdentityLinkHealthServiceTest',
+		'label' => 'missing PC classified as linked not broken',
 	],
 	[
 		'file' => $root . '/lib/Service/MoneyService.php',

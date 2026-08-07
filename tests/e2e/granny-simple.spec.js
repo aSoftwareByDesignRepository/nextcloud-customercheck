@@ -22,6 +22,9 @@ test.describe('Granny-simple company 360', () => {
     await page.locator('#crm-company-form button[type="submit"]').click();
     await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
 
+    await expect(page.locator('#crm-welcome-coach')).toBeVisible();
+    await expect(page.locator('#crm-persons .crm-empty-state [data-crm-trigger="crm-add-person"]')).toBeVisible();
+    await expect(page.locator('#crm-deals .crm-empty-state [data-crm-trigger="crm-add-deal"]')).toBeVisible();
     await expect(page.locator('#crm-log-email')).toBeVisible();
     await expect(page.locator('#crm-log-email')).toHaveCount(1);
     await expect(page.locator('#crm-schedule-callback')).toContainText(/Call tomorrow|Morgen anrufen/i);
@@ -40,6 +43,8 @@ test.describe('Granny-simple company 360', () => {
 
     const jump = page.locator('[data-crm-jump-nav="1"]');
     await expect(jump.locator('.crm-jump-nav__list').first().locator('.crm-jump-nav__link')).toHaveCount(5);
+    await expect(jump.getByRole('link', { name: /Communication|Kommunikation|Gespräche/i }).first()).toBeVisible();
+    await expect(jump.getByRole('link', { name: /Deals/i }).first()).toBeVisible();
     await expect(jump.locator('.crm-jump-nav__link')).toHaveCount(14);
 
     const results = await new AxeBuilder({ page })
@@ -62,7 +67,7 @@ test.describe('Granny-simple company 360', () => {
 
     const verify = page.locator('.crm-brief-verify').first();
     await expect(page.locator('#crm-brief-wip-title, .crm-card__title').first()).toBeVisible();
-    await expect(page.locator('.crm-card__lead').first()).toContainText(/This week|Diese Woche|promises|Zusagen|Slots left|Freie Plätze|Your week is full|Deine Woche|View only|Nur lesen/i);
+    await expect(page.locator('.crm-card__lead').first()).toContainText(/This week|Diese Woche|promises|Zusagen|Promises left|Freie Zusagen|Slots left|Freie Plätze|Your week is full|Deine Woche|View only|Nur lesen/i);
     await expect(page.locator('.crm-card__lead').first()).not.toContainText(/\bWIP\b/);
     await expect(page.getByText(/Money customers still owe|Geld, das Kunden noch schulden/i).first()).toBeVisible();
     await expect(page.getByText(/Overdue AR|Überfällige AR/i)).toHaveCount(0);

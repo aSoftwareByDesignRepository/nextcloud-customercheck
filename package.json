@@ -1,19 +1,19 @@
 {
-  "name": "customercheck",
-  "private": true,
-  "version": "1.0.0",
-  "type": "module",
-  "description": "CustomerCheck Playwright / frontend tooling",
-  "scripts": {
-    "test:e2e": "playwright test",
-    "test:js": "vitest run",
-    "test:unit:php": "php vendor/bin/phpunit --testsuite unit",
-    "test:integration:php": "php vendor/bin/phpunit --testsuite integration",
-    "test:mutation": "php tests/Mutation/run-critical-service-mutations.php"
-  },
-  "devDependencies": {
-    "@axe-core/playwright": "^4.10.1",
-    "@playwright/test": "^1.51.0",
-    "vitest": "^3.0.0"
-  }
+    "name": "customercheck",
+    "private": true,
+    "version": "1.6.13",
+    "type": "module",
+    "description": "CustomerCheck Playwright / frontend tooling",
+    "scripts": {
+        "test:e2e": "playwright test",
+        "test:js": "vitest run",
+        "test:unit:php": "php vendor/bin/phpunit --testsuite unit",
+        "test:integration:php": "php vendor/bin/phpunit --testsuite integration",
+        "test:mutation": "php tests/Mutation/run-critical-service-mutations.php"
+    },
+    "devDependencies": {
+        "@axe-core/playwright": "^4.10.1",
+        "@playwright/test": "^1.51.0",
+        "vitest": "^3.0.0"
+    }
 }

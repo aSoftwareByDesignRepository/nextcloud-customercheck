@@ -397,3 +397,14 @@ dialog.entitlement-explain-dialog[open] {
     margin-top: var(--space-2);
   }
 }
+
+/* Soft keyboard: leave room when visualViewport / scrollIntoView adjusts. */
+.form-textarea,
+textarea.form-input,
+textarea.bc-input,
+textarea.crm-input,
+textarea.form-control,
+textarea {
+	scroll-margin-bottom: min(45vh, 20rem);
+	scroll-margin-top: 5rem;
+}

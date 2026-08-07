@@ -186,6 +186,54 @@ class CompanyMapper extends QBMapper
 	}
 
 	/**
+	 * Distinct linked ProjectCheck ids on non-archived companies (Identity Health).
+	 *
+	 * @return list<int>
+	 */
+	public function listLinkedPcCustomerIds(): array
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->selectDistinct('pc_customer_id')
+			->from($this->getTableName())
+			->where($qb->expr()->isNotNull('pc_customer_id'))
+			->andWhere($qb->expr()->isNull('archived_at'));
+		$result = $qb->executeQuery();
+		$ids = [];
+		while ($row = $result->fetch()) {
+			$id = (int)($row['pc_customer_id'] ?? 0);
+			if ($id > 0) {
+				$ids[] = $id;
+			}
+		}
+		$result->closeCursor();
+
+		return $ids;
+	}
+
+	/**
+	 * @return list<int>
+	 */
+	public function listLinkedTcCustomerIds(): array
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->selectDistinct('tc_customer_id')
+			->from($this->getTableName())
+			->where($qb->expr()->isNotNull('tc_customer_id'))
+			->andWhere($qb->expr()->isNull('archived_at'));
+		$result = $qb->executeQuery();
+		$ids = [];
+		while ($row = $result->fetch()) {
+			$id = (int)($row['tc_customer_id'] ?? 0);
+			if ($id > 0) {
+				$ids[] = $id;
+			}
+		}
+		$result->closeCursor();
+
+		return $ids;
+	}
+
+	/**
 	 * Case-insensitive exact name match, used by the import matcher (§8.6 rule b).
 	 *
 	 * @return Company[]

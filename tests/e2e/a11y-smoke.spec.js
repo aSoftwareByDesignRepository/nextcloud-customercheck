@@ -18,6 +18,11 @@ const pages = [
   '/apps/customercheck/review',
   '/apps/customercheck/conflicts',
   '/apps/customercheck/settings',
+  '/apps/customercheck/strategy',
+  '/apps/customercheck/import',
+  '/apps/customercheck/app-settings',
+  '/apps/customercheck/support-us',
+  '/apps/customercheck/agreements/new',
 ];
 
 for (const path of pages) {

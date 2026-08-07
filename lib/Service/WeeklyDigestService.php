@@ -193,7 +193,7 @@ class WeeklyDigestService
 		$cash = (int)(($brief['cash']['expectedInThisMonthCents'] ?? 0));
 		$euros = number_format($cash / 100, 2, '.', '');
 		return $this->l10n->t(
-			'%1$s · %2$s · WIP %3$d/%4$d · expected cash €%5$s (pipeline excluded). Open Weekly Brief.',
+			'%1$s · %2$s · promises %3$d/%4$d · expected cash €%5$s (deals not counted as cash). Open This week.',
 			[$wsName, $weekKey, $wip, $limit, $euros],
 		);
 	}

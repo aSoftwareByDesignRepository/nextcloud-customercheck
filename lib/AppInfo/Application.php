@@ -39,6 +39,10 @@ use OCA\CustomerCheck\Service\LeadWebhookService;
 use OCA\CustomerCheck\Service\WebsiteOrderWebhookService;
 use OCA\CustomerCheck\Service\WorkspaceService;
 use OCA\CustomerCheck\Service\MobileIdempotencyService;
+use OCA\CustomerCheck\Service\LinkIdempotencyService;
+use OCA\CustomerCheck\Service\IdentityLinkHealthService;
+use OCA\CustomerCheck\Service\SiblingCustomerWriteService;
+use OCA\CustomerCheck\Public\CrmCompanyLinkReadFacade;
 use OCA\CustomerCheck\Service\MobilePushService;
 use OCA\CustomerCheck\Service\MoneyService;
 use OCA\CustomerCheck\Service\NotificationService;
@@ -111,6 +115,36 @@ class Application extends App implements IBootstrap
 			$c->get(\Psr\Log\LoggerInterface::class),
 			$c->get(MobilePushService::class),
 		));
+		
+		$context->registerService(LinkIdempotencyService::class, fn ($c) => new LinkIdempotencyService(
+			$c->get(\OCA\CustomerCheck\Db\LinkIdempotencyMapper::class),
+			$c->get(\OCP\AppFramework\Utility\ITimeFactory::class),
+			$c->get(\OCP\IL10N::class),
+		));
+		$context->registerService(IdentityLinkHealthService::class, fn ($c) => new IdentityLinkHealthService(
+			$c->get(\OCA\CustomerCheck\Db\CompanyMapper::class),
+			$c->get(FacadeProbeService::class),
+			$c->get(\OCP\IConfig::class),
+			$c->get(\OCP\IL10N::class),
+			$c->get(\Psr\Log\LoggerInterface::class),
+		));
+		$context->registerService(SiblingCustomerWriteService::class, fn ($c) => new SiblingCustomerWriteService(
+			$c->get(CompanyService::class),
+			$c->get(\OCA\CustomerCheck\Db\CompanyMapper::class),
+			$c->get(FacadeProbeService::class),
+			$c->get(TimelineService::class),
+			$c->get(\OCA\CustomerCheck\Db\PersonMapper::class),
+			$c->get(\OCP\IL10N::class),
+			$c->get(\Psr\Log\LoggerInterface::class),
+			$c->get(LinkIdempotencyService::class),
+			$c->get(IdentityLinkHealthService::class),
+		));
+		$context->registerService(CrmCompanyLinkReadFacade::class, fn ($c) => new CrmCompanyLinkReadFacade(
+			$c->get(\OCA\CustomerCheck\Db\CompanyMapper::class),
+			$c->get(AccessControlService::class),
+			$c->get(IURLGenerator::class),
+		));
+
 		$context->registerService(MobileIdempotencyService::class, fn ($c) => new MobileIdempotencyService(
 			$c->get(\OCA\CustomerCheck\Db\MobileIdempotencyMapper::class),
 			$c->get(ActivityService::class),

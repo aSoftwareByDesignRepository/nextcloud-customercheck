@@ -18,7 +18,7 @@ test.describe('Persona shell parity', () => {
     await expect(page.locator('#customercheck-app')).toBeVisible();
     await expect(page.locator('#app-content.crm-app.crm-app--pulse')).toBeVisible();
     await expect(page.locator('#app-navigation.crm-nav')).toBeVisible();
-    await expect(page.locator('#crm-page-title')).toContainText(/Business Pulse|Betriebs-Pulse|Pulse/i);
+    await expect(page.locator('#crm-page-title')).toContainText(/Overview|Übersicht|Überblick|Pulse/i);
     await expect(page.locator('.crm-page-header__lead')).toBeVisible();
 
     await expect(page.locator('[data-crm-persona-mount="pulse"] [role="alert"]')).toHaveCount(0, { timeout: 20000 });
@@ -57,7 +57,7 @@ test.describe('Persona shell parity', () => {
     await page.goto('/apps/customercheck/brief?workspaceId=1');
     await page.waitForSelector('#crm-main-content', { timeout: 30000 });
     await expect(page.locator('#app-content.crm-app.crm-app--brief')).toBeVisible();
-    await expect(page.locator('#app-navigation a', { hasText: /^Brief$/ })).toBeVisible();
+    await expect(page.getByRole('navigation').getByRole('link', { name: /This week|Diese Woche|Brief/i })).toBeVisible();
     await expect(page.locator('[data-crm-persona-mount="brief"] .crm-card, [data-crm-persona-mount="brief"] .crm-today-stat').first()).toBeVisible({ timeout: 20000 });
 
     await page.goto('/apps/customercheck/strategy?workspaceId=1');

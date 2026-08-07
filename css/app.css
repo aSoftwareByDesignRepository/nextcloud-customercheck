@@ -24,6 +24,7 @@
 @import url('navigation.css');
 @import url('app-vanilla.css');
 @import url('common/badges.css');
+@import url('common/identity-links.css');
 @import url('common/notification-surfaces.css');
 /* Shell layout critical path is reinforced at end of this file (after imports). */
 
@@ -432,6 +433,23 @@
 #app-content.crm-app .crm-card:has(.crm-card__header),
 #app-content.crm-app .crm-card:has(.crm-card__body) {
 	padding: 0;
+}
+/*
+ * Bachus / AZ parity (defense): keep structured cards + Filter soft-band
+ * chrome at #content specificity so a future AZ content-surface padding
+ * rule cannot recreate the inset-white list-header trap.
+ */
+#content.app-customercheck #app-content .crm-card:has(.crm-card__header),
+#content.app-customercheck #app-content .crm-card:has(.crm-card__body),
+#content.app-customercheck #app-content .crm-filter-panel {
+	padding: 0;
+	overflow: hidden;
+}
+#content.app-customercheck #app-content .crm-filter-panel__head,
+#content.app-customercheck #app-content .crm-card__header {
+	padding: var(--crm-space-5, 24px);
+	border-bottom: 1px solid var(--crm-border, var(--color-border));
+	background: var(--crm-bg-soft, color-mix(in srgb, var(--color-main-background) 96%, var(--color-main-text) 4%));
 }
 #app-content.crm-app .crm-card__header {
 	display: flex;
@@ -1123,6 +1141,41 @@
 	flex-wrap: wrap;
 	gap: var(--crm-space-3);
 	margin-top: var(--crm-space-4);
+	justify-content: center;
+}
+
+#app-content.crm-app .crm-welcome-coach {
+	margin: 0 0 var(--crm-space-4);
+}
+
+#app-content.crm-app .crm-welcome-coach__title {
+	margin: 0 0 var(--crm-space-2);
+	font-size: var(--crm-fs-lg);
+	font-weight: 600;
+	color: var(--crm-text);
+}
+
+#app-content.crm-app .crm-welcome-coach__steps {
+	margin: 0 0 var(--crm-space-3);
+	padding-left: 1.25rem;
+	max-width: 52ch;
+	line-height: var(--crm-line-base);
+}
+
+#app-content.crm-app .crm-welcome-coach__steps li {
+	margin: 0 0 var(--crm-space-2);
+}
+
+#app-content.crm-app .crm-welcome-coach__actions {
+	justify-content: flex-start;
+}
+
+#app-content.crm-app .crm-form-inline-error {
+	margin: 0 0 var(--crm-space-3);
+}
+
+#app-content.crm-app .crm-form-inline-error[hidden] {
+	display: none !important;
 }
 
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
@@ -2863,9 +2916,10 @@ dialog.entitlement-explain-dialog::backdrop {
 	color: var(--crm-muted, var(--color-text-maxcontrast));
 }
 #app-content.crm-app .crm-quickstart__item .crm-btn {
-	align-self: flex-start;
+	align-self: center;
 	margin-top: auto;
 	min-height: 44px;
+	text-align: center;
 }
 
 

@@ -135,7 +135,7 @@ class SlugService
 			throw ValidationException::field(
 				Constants::ERR_SLUG_TAKEN,
 				'slug',
-				$this->l10n->t('A company with this slug already exists. Open it instead of creating a duplicate.'),
+				$this->l10n->t('A company with this short address already exists. Open it instead of creating a duplicate.'),
 			);
 		}
 

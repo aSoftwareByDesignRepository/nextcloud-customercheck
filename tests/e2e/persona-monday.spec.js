@@ -28,7 +28,7 @@ test.describe('Persona Monday operating path', () => {
     await page.goto('/apps/customercheck/money');
     await page.waitForSelector('.crm-page-header', { timeout: 30000 });
     await expect(page.locator('.crm-page-header')).not.toContainText(/GoBD|tax filing|Steuererklärung|day-to-day ops|Ops overview/i);
-    await expect(page.locator('.crm-page-header__lead')).toContainText(/invoice states|Rechnungszustände/i);
+    await expect(page.locator('.crm-page-header__lead')).toContainText(/invoice states|Rechnungszustände|Rechnungsstatus/i);
 
     // Return to Pulse — Money has no persona mount; workspace race + escapeHTML checks belong here.
     await openPersona(page, '/pulse');
@@ -52,9 +52,11 @@ test.describe('Persona Monday operating path', () => {
     await openPersona(page, '/team');
     await expect(page.locator('#capacity, [data-crm-persona-mount="team"], .crm-page-stack').first()).toBeVisible();
     await expect(page.getByRole('heading', { name: /Who needs help|Wer braucht Hilfe/i }).first()).toBeVisible({ timeout: 15000 });
-    await expect(page.getByRole('heading', { name: /Capacity tools|Kapazitäts-Werkzeuge/i }).first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Manager tools|Manager-Werkzeuge|Kapazitäts-Werkzeuge|Capacity tools/i }).first()).toBeVisible();
     await expect(page.locator('[data-crm-persona-mount="team"] [role="alert"]')).toHaveCount(0);
     await expect(page.locator('[data-crm-persona-mount="team"]')).not.toContainText(/No team rows to show|Keine Team-Zeilen/i);
+    await expect(page.locator('#capacity details.crm-advanced, details.crm-team-capacity-shell').first()).toBeVisible();
+    await page.locator('#capacity details summary, details.crm-team-capacity-shell > summary').first().click();
     await expect(page.locator('[data-crm-team-capacity]')).toBeVisible();
     // Capacity tools mount after board fetch — cover / reassign / escalate cards for coaches.
     await expect(page.locator('[data-crm-team-capacity]')).toContainText(/Cover while away|Vertretung|Move work|Arbeit an|Escalate|eskalieren|viewing your own row|eigene Zeile/i, { timeout: 20000 });

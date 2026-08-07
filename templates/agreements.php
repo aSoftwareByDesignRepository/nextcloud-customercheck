@@ -28,17 +28,15 @@ include __DIR__ . '/common/page-start.php';
 		<a class="crm-quick-filter<?php if ($filterExpiry === '60'): ?> is-active<?php endif; ?>" href="<?php p($agreementsUrl); ?>?expiry=60"<?php if ($filterExpiry === '60'): ?> aria-current="page"<?php endif; ?>><?php p($l->t('Expiring soon')); ?></a>
 	</nav>
 	<section id="crm-agreements-filter" class="crm-card crm-filter-panel" <?php if (!$filterOpen): ?>hidden<?php endif; ?> aria-labelledby="crm-agreements-filter-title">
-		<header class="crm-card__header">
-			<div class="crm-card__header-text">
-				<h2 id="crm-agreements-filter-title" class="crm-card__title"><?php p($l->t('Filter agreements')); ?></h2>
-				<p class="crm-card__lead"><?php p($l->t('Pick a kind, status or expiry window — applies instantly.')); ?></p>
-			</div>
+		<header class="crm-filter-panel__head">
+			<h2 id="crm-agreements-filter-title"><?php p($l->t('Filter agreements')); ?></h2>
+			<p class="crm-filter-panel__intro"><?php p($l->t('Pick a type, status or expiry window — applies instantly.')); ?></p>
 		</header>
-		<div class="crm-card__body">
+		<div class="crm-filter-panel__body">
 			<form method="get" class="crm-filter-panel__form form" action="<?php p($agreementsUrl); ?>" data-crm-live-filter novalidate>
 				<div class="crm-filter-grid" role="group">
 					<div class="crm-filter-field">
-						<label for="crm-filter-kind" class="form-label"><?php p($l->t('Kind')); ?></label>
+						<label for="crm-filter-kind" class="form-label"><?php p($l->t('Type')); ?></label>
 						<select id="crm-filter-kind" name="kind" class="form-select crm-input">
 							<option value=""><?php p($l->t('All kinds')); ?></option>
 							<?php foreach ($kinds as $k): ?>
@@ -81,9 +79,11 @@ include __DIR__ . '/common/page-start.php';
 			<?php if (($_['agreements'] ?? []) === []): ?>
 				<div class="crm-empty-state" role="status">
 					<h3 class="crm-empty-state__title"><?php p($l->t('No agreements yet')); ?></h3>
-					<p class="crm-empty-state__text"><?php p($l->t('Create one or import from CSV / ProjectCheck.')); ?></p>
+					<p class="crm-empty-state__text"><?php p($l->t('Create a license or partner package for a company. Import is optional.')); ?></p>
 					<?php if (!empty($_['canWrite'])): ?>
-					<a class="crm-btn crm-btn--primary" href="<?php p($urlGenerator->linkToRoute('customercheck.page.agreementNew')); ?>"><?php p($l->t('New agreement')); ?></a>
+					<div class="crm-empty-state__actions">
+						<a class="crm-btn crm-btn--primary crm-btn--lg" href="<?php p($urlGenerator->linkToRoute('customercheck.page.agreementNew')); ?>"><?php p($l->t('New agreement')); ?></a>
+					</div>
 					<?php endif; ?>
 				</div>
 			<?php else: ?>
@@ -127,7 +127,7 @@ include __DIR__ . '/common/page-start.php';
 								<?php if ($canWrite): ?>
 								<div class="crm-table-actions">
 									<?php if (($a['kind'] ?? '') === 'partner'): ?>
-										<button type="button" class="crm-btn crm-btn--sm crm-btn--primary" data-crm-partner-session="<?php p($a['id']); ?>" data-company-id="<?php p((int)($a['companyId'] ?? 0)); ?>"><?php p($l->t('Mail & log hours')); ?></button>
+										<button type="button" class="crm-btn crm-btn--sm crm-btn--primary" data-crm-partner-session="<?php p($a['id']); ?>" data-company-id="<?php p((int)($a['companyId'] ?? 0)); ?>"><?php p($l->t('Email & log hours')); ?></button>
 										<button type="button" class="crm-btn crm-btn--sm crm-btn--ghost" data-crm-log-hours="<?php p($a['id']); ?>"><?php p($l->t('Hours only')); ?></button>
 									<?php endif; ?>
 									<?php if (($a['kind'] ?? '') === 'license' && (!empty($a['salesLogId']) || !empty($a['keyFingerprint']))): ?>

@@ -236,7 +236,50 @@
     mount.classList.remove('crm-skeleton');
   }
 
-  function renderList(mount, items, emptyMsg) {
+  function formatDisplayDate(iso) {
+    const raw = String(iso || '').trim();
+    if (!raw || raw === '—') return '—';
+    const hasTime = /T|\s\d{1,2}:/.test(raw);
+    const d = new Date(hasTime ? raw : (raw + 'T12:00:00'));
+    if (Number.isNaN(d.getTime())) return raw;
+    try {
+      const locale = (document.documentElement.lang || navigator.language || undefined);
+      return new Intl.DateTimeFormat(locale, hasTime
+        ? { dateStyle: 'medium', timeStyle: 'short' }
+        : { dateStyle: 'medium' }).format(d);
+    } catch (e) {
+      return raw;
+    }
+  }
+
+  function weekOfLabel(weekKey) {
+    const m = String(weekKey || '').match(/^(\d{4})-W(\d{1,2})$/);
+    if (!m) return weekKey || '';
+    try {
+      const year = parseInt(m[1], 10);
+      const week = parseInt(m[2], 10);
+      const simple = new Date(Date.UTC(year, 0, 1 + (week - 1) * 7));
+      const day = simple.getUTCDay();
+      const ISOweekStart = new Date(simple);
+      if (day <= 4) ISOweekStart.setUTCDate(simple.getUTCDate() - simple.getUTCDay() + 1);
+      else ISOweekStart.setUTCDate(simple.getUTCDate() + 8 - simple.getUTCDay());
+      return t('Week of %s', [formatDisplayDate(ISOweekStart.toISOString().slice(0, 10))]);
+    } catch (e) {
+      return weekKey;
+    }
+  }
+
+  function renderList(mount, items, emptyMsg, emptyCta) {
+    if ((!items || !items.length) && emptyCta && emptyCta.href) {
+      clearMountBusy(mount);
+      mount.innerHTML =
+        '<div class="crm-empty-state" role="status">' +
+        '<p class="crm-empty-state__text">' + escapeHtml(emptyMsg) + '</p>' +
+        '<div class="crm-empty-state__actions">' +
+        '<a class="crm-btn crm-btn--primary crm-btn--lg" href="' + escapeHtml(emptyCta.href) + '">' +
+        escapeHtml(emptyCta.label || t('Open')) + '</a></div></div>';
+      return;
+    }
     renderSuiteTable(mount, items, emptyMsg, t('Items'));
   }
 
@@ -436,7 +479,7 @@
     renderSuiteTable(
       mount.querySelector('[data-crm-pulse-debt]'),
       debt,
-      t('No link debt — nice.'),
+      t('All links set — nice.'),
       t('Missing links'),
     );
   }
@@ -472,28 +515,31 @@
     mount.innerHTML =
       '<section class="crm-card crm-today-role" aria-labelledby="crm-brief-wip-title">' +
       '<header class="crm-card__header"><div class="crm-card__header-text">' +
-      '<h2 id="crm-brief-wip-title" class="crm-card__title">' + escapeHtml(t('Weekly Brief')) + '</h2>' +
+      '<h2 id="crm-brief-wip-title" class="crm-card__title">' + escapeHtml(t('This week')) + '</h2>' +
       '<p class="crm-card__lead">' + escapeHtml(t('This week')) + ': ' + (data.wipUsed || 0) + ' ' +
       escapeHtml(t('of')) + ' ' + (data.wipLimit || 5) + ' ' + escapeHtml(t('promises')) +
-      (data.weekKey ? ' · ' + escapeHtml(data.weekKey) : '') + '</p></div></header>' +
+      (data.weekKey ? ' · ' + escapeHtml(weekOfLabel(data.weekKey)) : '') + '</p></div></header>' +
       (data.forecastDisclaimer
         ? '<div class="crm-card__body"><p class="crm-muted">' + escapeHtml(data.forecastDisclaimer) + '</p></div>'
         : '') +
       '</section>' +
       '<section class="crm-card" aria-labelledby="crm-brief-cash-title">' +
       '<header class="crm-card__header"><h2 id="crm-brief-cash-title" class="crm-card__title">' +
-      escapeHtml(t('Cash calendar')) + '</h2></header>' +
+      escapeHtml(t('Money this month')) + '</h2></header>' +
       '<div class="crm-card__body">' +
-      '<div class="crm-today-role__stats" role="list" aria-label="' + escapeHtml(t('Cash calendar')) + '">' +
+      '<div class="crm-today-role__stats" role="list" aria-label="' + escapeHtml(t('Money this month')) + '">' +
       pulseStat(euros(cash.overdueArCents), t('Money customers still owe')) +
+      pulseStat(euros(cash.expectedInThisMonthCents), t('Expected cash this month')) +
+      pulseStat(euros(cash.renewalsThisMonthCents), t('Renewals this month')) +
+      '</div>' +
+      '<details class="crm-advanced"><summary>' + escapeHtml(t('More money detail')) + '</summary>' +
+      '<div class="crm-today-role__stats" role="list">' +
       pulseStat(euros(cash.arDueThisMonthCents), t('Due this month')) +
       pulseStat(euros(cash.arDueNextMonthCents), t('Due next month')) +
-      pulseStat(euros(cash.renewalsThisMonthCents), t('Renewals this month')) +
       pulseStat(euros(cash.renewalsNextMonthCents), t('Renewals next month')) +
-      pulseStat(euros(cash.expectedInThisMonthCents), t('Expected cash this month')) +
       '</div>' +
       '<p class="crm-muted" role="status">' + escapeHtml(t('Open deals not counted')) + ': ' + euros(cash.pipelineExcludedCents) +
-      ' · ' + escapeHtml(t('Never multiply pipeline by hope.')) + '</p>' +
+      ' · ' + escapeHtml(t('Never multiply pipeline by hope.')) + '</p></details>' +
       '</div></section>' +
       '<section class="crm-card" aria-labelledby="crm-brief-last-title">' +
       '<header class="crm-card__header"><h2 id="crm-brief-last-title" class="crm-card__title">' +
@@ -634,7 +680,7 @@
       suggestHtml += '</div></div>';
     }
 
-    const slotsLead = t('Slots left') + ': ' + String(wipLeft) + '/' + String(wipLimit) +
+    const slotsLead = t('Promises left') + ': ' + String(wipLeft) + '/' + String(wipLimit) +
       '. ' + t('One clear sentence about what you will finish.');
 
     formCard.innerHTML =
@@ -648,7 +694,7 @@
       '<label class="form-label" for="crm-brief-title">' + escapeHtml(t('What will you finish?')) + '</label>' +
       '<input id="crm-brief-title" name="title" type="text" required maxlength="255" ' +
       'class="crm-input form-input" autocomplete="off" aria-describedby="crm-brief-title-help" ' +
-      'placeholder="' + escapeHtml(t('Example: Chase Acme overdue invoice')) + '" />' +
+      'placeholder="' + escapeHtml(t('Example: Follow up Acme overdue invoice')) + '" />' +
       '<p class="form-help" id="crm-brief-title-help">' +
       escapeHtml(t('Name the company or task so your future self understands it.')) + '</p>' +
       '</div>' +
@@ -705,11 +751,14 @@
         : '';
       return {
         title: a.name,
-        meta: (a.gap ? t('Gap') : t('Covered')) +
-          (a.nextTouchOn ? ' · ' + a.nextTouchOn : '') + flags + cover,
+        meta: (a.gap ? t('Needs attention') : t('Up to date')) +
+          (a.nextTouchOn ? ' · ' + formatDisplayDate(a.nextTouchOn) : '') + flags + cover,
         href: OC.generateUrl('/apps/customercheck/companies/' + a.id) + '?workspaceId=' + ws,
       };
-    }), t('No accounts assigned to you yet.'));
+    }), t('No customers assigned to you yet.'), {
+      href: OC.generateUrl('/apps/customercheck/companies') + '?workspaceId=' + ws,
+      label: t('Browse companies'),
+    });
   }
 
   function userPickerFieldHtml(opts) {
@@ -909,7 +958,11 @@
       empty.setAttribute('role', 'status');
       empty.innerHTML =
         '<h3 class="crm-empty-state__title">' + escapeHtml(t('No teammates here yet')) + '</h3>' +
-        '<p class="crm-empty-state__lead">' + escapeHtml(t('Add people to this workspace in Settings, then come back to coach them.')) + '</p>';
+        '<p class="crm-empty-state__text">' + escapeHtml(t('Add people to this workspace in Settings, then come back to help them.')) + '</p>' +
+        '<div class="crm-empty-state__actions">' +
+        '<a class="crm-btn crm-btn--primary crm-btn--lg" href="' +
+        escapeHtml(OC.generateUrl('/apps/customercheck/settings') + '?workspaceId=' + ws) + '">' +
+        escapeHtml(t('Open Settings')) + '</a></div>';
       mount.appendChild(empty);
     } else {
       const wrap = document.createElement('div');
@@ -922,16 +975,17 @@
         '<thead><tr>' +
         '<th scope="col">' + escapeHtml(t('Person')) + '</th>' +
         '<th scope="col">' + escapeHtml(t('Status')) + '</th>' +
-        '<th scope="col">' + escapeHtml(t('Open chase')) + '</th>' +
+        '<th scope="col">' + escapeHtml(t('Open deals')) + '</th>' +
         '<th scope="col">' + escapeHtml(t('Old quotes')) + '</th>' +
-        '<th scope="col">' + escapeHtml(t('Coverage gaps')) + '</th>' +
-        '<th scope="col">' + escapeHtml(t('Overdue promises')) + '</th>' +
-        '<th scope="col">' + escapeHtml(t('Commit pipeline')) + '</th>' +
-        '<th scope="col">' + escapeHtml(t('Out of office')) + '</th>' +
+        '<th scope="col">' + escapeHtml(t('Missing coverage')) + '</th>' +
+        '<th scope="col">' + escapeHtml(t('Overdue work')) + '</th>' +
+        '<th scope="col">' + escapeHtml(t('Away')) + '</th>' +
         '<th scope="col" class="crm-table-actions-col">' + escapeHtml(t('Actions')) + '</th>' +
         '</tr></thead>';
       const tbody = document.createElement('tbody');
+      let stuckCount = 0;
       rows.forEach(function (r) {
+        if (r.stuck) stuckCount += 1;
         const tr = document.createElement('tr');
         const name = r.displayName || r.userId || '';
         const stuckLabel = r.stuck
@@ -952,17 +1006,15 @@
           (r.userId && r.userId !== name ? (' <span class="crm-sr-only">' + escapeHtml(r.userId) + '</span>') : '') +
           '</td>' +
           '<td data-label="' + escapeHtml(t('Status')) + '"><span class="crm-badge crm-badge--' + stuckBadge + '">' + escapeHtml(stuckLabel) + '</span></td>' +
-          '<td data-label="' + escapeHtml(t('Open chase')) + '">' + (r.chase || 0) + '</td>' +
+          '<td data-label="' + escapeHtml(t('Open deals')) + '">' + (r.chase || 0) + '</td>' +
           '<td data-label="' + escapeHtml(t('Old quotes')) + '">' + (r.quote14 || 0) + '</td>' +
-          '<td data-label="' + escapeHtml(t('Coverage gaps')) + '">' + (r.coverageGaps || 0) + '</td>' +
-          '<td data-label="' + escapeHtml(t('Overdue promises')) + '">' + (r.overdueWork || 0) + '</td>' +
-          '<td data-label="' + escapeHtml(t('Commit pipeline')) + '">' + euros(r.commitCents) +
-          ' <span class="crm-sr-only">' + escapeHtml(r.forecastDisclaimer || t('Planning labels — not expected cash.')) + '</span></td>' +
-          '<td data-label="' + escapeHtml(t('Out of office')) + '">' + oooHtml + '</td>' +
+          '<td data-label="' + escapeHtml(t('Missing coverage')) + '">' + (r.coverageGaps || 0) + '</td>' +
+          '<td data-label="' + escapeHtml(t('Overdue work')) + '">' + (r.overdueWork || 0) + '</td>' +
+          '<td data-label="' + escapeHtml(t('Away')) + '">' + oooHtml + '</td>' +
           '<td data-label="' + escapeHtml(t('Actions')) + '" class="crm-table-actions">' +
           (!data.selfOnly
             ? ('<button type="button" class="crm-btn crm-btn--sm crm-btn--secondary" data-crm-one-on-one="' +
-              escapeHtml(r.userId || '') + '">' + escapeHtml(t('1:1 prep')) + '</button> ')
+              escapeHtml(r.userId || '') + '">' + escapeHtml(t('Coach')) + '</button> ')
             : '') +
           '<a class="crm-btn crm-btn--sm crm-btn--ghost" href="#capacity">' + escapeHtml(t('Tools')) + '</a>' +
           '</td>';
@@ -971,10 +1023,12 @@
       table.appendChild(tbody);
       wrap.appendChild(table);
       mount.appendChild(wrap);
-      const note = document.createElement('p');
-      note.className = 'crm-muted crm-team-forecast-note';
-      note.textContent = t('Commit pipeline is a planning label — not expected cash.');
-      mount.appendChild(note);
+      if (stuckCount > 0 && !data.selfOnly) {
+        const shell = document.querySelector('#capacity details.crm-team-capacity-shell');
+        if (shell instanceof HTMLDetailsElement) {
+          shell.open = true;
+        }
+      }
     }
 
     if ((data.escalations || []).length) {
@@ -1139,7 +1193,7 @@
     const chaseLines = (prep.chase || []).slice(0, 8).map(function (d) {
       const reason = chaseReasonLabel(d.primaryReason || '');
       return '<li>' + escapeHtml((d.title || '') + (reason ? ' · ' + reason : '')) + '</li>';
-    }).join('') || '<li class="crm-muted">' + escapeHtml(t('No open chase items.')) + '</li>';
+    }).join('') || '<li class="crm-muted">' + escapeHtml(t('No open follow-ups.')) + '</li>';
     const promiseLines = (prep.promisesDue || []).slice(0, 8).map(function (p) {
       return '<li>' + escapeHtml((p.title || '') + (p.dueOn ? ' · ' + p.dueOn : '')) + '</li>';
     }).join('') || '<li class="crm-muted">' + escapeHtml(t('No overdue promises.')) + '</li>';
@@ -1147,12 +1201,12 @@
     panel.innerHTML =
       '<header class="crm-card__header"><div class="crm-card__header-text">' +
       '<h3 id="crm-11-title" class="crm-card__title">' +
-      escapeHtml(t('1:1 prep') + ' — ' + report) + '</h3>' +
-      '<p class="crm-card__lead">' + escapeHtml(t('Chase and promises for this person — then save what you discussed.')) +
+      escapeHtml(t('Coach') + ' — ' + report) + '</h3>' +
+      '<p class="crm-card__lead">' + escapeHtml(t('Open deals and promises for this person — then save what you discussed.')) +
       '</p></div></header>' +
       '<div class="crm-card__body">' +
       '<div class="crm-11-prep__block">' +
-      '<h4 class="crm-pulse-glance__heading" id="crm-11-chase">' + escapeHtml(t('Chase')) + '</h4>' +
+      '<h4 class="crm-pulse-glance__heading" id="crm-11-chase">' + escapeHtml(t('Open deals')) + '</h4>' +
       '<ul class="crm-list" aria-labelledby="crm-11-chase">' + chaseLines + '</ul></div>' +
       '<div class="crm-11-prep__block">' +
       '<h4 class="crm-pulse-glance__heading" id="crm-11-promises">' + escapeHtml(t('Promises')) + '</h4>' +
@@ -1201,7 +1255,13 @@
     clearMountBusy(mount);
     const items = data.items || [];
     if (!items.length) {
-      mount.innerHTML = '<p class="crm-empty">' + escapeHtml(t('No account plans yet — open a company to add one.')) + '</p>';
+      mount.innerHTML =
+        '<div class="crm-empty-state" role="status">' +
+        '<p class="crm-empty-state__text">' + escapeHtml(t('No account plans yet — open a company to add one.')) + '</p>' +
+        '<div class="crm-empty-state__actions">' +
+        '<a class="crm-btn crm-btn--primary crm-btn--lg" href="' +
+        escapeHtml(OC.generateUrl('/apps/customercheck/companies') + '?workspaceId=' + ws) + '">' +
+        escapeHtml(t('Open companies')) + '</a></div></div>';
       return;
     }
     const ul = document.createElement('ul');
@@ -1211,6 +1271,9 @@
       li.className = 'crm-list__item crm-list__item--stack';
       const companyHref = OC.generateUrl('/apps/customercheck/companies/' + p.companyId) + '?workspaceId=' + ws;
       const companyLabel = p.companyName ? String(p.companyName) : t('Unknown company');
+      const healthLabel = p.healthLabel || p.statusLabel || p.health || '';
+      const priorityLabel = p.priority === 'p1' ? t('High')
+        : (p.priority === 'p3' ? t('Low') : t('Normal'));
       const editBtn = shellCan('write')
         ? ('<button type="button" class="crm-btn crm-btn--secondary" data-edit-plan="' +
           escapeHtml(String(p.companyId)) + '">' + t('Edit') + '</button>')
@@ -1219,8 +1282,8 @@
         '<div class="crm-list__main">' +
         '<strong><a href="' + escapeHtml(companyHref) + '">' +
         escapeHtml(companyLabel) + '</a></strong>' +
-        '<span class="crm-muted"> · ' + escapeHtml((p.health || '') + ' · ' + (p.priority || '') +
-          (p.nextReviewOn ? ' · ' + p.nextReviewOn : '')) + '</span></div>' +
+        '<span class="crm-muted"> · ' + escapeHtml(healthLabel + ' · ' + priorityLabel +
+          (p.nextReviewOn ? ' · ' + formatDisplayDate(p.nextReviewOn) : '')) + '</span></div>' +
         editBtn +
         '<form class="crm-form crm-form--inline" hidden data-plan-form="' +
         escapeHtml(String(p.companyId)) + '" data-plan-updated-at="' + escapeHtml(p.updatedAt || '') +
@@ -1229,9 +1292,9 @@
         escapeHtml(p.goal || '') + '</textarea></label>' +
         '<label>' + t('Priority') +
         '<select name="priority" class="crm-input">' +
-        '<option value="p1"' + (p.priority === 'p1' ? ' selected' : '') + '>P1</option>' +
-        '<option value="p2"' + (p.priority === 'p2' || !p.priority ? ' selected' : '') + '>P2</option>' +
-        '<option value="p3"' + (p.priority === 'p3' ? ' selected' : '') + '>P3</option>' +
+        '<option value="p1"' + (p.priority === 'p1' ? ' selected' : '') + '>' + t('High') + '</option>' +
+        '<option value="p2"' + (p.priority === 'p2' || !p.priority ? ' selected' : '') + '>' + t('Normal') + '</option>' +
+        '<option value="p3"' + (p.priority === 'p3' ? ' selected' : '') + '>' + t('Low') + '</option>' +
         '</select></label>' +
         '<label>' + t('Next review') +
         '<input type="date" name="nextReviewOn" class="crm-input" value="' +
@@ -1558,7 +1621,7 @@
     if (!companyId) {
       clearMountBusy(mount);
       mount.innerHTML = '<div class="crm-callout crm-callout--danger" role="alert"><p>' +
-        escapeHtml(t('Missing company id for prepare meeting.')) + '</p></div>';
+        escapeHtml(t('Pick a company first — then open Prepare meeting from that customer.')) + '</p></div>';
       return;
     }
     const data = await apiGet('/api/v1/companies/' + companyId + '/prepare-meeting');
@@ -1592,7 +1655,7 @@
     covBlock.className = 'crm-card crm-prepare-section';
     covBlock.innerHTML =
       '<header class="crm-card__header"><h3 class="crm-card__title">' + t('Coverage') + '</h3></header>' +
-      '<div class="crm-card__body"><p><span class="crm-badge">' + escapeHtml(cov.gap ? t('Gap') : t('Covered')) + '</span>' +
+      '<div class="crm-card__body"><p><span class="crm-badge">' + escapeHtml(cov.gap ? t('Needs attention') : t('Up to date')) + '</span>' +
       (flagText ? ' <span class="crm-muted">' + escapeHtml(flagText) + '</span>' : '') +
       '</p></div>';
     mount.appendChild(covBlock);
@@ -1607,14 +1670,18 @@
     mount.appendChild(sectionList(t('Communication'), data.communication || [], t('No recent communication.'), function (c) {
       return {
         title: c.subject || c.snippet || c.kindLabel || t('Touch'),
-        meta: [c.occurredAt, c.directionLabel || c.direction, c.kindLabel || c.kind].filter(Boolean).join(' · '),
+        meta: [
+          c.occurredAt ? formatDisplayDate(c.occurredAt) : '',
+          c.directionLabel || c.direction,
+          c.kindLabel || c.kind,
+        ].filter(Boolean).join(' · '),
       };
     }));
 
     mount.appendChild(sectionList(t('Open promises'), data.openPromises || [], t('No open promises.'), function (p) {
       return {
         title: p.title || p.text || t('Promise'),
-        meta: [p.statusLabel || p.status, p.dueOn || p.dueDate].filter(Boolean).join(' · '),
+        meta: [p.statusLabel || p.status, (p.dueOn || p.dueDate) ? formatDisplayDate(p.dueOn || p.dueDate) : ''].filter(Boolean).join(' · '),
       };
     }));
 
@@ -1626,11 +1693,11 @@
     const renBlock = document.createElement('section');
     renBlock.className = 'crm-card crm-prepare-section';
     renBlock.innerHTML =
-      '<header class="crm-card__header"><h3 class="crm-card__title">' + t('Renewals ≤90d') + '</h3></header>' +
+      '<header class="crm-card__header"><h3 class="crm-card__title">' + t('Renewals in the next 90 days') + '</h3></header>' +
       '<div class="crm-card__body">' +
       (ren && (ren.validUntil || ren.daysLeft != null)
         ? '<p>' + escapeHtml(
-          (ren.validUntil ? String(ren.validUntil) : '') +
+          (ren.validUntil ? formatDisplayDate(ren.validUntil) : '') +
           (ren.daysLeft != null ? ' · ' + t('%s days left', [String(ren.daysLeft)]) : '')
         ) + '</p>'
         : '<p class="crm-empty">' + escapeHtml(t('No renewal runway in the next 90 days.')) + '</p>') +
@@ -1700,7 +1767,7 @@
       const a = document.createElement('a');
       a.className = 'crm-btn crm-btn--primary';
       a.href = OC.generateUrl('/apps/customercheck/companies/' + companyId);
-      a.textContent = t('Open company 360');
+      a.textContent = t('Open customer');
       ctaRow.appendChild(a);
     }
     const ctaBody = ctaBlock.querySelector('[data-crm-prepare-cta]');
@@ -1861,7 +1928,7 @@
         const hiddenId = 'crm-review-company-' + item.id;
         let actions = '<span class="crm-muted">' + escapeHtml(t('View only')) + '</span>';
         const terminal = item.status === 'assigned' || item.status === 'no_relation';
-        const overheadHint = escapeHtml(t('Logged without a deal — counts as overhead for chase hygiene, not as finance.'));
+        const overheadHint = escapeHtml(t('Logged without a deal — not counted as sales work.'));
         const ref = item.sourceRef || {};
         const anomalyField = String(ref.fieldKey || '');
         const anomalyRaw = String(ref.raw || item.snippet || '');
@@ -2326,9 +2393,9 @@
       const map = {
         name: t('Name'),
         status: t('Status'),
-        accountOwnerUserId: t('Account owner'),
-        kamTier: t('KAM tier'),
-        touchIntervalDays: t('Touch interval'),
+        accountOwnerUserId: t('Owner'),
+        kamTier: t('Customer priority'),
+        touchIntervalDays: t('Follow-up every (days)'),
         nextTouchOn: t('Next touch'),
         filesFolderId: t('Files folder'),
         title: t('Title'),
@@ -2425,16 +2492,17 @@
       const reasonLabel = document.createElement('label');
       reasonLabel.className = 'form-label';
       reasonLabel.setAttribute('for', 'crm-cf-reason-' + c.id);
-      reasonLabel.textContent = t('Reason (at least 10 characters)');
+      reasonLabel.textContent = t('Short reason');
       body.appendChild(reasonLabel);
       const reason = document.createElement('textarea');
       reason.id = 'crm-cf-reason-' + c.id;
       reason.className = 'form-input crm-input';
       reason.rows = 2;
       reason.required = true;
-      reason.minLength = 10;
+      reason.minLength = 3;
       reason.setAttribute('aria-required', 'true');
       reason.placeholder = t('Why this choice is right…');
+      reason.value = t('Kept what was already saved.');
       body.appendChild(reason);
       const btn = document.createElement('button');
       btn.type = 'button';
@@ -2442,9 +2510,11 @@
       btn.textContent = t('Resolve');
       btn.addEventListener('click', async function () {
         const choices = {};
+        let allKeep = true;
         fields.forEach(function (field) {
           const picked = body.querySelector('input[name="crm-cf-' + c.id + '-' + field + '"]:checked');
           const choice = picked ? picked.value : 'keep_current';
+          if (choice !== 'keep_current') allKeep = false;
           const entry = { choice: choice };
           if (choice === 'manual') {
             const manual = body.querySelector('[data-crm-cf-manual="' + field + '"]');
@@ -2452,10 +2522,14 @@
           }
           choices[field] = entry;
         });
+        let reasonText = (reason.value || '').trim();
+        if (!reasonText && allKeep) {
+          reasonText = t('Kept what was already saved.');
+        }
         try {
           await apiPost('/api/v1/workspaces/' + ws + '/conflicts/' + c.id + '/resolve', {
             choices: choices,
-            reason: reason.value || '',
+            reason: reasonText,
             rowVersion: c.rowVersion || 1,
           });
           await loadConflicts(mount);

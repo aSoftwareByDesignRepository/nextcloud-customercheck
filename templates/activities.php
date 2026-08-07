@@ -22,13 +22,11 @@ include __DIR__ . '/common/page-start.php';
 		<a class="crm-quick-filter<?php if ($filterScope === 'all'): ?> is-active<?php endif; ?>" href="<?php p($activitiesUrl); ?>?scope=all"<?php if ($filterScope === 'all'): ?> aria-current="page"<?php endif; ?>><?php p($l->t('All')); ?></a>
 	</nav>
 	<section id="crm-activities-filter" class="crm-card crm-filter-panel" <?php if (!$filterOpen): ?>hidden<?php endif; ?> aria-labelledby="crm-activities-filter-title">
-		<header class="crm-card__header">
-			<div class="crm-card__header-text">
-				<h2 id="crm-activities-filter-title" class="crm-card__title"><?php p($l->t('Filter activities')); ?></h2>
-				<p class="crm-card__lead"><?php p($l->t('Filter by open/done status and activity type — applies instantly.')); ?></p>
-			</div>
+		<header class="crm-filter-panel__head">
+			<h2 id="crm-activities-filter-title"><?php p($l->t('Filter activities')); ?></h2>
+			<p class="crm-filter-panel__intro"><?php p($l->t('Filter by open/done status and activity type — applies instantly.')); ?></p>
 		</header>
-		<div class="crm-card__body">
+		<div class="crm-filter-panel__body">
 			<form method="get" class="crm-filter-panel__form form" action="<?php p($activitiesUrl); ?>" data-crm-live-filter novalidate>
 				<div class="crm-filter-grid" role="group">
 					<div class="crm-filter-field">
@@ -83,7 +81,6 @@ include __DIR__ . '/common/page-start.php';
 						<th scope="col"><?php p($l->t('Company')); ?></th>
 						<th scope="col"><?php p($l->t('Type')); ?></th>
 						<th scope="col"><?php p($l->t('Due')); ?></th>
-						<th scope="col"><?php p($l->t('Origin')); ?></th>
 						<th scope="col" class="crm-table-actions-col"><?php p($l->t('Actions')); ?></th>
 					</tr></thead>
 					<tbody>
@@ -102,8 +99,16 @@ include __DIR__ . '/common/page-start.php';
 									? $labels->activityType((string)$act['type'])
 									: (string)$act['type']);
 							?></span></td>
-							<td data-label="<?php p($l->t('Due')); ?>"><?php p($act['dueDate'] ?? '—'); ?></td>
-							<td data-label="<?php p($l->t('Origin')); ?>"><?php p(($act['origin'] === 'system' || str_starts_with((string)$act['origin'], 'sequence_')) ? $l->t('Auto') : $l->t('User')); ?></td>
+							<td data-label="<?php p($l->t('Due')); ?>"><?php
+								$dueRaw = (string)($act['dueDate'] ?? '');
+								if ($dueRaw === '') {
+									p('—');
+								} elseif ($labels instanceof \OCA\CustomerCheck\Service\DisplayLabelService) {
+									p($labels->formatDate($dueRaw));
+								} else {
+									p($dueRaw);
+								}
+							?></td>
 							<td data-label="<?php p($l->t('Actions')); ?>" class="actions-cell crm-table-actions-col">
 								<?php if ($canWrite): ?>
 								<div class="crm-table-actions">
@@ -129,8 +134,12 @@ include __DIR__ . '/common/page-start.php';
 	<section class="crm-card">
 		<div class="crm-card__body">
 			<div class="crm-empty-state" role="status">
-				<h3 class="crm-empty-state__title"><?php p($l->t('Inbox is clear')); ?></h3>
-				<p class="crm-empty-state__text"><?php p($l->t('No activities match this filter.')); ?></p>
+				<h3 class="crm-empty-state__title"><?php p($l->t('Nothing open right now')); ?></h3>
+				<p class="crm-empty-state__text"><?php p($l->t('Open a company to add a call, reminder, or to-do — then it shows up here and on Today.')); ?></p>
+				<div class="crm-empty-state__actions">
+					<a class="crm-btn crm-btn--primary crm-btn--lg" href="<?php p($urlGenerator->linkToRoute('customercheck.page.companies')); ?>"><?php p($l->t('Open companies')); ?></a>
+					<a class="crm-btn crm-btn--secondary crm-btn--lg" href="<?php p($urlGenerator->linkToRoute('customercheck.page.today')); ?>"><?php p($l->t('Open Today')); ?></a>
+				</div>
 			</div>
 		</div>
 	</section>

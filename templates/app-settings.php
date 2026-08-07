@@ -60,7 +60,7 @@ include __DIR__ . '/common/page-start.php';
 			<header class="crm-card__header">
 				<div class="crm-card__header-text">
 					<h2 id="section-workspace-settings-link-heading" class="crm-card__title"><?php p($l->t('Workspace settings')); ?></h2>
-					<p class="crm-card__lead"><?php p($l->t('Preferences, members, mailbox, Circles roll-call, and integrations.')); ?></p>
+					<p class="crm-card__lead"><?php p($l->t('Preferences, members, mailbox, weekly promise check, and integrations.')); ?></p>
 				</div>
 			</header>
 			<div class="crm-card__body">

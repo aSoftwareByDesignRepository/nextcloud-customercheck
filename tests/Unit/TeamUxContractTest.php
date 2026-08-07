@@ -18,9 +18,11 @@ final class TeamUxContractTest extends TestCase
 		$this->assertStringContainsString('data-crm-persona-mount="team"', $html);
 		$this->assertStringContainsString('id="capacity"', $html);
 		$this->assertStringContainsString('data-crm-team-capacity', $html);
+		$this->assertStringContainsString('Manager tools', $html);
 		$this->assertStringContainsString('Who needs help', $html);
-		$this->assertStringContainsString('Capacity tools', $html);
 		$this->assertStringContainsString('On track = fine. Needs help = coach them.', $html);
+		$this->assertStringContainsString('Tap Coach', $html);
+		$this->assertStringNotContainsString('Capacity tools', $html);
 		$this->assertStringNotContainsString('Green = fine. Amber = coach.', $html);
 		$this->assertStringNotContainsString('No team rows to show.', $html);
 	}
@@ -38,7 +40,14 @@ final class TeamUxContractTest extends TestCase
 		$this->assertStringContainsString('roleLabel', $js);
 		$this->assertStringContainsString('data-label="', $js);
 		$this->assertStringContainsString('crm-table--responsive', $js);
+		$this->assertStringContainsString('Open deals', $js);
+		$this->assertStringContainsString('Missing coverage', $js);
+		$this->assertStringContainsString("t('Coach')", $js);
+		$this->assertStringNotContainsString("t('1:1 prep')", $js);
+		$this->assertStringNotContainsString("t('No open chase items.')", $js);
 		$this->assertStringContainsString('No teammates here yet', $js);
+		$this->assertStringNotContainsString('Open chase', $js);
+		$this->assertStringNotContainsString('Commit pipeline', $js);
 		$this->assertStringNotContainsString('No team rows to show.', $js);
 		$this->assertStringNotContainsString('Quote ≥14', $js);
 		$this->assertStringNotContainsString('Set OOO cover', $js);

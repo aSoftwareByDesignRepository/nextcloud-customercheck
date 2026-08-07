@@ -25,6 +25,7 @@ test.describe('CustomerCheck extreme simplicity journeys', () => {
     await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
 
     await expect(page.locator('#crm-identity')).toBeVisible();
+    await expect(page.locator('#crm-identity-links')).toBeVisible();
     await expect(page.locator('#crm-contracts')).toBeVisible();
     await expect(page.locator('#crm-persons')).toBeVisible();
     await expect(page.locator('#crm-activities')).toBeVisible();

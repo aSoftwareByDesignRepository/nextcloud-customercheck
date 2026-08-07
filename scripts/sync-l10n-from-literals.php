@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 /**
  * Sync en/de L10n from PHP ->t()/->n() and js/pages t()/tr() literals.
- * German: use existing non-identity DE when present; otherwise apply DE_MAP;
- * remaining multi-word identities fail the contract — map must cover them.
+ *
+ * Catalogs are rebuilt from live literals only (orphans pruned).
+ * German: DE_MAP wins, then existing non-identity DE, else identity.
+ * The DE map itself is pruned to live keys so it cannot reintroduce dead strings.
  */
 
 $root = dirname(__DIR__);
@@ -53,7 +55,7 @@ function extractJs(string $root): array
 				$found[] = stripcslashes($lit);
 			}
 		}
-		if (preg_match_all('/(?<![\\w.])(?:t|tr)\\(\\s*"((?:\\\\"|[^"])*)"\\s*[,)]/', $src, $m)) {
+		if (preg_match_all('/(?<![\\w.])(?:t|tr)\\(\\s*"((?:\\\\"|[^\"])*)"\\s*[,)]/', $src, $m)) {
 			foreach ($m[1] as $lit) {
 				$found[] = stripcslashes($lit);
 			}
@@ -106,36 +108,68 @@ if (!is_file($deMapPath)) {
 /** @var array<string, string> $deMap */
 $deMap = json_decode((string)file_get_contents($deMapPath), true, 512, JSON_THROW_ON_ERROR);
 
-$en = json_decode((string)file_get_contents($root . '/l10n/en.json'), true, 512, JSON_THROW_ON_ERROR);
-$de = json_decode((string)file_get_contents($root . '/l10n/de.json'), true, 512, JSON_THROW_ON_ERROR);
-$enTr = $en['translations'];
-$deTr = $de['translations'];
+$enPrev = json_decode((string)file_get_contents($root . '/l10n/en.json'), true, 512, JSON_THROW_ON_ERROR);
+$dePrev = json_decode((string)file_get_contents($root . '/l10n/de.json'), true, 512, JSON_THROW_ON_ERROR);
+$enOld = is_array($enPrev['translations'] ?? null) ? $enPrev['translations'] : [];
+$deOld = is_array($dePrev['translations'] ?? null) ? $dePrev['translations'] : [];
 
-$added = 0;
+$live = [];
 foreach (array_merge(extractPhp($root), extractJs($root)) as $lit) {
 	if ($lit === '') {
 		continue;
 	}
-	if (!array_key_exists($lit, $enTr)) {
-		$enTr[$lit] = $lit;
+	$live[$lit] = true;
+}
+
+$enTr = [];
+$deTr = [];
+$added = 0;
+$pruned = 0;
+foreach (array_keys($live) as $lit) {
+	$enTr[$lit] = $lit;
+	if (!array_key_exists($lit, $enOld)) {
 		$added++;
 	}
-	if (!array_key_exists($lit, $deTr) || ($deTr[$lit] === $lit && isset($deMap[$lit]))) {
-		$deTr[$lit] = $deMap[$lit] ?? $deTr[$lit] ?? $lit;
-	} elseif (!array_key_exists($lit, $deTr)) {
-		$deTr[$lit] = $deMap[$lit] ?? $lit;
+	if (isset($deMap[$lit])) {
+		$deTr[$lit] = $deMap[$lit];
+	} elseif (array_key_exists($lit, $deOld) && $deOld[$lit] !== $lit) {
+		$deTr[$lit] = $deOld[$lit];
+	} else {
+		$deTr[$lit] = $lit;
+	}
+}
+foreach (array_keys($enOld) as $oldKey) {
+	if (!isset($live[$oldKey])) {
+		$pruned++;
 	}
 }
 
-// Force-apply map over identity multi-word DE
+// Keep DE map limited to live keys so orphans cannot re-enter on the next sync.
+$mapLive = [];
+$mapPruned = 0;
 foreach ($deMap as $k => $v) {
-	if (!array_key_exists($k, $enTr)) {
-		$enTr[$k] = $k;
+	if (isset($live[$k])) {
+		$mapLive[$k] = $v;
+	} else {
+		$mapPruned++;
 	}
-	$deTr[$k] = $v;
 }
+ksort($mapLive, SORT_STRING);
+file_put_contents(
+	$deMapPath,
+	json_encode($mapLive, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n"
+);
 
-writeL10n($root, 'en', $enTr, $en['pluralForm'] ?? null);
-writeL10n($root, 'de', $deTr, $de['pluralForm'] ?? null);
+writeL10n($root, 'en', $enTr, $enPrev['pluralForm'] ?? null);
+writeL10n($root, 'de', $deTr, $dePrev['pluralForm'] ?? null);
 
-fwrite(STDERR, "L10n sync: added $added EN keys; en=" . count($enTr) . ' de=' . count($deTr) . "\n");
+fwrite(
+	STDERR,
+	'L10n sync: added ' . $added
+	. ' EN keys; pruned ' . $pruned
+	. ' orphans; map pruned ' . $mapPruned
+	. '; en=' . count($enTr)
+	. ' de=' . count($deTr)
+	. ' map=' . count($mapLive)
+	. "\n"
+);

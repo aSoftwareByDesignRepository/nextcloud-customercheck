@@ -15,6 +15,7 @@ use OCA\CustomerCheck\Service\DealService;
 use OCA\CustomerCheck\Service\DirectoryOptionsService;
 use OCA\CustomerCheck\Service\DisplayLabelService;
 use OCA\CustomerCheck\Service\FacadeProbeService;
+use OCA\CustomerCheck\Service\IdentityLinkHealthService;
 use OCA\CustomerCheck\Service\LicenseService;
 use OCA\CustomerCheck\Service\MailRelatedService;
 use OCA\CustomerCheck\Service\MoneyService;
@@ -66,6 +67,7 @@ class PageController extends Controller
 		private readonly CirclesDirectoryService $circlesDirectory,
 		private readonly QuotaService $quota,
 		private readonly FacadeProbeService $facades,
+		private readonly IdentityLinkHealthService $identityHealth,
 		private readonly DisplayLabelService $labels,
 		private readonly LicenseService $license,
 		private readonly ProductCodeRegistry $productCodes,
@@ -130,7 +132,7 @@ class PageController extends Controller
 		$this->registerFrontEndAssets('pages/persona');
 		return new TemplateResponse('customercheck', 'pulse', $this->mergeShellPageParams(
 			'pulse',
-			$this->l10n->t('Business Pulse'),
+			$this->l10n->t('Overview'),
 			$this->l10n->t('Companies, money, renewals and missing links — what needs attention.'),
 		));
 	}
@@ -142,7 +144,7 @@ class PageController extends Controller
 		$this->registerFrontEndAssets('pages/persona');
 		return new TemplateResponse('customercheck', 'brief', $this->mergeShellPageParams(
 			'brief',
-			$this->l10n->t('Weekly Brief'),
+			$this->l10n->t('This week'),
 			$this->l10n->t('Commit and verify this week’s owned promises.'),
 		));
 	}
@@ -410,7 +412,7 @@ class PageController extends Controller
 	#[NoCSRFRequired]
 	public function companyDetail(int $id): TemplateResponse
 	{
-		$this->registerFrontEndAssets('pages/company-detail', null, [], ['common/jump-nav', 'common/folder-picker', 'pages/persona']);
+		$this->registerFrontEndAssets('pages/company-detail', null, ['common/identity-links'], ['common/jump-nav', 'common/folder-picker', 'pages/persona']);
 		$company = $this->requireCompanyPage($id);
 		$now = $this->timeFactory->getDateTime();
 		$agreements = [];
@@ -540,6 +542,24 @@ class PageController extends Controller
 			'invoicesHref' => '#crm-invoices',
 			'ticketsHref' => '#crm-tickets',
 		];
+		$identityLinks = $this->identityHealth->classifyCompany($company);
+		// When PC/TC target is broken, do not pretend projects/tickets loaded for a ghost id.
+		if (($identityLinks['pc']['state'] ?? '') === IdentityLinkHealthService::STATE_BROKEN) {
+			$projects = [];
+			$projectError = false;
+			$invoices = [];
+			$invoiceError = false;
+			$density['openProjects'] = 0;
+			$density['unpaidInvoices'] = 0;
+			$density['projectsHref'] = '#crm-identity-links';
+		}
+		if (($identityLinks['tc']['state'] ?? '') === IdentityLinkHealthService::STATE_BROKEN) {
+			$tickets = [];
+			$ticketError = false;
+			$density['openTickets'] = 0;
+			$density['waitingTickets'] = 0;
+			$density['ticketsHref'] = '#crm-identity-links';
+		}
 		// Sibling deep links when the app is usable and we have a linked id
 		// (otherwise stay on-page so muted panels remain reachable).
 		try {
@@ -603,6 +623,11 @@ class PageController extends Controller
 				'pcCustomerId' => $pcCustomerId,
 				'capabilities' => $capabilities,
 				'density' => $density,
+				'identityLinks' => $identityLinks,
+				'pcWriteAvailable' => !empty($capabilities['projectcheckWrite']),
+				'tcWriteAvailable' => !empty($capabilities['ticketcheckWrite']),
+				'mnIdentityAvailable' => $this->facades->maintenancecheckIdentityAvailable(),
+				'companyUpdatedAt' => \OCA\CustomerCheck\Support\OptimisticLock::format($company->getUpdatedAt()),
 				'buyingRoleOptions' => $this->labels->buyingRoleOptions(),
 				'nextTouchOn' => $company->getNextTouchOn()?->format('Y-m-d'),
 				'prepareMeetingUrl' => $this->urlGenerator->linkToRoute(
@@ -707,7 +732,7 @@ class PageController extends Controller
 		}
 		return new TemplateResponse('customercheck', 'pipeline', $this->mergeShellPageParams(
 			'pipeline',
-			$this->l10n->t('Pipeline'),
+			$this->l10n->t('Deals'),
 			$this->l10n->t('All deals — table or board. Each deal has an owner.'),
 			[
 				'deals' => $dealRows,

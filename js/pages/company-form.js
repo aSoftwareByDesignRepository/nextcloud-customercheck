@@ -116,8 +116,54 @@
       } else {
         res = await Api.post('/companies', body);
       }
-      const id = res.data && (res.data.id || (res.data.company && res.data.company.id));
-      window.location.href = OC.generateUrl('/apps/customercheck/companies/' + id);
+      const payload = res.data || {};
+      const id = payload.id || (payload.company && payload.company.id);
+      const companyUrl = OC.generateUrl('/apps/customercheck/companies/' + id);
+      if (payload.renamePushWarning) {
+        const pcSelect = document.getElementById('crm-company-pc');
+        const pcId = (pcSelect && pcSelect.value) ? parseInt(pcSelect.value, 10) : (body.pcCustomerId || 0);
+        const msg = String(payload.renamePushWarning);
+        const openPc = t('Open ProjectCheck');
+        const renameAlert = document.getElementById('crm-rename-push-alert');
+        if (renameAlert) {
+          renameAlert.hidden = false;
+          while (renameAlert.firstChild) {
+            renameAlert.removeChild(renameAlert.firstChild);
+          }
+          const p = document.createElement('p');
+          p.textContent = msg;
+          renameAlert.appendChild(p);
+          if (Number.isFinite(pcId) && pcId > 0) {
+            const a = document.createElement('a');
+            a.className = 'crm-btn crm-btn--secondary';
+            a.style.minHeight = '44px';
+            a.style.display = 'inline-flex';
+            a.style.alignItems = 'center';
+            a.href = OC.generateUrl('/apps/projectcheck/customers/' + pcId);
+            a.textContent = openPc;
+            renameAlert.appendChild(a);
+          }
+          renameAlert.focus();
+        }
+        if (C && typeof C.showConfirmDialog === 'function' && Number.isFinite(pcId) && pcId > 0) {
+          const goPc = await C.showConfirmDialog({
+            title: t('ProjectCheck name not updated'),
+            message: msg,
+            variant: 'warning',
+            confirmLabel: openPc,
+            cancelLabel: t('Continue to company'),
+          });
+          if (goPc) {
+            window.location.href = OC.generateUrl('/apps/projectcheck/customers/' + pcId);
+            return;
+          }
+        } else if (C && typeof C.alertDialog === 'function') {
+          await C.alertDialog({ title: t('ProjectCheck name not updated'), message: msg, variant: 'warning' });
+        } else {
+          window.alert(msg);
+        }
+      }
+      window.location.href = companyUrl;
     } catch (e) {
       errBox.hidden = false;
       errBox.textContent = (e.payload && e.payload.message) || e.message;
@@ -153,18 +199,29 @@
    */
   function wireCreateSibling(pathSuffix, btn, opts) {
     if (!btn || form.dataset.mode !== 'edit' || !form.dataset.id) return;
+    /** @type {string|null} */
+    let pendingKey = null;
 
     async function runCreate(extraBody) {
       errBox.hidden = true;
       while (errBox.firstChild) {
         errBox.removeChild(errBox.firstChild);
       }
+      if (btn.disabled) return;
       btn.disabled = true;
+      btn.setAttribute('aria-busy', 'true');
       try {
         const body = Object.assign({
           updatedAt: form.dataset.updatedAt || null,
         }, extraBody || {});
-        const res = await Api.post('/companies/' + form.dataset.id + pathSuffix, body);
+        if (!pendingKey) {
+          pendingKey = Api.makeIdempotencyKey
+            ? Api.makeIdempotencyKey()
+            : ('idem-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10));
+        }
+        const headers = { 'Idempotency-Key': pendingKey };
+        const res = await Api.post('/companies/' + form.dataset.id + pathSuffix, body, headers);
+        pendingKey = null;
         const company = res.data && (res.data.company || res.data);
         if (company && company.updatedAt) {
           form.dataset.updatedAt = company.updatedAt;
@@ -188,12 +245,14 @@
           linkBtn.addEventListener('click', () => {
             const payload = {};
             payload[opts.bodyKey] = existingId;
+            pendingKey = null; // link is a distinct operation
             runCreate(payload);
           });
           errBox.appendChild(linkBtn);
         }
       } finally {
         btn.disabled = false;
+        btn.setAttribute('aria-busy', 'false');
       }
     }
 

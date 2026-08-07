@@ -364,7 +364,7 @@ class CompanyService
 			throw ValidationException::field(
 				Constants::ERR_VALIDATION,
 				'confirmSlug',
-				$this->l10n->t('Type the company slug "%s" exactly to confirm the move.', [$slug]),
+				$this->l10n->t('Type the short address "%s" exactly to confirm the move.', [$slug]),
 			);
 		}
 
@@ -761,7 +761,7 @@ class CompanyService
 				throw ValidationException::field(
 					Constants::ERR_VALIDATION,
 					'confirmSlug',
-					$this->l10n->t('Type the company slug "%s" exactly to confirm the deletion.', [$slug]),
+					$this->l10n->t('Type the short address "%s" exactly to confirm the deletion.', [$slug]),
 				);
 			}
 

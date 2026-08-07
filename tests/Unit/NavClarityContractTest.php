@@ -52,11 +52,24 @@ final class NavClarityContractTest extends TestCase
 		$this->assertStringContainsString('crm-pipeline-period-custom', $html);
 	}
 
-	public function testPageHelpLeadsWithJob(): void
+	public function testPageHelpLeadsArePlainSentences(): void
 	{
 		$src = (string)file_get_contents(dirname(__DIR__, 2) . '/lib/Service/PageHelpCatalog.php');
-		$this->assertGreaterThanOrEqual(10, substr_count($src, 'Job:'));
-		$this->assertStringContainsString('account owner', $src);
+		$this->assertStringNotContainsString('Job:', $src);
+		$this->assertStringNotContainsString('Aufgabe:', $src);
+		$this->assertStringContainsString('workspace', $src);
+		$this->assertGreaterThanOrEqual(15, substr_count($src, "\$l->t('"));
+	}
+
+	public function testNavUsesOverviewThisWeekAndDeals(): void
+	{
+		$html = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/common/navigation.php');
+		$this->assertStringContainsString("\$l->t('Overview')", $html);
+		$this->assertStringContainsString("\$l->t('This week')", $html);
+		$this->assertStringContainsString("\$l->t('Deals')", $html);
+		$this->assertStringNotContainsString("\$l->t('Pulse')", $html);
+		$this->assertStringNotContainsString("\$l->t('Brief')", $html);
+		$this->assertStringNotContainsString("\$l->t('Pipeline')", $html);
 	}
 
 	public function testTodayTitleMatchesNav(): void
@@ -65,6 +78,11 @@ final class NavClarityContractTest extends TestCase
 		$this->assertStringContainsString("\$this->l10n->t('Today')", $src);
 		$this->assertStringNotContainsString("\$this->l10n->t('Command Board')", $src);
 		$this->assertStringContainsString("\$this->l10n->t('My customers')", $src);
+		$this->assertStringContainsString("\$this->l10n->t('Overview')", $src);
+		$this->assertStringContainsString("\$this->l10n->t('This week')", $src);
+		$this->assertStringContainsString("\$this->l10n->t('Deals')", $src);
+		$this->assertStringNotContainsString("\$this->l10n->t('Business Pulse')", $src);
+		$this->assertStringNotContainsString("\$this->l10n->t('Weekly Brief')", $src);
 		$this->assertStringContainsString('workspaceMemberOptions', $src);
 		$this->assertStringContainsString('WorkspaceService', $src);
 	}

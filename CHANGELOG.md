@@ -3,7 +3,72 @@
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0/).
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## 1.6.16 - 2026-08-03
+
+### UX (Bachus — Review / Conflicts / Import / Settings / Team)
+
+- **Conflicts:** keep-saved prefilled reason; min reason 3 chars; plainer lead
+- **Import:** hide unavailable sources; one-click **Import clear rows**; Open companies after apply
+- **Settings:** mailbox/people before preferences and Review sources; First reply / Calendar feed labels
+- **Team:** Coach (not 1:1 prep); Missing coverage; Manager tools auto-open when someone needs help; no Chase in prep
+- **Copy:** digest/promises plain language; short address confirms; no webhook/SLA jargon in admin tips
+
+## 1.6.15 - 2026-08-03
+
+### Changed
+
+- **L10n hygiene:** sync rebuilds en/de from live PHP/JS literals only (309 orphan keys pruned, including old `Job:` leads); DE map pruned to match; leftover Circles / company-360 wording aligned
+
+## 1.6.14 - 2026-08-03
+
+### UX (Bachus — leftover granny pass)
+
+- **Nav:** Pulse → Overview, Brief → This week, Pipeline → Deals; matching page titles
+- **Page help:** plain one-line leads (no Job: prefix)
+- **Agreements:** Type / Product (no Kind / product-code clutter in the picker)
+- **Prepare / My customers:** Needs attention · Up to date; Open customer; forgiving empty prepare
+- **Settings:** Short address, Today follow-up copy, Website lead/order links, Promises column (not WIP), Weekly promise check
+- E2E + contracts: nav-clarity, a11y smoke extended, ExtremeSimplicity leftovers
+
+## 1.6.13 - 2026-08-03
+
+### UX (Bachus — whole app granny pass)
+
+- **Today:** plain section titles (Follow up on deals, Customers to contact, My promises); CTAs Assign mail / Help teammate / I’ll take it; locale due dates
+- **Money / Activities / Agreements:** empty states with primary CTAs; Activities drops Origin column; localized dues
+- **Import:** human paste placeholder, translated meta (“rows · ready · need a choice”), Accept all clear rows
+- **Team:** lean columns (no Open chase / Commit pipeline); Manager tools collapsed by default
+- **Brief / Pulse / Strategy / Prepare:** week-of label, demoted cash detail, Promises left, High/Normal/Low priorities, Renewals in the next 90 days
+- **Pipeline:** human stage live region; “Quote N days old”
+- Quick starts: Open Today / My customers / Plans (no Command Board jargon)
+- E2E: `bachus-whole-app.spec.js` + axe WCAG 2.1 AA
+
+## 1.6.12 - 2026-08-03
+
+### UX (Bachus — company 360 effortless)
+
+- **After create:** land on company 360 with a clear **Next steps** coach (add person → add deal → log talk)
+- **Empty states:** large in-body CTAs for people, deals, activities, and agreements
+- **Add person / deal:** title/name first; value, products, phone, job title, and buying role under **More options**
+- **Validation:** plain “Almost there / Please fill in…” instead of jargon; native `type=date` pickers kept
+- **Dates:** locale-aware display in glance, feed, tasks, invoices, activities, promises
+- **Copy / DE:** Communication (not Talked), Short address (not Slug), Stop reminders, Email & log hours; fixed broken DE strings
+- Jump bar promotes **Deals**; quick start / page help rewritten for first-run clarity
+- E2E: `bachus-company360.spec.js` + axe WCAG 2.1 AA on core journeys
+
+## 1.6.11 - 2026-08-02
+
+### Changed
+
+- Packaging release: version bump for ready4upload / production archive (local install already at 1.6.10).
+
+## 1.6.10 - 2026-08-02
+
+### Changed
+
+- **German locale:** refreshed `de` catalog after the Universal Review / Conflicts Bachus UX pass.
 
 ## 1.6.9 - 2026-08-02
 

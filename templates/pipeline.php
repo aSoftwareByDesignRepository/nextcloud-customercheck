@@ -73,32 +73,45 @@ include __DIR__ . '/common/page-start.php';
 <div class="crm-page-stack">
 	<p class="crm-muted" role="status" id="crm-forecast-disclaimer"><?php p($forecastDisclaimer); ?></p>
 
-	<section id="crm-pipeline-filter" class="crm-card crm-filter-panel" <?php if ($stageFilter === '' && $periodFilter === ''): ?>hidden<?php endif; ?>>
-		<header class="crm-card__header"><h2 class="crm-card__title"><?php p($l->t('Filter deals')); ?></h2></header>
-		<div class="crm-card__body">
-			<form method="get" class="crm-form" action="<?php p($urlGenerator->linkToRoute('customercheck.page.pipeline')); ?>">
-				<label for="crm-filter-stage" class="form-label"><?php p($l->t('Stage')); ?></label>
-				<select id="crm-filter-stage" name="stage" class="form-select crm-input">
-					<option value=""><?php p($l->t('All stages')); ?></option>
-					<?php foreach ($stages as $s): ?>
-						<option value="<?php p($s); ?>" <?php if ($stageFilter === $s): ?>selected<?php endif; ?>><?php p($stageLabels[$s]); ?></option>
-					<?php endforeach; ?>
-				</select>
-				<label for="crm-filter-period" class="form-label"><?php p($l->t('Period')); ?></label>
-				<select id="crm-filter-period" name="period" class="form-select crm-input">
-					<option value=""><?php p($l->t('Any time')); ?></option>
-					<option value="month" <?php if ($periodFilter === 'month'): ?>selected<?php endif; ?>><?php p($l->t('This month')); ?></option>
-					<option value="quarter" <?php if ($periodFilter === 'quarter'): ?>selected<?php endif; ?>><?php p($l->t('This quarter')); ?></option>
-					<option value="year" <?php if ($periodFilter === 'year'): ?>selected<?php endif; ?>><?php p($l->t('This year')); ?></option>
-					<option value="custom" <?php if ($periodFilter === 'custom'): ?>selected<?php endif; ?>><?php p($l->t('Custom range')); ?></option>
-				</select>
-				<label for="crm-filter-from" class="form-label"><?php p($l->t('From')); ?></label>
-				<input type="date" id="crm-filter-from" name="from" class="form-input crm-input" value="<?php p($periodFrom); ?>" style="min-height:44px">
-				<label for="crm-filter-to" class="form-label"><?php p($l->t('To')); ?></label>
-				<input type="date" id="crm-filter-to" name="to" class="form-input crm-input" value="<?php p($periodTo); ?>" style="min-height:44px">
-				<div class="crm-form-actions">
-					<button type="submit" class="crm-btn crm-btn--primary"><?php p($l->t('Apply')); ?></button>
-					<a class="crm-btn crm-btn--secondary" href="<?php p($urlGenerator->linkToRoute('customercheck.page.pipeline')); ?>"><?php p($l->t('Clear')); ?></a>
+	<section id="crm-pipeline-filter" class="crm-card crm-filter-panel" <?php if ($stageFilter === '' && $periodFilter === ''): ?>hidden<?php endif; ?> aria-labelledby="crm-pipeline-filter-title">
+		<header class="crm-filter-panel__head">
+			<h2 id="crm-pipeline-filter-title"><?php p($l->t('Filter deals')); ?></h2>
+			<p class="crm-filter-panel__intro"><?php p($l->t('Narrow by stage or period, then Apply.')); ?></p>
+		</header>
+		<div class="crm-filter-panel__body">
+			<form method="get" class="crm-filter-panel__form form" action="<?php p($urlGenerator->linkToRoute('customercheck.page.pipeline')); ?>" novalidate>
+				<div class="crm-filter-grid" role="group" aria-label="<?php p($l->t('Filter options')); ?>">
+					<div class="crm-filter-field">
+						<label for="crm-filter-stage" class="form-label"><?php p($l->t('Stage')); ?></label>
+						<select id="crm-filter-stage" name="stage" class="form-select crm-input">
+							<option value=""><?php p($l->t('All stages')); ?></option>
+							<?php foreach ($stages as $s): ?>
+								<option value="<?php p($s); ?>" <?php if ($stageFilter === $s): ?>selected<?php endif; ?>><?php p($stageLabels[$s]); ?></option>
+							<?php endforeach; ?>
+						</select>
+					</div>
+					<div class="crm-filter-field">
+						<label for="crm-filter-period" class="form-label"><?php p($l->t('Period')); ?></label>
+						<select id="crm-filter-period" name="period" class="form-select crm-input">
+							<option value=""><?php p($l->t('Any time')); ?></option>
+							<option value="month" <?php if ($periodFilter === 'month'): ?>selected<?php endif; ?>><?php p($l->t('This month')); ?></option>
+							<option value="quarter" <?php if ($periodFilter === 'quarter'): ?>selected<?php endif; ?>><?php p($l->t('This quarter')); ?></option>
+							<option value="year" <?php if ($periodFilter === 'year'): ?>selected<?php endif; ?>><?php p($l->t('This year')); ?></option>
+							<option value="custom" <?php if ($periodFilter === 'custom'): ?>selected<?php endif; ?>><?php p($l->t('Custom range')); ?></option>
+						</select>
+					</div>
+					<div class="crm-filter-field">
+						<label for="crm-filter-from" class="form-label"><?php p($l->t('From')); ?></label>
+						<input type="date" id="crm-filter-from" name="from" class="form-input crm-input" value="<?php p($periodFrom); ?>">
+					</div>
+					<div class="crm-filter-field">
+						<label for="crm-filter-to" class="form-label"><?php p($l->t('To')); ?></label>
+						<input type="date" id="crm-filter-to" name="to" class="form-input crm-input" value="<?php p($periodTo); ?>">
+					</div>
+					<div class="crm-filter-field crm-filter-field--actions">
+						<button type="submit" class="crm-btn crm-btn--primary"><?php p($l->t('Apply')); ?></button>
+						<a class="crm-btn crm-btn--secondary" href="<?php p($urlGenerator->linkToRoute('customercheck.page.pipeline')); ?>"><?php p($l->t('Clear')); ?></a>
+					</div>
 				</div>
 			</form>
 		</div>
@@ -146,7 +159,7 @@ include __DIR__ . '/common/page-start.php';
 										<p class="crm-muted"><strong><?php p($l->t('Owner')); ?>:</strong> <?php p($ownerLabel !== '' ? $ownerLabel : '—'); ?></p>
 										<p class="crm-muted"><strong><?php p($l->t('Quote age')); ?>:</strong>
 											<?php if ($quoteAge !== null): ?>
-												<?php p($l->t('%s d', [(string)(int)$quoteAge])); ?>
+												<?php p($l->t('%s days', [(string)(int)$quoteAge])); ?>
 											<?php else: ?>
 												—
 											<?php endif; ?>
@@ -294,7 +307,11 @@ include __DIR__ . '/common/page-start.php';
 								$dueDay = substr($dueRaw, 0, 10);
 								$dueDt = \DateTimeImmutable::createFromFormat('Y-m-d', $dueDay) ?: null;
 								$today = new \DateTimeImmutable('today');
-								$dueLabel = $l->t('Due %s', [$dueDay]);
+								$dueLabel = $l->t('Due %s', [
+									$labels instanceof \OCA\CustomerCheck\Service\DisplayLabelService
+										? $labels->formatDate($dueDay)
+										: $dueDay,
+								]);
 								if ($dueDt instanceof \DateTimeImmutable) {
 									$days = (int)$today->diff($dueDt)->format('%r%a');
 									if ($days === 0) {
@@ -312,7 +329,7 @@ include __DIR__ . '/common/page-start.php';
 							<?php endif; ?>
 							<?php if ($quoteAge !== null): ?>
 								<span class="crm-badge <?php echo ((int)$quoteAge >= 14) ? 'crm-badge--warning' : 'crm-badge--neutral'; ?>" title="<?php p($quoteSent); ?>">
-									<?php p($l->t('Quote %s d', [(string)(int)$quoteAge])); ?>
+									<?php p($l->t('Quote %s days old', [(string)(int)$quoteAge])); ?>
 								</span>
 							<?php endif; ?>
 							<?php if ($forecast !== ''): ?>

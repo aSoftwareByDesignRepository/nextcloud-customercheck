@@ -71,7 +71,7 @@ final class PageQuickStartCatalog
 
 		return [
 			'today' => [
-				'lead' => $l->t('Your daily command board — pick one row and finish it.'),
+				'lead' => $l->t('Your daily list — pick one row and finish it.'),
 				'steps' => [
 					[
 						'title' => $l->t('1. Scan the queues'),
@@ -100,11 +100,11 @@ final class PageQuickStartCatalog
 						'title' => $l->t('2. Follow the red flags'),
 						'text' => $l->t('Open anything that looks stuck — then fix it on Today, Team, or Companies.'),
 						'href' => $link('today'),
-						'linkLabel' => $l->t('Open Command Board'),
+						'linkLabel' => $l->t('Open Today'),
 					],
 					[
 						'title' => $l->t('3. Use Money for amounts'),
-						'text' => $l->t('Pulse shows health. Open Money when you need overdue and unpaid details.'),
+						'text' => $l->t('Overview shows health. Open Money when you need overdue and unpaid details.'),
 						'href' => $link('money'),
 						'linkLabel' => $l->t('Open Money'),
 					],
@@ -136,7 +136,7 @@ final class PageQuickStartCatalog
 					],
 					[
 						'title' => $l->t('2. Fix coverage gaps'),
-						'text' => $l->t('Missing economic buyer, champion, or day-to-day contact? Open the company and add people.'),
+						'text' => $l->t('Missing a budget decision-maker, main contact, or day-to-day contact? Open the company and add people.'),
 						'href' => $link('companies'),
 						'linkLabel' => $l->t('Open Companies'),
 					],
@@ -144,7 +144,7 @@ final class PageQuickStartCatalog
 						'title' => $l->t('3. Keep plans alive'),
 						'text' => $l->t('Stalled plans need a next step. Use Strategy for the full plan list.'),
 						'href' => $link('strategy'),
-						'linkLabel' => $l->t('Open Strategy'),
+						'linkLabel' => $l->t('Open Plans'),
 					],
 				],
 			],
@@ -153,11 +153,11 @@ final class PageQuickStartCatalog
 				'steps' => [
 					[
 						'title' => $l->t('1. Spot who needs help'),
-						'text' => $l->t('Amber means coach them. Green means fine. Rows use chase, quotes, promises, and overdue work from this workspace.'),
+						'text' => $l->t('Needs help means coach them. On track means fine. Rows use open deals, quotes, promises, and overdue work from this workspace.'),
 					],
 					[
 						'title' => $l->t('2. Cover while away'),
-						'text' => $l->t('In Capacity tools, pick who is out and who covers. Ownership stays with the primary person.'),
+						'text' => $l->t('In Manager tools, pick who is out and who covers. Ownership stays with the primary person.'),
 					],
 					[
 						'title' => $l->t('3. Move or escalate'),
@@ -180,7 +180,7 @@ final class PageQuickStartCatalog
 						'title' => $l->t('3. Align with owners'),
 						'text' => $l->t('Each plan has an owner. Use My Accounts or Team when someone is behind.'),
 						'href' => $link('myAccounts'),
-						'linkLabel' => $l->t('Open My Accounts'),
+						'linkLabel' => $l->t('Open My customers'),
 					],
 				],
 			],
@@ -231,7 +231,7 @@ final class PageQuickStartCatalog
 					],
 					[
 						'title' => $l->t('2. Choose and resolve'),
-						'text' => $l->t('Keep what’s saved, take the other edit, or type a value. Reason needs at least 10 characters.'),
+						'text' => $l->t('Keep what’s saved, take the other edit, or type a value. A short reason is enough.'),
 					],
 					[
 						'title' => $l->t('3. Back to work'),
@@ -242,7 +242,7 @@ final class PageQuickStartCatalog
 				],
 			],
 			'prepare-meeting' => [
-				'lead' => $l->t('One stack for the next call or QBR — context without tab chaos.'),
+				'lead' => $l->t('One stack for the next call or review meeting — context without tab chaos.'),
 				'steps' => [
 					[
 						'title' => $l->t('1. Skim the stack'),
@@ -278,19 +278,19 @@ final class PageQuickStartCatalog
 				],
 			],
 			'company-detail' => [
-				'lead' => $l->t('Everything about one customer — people, deals, mail, money, plan.'),
+				'lead' => $l->t('This is one customer. Start with a person, then a deal if you have a quote.'),
 				'steps' => [
 					[
-						'title' => $l->t('1. Jump to a section'),
-						'text' => $l->t('Use the jump bar to reach people, pipeline, emails, documents, or the timeline.'),
+						'title' => $l->t('1. Add a person'),
+						'text' => $l->t('Someone you talk to. Name is enough; email lets you log messages.'),
 					],
 					[
-						'title' => $l->t('2. Keep coverage full'),
-						'text' => $l->t('Add economic buyer, champion, and day-to-day contacts so renewals stay safe.'),
+						'title' => $l->t('2. Add a deal (optional)'),
+						'text' => $l->t('A quote or opportunity needs only a title. Value can wait.'),
 					],
 					[
-						'title' => $l->t('3. Link Files'),
-						'text' => $l->t('Browse a Nextcloud folder for contracts and notes — never link the Files home root.'),
+						'title' => $l->t('3. Log what you discussed'),
+						'text' => $l->t('Use Log email or Call tomorrow under Communication after you talk.'),
 					],
 				],
 			],
@@ -307,28 +307,28 @@ final class PageQuickStartCatalog
 					],
 					[
 						'title' => $l->t('3. Save and open 360'),
-						'text' => $l->t('After saving, add people and set buying roles on the company page.'),
+						'text' => $l->t('After saving you land on the customer page — add a person next.'),
 						'href' => $link('companies'),
 						'linkLabel' => $l->t('Back to Companies'),
 					],
 				],
 			],
 			'pipeline' => [
-				'lead' => $l->t('Deals as a table or board — stages, quotes, and honest forecast labels.'),
+				'lead' => $l->t('Deals as a table or board — pick a company, give the deal a title, move the stage.'),
 				'steps' => [
 					[
 						'title' => $l->t('1. Pick table or board'),
 						'text' => $l->t('Deals live in CustomerCheck for this workspace. Use the view that helps you move them.'),
 					],
 					[
-						'title' => $l->t('2. Update stage truthfully'),
-						'text' => $l->t('Commit and Upside are planning labels — not expected cash. Lost deals need a reason code.'),
+						'title' => $l->t('2. New deal = company + title'),
+						'text' => $l->t('That is enough to create one. Value and products stay under More options.'),
 					],
 					[
-						'title' => $l->t('3. Chase old quotes'),
-						'text' => $l->t('Quotes sitting too long show up on Today and Team. Open the deal and follow up or close it.'),
+						'title' => $l->t('3. Follow up on old quotes'),
+						'text' => $l->t('Quotes sitting too long show up on Today. Open the deal and follow up or close it.'),
 						'href' => $link('today'),
-						'linkLabel' => $l->t('Open Command Board'),
+						'linkLabel' => $l->t('Open Today'),
 					],
 				],
 			],
@@ -411,7 +411,7 @@ final class PageQuickStartCatalog
 				'steps' => [
 					[
 						'title' => $l->t('1. Pick a source'),
-						'text' => $l->t('Upload a CSV or pull from ProjectCheck / TicketCheck when those apps are enabled.'),
+						'text' => $l->t('Paste a CSV or pull from ProjectCheck / TicketCheck when those apps are enabled.'),
 					],
 					[
 						'title' => $l->t('2. Preview matches'),
@@ -419,14 +419,14 @@ final class PageQuickStartCatalog
 					],
 					[
 						'title' => $l->t('3. Import, then enrich'),
-						'text' => $l->t('After import, open companies to add people, roles, and folders.'),
+						'text' => $l->t('Tap Import clear rows for ready matches, then open companies to add people.'),
 						'href' => $link('companies'),
 						'linkLabel' => $l->t('Open Companies'),
 					],
 				],
 			],
 			'settings' => [
-				'lead' => $l->t('Workspace members, mailbox, preferences, and sibling apps for this book.'),
+				'lead' => $l->t('Start with people and the shared mailbox — preferences come after.'),
 				'steps' => [
 					[
 						'title' => $l->t('1. Add workspace members'),
@@ -434,26 +434,26 @@ final class PageQuickStartCatalog
 					],
 					[
 						'title' => $l->t('2. Configure mailbox if shared'),
-						'text' => $l->t('Shared mailbox powers Mail triage. Keep credentials in Workspace settings — never in chat.'),
+						'text' => $l->t('Shared mailbox powers Review mail. Keep credentials in Workspace settings — never in chat.'),
 					],
 					[
 						'title' => $l->t('3. Personal preference'),
-						'text' => $l->t('Pick table or board as your default pipeline view. Access policy and seats live under App settings.'),
+						'text' => $l->t('Pick table or board as your default deals view. Access policy and seats live under App settings.'),
 						'href' => $link('appSettings'),
 						'linkLabel' => $l->t('Open App settings'),
 					],
 				],
 			],
 			'app-settings' => [
-				'lead' => $l->t('Who may use CustomerCheck, reminders, tokens, mobile seats, and the agreement catalogue.'),
+				'lead' => $l->t('Who may use CustomerCheck, reminders, public links, mobile seats, and the agreement catalogue.'),
 				'steps' => [
 					[
 						'title' => $l->t('1. Review access'),
 						'text' => $l->t('App administrators always have access. Turn restriction on and allowlist groups or users for everyone else.'),
 					],
 					[
-						'title' => $l->t('2. Rotate tokens when needed'),
-						'text' => $l->t('ICS feed, lead webhook, and order webhook are public URLs. Rotate if a token leaks.'),
+						'title' => $l->t('2. Rotate public links when needed'),
+						'text' => $l->t('Calendar renewal feed and website lead/order links are public URLs. Rotate if a link leaks.'),
 					],
 					[
 						'title' => $l->t('3. Seats and catalogue'),

@@ -26,7 +26,7 @@ use OCP\IL10N;
  *
  * Moves children from source → keeper inside one transaction, archives the
  * source, and writes audit event {@see Constants::EVENT_COMPANY_MERGED} on the
- * keeper. Never cascades into ProjectCheck / InvoicingCheck / TicketCheck.
+ * keeper. Never cascades into ProjectCheck / InvoiceCheck / TicketCheck.
  *
  * Lock order: lower company id first (deadlock avoidance), then child tables
  * by the documented company → deal → agreement → activity/hours → event order.

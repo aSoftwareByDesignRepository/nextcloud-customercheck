@@ -25,13 +25,22 @@ test.describe('Bachus extreme simplicity journeys', () => {
     await expect(chips.first()).toBeVisible();
     await expect(chips).toHaveCount(7);
 
-    // Kind chip filters without dead end.
-    await chips.filter({ hasText: /Shared mail|Freigegebene|Shared/i }).first().click();
-    await page.waitForFunction(() => {
-      const mount = document.querySelector('[data-crm-persona-mount="review"]');
-      return mount && mount.getAttribute('aria-busy') !== 'true';
-    }, null, { timeout: 30000 });
-    await expect(page.locator('#crm-review-disclosure')).toBeVisible();
+    // Kind chip filters without dead end (EN or DE labels).
+    const sharedChip = chips.filter({ hasText: /Shared mail|Gemeinsame|Freigegebene|Shared/i }).first();
+    if (await sharedChip.count()) {
+      await sharedChip.click();
+      await page.waitForFunction(() => {
+        const mount = document.querySelector('[data-crm-persona-mount="review"]');
+        return mount && mount.getAttribute('aria-busy') !== 'true';
+      }, null, { timeout: 30000 });
+      await expect(page.locator('#crm-review-disclosure')).toBeVisible();
+    } else {
+      await chips.first().click();
+      await page.waitForFunction(() => {
+        const mount = document.querySelector('[data-crm-persona-mount="review"]');
+        return mount && mount.getAttribute('aria-busy') !== 'true';
+      }, null, { timeout: 30000 });
+    }
 
     const assignRow = page.locator('form.crm-review-assign').first();
     if (await assignRow.count()) {

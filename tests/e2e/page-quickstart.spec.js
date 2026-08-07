@@ -57,9 +57,9 @@ test.describe('Page Quick start how-tos', () => {
     const tips = page.locator('#crm-quickstart-team');
     await expect(tips).toBeVisible({ timeout: 15000 });
     await expect(tips).toContainText(/who needs help|wer Hilfe braucht|Cover while away|Vertretung|Move or escalate|Verschieben oder eskalieren/i);
-    await expect(page.locator('.crm-page-header__lead')).toContainText(/green|Grün|amber|Amber/i);
+    await expect(page.locator('.crm-page-header__lead')).toContainText(/Needs help|On track|coach|Hilfe|im Plan|workspace|Arbeitsbereich/i);
     await tips.getByRole('button', { name: /Hide tips|Tipps ausblenden/i }).click();
     await expect(tips).toBeHidden();
-    await expect(page.locator('.crm-page-header__lead')).toContainText(/green|Grün|amber|Amber|workspace|Arbeitsbereich/i);
+    await expect(page.locator('.crm-page-header__lead')).toContainText(/Needs help|On track|coach|Hilfe|workspace|Arbeitsbereich/i);
   });
 });

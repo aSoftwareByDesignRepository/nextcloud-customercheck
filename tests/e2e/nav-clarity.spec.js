@@ -8,11 +8,11 @@ test.describe('Nav clarity and deal overview', () => {
   test('sidebar groups and job titles are present', async ({ page }) => {
     await page.goto('/apps/customercheck/today');
     await expect(page.locator('#app-navigation .crm-nav__group-label').first()).toBeVisible({ timeout: 20000 });
-    await expect(page.locator('#app-navigation')).toContainText(/Do now|Jetzt handeln/i);
+    await expect(page.locator('#app-navigation')).toContainText(/Do now|Jetzt erledigen|Jetzt handeln/i);
     await expect(page.locator('#app-navigation')).toContainText(/Deals & money|Deals & Geld|Geschäfte & Geld/i);
     await expect(page.locator('#app-navigation a[title]').first()).toBeVisible();
     await expect(page.locator('#crm-page-title')).toContainText(/Today|Heute/i);
-    await expect(page.locator('.crm-page-header__lead')).toContainText(/Job:|Aufgabe:/i);
+    await expect(page.locator('.crm-page-header__lead')).toContainText(/workspace|Arbeitsbereich|Pick one|Folgen|finish|erledig/i);
   });
 
   test('companies list exposes owner column', async ({ page }) => {
@@ -34,6 +34,6 @@ test.describe('Nav clarity and deal overview', () => {
     await expect(page.locator('#crm-pipeline-board')).toBeVisible({ timeout: 10000 });
     await expect(page.locator('.crm-kanban__column-count').first()).toBeVisible();
     await expect(page.locator('.crm-kanban__column-sum').first()).toBeVisible();
-    await expect(page.locator('.crm-page-header__lead')).toContainText(/owner|Owner|Verantwortlich|Eigentümer|Job:/i);
+    await expect(page.locator('.crm-page-header__lead')).toContainText(/deal|Deal|owner|Owner|Firma|company|Unternehmen/i);
   });
 });

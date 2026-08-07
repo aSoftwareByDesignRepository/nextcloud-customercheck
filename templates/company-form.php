@@ -68,7 +68,7 @@ include __DIR__ . '/common/page-start.php';
 							<textarea class="crm-input form-input" id="crm-company-notes" name="notes" rows="3"><?php p($company ? (string)$company->getNotes() : ''); ?></textarea>
 						</div>
 						<div class="form-group">
-							<label class="form-label" for="crm-company-slug"><?php p($l->t('Slug')); ?></label>
+							<label class="form-label" for="crm-company-slug"><?php p($l->t('Short address')); ?></label>
 							<input class="crm-input form-input" id="crm-company-slug" name="slug" pattern="[a-z0-9-]{3,64}" maxlength="64" value="<?php p($company ? $company->getSlug() : ''); ?>" <?php if ($mode === 'edit'): ?>readonly<?php endif; ?> aria-describedby="crm-company-slug-help" />
 							<p id="crm-company-slug-help" class="form-help"><?php p($l->t('Filled automatically from the name. Lowercase letters, numbers and hyphens.')); ?></p>
 						</div>
@@ -122,6 +122,7 @@ include __DIR__ . '/common/page-start.php';
 					<button type="submit" class="crm-btn crm-btn--primary crm-btn--lg"><?php p($l->t('Save')); ?></button>
 					<a class="crm-btn crm-btn--secondary" href="<?php p($_['urls']['companies'] ?? '#'); ?>"><?php p($l->t('Cancel')); ?></a>
 				</div>
+				<div id="crm-rename-push-alert" class="crm-callout crm-callout--warning" role="alert" tabindex="-1" hidden></div>
 				<div id="crm-company-form-error" class="crm-callout crm-callout--danger" role="alert" hidden></div>
 			</form>
 		</div>

@@ -3,6 +3,8 @@ use OCA\CustomerCheck\Service\IconCatalog;
 use OCP\Util;
 Util::addScript('customercheck', 'common/navigation');
 Util::addScript('customercheck', 'common/navigation-icons');
+// Soft keyboard: keep focused notes/inputs above the IME on phones.
+Util::addScript('customercheck', 'common/keep-focused-visible');
 /** @var array $_ */
 $l = $_['l'];
 $urlGenerator = $_['urlGenerator'];
@@ -146,8 +148,8 @@ $navItem = static function (
 		</li>
 		<?php
 		$navItem($is('today'), $u('today'), 'sun', $l->t('Today'), $l->t('Clear what needs you now'));
-		$navItem($is('pulse'), $u('pulse'), 'activity', $l->t('Pulse'), $l->t('See how the book is doing'));
-		$navItem($is('brief'), $u('brief'), 'clipboard-list', $l->t('Brief'), $l->t('This week’s owned promises'));
+		$navItem($is('pulse'), $u('pulse'), 'activity', $l->t('Overview'), $l->t('See how the book is doing'));
+		$navItem($is('brief'), $u('brief'), 'clipboard-list', $l->t('This week'), $l->t('This week’s owned promises'));
 		?>
 
 		<li class="crm-nav__group">
@@ -158,7 +160,7 @@ $navItem = static function (
 		$navItem($is('companies', 'company-detail', 'company-form', 'prepare-meeting'), $u('companies'), 'building-2', $l->t('Companies'), $l->t('Full customer registry'));
 		$navItem($is('strategy'), $u('strategy'), 'map', $l->t('Plans'), $l->t('Account plans for the book'));
 		if (!empty($_['showTeamNav'])) {
-			$navItem($is('team', 'workload'), $u('team'), 'user-cog', $l->t('Team'), $l->t('Who is stuck — managers only'));
+			$navItem($is('team', 'workload'), $u('team'), 'user-cog', $l->t('Team'), $l->t('Who needs help — managers only'));
 		}
 		?>
 
@@ -166,7 +168,7 @@ $navItem = static function (
 			<span class="crm-nav__group-label" id="crm-nav-group-deals"><?php p($l->t('Deals & money')); ?></span>
 		</li>
 		<?php
-		$navItem($is('pipeline'), $u('pipeline'), 'kanban', $l->t('Pipeline'), $l->t('All deals — table or board'));
+		$navItem($is('pipeline'), $u('pipeline'), 'kanban', $l->t('Deals'), $l->t('All deals — table or board'));
 		$navItem($is('agreements', 'agreement-form'), $u('agreements'), 'file-text', $l->t('Agreements'), $l->t('Licenses and renewals'));
 		$navItem($is('money'), $u('money'), 'coins', $l->t('Money'), $l->t('Invoices and overdue cash'));
 		$navItem($is('activities'), $u('activities'), 'check-square', $l->t('Activities'), $l->t('Logged calls and to-dos'));

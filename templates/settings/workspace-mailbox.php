@@ -8,7 +8,7 @@ $canManageWorkspace = !empty($_['canManageWorkspace']);
 		<header class="crm-card__header">
 			<div class="crm-card__header-text">
 				<h2 id="section-workspace-mailbox-heading" class="crm-card__title"><?php p($l->t('Workspace & mailbox')); ?></h2>
-				<p class="crm-card__lead"><?php p($l->t('Manage members, WIP limits, and connect a shared IMAP mailbox. Only app administrators can create new workspaces.')); ?></p>
+				<p class="crm-card__lead"><?php p($l->t('Manage members, weekly promise limits, and connect a shared mailbox. Only app administrators can create new workspaces.')); ?></p>
 			</div>
 		</header>
 		<div class="crm-card__body">
@@ -23,9 +23,9 @@ $canManageWorkspace = !empty($_['canManageWorkspace']);
 					<input type="text" id="crm-ws-name" name="name" class="form-input crm-input" required maxlength="120" autocomplete="organization">
 				</div>
 				<div class="form-group">
-					<label class="form-label" for="crm-ws-slug"><?php p($l->t('Slug')); ?></label>
+					<label class="form-label" for="crm-ws-slug"><?php p($l->t('Short address')); ?></label>
 					<input type="text" id="crm-ws-slug" name="slug" class="form-input crm-input" required maxlength="64" pattern="[a-z0-9-]{2,64}" autocomplete="off" spellcheck="false">
-					<p class="form-help"><?php p($l->t('Lowercase letters, digits, hyphens.')); ?></p>
+					<p class="form-help"><?php p($l->t('Lowercase letters, digits, and hyphens only — used in links.')); ?></p>
 				</div>
 				<div class="crm-form-actions">
 					<button type="submit" class="crm-btn crm-btn--primary"><?php p($l->t('Create workspace')); ?></button>
@@ -39,19 +39,19 @@ $canManageWorkspace = !empty($_['canManageWorkspace']);
 
 				<form id="crm-ws-settings-form" class="crm-form" novalidate>
 					<div class="form-group">
-						<label class="form-label" for="crm-ws-wip"><?php p($l->t('Weekly WIP limit')); ?></label>
+						<label class="form-label" for="crm-ws-wip"><?php p($l->t('Weekly promise limit')); ?></label>
 						<input type="number" id="crm-ws-wip" name="wipLimit" class="form-input crm-input" min="3" max="15" step="1" required>
 						<p class="form-help"><?php p($l->t('How many new commitments the team may take on each week.')); ?></p>
 					</div>
 					<div class="form-group">
-						<label class="form-label" for="crm-ws-lead-sla"><?php p($l->t('Lead reply SLA (hours)')); ?></label>
+						<label class="form-label" for="crm-ws-lead-sla"><?php p($l->t('First reply within (hours)')); ?></label>
 						<input type="number" id="crm-ws-lead-sla" name="leadSlaHours" class="form-input crm-input" min="1" max="168" step="1" required>
 						<p class="form-help"><?php p($l->t('Website leads must get a first touch within this many hours.')); ?></p>
 					</div>
 					<div class="form-group">
 						<label class="form-label" for="crm-ws-stuck"><?php p($l->t('Quote follow-up after (days)')); ?></label>
 						<input type="number" id="crm-ws-stuck" name="stuckChaseDays" class="form-input crm-input" min="1" max="90" step="1" required>
-						<p class="form-help"><?php p($l->t('Quoted deals without a follow-up show in Chase after this many days.')); ?></p>
+						<p class="form-help"><?php p($l->t('Quoted deals without a follow-up show on Today after this many days.')); ?></p>
 					</div>
 					<div class="form-group">
 						<label class="form-label" for="crm-ws-mail-retention"><?php p($l->t('Shared mail retention (days)')); ?></label>
@@ -63,7 +63,7 @@ $canManageWorkspace = !empty($_['canManageWorkspace']);
 						<span><?php p($l->t('Enable workspace digest')); ?></span>
 					</label>
 					<div class="form-group" id="crm-ws-ics-wrap" hidden>
-						<label class="form-label" for="crm-ws-ics-url"><?php p($l->t('ICS renewal feed (this workspace)')); ?></label>
+						<label class="form-label" for="crm-ws-ics-url"><?php p($l->t('Calendar feed for renewals')); ?></label>
 						<div class="crm-token-row">
 							<input id="crm-ws-ics-url" class="form-input crm-input" type="text" readonly value="">
 							<button type="button" class="crm-btn crm-btn--secondary" data-copy-target="crm-ws-ics-url"><?php p($l->t('Copy')); ?></button>

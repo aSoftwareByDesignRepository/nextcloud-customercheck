@@ -31,7 +31,8 @@ final class JumpNavContractTest extends TestCase
 		foreach (['#crm-glance', '#crm-communication', '#crm-account-plan', '#crm-persons', '#crm-promises', '#crm-contracts', '#crm-open-tasks', '#crm-billing', '#crm-tickets', '#crm-deals', '#crm-projects', '#crm-documents', '#crm-prepare-meeting', '#crm-timeline'] as $href) {
 			$this->assertStringContainsString($href, $html);
 		}
-		$this->assertStringContainsString('Talked', $html);
+		$this->assertStringContainsString('Communication', $html);
+		$this->assertStringNotContainsString("\$l->t('Talked')", $html);
 	}
 
 	public function testBarCssIsChipStripNotSidebarColumn(): void

@@ -13,7 +13,7 @@ use OCP\AppFramework\Utility\ITimeFactory;
  * Money / dunning overview — PSD §8.5 / §9.8 / product §15.3.
  *
  * Groups: overdue, sent (unpaid), paid30d, unknown (invoice_status = none).
- * When InvoicingCheck is available, overdue/paid prefer IC facade summaries and
+ * When InvoiceCheck is available, overdue/paid prefer IC facade summaries and
  * skip CRM-mirror rows that share the same invoiceRef (no double-count).
  *
  * Workspace scoping is mandatory for Pulse / Brief / Money (§20: never blend

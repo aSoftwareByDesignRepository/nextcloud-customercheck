@@ -284,6 +284,42 @@ final class DisplayLabelService
 		return (string)$this->l10n->l('datetime', $at);
 	}
 
+	/**
+	 * Locale-aware calendar date for Y-m-d (or parseable) strings shown in tables.
+	 */
+	public function formatDate(?string $ymd): string
+	{
+		$raw = trim((string)$ymd);
+		if ($raw === '' || $raw === '—') {
+			return '—';
+		}
+		try {
+			$dt = new \DateTimeImmutable($raw);
+		} catch (\Exception) {
+			return $raw;
+		}
+
+		return (string)$this->l10n->l('date', $dt);
+	}
+
+	/**
+	 * Locale-aware date+time for ISO timestamps in feeds and glances.
+	 */
+	public function formatDateTime(?string $iso): string
+	{
+		$raw = trim((string)$iso);
+		if ($raw === '' || $raw === '—') {
+			return '—';
+		}
+		try {
+			$dt = new \DateTimeImmutable($raw);
+		} catch (\Exception) {
+			return $raw;
+		}
+
+		return (string)$this->l10n->l('datetime', $dt);
+	}
+
 	public function personStatus(string $status): string
 	{
 		return match ($status) {

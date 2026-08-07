@@ -40,7 +40,7 @@ final class ContactsPeopleRosterContractTest extends TestCase
 		$this->assertStringContainsString('data-crm-log-email', $detail);
 		$emails = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/common/crm-emails-section.php');
 		$this->assertStringNotContainsString('id="crm-log-email"', $emails);
-		$this->assertStringContainsString('Talked above', $emails);
+		$this->assertStringContainsString('Communication above', $emails);
 	}
 
 	public function testPageControllerHydratesPeopleRoster(): void

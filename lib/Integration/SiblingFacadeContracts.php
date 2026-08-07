@@ -39,6 +39,11 @@ final class SiblingFacadeContracts
 	public const TICKET_CHECK_WRITE_REQUEST = 'OCA\\Ticketcheck\\Public\\CrmHelpdeskWriteRequest';
 	public const TICKET_CHECK_WRITE_MIN_VERSION = 1;
 
+	/** MaintenanceCheck soft-link identity facade (W3). */
+	public const MAINTENANCE_CHECK_APP = 'maintenancecheck';
+	public const MAINTENANCE_CHECK_IDENTITY_FACADE = 'OCA\\MaintenanceCheck\\Public\\CrmFieldCustomerFacade';
+	public const MAINTENANCE_CHECK_IDENTITY_MIN_VERSION = 1;
+
 	private function __construct()
 	{
 	}

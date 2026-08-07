@@ -32,6 +32,7 @@ Part of the Check app family by [Software by Design](https://nextcloud.software-
 - GDPR: user deletion frees companion seats automatically; company data export
   includes merged history. Suite erase order (PC → IC → TC → CUC): see
   [docs/SUITE-GDPR-ERASE.md](docs/SUITE-GDPR-ERASE.md).
+- Shared identity / “two Acme” support: [docs/IDENTITY-SUPPORT-RUNBOOK.md](docs/IDENTITY-SUPPORT-RUNBOOK.md).
 
 ## Requirements
 

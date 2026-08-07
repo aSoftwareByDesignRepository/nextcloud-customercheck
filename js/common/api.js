@@ -34,11 +34,18 @@
 		return path + (path.indexOf('?') >= 0 ? '&' : '?') + 'workspaceId=' + encodeURIComponent(String(ws));
 	}
 
-	async function request(method, path, body) {
+	async function request(method, path, body, extraHeaders) {
 		const headers = {
 			'Accept': 'application/json',
 			'requesttoken': requestToken(),
 		};
+		if (extraHeaders && typeof extraHeaders === 'object') {
+			Object.keys(extraHeaders).forEach((k) => {
+				if (extraHeaders[k] != null && extraHeaders[k] !== '') {
+					headers[k] = String(extraHeaders[k]);
+				}
+			});
+		}
 		const opts = { method: method.toUpperCase(), headers, credentials: 'same-origin' };
 		if (body !== undefined && body !== null) {
 			headers['Content-Type'] = 'application/json';
@@ -63,12 +70,20 @@
 		return payload;
 	}
 
+	function makeIdempotencyKey() {
+		if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+			return crypto.randomUUID();
+		}
+		return 'idem-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
+	}
+
 	window.CustomerCheckApi = {
 		get: (path) => request('GET', path),
-		post: (path, body) => request('POST', path, body),
-		put: (path, body) => request('PUT', path, body),
+		post: (path, body, extraHeaders) => request('POST', path, body, extraHeaders),
+		put: (path, body, extraHeaders) => request('PUT', path, body, extraHeaders),
 		del: (path, body) => request('DELETE', path, body),
 		base: BASE,
 		activeWorkspaceId: activeWorkspaceId,
+		makeIdempotencyKey: makeIdempotencyKey,
 	};
 })();

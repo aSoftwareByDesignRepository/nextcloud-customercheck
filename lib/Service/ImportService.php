@@ -181,6 +181,22 @@ class ImportService
 						'notes' => isset($row['notes']) ? (string)$row['notes'] : null,
 						'workspaceId' => $workspaceId,
 					];
+					// MH-15 / AC-C-17: ProjectCheck import defaults to linked CRM (not orphan twin).
+					// Advanced disclosure may set decision.linkSibling=false to create unlinked.
+					$importSource = (string)($scan['source'] ?? '');
+					$linkOnImport = !is_array($decision) || ($decision['linkSibling'] ?? true) !== false;
+					if ($importSource === 'projectcheck' && $linkOnImport) {
+						$pcId = (int)($row['id'] ?? $row['pcCustomerId'] ?? 0);
+						if ($pcId > 0) {
+							$createInput['pcCustomerId'] = $pcId;
+						}
+					}
+					if ($importSource === 'ticketcheck' && $linkOnImport) {
+						$tcId = (int)($row['id'] ?? $row['tcCustomerId'] ?? 0);
+						if ($tcId > 0) {
+							$createInput['tcCustomerId'] = $tcId;
+						}
+					}
 					$rawCountry = trim((string)($row['country'] ?? ''));
 					if ($rawCountry !== '') {
 						$mapped = $this->valueMaps !== null
@@ -193,7 +209,12 @@ class ImportService
 							$countryAnomaly = $rawCountry;
 						}
 					}
-					$company = $this->companies->create($createInput, $actor);
+					try {
+						$company = $this->companies->create($createInput, $actor);
+					} catch (\OCA\CustomerCheck\Exception\ConflictException $linkConflict) {
+						// Unique pc/tc link already owned — report and skip twin creation.
+						throw $linkConflict;
+					}
 					$companyId = (int)$company->getId();
 					$summary['created']++;
 					$this->maybeCreatePerson($companyId, $row, $actor, $now);
@@ -206,6 +227,26 @@ class ImportService
 							'companyId',
 							$this->l10n->t('That company is not in the current workspace.'),
 						);
+					}
+					$importSource = (string)($scan['source'] ?? '');
+					$linkOnImport = !is_array($decision) || ($decision['linkSibling'] ?? true) !== false;
+					if ($linkOnImport && $importSource === 'projectcheck'
+						&& (int)($company->getPcCustomerId() ?? 0) <= 0) {
+						$pcId = (int)($row['id'] ?? $row['pcCustomerId'] ?? 0);
+						if ($pcId > 0) {
+							$company = $this->companies->update($companyId, [
+								'pcCustomerId' => $pcId,
+							], $actor, null, false, true);
+						}
+					}
+					if ($linkOnImport && $importSource === 'ticketcheck'
+						&& (int)($company->getTcCustomerId() ?? 0) <= 0) {
+						$tcId = (int)($row['id'] ?? $row['tcCustomerId'] ?? 0);
+						if ($tcId > 0) {
+							$company = $this->companies->update($companyId, [
+								'tcCustomerId' => $tcId,
+							], $actor, null, false, true);
+						}
 					}
 					$summary['linked']++;
 				}

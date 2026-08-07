@@ -470,7 +470,7 @@ class PersonaApiController extends Controller
 		try {
 			$uid = $this->access->currentUserId();
 			if (!$this->access->isAppAdmin($uid)) {
-				return $this->fail('WS_ROLE_DENIED', 'Only app administrators can open Circles roll-call.', [], 403);
+				return $this->fail('WS_ROLE_DENIED', 'Only app administrators can open the weekly promise check.', [], 403);
 			}
 			return $this->ok(['items' => $this->circles->build()]);
 		} catch (\Throwable $e) {

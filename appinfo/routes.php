@@ -54,6 +54,10 @@ return [
 		// CORE-APP-PLAN §8.3 canonical write-link paths (aliases of create-*-customer).
 		['name' => 'company_api#linkProjectcheck', 'url' => '/api/v1/companies/{id}/link/projectcheck', 'verb' => 'POST', 'requirements' => ['id' => '\d+']],
 		['name' => 'company_api#linkTicketcheck', 'url' => '/api/v1/companies/{id}/link/ticketcheck', 'verb' => 'POST', 'requirements' => ['id' => '\d+']],
+		['name' => 'company_api#unlinkProjectcheck', 'url' => '/api/v1/companies/{id}/unlink/projectcheck', 'verb' => 'POST', 'requirements' => ['id' => '\d+']],
+		['name' => 'company_api#unlinkTicketcheck', 'url' => '/api/v1/companies/{id}/unlink/ticketcheck', 'verb' => 'POST', 'requirements' => ['id' => '\d+']],
+		['name' => 'company_api#createFieldCustomer', 'url' => '/api/v1/companies/{id}/create-field-customer', 'verb' => 'POST', 'requirements' => ['id' => '\d+']],
+		['name' => 'identity_health_api#summary', 'url' => '/api/v1/admin/identity-health', 'verb' => 'GET'],
 		['name' => 'company_api#export', 'url' => '/api/v1/companies/{id}/export', 'verb' => 'POST', 'requirements' => ['id' => '\d+']],
 		['name' => 'company_api#timeline', 'url' => '/api/v1/companies/{id}/timeline', 'verb' => 'GET', 'requirements' => ['id' => '\d+']],
 

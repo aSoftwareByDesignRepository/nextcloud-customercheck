@@ -25,13 +25,11 @@ include __DIR__ . '/common/page-start.php';
 		<a class="crm-quick-filter<?php if ($filterArchived): ?> is-active<?php endif; ?>" href="<?php p($companiesUrl); ?>?archived=1"<?php if ($filterArchived): ?> aria-current="page"<?php endif; ?>><?php p($l->t('Archived')); ?></a>
 	</nav>
 	<section id="crm-companies-filter" class="crm-card crm-filter-panel" <?php if ($filterQ === '' && $filterStatus === '' && !$filterArchived): ?>hidden<?php endif; ?> aria-labelledby="crm-companies-filter-title">
-		<header class="crm-card__header">
-			<div class="crm-card__header-text">
-				<h2 id="crm-companies-filter-title" class="crm-card__title"><?php p($l->t('Filter companies')); ?></h2>
-				<p class="crm-card__lead"><?php p($l->t('Search by name or pick a status. Changes apply as you type.')); ?></p>
-			</div>
+		<header class="crm-filter-panel__head">
+			<h2 id="crm-companies-filter-title"><?php p($l->t('Filter companies')); ?></h2>
+			<p class="crm-filter-panel__intro"><?php p($l->t('Search by name or pick a status. Changes apply as you type.')); ?></p>
 		</header>
-		<div class="crm-card__body">
+		<div class="crm-filter-panel__body">
 			<form method="get" class="crm-filter-panel__form form" action="<?php p($companiesUrl); ?>" data-crm-live-filter novalidate>
 				<div class="crm-filter-grid" role="group">
 					<div class="crm-filter-field">
@@ -129,7 +127,7 @@ include __DIR__ . '/common/page-start.php';
 						<tr><td class="crm-table-empty" colspan="7">
 							<div class="crm-empty-state" role="status">
 								<h3 class="crm-empty-state__title"><?php p($l->t('No companies yet')); ?></h3>
-								<p class="crm-empty-state__text"><?php p($l->t('Add a company or import a list. ProjectCheck and InvoicingCheck are optional — CustomerCheck works alone.')); ?></p>
+								<p class="crm-empty-state__text"><?php p($l->t('Add a company or import a list. ProjectCheck and InvoiceCheck are optional — CustomerCheck works alone.')); ?></p>
 								<div class="crm-empty-state__actions">
 									<?php if (!empty($_['canWrite'])): ?>
 									<a class="crm-btn crm-btn--primary crm-btn--lg" href="<?php p($_['urls']['companyNew'] ?? '#'); ?>"><?php p($l->t('Add company')); ?></a>

@@ -20,7 +20,7 @@ final class EmailsSectionContractTest extends TestCase
 		$this->assertStringContainsString('sourceLabel', $src);
 		$this->assertStringContainsString('mailRelated', $src);
 		$this->assertStringContainsString('data-crm-mail-mode', $src);
-		$this->assertStringContainsString('Talked above', $src);
+		$this->assertStringContainsString('Communication above', $src);
 		$this->assertStringNotContainsString('id="crm-log-email"', $src);
 	}
 

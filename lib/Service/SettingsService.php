@@ -354,6 +354,7 @@ class SettingsService
 			Constants::CONFIG_DIGEST_ENABLED,
 			Constants::CONFIG_CADENCE_ENABLED,
 			Constants::CONFIG_MAIL_RELATED_ENABLED,
+			Constants::CONFIG_IDENTITY_RENAME_PUSH,
 		], true)) {
 			return $value === '1';
 		}
