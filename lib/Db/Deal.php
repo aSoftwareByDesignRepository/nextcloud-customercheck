@@ -18,6 +18,8 @@ use OCP\DB\Types;
  * @method void setValueCents(int $valueCents)
  * @method string|null getProducts()
  * @method void setProducts(?string $products)
+ * @method string|null getNotes()
+ * @method void setNotes(?string $notes)
  * @method \DateTime|null getExpectedClose()
  * @method void setExpectedClose(?\DateTime $expectedClose)
  * @method \DateTime|null getStageChangedAt()
@@ -58,6 +60,7 @@ class Deal extends Entity
 	protected $stage = 'lead';
 	protected $valueCents = 0;
 	protected $products = null;
+	protected $notes = null;
 	protected $expectedClose = null;
 	protected $stageChangedAt = null;
 	protected $lostReason = null;

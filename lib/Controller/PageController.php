@@ -732,14 +732,7 @@ class PageController extends Controller
 				},
 			));
 		}
-		$companyOptions = [];
-		foreach ($this->companies->search(['workspaceId' => $wsId], 500, 0) as $company) {
-			$companyOptions[] = [
-				'id' => (int)$company->getId(),
-				'name' => (string)$company->getName(),
-				'slug' => (string)$company->getSlug(),
-			];
-		}
+		$companyCount = $this->companies->count(['workspaceId' => $wsId]);
 		return new TemplateResponse('customercheck', 'pipeline', $this->mergeShellPageParams(
 			'pipeline',
 			$this->l10n->t('Deals'),
@@ -751,7 +744,7 @@ class PageController extends Controller
 				'periodFilter' => $periodFilter,
 				'periodFrom' => $periodFromParam,
 				'periodTo' => $periodToParam,
-				'companyOptions' => $companyOptions,
+				'hasCompanies' => $companyCount > 0,
 				'forecastDisclaimer' => $this->l10n->t('Planning labels — not expected cash.'),
 				'lossReasonCodes' => \OCA\CustomerCheck\Constants::LOSS_REASON_CODES,
 				'forecastBuckets' => \OCA\CustomerCheck\Constants::FORECAST_BUCKETS,
@@ -1062,7 +1055,7 @@ class PageController extends Controller
 				'settingsSection' => $section,
 				'settingsSectionLabels' => $settingsSectionLabels,
 				'breadcrumbParent' => [
-					'label' => $this->l10n->t('Workspace settings'),
+					'label' => $this->l10n->t('Team & mailbox'),
 					'url' => $this->urlGenerator->linkToRoute(
 						'customercheck.page.settings',
 						$this->workspaceQueryParams(),

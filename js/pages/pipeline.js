@@ -24,8 +24,50 @@
     }
   }
 
-  function companyOptions() {
-    return parseJsonScript('crm-pipeline-companies');
+  function pipelineHasCompanies() {
+    const btn = document.getElementById('crm-pipeline-new-deal');
+    if (btn && btn.getAttribute('data-has-companies') === '1') {
+      return true;
+    }
+    try {
+      const el = document.getElementById('crm-pipeline-meta');
+      if (!el) return false;
+      const data = JSON.parse(el.textContent || '{}');
+      return !!(data && data.hasCompanies);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function companyNewUrl() {
+    try {
+      const el = document.getElementById('app-content');
+      if (!el) return '';
+      const urls = JSON.parse(String(el.getAttribute('data-crm-urls') || '{}'));
+      return (urls && typeof urls.companyNew === 'string') ? urls.companyNew : '';
+    } catch (e) {
+      return '';
+    }
+  }
+
+  /** Bachus: empty pipeline never dead-ends on an alert — offer Create company. */
+  async function offerCreateCompanyFirst() {
+    const url = companyNewUrl();
+    if (!C) {
+      if (url) {
+        window.location.assign(url);
+      }
+      return;
+    }
+    const go = await C.confirmDialog({
+      title: t('No companies yet'),
+      message: t('Create a company first, then add a deal.'),
+      confirmLabel: t('Create company'),
+      cancelLabel: t('Not now'),
+    });
+    if (go && url) {
+      window.location.assign(url);
+    }
   }
 
   function forecastOptions() {
@@ -413,6 +455,13 @@
     const html =
       '<form id="' + dialogId + '-form" class="crm-form crm-form--stack">' +
       '<p class="crm-muted" role="status">' + escapeHtml(t('Planning labels — not expected cash.')) + '</p>' +
+      '<div class="form-group"><label class="form-label" for="' + dialogId + '-notes">' + escapeHtml(t('Notes')) + '</label>' +
+      '<textarea class="crm-input form-input" id="' + dialogId + '-notes" name="notes" rows="3" maxlength="4000">' +
+      escapeHtml(host.getAttribute('data-notes') || '') + '</textarea>' +
+      '<p class="form-help">' + escapeHtml(t('Internal notes for your team — the customer does not see these.')) + '</p></div>' +
+      '<details class="crm-advanced">' +
+      '<summary class="crm-advanced__summary">' + escapeHtml(t('More options')) + '</summary>' +
+      '<div class="crm-advanced__body">' +
       '<div class="form-group">' +
       '<label class="form-label" for="' + dialogId + '-owner-search">' + escapeHtml(t('Owner')) + '</label>' +
       '<div class="user-picker" id="' + dialogId + '-owner-picker">' +
@@ -443,6 +492,7 @@
       '</div>' +
       '<div class="form-group"><label class="form-label" for="' + dialogId + '-forecast">' + escapeHtml(t('Win chance')) + '</label>' +
       '<select class="crm-input form-select" id="' + dialogId + '-forecast" name="forecastBucket">' + forecastOpts + '</select></div>' +
+      '</div></details>' +
       '<div class="crm-form-actions">' +
       '<button type="submit" class="crm-btn crm-btn--primary">' + escapeHtml(t('Save')) + '</button> ' +
       '<button type="button" class="crm-btn crm-btn--secondary" data-cancel>' + escapeHtml(t('Cancel')) + '</button></div></form>';
@@ -513,6 +563,7 @@
       try {
         const qfid = parseInt(String(quoteFileHidden.value || '0'), 10);
         await Api.put('/deals/' + id, {
+          notes: String(form.elements.notes.value || '').trim(),
           ownerUserId: ownerPicker.selectedUid() || null,
           quoteSentOn: String(form.elements.quoteSentOn.value || '').trim() || null,
           quoteFileId: qfid > 0 ? qfid : null,
@@ -546,45 +597,120 @@
   }
   if (newDealBtn && C) {
     newDealBtn.addEventListener('click', async () => {
-      const options = companyOptions();
-      if (options.length === 0) {
-        await C.alertDialog({
-          title: t('No companies yet'),
-          message: t('Create a company first, then add a deal.'),
-          variant: 'info',
-        });
+      if (!pipelineHasCompanies()) {
+        await offerCreateCompanyFirst();
         return;
       }
       const id = 'crm-new-deal-' + Date.now();
-      const selectHtml = options.map((c) =>
-        '<option value="' + escapeHtml(String(c.id)) + '">' +
-        escapeHtml(String(c.name)) +
-        '</option>'
-      ).join('');
       const html =
-        '<form id="' + id + '-form" class="crm-form crm-form--stack">' +
-        '<div class="form-group"><label class="form-label" for="' + id + '-company">' + t('Company') + '</label>' +
-        '<select class="form-select crm-input" id="' + id + '-company" name="companyId" required>' + selectHtml + '</select></div>' +
-        '<div class="form-group"><label class="form-label" for="' + id + '-title">' + t('What is this deal?') + '</label>' +
-        '<input class="form-input crm-input" id="' + id + '-title" name="title" required maxlength="255" />' +
-        '<p class="form-help">' + t('A title is enough. Value and products are optional.') + '</p></div>' +
-        '<details class="crm-advanced">' +
-        '<summary class="crm-advanced__summary">' + t('More options') + '</summary>' +
-        '<div class="form-group"><label class="form-label" for="' + id + '-value">' + t('Value (EUR, optional)') + '</label>' +
+        '<form id="' + id + '-form" class="crm-form crm-form--stack crm-form--new-deal">' +
+        '<div class="form-group crm-new-deal__company">' +
+        '<span class="form-label" id="' + id + '-company-label">' + escapeHtml(t('Company')) + '</span>' +
+        '<div class="crm-company-picker crm-deal-company-picker" id="' + id + '-company-picker" ' +
+        'aria-labelledby="' + id + '-company-label">' +
+        '<div class="crm-company-choice" id="' + id + '-company-choice" hidden>' +
+        '<div class="crm-company-choice__card">' +
+        '<p class="crm-company-choice__name" id="' + id + '-company-choice-name"></p>' +
+        '<button type="button" class="crm-btn crm-btn--secondary crm-btn--sm crm-company-choice__change" id="' +
+        id + '-company-change">' + escapeHtml(t('Change company')) + '</button>' +
+        '</div></div>' +
+        '<div class="crm-company-browse" id="' + id + '-company-browse">' +
+        '<div class="crm-company-picker__filter-wrap" id="' + id + '-company-filter-wrap" hidden>' +
+        '<label class="visually-hidden" for="' + id + '-company-filter">' +
+        escapeHtml(t('Filter companies')) + '</label>' +
+        '<input type="search" id="' + id + '-company-filter" class="form-input crm-input crm-company-picker__filter" ' +
+        'autocomplete="off" placeholder="' + escapeHtml(t('Search by company name…')) + '" ' +
+        'aria-controls="' + id + '-company-list" /></div>' +
+        '<ul id="' + id + '-company-list" class="crm-company-list" role="listbox" aria-labelledby="' +
+        id + '-company-label"></ul>' +
+        '<p class="crm-muted crm-company-picker__status" id="' + id + '-company-status" role="status" aria-live="polite" hidden></p>' +
+        '</div>' +
+        '<input type="hidden" id="' + id + '-company" name="companyId" value="" required />' +
+        '</div></div>' +
+        '<div class="form-group crm-new-deal__title">' +
+        '<label class="form-label" for="' + id + '-title">' + escapeHtml(t('What is this deal?')) + '</label>' +
+        '<input class="form-input crm-input" id="' + id + '-title" name="title" required maxlength="255" ' +
+        'placeholder="' + escapeHtml(t('e.g. Quote for workshop tools')) + '" />' +
+        '<p class="form-help">' + escapeHtml(t('A title is enough. Value and products are optional.')) + '</p></div>' +
+        '<details class="crm-advanced crm-new-deal__more">' +
+        '<summary class="crm-advanced__summary">' + escapeHtml(t('More options')) + '</summary>' +
+        '<div class="crm-advanced__body">' +
+        '<div class="form-group"><label class="form-label" for="' + id + '-value">' + escapeHtml(t('Value (EUR, optional)')) + '</label>' +
         '<input class="form-input crm-input" id="' + id + '-value" name="valueEur" type="number" min="0" step="0.01" /></div>' +
-        '<div class="form-group"><label class="form-label" for="' + id + '-products">' + t('Products (optional)') + '</label>' +
+        '<div class="form-group"><label class="form-label" for="' + id + '-products">' + escapeHtml(t('Products (optional)')) + '</label>' +
         '<input class="form-input crm-input" id="' + id + '-products" name="products" maxlength="255" /></div>' +
-        '</details>' +
-        '<div class="crm-form-actions">' +
-        '<button type="submit" class="crm-btn crm-btn--primary">' + t('Create deal') + '</button> ' +
-        '<button type="button" class="crm-btn crm-btn--secondary" data-cancel>' + t('Cancel') + '</button></div></form>';
-      C.openDialog({ id: id, title: t('New deal'), content: html, size: 'md' });
+        '</div></details>' +
+        '<div class="crm-form-actions crm-new-deal__actions">' +
+        '<button type="submit" class="crm-btn crm-btn--primary">' + escapeHtml(t('Create deal')) + '</button>' +
+        '<button type="button" class="crm-btn crm-btn--secondary" data-cancel>' + escapeHtml(t('Cancel')) + '</button></div></form>';
+      let companyPanel = null;
+      C.openDialog({
+        id: id,
+        title: t('New deal'),
+        content: html,
+        size: 'md',
+        onClose: () => {
+          if (companyPanel && typeof companyPanel.destroy === 'function') {
+            companyPanel.destroy();
+          }
+          companyPanel = null;
+        },
+      });
       const form = document.getElementById(id + '-form');
-      const close = () => C.closeModal(document.getElementById(id));
+      const dialogEl = document.getElementById(id);
+      if (dialogEl) {
+        dialogEl.classList.add('crm-dialog--new-deal');
+      }
+      const close = () => C.closeModal(dialogEl);
       form.querySelector('[data-cancel]').addEventListener('click', () => close());
       const titleInput = form.elements.title;
-      if (titleInput && typeof titleInput.focus === 'function') {
-        setTimeout(() => titleInput.focus(), 50);
+      const Picker = window.CustomerCheckCompanyPicker;
+      let emptied = false;
+      const focusTitle = () => {
+        if (titleInput && typeof titleInput.focus === 'function') {
+          setTimeout(() => titleInput.focus(), 40);
+        }
+      };
+      if (Picker && typeof Picker.mountListPanel === 'function') {
+        companyPanel = Picker.mountListPanel({
+          listEl: document.getElementById(id + '-company-list'),
+          filterEl: document.getElementById(id + '-company-filter'),
+          filterWrapEl: document.getElementById(id + '-company-filter-wrap'),
+          browseEl: document.getElementById(id + '-company-browse'),
+          choiceEl: document.getElementById(id + '-company-choice'),
+          choiceNameEl: document.getElementById(id + '-company-choice-name'),
+          changeBtn: document.getElementById(id + '-company-change'),
+          hiddenEl: document.getElementById(id + '-company'),
+          statusEl: document.getElementById(id + '-company-status'),
+          api: Api,
+          workspaceIdFn: activeWorkspaceId,
+          t: t,
+          browseLimit: 40,
+          filterMinCount: 8,
+          onReady: async (count) => {
+            if (count > 0) {
+              if (count === 1) {
+                focusTitle();
+              }
+              return;
+            }
+            if (emptied) {
+              return;
+            }
+            emptied = true;
+            if (companyPanel && typeof companyPanel.destroy === 'function') {
+              companyPanel.destroy();
+            }
+            close();
+            await offerCreateCompanyFirst();
+          },
+          onSelect: () => {
+            focusTitle();
+          },
+        });
+      } else {
+        close();
+        await offerCreateCompanyFirst();
       }
       form.addEventListener('submit', async (ev) => {
         ev.preventDefault();
@@ -592,7 +718,7 @@
         if (submitBtn && submitBtn.disabled) {
           return;
         }
-        const companyId = parseInt(form.elements.companyId.value, 10);
+        const companyId = parseInt(String(form.elements.companyId.value || '0'), 10);
         const title = String(form.elements.title.value || '').trim();
         const valueCents = Math.round(parseFloat(form.elements.valueEur.value || '0') * 100) || 0;
         const products = String(form.elements.products.value || '').trim();
@@ -603,6 +729,9 @@
         if (submitBtn) submitBtn.disabled = true;
         try {
           await Api.post('/deals', { companyId, title, stage: 'lead', valueCents, products });
+          if (companyPanel && typeof companyPanel.destroy === 'function') {
+            companyPanel.destroy();
+          }
           close();
           location.reload();
         } catch (e) {

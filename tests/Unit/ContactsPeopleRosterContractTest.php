@@ -26,7 +26,7 @@ final class ContactsPeopleRosterContractTest extends TestCase
 		$this->assertStringContainsString("\$l->t('Log talk')", $html);
 		// Granny: never bury person controls in a More disclosure (scroll-trap).
 		$personsStart = strpos($html, 'id="crm-persons-table"');
-		$personsEnd = strpos($html, 'id="crm-promises"', (int)$personsStart);
+		$personsEnd = strpos($html, 'id="crm-deals"', (int)$personsStart);
 		$this->assertNotFalse($personsStart);
 		$this->assertNotFalse($personsEnd);
 		$personsChunk = substr($html, (int)$personsStart, (int)$personsEnd - (int)$personsStart);

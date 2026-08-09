@@ -43,12 +43,14 @@ trait PageShellTrait
 				$ctx = $this->workspaceAccess->resolveForUser($userId);
 				$workspaceId = (int)$ctx['workspace']->getId();
 				$workspaceName = (string)$ctx['workspace']->getName();
-				$needsPicker = !empty($ctx['needsPicker']);
+				$needsPicker = false;
 				$isAppAdminCtx = !empty($ctx['isAppAdmin']) || $isAdmin;
 				$workspaceRole = WorkspaceCapability::normalizeRole((string)($ctx['role'] ?? 'viewer'));
 				$roleLabel = $this->shellRoleLabel($isAppAdminCtx, $workspaceRole);
 				$roleSlug = $isAppAdminCtx ? 'app-admin' : $workspaceRole;
-				$workspaces = $this->workspaceAccess->listVisibleSummaries($userId);
+				$workspaces = \OCA\CustomerCheck\Constants::MULTI_WORKSPACE_ENABLED
+					? $this->workspaceAccess->listVisibleSummaries($userId)
+					: [];
 			} catch (\Throwable) {
 			}
 		}

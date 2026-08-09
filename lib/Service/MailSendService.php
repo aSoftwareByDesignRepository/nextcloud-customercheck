@@ -375,7 +375,7 @@ class MailSendService
 					Constants::ERR_VALIDATION,
 					'smtp',
 					$decryptFailed
-						? $this->l10n->t('Shared mailbox password could not be decrypted. Re-save the mailbox credentials in Workspace settings.')
+						? $this->l10n->t('Shared mailbox password could not be decrypted. Re-save the mailbox credentials in Team & mailbox.')
 						: $this->l10n->t('Shared mailbox SMTP is configured but the password is missing. Re-save the mailbox credentials.'),
 				);
 			}

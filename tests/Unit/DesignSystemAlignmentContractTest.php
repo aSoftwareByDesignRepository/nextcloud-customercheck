@@ -171,7 +171,7 @@ final class DesignSystemAlignmentContractTest extends TestCase
 			"/createModal\\(options\\s*=\\s*\\{\\}\\)\\s*\\{[\\s\\S]*?createElement\\('dialog'\\)/",
 			$js,
 		);
-		$this->assertStringContainsString("modal.className = `crm-native-dialog modal modal--\${size} crm-dialog`", $js);
+		$this->assertStringContainsString("modal.className = `crm-native-dialog modal modal--\${size} crm-dialog crm-dialog--content`", $js);
 		$this->assertStringContainsString('dataset.azcClosed', $js);
 		$this->assertStringContainsString("settings/review-sources", (string)file_get_contents($this->root . '/js/pages/persona.js'));
 		$this->assertStringNotContainsString('placeholder="DE"', (string)file_get_contents($this->root . '/js/pages/persona.js'));

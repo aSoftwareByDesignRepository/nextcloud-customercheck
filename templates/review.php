@@ -5,7 +5,7 @@ include __DIR__ . '/common/page-start.php';
 $reviewKind = (string)($_['reviewKind'] ?? '');
 ?>
 <div class="crm-page-stack" id="crm-review-root">
-	<p class="crm-callout" role="status" id="crm-review-disclosure"><?php p($l->t('These items come from sources your workspace enabled. Everyone with Review access can see them.')); ?></p>
+	<p class="crm-callout" role="status" id="crm-review-disclosure"><?php p($l->t('These items come from sources your team turned on. Everyone with Review access can see them.')); ?></p>
 	<div
 		class="crm-skeleton crm-persona-mount"
 		data-crm-persona-mount="review"

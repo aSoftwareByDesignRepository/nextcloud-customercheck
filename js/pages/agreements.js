@@ -1,7 +1,10 @@
 (function () {
   'use strict';
   const C = window.CustomerCheckComponents || window.CrmComponents;
-  const t = (msg) => (window.t ? window.t('customercheck', msg) : msg);
+  const t = (msg, args) => (window.t ? window.t('customercheck', msg, args || []) : msg);
+  function escapeHtml(s) {
+    return String(s || '').replace(/[<>&"]/g, (ch) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[ch]));
+  }
   if (C && C.init) { C.init(); }
 
   const toggle = document.getElementById('crm-agreements-filter-toggle');
@@ -26,10 +29,10 @@
       id: id,
       title: t('Log hours'),
       content: '<form id="' + id + '-form" class="crm-form crm-form--stack">' +
-        '<div class="form-group"><label class="form-label" for="' + id + '-date">' + t('Date') + '</label><input class="crm-input form-input" id="' + id + '-date" name="entryDate" type="date" value="' + today + '" required /></div>' +
-        '<div class="form-group"><label class="form-label" for="' + id + '-minutes">' + t('Minutes') + '</label><input class="crm-input form-input" id="' + id + '-minutes" name="minutes" type="number" min="15" step="15" value="60" required /><p class="form-help">' + t('Steps of 15. Default is one hour.') + '</p></div>' +
-        '<div class="form-group"><label class="form-label" for="' + id + '-topic">' + t('Topic') + '</label><input class="crm-input form-input" id="' + id + '-topic" name="topic" required autofocus /></div>' +
-        '<div class="crm-form-actions"><button type="submit" class="crm-btn crm-btn--primary">' + t('Save') + '</button> <button type="button" class="crm-btn crm-btn--secondary" data-cancel>' + t('Cancel') + '</button></div></form>',
+        '<div class="form-group"><label class="form-label" for="' + id + '-date">' + escapeHtml(t('Date')) + '</label><input class="crm-input form-input" id="' + id + '-date" name="entryDate" type="date" value="' + escapeHtml(today) + '" required /></div>' +
+        '<div class="form-group"><label class="form-label" for="' + id + '-minutes">' + escapeHtml(t('Minutes')) + '</label><input class="crm-input form-input" id="' + id + '-minutes" name="minutes" type="number" min="15" step="15" value="60" required /><p class="form-help">' + escapeHtml(t('Steps of 15. Default is one hour.')) + '</p></div>' +
+        '<div class="form-group"><label class="form-label" for="' + id + '-topic">' + escapeHtml(t('Topic')) + '</label><input class="crm-input form-input" id="' + id + '-topic" name="topic" required autofocus /></div>' +
+        '<div class="crm-form-actions"><button type="submit" class="crm-btn crm-btn--primary">' + escapeHtml(t('Save')) + '</button> <button type="button" class="crm-btn crm-btn--secondary" data-cancel>' + escapeHtml(t('Cancel')) + '</button></div></form>',
     });
     const form = document.getElementById(id + '-form');
     const close = () => C.closeModal(document.getElementById(id));

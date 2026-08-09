@@ -81,21 +81,21 @@
       const id = parseInt(String(b.id || 0), 10);
       const label = boxLabel(b);
       const selected = id === preferred ? ' selected' : '';
-      return '<option value="' + id + '"' + selected + '>' + esc(label) + '</option>';
+      return '<option value="' + esc(String(id)) + '"' + selected + '>' + esc(label) + '</option>';
     }).join('');
     return new Promise(function (resolve) {
       C.openDialog({
         id: dialogId,
         title: t('Which shared mailbox?'),
         content:
-          '<form id="' + dialogId + '-form" class="crm-form">' +
-          '<p class="crm-muted">' + esc(t('This workspace has more than one shared mailbox. Pick who the message should send as.')) + '</p>' +
+          '<form id="' + dialogId + '-form" class="crm-form crm-form--stack">' +
+          '<p class="crm-muted">' + esc(t('More than one shared mailbox is connected. Pick who the message should send as.')) + '</p>' +
           '<div class="form-group"><label class="form-label" for="' + dialogId + '-select">' + esc(t('Send as')) + '</label>' +
           '<select id="' + dialogId + '-select" class="crm-input form-select" required>' + options + '</select></div>' +
           '<div class="crm-form-actions">' +
           '<button type="submit" class="crm-btn crm-btn--primary">' + esc(t('Continue')) + '</button> ' +
           '<button type="button" class="crm-btn crm-btn--secondary" data-cancel>' + esc(t('Cancel')) + '</button></div></form>',
-        size: 'sm',
+        size: 'md',
       });
       const form = document.getElementById(dialogId + '-form');
       const close = function () {
@@ -141,7 +141,7 @@
     if (!wsId || !to || !subject) {
       await C.alertDialog({
         title: t('Cannot send'),
-        message: t('Add a contact email and open this company in a workspace first.'),
+        message: t('Add a contact email and open this company first.'),
         variant: 'danger',
       });
       return false;
@@ -162,7 +162,7 @@
     if (boxes.length === 0) {
       await C.alertDialog({
         title: t('No shared mailbox'),
-        message: t('Connect a shared mailbox in Workspace settings, or use Open mail instead.'),
+        message: t('Connect a shared mailbox in Team & mailbox, or use Open mail instead.'),
         variant: 'info',
       });
       return false;
@@ -176,7 +176,7 @@
       : '';
     const ok = await C.confirmDialog({
       title: t('Send from shared mailbox?'),
-      message: t('This sends as %s. Everyone in the workspace who can read mail can see it.', [label]) + attachNote,
+      message: t('This sends as %s. Everyone on the team who can read mail can see it.', [label]) + attachNote,
       confirmLabel: t('Send'),
       cancelLabel: t('Cancel'),
       variant: 'info',
@@ -240,7 +240,7 @@
       title: title,
       content:
         '<div class="crm-callout crm-callout--info" role="status">' +
-        '<p>' + esc(t('Shared mailbox: everyone in this workspace who can read mail can see messages you send from here.')) + '</p>' +
+        '<p>' + esc(t('Shared mailbox: everyone on the team who can read mail can see messages you send from here.')) + '</p>' +
         '</div>' +
         '<p><strong>' + esc((pack && pack.subject) || '') +
         '</strong></p><pre class="crm-pre">' +

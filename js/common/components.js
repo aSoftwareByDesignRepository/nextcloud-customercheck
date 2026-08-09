@@ -499,7 +499,7 @@ const CustomerCheckComponents = {
     } = options;
 
     const modal = document.createElement('dialog');
-    modal.className = `crm-native-dialog modal modal--${size} crm-dialog`;
+    modal.className = `crm-native-dialog modal modal--${size} crm-dialog crm-dialog--content`;
     modal.id = id;
     modal.setAttribute('role', 'dialog');
     modal.setAttribute('aria-modal', 'true');

@@ -508,60 +508,30 @@
 .app-brand__role {
     margin: 0.15rem 0 0;
     font-size: var(--crm-fs-xs, 0.75rem);
-    line-height: var(--crm-line-base, 1.45);
+    line-height: var(--crm-line-base, 1.4);
     color: var(--crm-muted, var(--color-text-maxcontrast));
 }
 
-/* Workspace switcher — labelled disclosure (WCAG 3.2.2: no select-on-change navigate) */
+.crm-nav__role {
+    margin: 0.5rem 0 0;
+    font-size: var(--crm-fs-xs, 0.75rem);
+    line-height: var(--crm-line-base, 1.4);
+    color: var(--crm-muted, var(--color-text-maxcontrast));
+}
+
+/* Multi-workspace switcher retired (single organisation). Keep selectors for contract/CSS hygiene. */
 .crm-workspace-switcher {
-    display: flex;
-    flex-direction: column;
-    gap: var(--crm-space-1);
-    min-width: 0;
+    display: none !important;
 }
 
 .crm-workspace-switcher__label {
     margin: 0;
     font-size: var(--crm-fs-xs, 0.75rem);
     font-weight: 600;
-    letter-spacing: 0.02em;
-    text-transform: uppercase;
-    color: var(--crm-muted, var(--color-text-maxcontrast));
 }
 
-.crm-workspace-switcher__current,
 .crm-workspace-switcher__trigger {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    width: 100%;
     min-height: 44px;
-    margin: 0;
-    padding: 0.55rem 0.75rem;
-    text-align: start;
-    border: 1px solid var(--crm-border, var(--color-border));
-    border-radius: var(--crm-radius-md, 12px);
-    background: var(--crm-bg-soft, var(--color-background-hover));
-    color: var(--crm-text, var(--color-main-text));
-    box-sizing: border-box;
-}
-
-/* Single-workspace card stacks name over role, same as the multi trigger text. */
-.crm-workspace-switcher__current {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.1rem;
-}
-
-.crm-workspace-switcher__trigger {
-    cursor: pointer;
-    font: inherit;
-    transition: border-color 0.15s ease, background-color 0.15s ease;
-}
-
-.crm-workspace-switcher__trigger:hover {
-    border-color: color-mix(in srgb, var(--color-primary-element) 40%, var(--color-border));
-    background: color-mix(in srgb, var(--color-primary-element) 8%, var(--color-main-background));
 }
 
 .crm-workspace-switcher__trigger:focus-visible,
@@ -570,137 +540,13 @@
     outline-offset: 2px;
 }
 
-.crm-workspace-switcher__trigger[aria-expanded="true"] {
-    border-color: color-mix(in srgb, var(--color-primary-element) 55%, var(--color-border));
-    background: color-mix(in srgb, var(--color-primary-element) 10%, var(--color-main-background));
-}
-
-.crm-workspace-switcher__trigger-text {
-    flex: 1 1 auto;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0.1rem;
-}
-
-.crm-workspace-switcher__name {
-    display: block;
-    font-size: var(--crm-fs-sm, 0.9375rem);
-    font-weight: 650;
-    line-height: var(--crm-line-tight, 1.25);
-    color: var(--crm-text, var(--color-main-text));
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.crm-workspace-switcher__role {
-    display: block;
-    font-size: var(--crm-fs-xs, 0.75rem);
-    line-height: var(--crm-line-base, 1.4);
-    color: var(--crm-muted, var(--color-text-maxcontrast));
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.crm-workspace-switcher__chevron {
-    flex: 0 0 auto;
-    display: inline-flex;
-    color: var(--crm-muted, var(--color-text-maxcontrast));
-    transition: transform 0.15s ease;
-}
-
-.crm-workspace-switcher__chevron .crm-icon,
-.crm-workspace-switcher__chevron .crm-nav__icon-svg {
-    width: 1.125rem;
-    height: 1.125rem;
-}
-
-.crm-workspace-switcher__trigger[aria-expanded="true"] .crm-workspace-switcher__chevron {
-    transform: rotate(180deg);
-}
-
-.crm-workspace-switcher__menu {
-    list-style: none;
-    margin: 0;
-    padding: var(--crm-space-1);
-    border: 1px solid var(--crm-border, var(--color-border));
-    border-radius: var(--crm-radius-md, 12px);
-    background: var(--crm-bg-card, var(--color-main-background));
-    box-shadow: 0 8px 24px color-mix(in srgb, var(--color-main-text) 12%, transparent);
-    max-height: min(16rem, 40vh);
-    overflow: auto;
-}
-
-.crm-workspace-switcher__menu[hidden] {
-    display: none !important;
-}
-
-.crm-workspace-switcher__option {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 0.5rem;
-    min-height: 44px;
-    padding: 0.55rem 0.65rem;
-    border-radius: calc(var(--crm-radius-md, 12px) - 2px);
-    text-decoration: none;
-    color: var(--crm-text, var(--color-main-text));
-}
-
-.crm-workspace-switcher__option:hover {
-    background: color-mix(in srgb, var(--color-primary-element) 10%, var(--color-main-background));
-}
-
-.crm-workspace-switcher__option.is-active {
-    background: color-mix(in srgb, var(--color-primary-element) 16%, var(--color-main-background));
-    font-weight: 650;
-}
-
-.crm-workspace-switcher__option-name {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.crm-workspace-switcher__option-meta {
-    flex: 0 0 auto;
-    font-size: var(--crm-fs-xs, 0.75rem);
-    color: var(--crm-muted, var(--color-text-maxcontrast));
-}
-
-.crm-workspace-switcher__hint {
-    margin: 0.15rem 0 0;
-    font-size: var(--crm-fs-xs, 0.75rem);
-    line-height: var(--crm-line-base, 1.45);
-    color: var(--color-primary-element);
-}
-
-.crm-workspace-switcher__empty {
-    margin: 0;
-    padding: 0.65rem 0.75rem;
-    min-height: 44px;
-    border: 1px dashed var(--crm-border, var(--color-border));
-    border-radius: var(--crm-radius-md, 12px);
-    font-size: var(--crm-fs-sm, 0.9375rem);
-    color: var(--crm-muted, var(--color-text-maxcontrast));
-    box-sizing: border-box;
-}
-
-.crm-workspace-switcher--needs-picker .crm-workspace-switcher__trigger,
-.crm-workspace-switcher--needs-picker .crm-workspace-switcher__current {
-    border-color: color-mix(in srgb, var(--color-primary-element) 50%, var(--color-border));
-    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-primary-element) 25%, transparent);
-}
-
 @media (prefers-reduced-motion: reduce) {
     .crm-workspace-switcher__trigger,
     .crm-workspace-switcher__chevron {
         transition: none;
     }
 }
+
 
 /* Sidebar Footer */
 .sidebar-footer {

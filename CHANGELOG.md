@@ -5,6 +5,60 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.6.44 - 2026-08-09
+
+### UX (Bachus — Company 360 radical simplicity)
+
+- Phone tasks collapsed by default; Reminders use Title+Due+Done (type under More on add)
+- 1-click Renew (confirm with end date + amount; no 3-field form); Cancel asks for a reason once
+- Command-center hydrate failure shows Try again on Talk / Phone tasks / Money (not only Glance)
+- Prepare meeting + Timeline collapsed; document Create/Unlink under More
+- Jump label “Phone tasks”; primary CTA “Add reminder”
+
+## 1.6.43 - 2026-08-09
+
+### UX (Bachus — single-org plain language)
+
+- Page leads drop “workspace / customer book” jargon
+- Nav no longer shows “Your role”; Company 360 drops the role badge
+- Team & mailbox: hide `#id · role` chrome; members show name + plain role (Look only / Can edit / Can manage team)
+- Shared mailbox: essentials first; IMAP/SMTP under Advanced; plain shared-inbox confirmation
+- Review sources: “Scan as teammate”; softer privacy checkbox copy
+- Mail triage / Review disclosures speak about the team, not a workspace
+
+## 1.6.42 - 2026-08-09
+
+### UX (Company 360 — granny simplicity)
+
+- **Deal notes** on create/edit (team-only, ≤4000 chars) with preview under the deal title
+- **Edit deal** works on Company 360 (was a dead button — handler lived only on Pipeline)
+- Stop reminders moved under **More** so each deal row has one primary action
+- “How to use this page” is a compact callout instead of a full card
+- Linked-app KPI strip collapses when everything is calm (expand on demand)
+- German Company 360 copy normalised to consistent **du** (no formal Sie mix on primary flows)
+
+### Security / reliability
+
+- Deal notes included in conflict snapshots / optimistic-lock patches
+- Notes cleared on empty string; GDPR export includes deal notes; mobile serialisation includes notes
+- Migration `Version1010Date20260809210000` adds `crm_deal.notes`
+
+## 1.6.41 - 2026-08-09
+
+### Removed / simplified (single organisation)
+
+- Multi-workspace UX is retired: no switcher, no “Create workspace”, no “Move to workspace”
+- Creating additional workspaces and moving companies between books is blocked server-side (`MULTI_WORKSPACE_ENABLED=false`, max 1 book)
+- Settings renamed to **Team & mailbox**; ACL still uses the default organisation workspace under the hood
+
+### Security / reliability (single organisation)
+
+- Create is serialized with an exclusive lock + DB transaction (no empty-table TOCTOU double-book)
+- `BootstrapDefaultWorkspace` promotes an existing row instead of inserting a second Default
+- Persona API rejects create/move at the controller (defense in depth)
+- Ambient resolve + mobile list pin to the canonical organisation; `needsPicker` stays false
+- Mutation suite `tests/Mutation/run-single-org-mutations.php` guards the fail-closed locks
+
 ## 1.6.40 - 2026-08-08
 
 ### Theme / responsive / a11y (Aristoteles)

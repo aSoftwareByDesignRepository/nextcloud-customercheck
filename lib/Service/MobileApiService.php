@@ -247,6 +247,7 @@ class MobileApiService
 			'companyId' => (int)$deal->getCompanyId(),
 			'valueCents' => (int)$deal->getValueCents(),
 			'products' => $deal->getProducts(),
+			'notes' => $deal->getNotes(),
 			'expectedClose' => $deal->getExpectedClose()?->format('Y-m-d'),
 			'stageChangedAt' => OptimisticLock::format($deal->getStageChangedAt()),
 			'lostReason' => $deal->getLostReason(),

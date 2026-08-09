@@ -16,7 +16,7 @@ $stageLabels = [
 	'won' => $l->t('Won'),
 	'lost' => $l->t('Lost'),
 ];
-$companyOptions = $_['companyOptions'] ?? [];
+$hasCompanies = !empty($_['hasCompanies']);
 $forecastDisclaimer = (string)($_['forecastDisclaimer'] ?? $l->t('Planning labels — not expected cash.'));
 $forecastBucketOptions = $_['forecastBucketOptions'] ?? [];
 $lossReasonCodeOptions = $_['lossReasonCodeOptions'] ?? [];
@@ -25,8 +25,8 @@ $labels = $_['labels'] ?? null;
 $canWrite = !empty($_['canWrite']);
 include __DIR__ . '/common/page-start.php';
 ?>
-<script type="application/json" id="crm-pipeline-companies"><?php
-	echo json_encode($companyOptions, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR);
+<script type="application/json" id="crm-pipeline-meta"><?php
+	echo json_encode(['hasCompanies' => $hasCompanies], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR);
 ?></script>
 <script type="application/json" id="crm-pipeline-forecast-options"><?php
 	echo json_encode($forecastBucketOptions, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR);
@@ -65,7 +65,7 @@ include __DIR__ . '/common/page-start.php';
 	</div>
 	<button type="button" class="crm-btn crm-btn--secondary" id="crm-pipeline-filter-toggle" aria-expanded="false" aria-controls="crm-pipeline-filter"><?php p($l->t('Filter')); ?></button>
 	<?php if (!empty($_['canWrite'])): ?>
-	<button type="button" class="crm-btn crm-btn--primary" id="crm-pipeline-new-deal"><?php p($l->t('New deal')); ?></button>
+	<button type="button" class="crm-btn crm-btn--primary" id="crm-pipeline-new-deal" data-has-companies="<?php p($hasCompanies ? '1' : '0'); ?>"><?php p($l->t('New deal')); ?></button>
 	<?php endif; ?>
 </div>
 <div class="crm-page-stack">
@@ -141,6 +141,7 @@ include __DIR__ . '/common/page-start.php';
 							data-company-id="<?php p($d['companyId']); ?>"
 							data-value-cents="<?php p($d['valueCents'] ?? 0); ?>"
 							data-products="<?php p($d['products'] ?? ''); ?>"
+							data-notes="<?php p((string)($d['notes'] ?? '')); ?>"
 							data-owner-user-id="<?php p($owner); ?>"
 							data-owner-display-name="<?php p($ownerLabel); ?>"
 							data-quote-sent-on="<?php p($quoteSent); ?>"
@@ -218,10 +219,18 @@ include __DIR__ . '/common/page-start.php';
 						<tr>
 							<td colspan="5">
 								<div class="crm-empty-state" role="status">
+									<?php if (!$hasCompanies): ?>
+									<h3 class="crm-empty-state__title"><?php p($l->t('No companies yet')); ?></h3>
+									<p class="crm-empty-state__text"><?php p($l->t('Create a company first, then add a deal.')); ?></p>
+									<?php if (!empty($_['canWrite'])): ?>
+										<a class="crm-btn crm-btn--primary crm-btn--lg" href="<?php p($urls['companyNew'] ?? '#'); ?>"><?php p($l->t('Create company')); ?></a>
+									<?php endif; ?>
+									<?php else: ?>
 									<h3 class="crm-empty-state__title"><?php p($l->t('No deals yet')); ?></h3>
 									<p class="crm-empty-state__text"><?php p($l->t('A deal is a quote or opportunity. Tap New deal to add one.')); ?></p>
 									<?php if (!empty($_['canWrite'])): ?>
-										<button type="button" class="crm-btn crm-btn--primary" id="crm-pipeline-empty-new"><?php p($l->t('New deal')); ?></button>
+										<button type="button" class="crm-btn crm-btn--primary crm-btn--lg" id="crm-pipeline-empty-new"><?php p($l->t('New deal')); ?></button>
+									<?php endif; ?>
 									<?php endif; ?>
 								</div>
 							</td>
@@ -282,6 +291,7 @@ include __DIR__ . '/common/page-start.php';
 							data-company-id="<?php p($d['companyId']); ?>"
 							data-value-cents="<?php p($d['valueCents'] ?? 0); ?>"
 							data-products="<?php p($d['products'] ?? ''); ?>"
+							data-notes="<?php p((string)($d['notes'] ?? '')); ?>"
 							data-owner-user-id="<?php p($owner); ?>"
 							data-owner-display-name="<?php p($ownerLabel); ?>"
 							data-quote-sent-on="<?php p($quoteSent); ?>"

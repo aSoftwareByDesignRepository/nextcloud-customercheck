@@ -99,6 +99,13 @@ class PersonaApiController extends Controller
 	{
 		try {
 			$uid = $this->access->currentUserId();
+			if (!Constants::MULTI_WORKSPACE_ENABLED && $this->workspaceService->listAll() !== []) {
+				throw ValidationException::field(
+					Constants::ERR_WS_LIMIT,
+					'workspace',
+					$this->l10n->t('CustomerCheck uses a single organisation. Additional workspaces cannot be created.'),
+				);
+			}
 			$body = $this->requestBody();
 			$ws = $this->workspaceService->create(
 				(string)($body['name'] ?? ''),
@@ -528,6 +535,13 @@ class PersonaApiController extends Controller
 	public function moveCompany(int $companyId): JSONResponse
 	{
 		try {
+			if (!Constants::MULTI_WORKSPACE_ENABLED) {
+				throw ValidationException::field(
+					Constants::ERR_WS_LIMIT,
+					'workspaceId',
+					$this->l10n->t('CustomerCheck uses a single organisation. Companies cannot be moved between workspaces.'),
+				);
+			}
 			$uid = $this->access->currentUserId();
 			$body = $this->requestBody();
 			$toWs = (int)($body['workspaceId'] ?? 0);

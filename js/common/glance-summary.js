@@ -181,13 +181,16 @@
 
   /**
    * XSS-safe mount: textContent only. Preserves .crm-glance-dl for e2e / contracts.
+   * Uses div/span tiles (not dt/dd) so meta lines stay WCAG-valid — axe rejects
+   * div>p inside dl wrappers (definition-list / only-dlitems).
    */
   function renderGlanceSummaryTiles(body, tiles, t) {
     if (!body) {
       return;
     }
-    const strip = document.createElement('dl');
+    const strip = document.createElement('div');
     strip.className = 'crm-glance-dl crm-stat-strip';
+    strip.setAttribute('role', 'list');
     strip.setAttribute('aria-label', t('At a glance'));
 
     (Array.isArray(tiles) ? tiles : []).forEach(function (tile) {
@@ -197,22 +200,22 @@
       const tone = sanitizeGlanceTone(tile.tone);
       const wrap = document.createElement('div');
       wrap.className = 'crm-stat-tile crm-stat-tile--' + tone;
-      wrap.setAttribute('role', 'group');
+      wrap.setAttribute('role', 'listitem');
 
-      const dt = document.createElement('dt');
-      dt.className = 'crm-stat-tile__label';
-      dt.textContent = String(tile.label || '');
+      const label = document.createElement('span');
+      label.className = 'crm-stat-tile__label';
+      label.textContent = String(tile.label || '');
 
-      const dd = document.createElement('dd');
-      dd.className = 'crm-stat-tile__value';
-      dd.textContent = String(tile.value || '—');
+      const value = document.createElement('span');
+      value.className = 'crm-stat-tile__value';
+      value.textContent = String(tile.value || '—');
 
-      wrap.appendChild(dt);
-      wrap.appendChild(dd);
+      wrap.appendChild(label);
+      wrap.appendChild(value);
 
       const meta = String(tile.meta || '').trim();
       if (meta) {
-        const metaEl = document.createElement('p');
+        const metaEl = document.createElement('span');
         metaEl.className = 'crm-stat-tile__meta';
         metaEl.textContent = meta;
         wrap.appendChild(metaEl);

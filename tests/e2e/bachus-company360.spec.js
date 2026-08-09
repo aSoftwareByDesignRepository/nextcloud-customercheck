@@ -24,9 +24,15 @@ test.describe('Bachus company 360 effortless flows', () => {
 
     await expect(page.locator('#crm-welcome-coach')).toBeVisible();
     await expect(page.locator('#crm-welcome-coach')).toContainText(/Next steps|Nächste Schritte/i);
+    await expect(page.locator('#crm-welcome-coach .crm-welcome-coach__step')).toHaveCount(3);
+    await expect(page.locator('#crm-welcome-coach [data-crm-trigger="crm-add-person"]')).toBeVisible();
+    await expect(page.locator('#crm-welcome-coach [data-crm-trigger="crm-add-deal"]')).toBeVisible();
+    await expect(page.locator('#crm-welcome-coach [data-crm-trigger="crm-schedule-callback"]')).toBeVisible();
+    await expect(page.locator('#crm-persons .crm-empty-state [data-crm-trigger="crm-add-person"]')).toHaveCount(0);
+    await expect(page.locator('#crm-360-role-title')).toHaveCount(0);
 
-    // Empty-state CTA opens the same Add person modal (name required only).
-    await page.locator('#crm-persons .crm-empty-state [data-crm-trigger="crm-add-person"]').click();
+    // Coach CTA opens Add person (name required only).
+    await page.locator('#crm-welcome-coach [data-crm-trigger="crm-add-person"]').click();
     let form = page.locator('form[id^="crm-prompt-"]');
     await expect(form).toBeVisible({ timeout: 10000 });
     await expect(form.locator('[name="name"]')).toBeVisible();
@@ -49,23 +55,43 @@ test.describe('Bachus company 360 effortless flows', () => {
     await expect(page.locator('#crm-glance-summary')).not.toContainText(/^Gap$/i);
     await expect(page.locator('#crm-glance')).toBeVisible();
 
-    // Deal: title only under progressive disclosure.
-    await page.locator('#crm-deals .crm-empty-state [data-crm-trigger="crm-add-deal"]').click();
+    // Deal: title-only primary; notes + value stay under progressive disclosure.
+    await page.locator('#crm-welcome-coach [data-crm-trigger="crm-add-deal"]').click();
     form = page.locator('form[id^="crm-prompt-"]');
     await expect(form).toBeVisible({ timeout: 10000 });
     await expect(form.locator('[name="title"]')).toBeVisible();
     await expect(form.locator('details.crm-advanced')).not.toHaveAttribute('open', '');
+    await expect(form.locator('[name="notes"]')).toBeAttached();
     await expect(form.locator('[name="valueEur"]')).toBeAttached();
     await form.locator('[name="title"]').fill(`Quote ${suffix}`);
+    await form.locator('details.crm-advanced summary').click();
+    await form.locator('[name="notes"]').fill(`Team note ${suffix}`);
     await form.locator('button[type="submit"]').click();
     await page.waitForLoadState('networkidle');
-    await expect(page.locator('#crm-deals table')).toContainText(`Quote ${suffix}`, { timeout: 15000 });
+    await expect(page.locator('#crm-deals-table')).toContainText(`Quote ${suffix}`, { timeout: 15000 });
+    await expect(page.locator('#crm-deals-table')).toContainText(`Team note ${suffix}`);
     await expect(page.locator('#crm-welcome-coach')).toHaveCount(0);
 
-    // Activity due date uses native date picker (locale-aware chrome).
+    // Edit deal works on 360 (notes persist) — not a dead button.
+    await page.locator('#crm-deals-table [data-crm-edit-chase]').first().click();
+    form = page.locator('form[id^="crm-prompt-"]');
+    await expect(form).toBeVisible({ timeout: 10000 });
+    await expect(form.locator('[name="notes"]')).toHaveValue(`Team note ${suffix}`);
+    await form.locator('[name="notes"]').fill(`Updated note ${suffix}`);
+    await form.locator('button[type="submit"]').click();
+    await page.waitForLoadState('networkidle');
+    await expect(page.locator('#crm-deals-table')).toContainText(`Updated note ${suffix}`, { timeout: 15000 });
+
+    // Stop reminders lives under More — one primary action per row.
+    await expect(page.locator('#crm-deals-table .crm-table-actions > [data-crm-dismiss-followups]')).toHaveCount(0);
+    await expect(page.locator('#crm-deals-table .crm-more-menu [data-crm-dismiss-followups]')).toHaveCount(1);
+
+    // Reminder due date uses native date picker; type stays under More.
     await page.locator('#crm-add-activity').click();
     form = page.locator('form[id^="crm-prompt-"]');
     await expect(form).toBeVisible({ timeout: 10000 });
+    await expect(form.locator('details.crm-advanced')).not.toHaveAttribute('open', '');
+    await expect(form.locator('[name="type"]')).toBeAttached();
     const due = form.locator('[name="dueDate"]');
     await expect(due).toHaveAttribute('type', 'date');
     const today = new Date().toISOString().slice(0, 10);
@@ -75,7 +101,7 @@ test.describe('Bachus company 360 effortless flows', () => {
     await page.waitForLoadState('networkidle');
     await expect(page.locator('#crm-activities')).toBeVisible();
     // Localized date should not be raw ISO-only in common locales (may still contain digits).
-    const dueCell = page.locator('#crm-activities table tbody tr').first().locator('td').nth(2);
+    const dueCell = page.locator('#crm-activities table tbody tr').first().locator('td').nth(1);
     await expect(dueCell).toBeVisible();
     const dueText = (await dueCell.innerText()).trim();
     expect(dueText === '' || dueText === '—').toBeFalsy();
@@ -102,8 +128,11 @@ test.describe('Bachus company 360 effortless flows', () => {
     await newDeal.click();
     const form = page.locator('form[id^="crm-new-deal-"]');
     await expect(form).toBeVisible({ timeout: 10000 });
+    await expect(form.locator('.crm-deal-company-picker')).toBeVisible();
+    await expect(form.locator('.crm-company-list, .crm-company-choice:not([hidden])').first()).toBeVisible();
     await expect(form.locator('[name="title"]')).toBeVisible();
     await expect(form.locator('details.crm-advanced')).not.toHaveAttribute('open', '');
+    await expect(form.locator('.crm-advanced__body')).toBeAttached();
     await expect(form.getByText(/Products \/ SKUs|Produkte\/SKUs/i)).toHaveCount(0);
     await form.locator('[data-cancel]').click();
 

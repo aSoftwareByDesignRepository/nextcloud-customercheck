@@ -10,17 +10,21 @@ use OCA\CustomerCheck\Db\WorkspaceMapper;
 use OCA\CustomerCheck\Db\WorkspaceMember;
 use OCA\CustomerCheck\Db\WorkspaceMemberMapper;
 use OCA\CustomerCheck\Exception\ValidationException;
+use OCA\CustomerCheck\Support\DbTransaction;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\IDBConnection;
 use OCP\IGroupManager;
 use OCP\IL10N;
 use OCP\IUserManager;
+use OCP\Lock\ILockingProvider;
 
 /**
  * Workspace CRUD + membership — product §6.
  */
 class WorkspaceService
 {
+	private const CREATE_LOCK_KEY = 'customercheck/workspace_create';
+
 	public function __construct(
 		private readonly WorkspaceMapper $workspaces,
 		private readonly WorkspaceMemberMapper $members,
@@ -31,6 +35,7 @@ class WorkspaceService
 		private readonly IUserManager $userManager,
 		private readonly IGroupManager $groupManager,
 		private readonly CirclesDirectoryService $circles,
+		private readonly ILockingProvider $locking,
 	) {
 	}
 
@@ -71,9 +76,6 @@ class WorkspaceService
 		if (!$this->access->isAppAdmin($actor)) {
 			throw ValidationException::field(Constants::ERR_WS_ROLE, 'role', $this->l10n->t('Only app administrators can create workspaces.'));
 		}
-		if ($this->workspaces->countAll() >= Constants::WS_MAX_PER_INSTANCE) {
-			throw ValidationException::field(Constants::ERR_WS_LIMIT, 'workspace', $this->l10n->t('Workspace limit reached.'));
-		}
 		$slug = strtolower(trim($slug));
 		if (!preg_match('/^[a-z0-9-]{3,64}$/', $slug)) {
 			throw ValidationException::field(Constants::ERR_VALIDATION, 'slug', $this->l10n->t('Workspace slug must be 3–64 characters: a–z, 0–9, hyphen.'));
@@ -83,20 +85,45 @@ class WorkspaceService
 			throw ValidationException::field(Constants::ERR_VALIDATION, 'name', $this->l10n->t('Enter a workspace name.'));
 		}
 
-		$now = $this->timeFactory->getDateTime();
-		$ws = new Workspace();
-		$ws->setSlug($slug);
-		$ws->setName($name);
-		$ws->setIsDefault(0);
-		$ws->setCreatedBy($actor);
-		$ws->setCreatedAt($now);
-		$ws->setUpdatedAt($now);
-		$ws = $this->workspaces->insert($ws);
+		$this->locking->acquireLock(self::CREATE_LOCK_KEY, ILockingProvider::LOCK_EXCLUSIVE);
+		$ownsTxn = false;
+		try {
+			$ownsTxn = DbTransaction::begin($this->db);
+			$existing = $this->workspaces->countAll();
+			if (!Constants::MULTI_WORKSPACE_ENABLED && $existing >= 1) {
+				throw ValidationException::field(
+					Constants::ERR_WS_LIMIT,
+					'workspace',
+					$this->l10n->t('CustomerCheck uses a single organisation. Additional workspaces cannot be created.'),
+				);
+			}
+			if ($existing >= Constants::WS_MAX_PER_INSTANCE) {
+				throw ValidationException::field(Constants::ERR_WS_LIMIT, 'workspace', $this->l10n->t('Workspace limit reached.'));
+			}
 
-		$this->addMember((int)$ws->getId(), $actor, 'manager', true, $actor);
-		$this->ensureSettingsRow((int)$ws->getId());
+			$now = $this->timeFactory->getDateTime();
+			$ws = new Workspace();
+			$ws->setSlug($slug);
+			$ws->setName($name);
+			// First book becomes the Default organisation when multi-workspace is off.
+			$ws->setIsDefault((!Constants::MULTI_WORKSPACE_ENABLED && $existing === 0) ? 1 : 0);
+			$ws->setCreatedBy($actor);
+			$ws->setCreatedAt($now);
+			$ws->setUpdatedAt($now);
+			$ws = $this->workspaces->insert($ws);
 
-		return $ws;
+			$this->addMember((int)$ws->getId(), $actor, 'manager', true, $actor);
+			$this->ensureSettingsRow((int)$ws->getId());
+			DbTransaction::commit($this->db, $ownsTxn);
+			$ownsTxn = false;
+
+			return $ws;
+		} catch (\Throwable $e) {
+			DbTransaction::rollBack($this->db, $ownsTxn);
+			throw $e;
+		} finally {
+			$this->locking->releaseLock(self::CREATE_LOCK_KEY, ILockingProvider::LOCK_EXCLUSIVE);
+		}
 	}
 
 	public function addMember(int $workspaceId, string $userId, string $role, bool $canMailSend, string $actor): WorkspaceMember

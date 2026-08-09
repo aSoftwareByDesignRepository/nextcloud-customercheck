@@ -23,19 +23,35 @@ test.describe('Granny-simple company 360', () => {
     await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
 
     await expect(page.locator('#crm-welcome-coach')).toBeVisible();
-    await expect(page.locator('#crm-persons .crm-empty-state [data-crm-trigger="crm-add-person"]')).toBeVisible();
-    await expect(page.locator('#crm-deals .crm-empty-state [data-crm-trigger="crm-add-deal"]')).toBeVisible();
+    await expect(page.locator('#crm-welcome-coach .crm-welcome-coach__steps')).toBeVisible();
+    await expect(page.locator('#crm-welcome-coach .crm-welcome-coach__step')).toHaveCount(3);
+    await expect(page.locator('#crm-welcome-coach [data-crm-trigger="crm-add-person"]')).toBeVisible();
+    await expect(page.locator('#crm-welcome-coach [data-crm-trigger="crm-add-deal"]')).toBeVisible();
+    // Coach owns CTAs — empty states stay calm (no duplicate Add buttons).
+    await expect(page.locator('#crm-persons .crm-empty-state [data-crm-trigger="crm-add-person"]')).toHaveCount(0);
+    await expect(page.locator('#crm-deals .crm-empty-state [data-crm-trigger="crm-add-deal"]')).toHaveCount(0);
+    await expect(page.locator('#crm-360-role-title')).toHaveCount(0);
+    // Fresh company: no email yet → coach step 3 is Call tomorrow (never a dead-end Log email).
+    await expect(page.locator('#crm-welcome-coach [data-crm-trigger="crm-schedule-callback"]')).toBeVisible();
+    await expect(page.locator('#crm-welcome-coach [data-crm-trigger="crm-log-email"]')).toHaveCount(0);
     await expect(page.locator('#crm-log-email')).toBeVisible();
     await expect(page.locator('#crm-log-email')).toHaveCount(1);
     await expect(page.locator('#crm-schedule-callback')).toContainText(/Call tomorrow|Morgen anrufen/i);
     await expect(page.locator('#crm-account-plan')).toBeVisible();
     await expect(page.locator('#crm-account-plan')).not.toHaveAttribute('open', '');
+    await page.locator('#crm-account-plan > summary').click();
+    await expect(page.locator('#crm-account-plan')).toHaveAttribute('open', '');
+    await expect(page.locator('#crm-account-plan-form')).toBeVisible({ timeout: 20000 });
+    await expect(page.locator('#crm-account-plan-body')).not.toContainText(/Loading account plan|Account-Plan wird geladen/i);
+    await expect(page.locator('#crm-plan-goal')).toBeVisible();
+    await expect(page.locator('#crm-plan-priority')).toBeVisible();
+    await expect(page.locator('#crm-account-plan-form button[type="submit"]')).toBeVisible();
     await expect(page.locator('#crm-promises .crm-card__lead')).toContainText(/What you told the customer|Was ihr dem Kunden zugesagt habt/);
     await expect(page.locator('#crm-promises .crm-card__lead')).not.toContainText(/WIP/i);
     await expect(page.getByText(/Evidence \(what was delivered|Nachweis \(was wurde geliefert/i)).toHaveCount(0);
 
-    // Add a person so the flat roster is exercised (no More scroll-trap).
-    await page.locator('#crm-persons .crm-empty-state [data-crm-trigger="crm-add-person"]').click();
+    // Add a person via the coach (single CTA owner — empty state has no duplicate).
+    await page.locator('#crm-welcome-coach [data-crm-trigger="crm-add-person"]').click();
     const personForm = page.locator('form[id^="crm-prompt-"]');
     await expect(personForm).toBeVisible({ timeout: 10000 });
     await personForm.locator('[name="name"]').fill(`Granny Person ${suffix}`);
@@ -53,14 +69,17 @@ test.describe('Granny-simple company 360', () => {
     const primary = personsTable.locator('tbody tr').first().locator('.crm-table-actions .crm-btn--primary').first();
     await expect(primary).toBeVisible();
     await expect(primary).toContainText(/Log talk|Gespräch|Open in Contacts|Kontakte/i);
+    await expect(primary).toHaveAttribute('data-crm-trigger', 'crm-log-email');
     // Opening the primary CTA must not create a horizontal scroll gutter on the table wrap.
     const scrollBefore = await personsTable.evaluate((el) => {
       const wrap = el.closest('.table-container');
       return wrap ? wrap.scrollWidth - wrap.clientWidth : 0;
     });
     await primary.click();
-    // Log talk / See talk jumps to communication — never opens a More disclosure.
+    // Log talk opens a forgiving dialog — never a More disclosure / hash-only scroll.
     await expect(personsTable.locator('details.crm-more-menu[open]')).toHaveCount(0);
+    await expect(page.locator('dialog.crm-native-dialog[open], dialog[open].crm-native-dialog, .modal[open], dialog[open]').first()).toBeVisible({ timeout: 10000 });
+    await page.keyboard.press('Escape');
     const scrollAfter = await personsTable.evaluate((el) => {
       const wrap = el.closest('.table-container');
       return wrap ? wrap.scrollWidth - wrap.clientWidth : 0;
@@ -72,9 +91,16 @@ test.describe('Granny-simple company 360', () => {
     await expect(jump.getByRole('link', { name: /^(Talk|Gespräch|Kommunikation)$/i }).first()).toBeVisible();
     await expect(jump.getByRole('link', { name: /^(Deals|Geschäfte)$/i }).first()).toBeVisible();
     await expect(jump.getByRole('link', { name: /^(Money|Geld)$/i }).first()).toBeVisible();
-    await expect(jump.locator('.crm-jump-nav__link')).toHaveCount(16);
+    await expect(jump.locator('.crm-jump-nav__link')).toHaveCount(17);
     await expect(page.locator('.crm-360-zone')).toHaveCount(4);
-    await expect(page.locator('#crm-360-role-title')).toBeVisible();
+    await expect(page.locator('#crm-open-tasks')).toBeVisible();
+    await expect(page.locator('#crm-open-tasks')).not.toHaveAttribute('open', '');
+    await expect(page.locator('#crm-add-activity')).toContainText(/Add reminder|Erinnerung hinzufügen/i);
+    await expect(page.locator('#crm-prepare-meeting')).not.toHaveAttribute('open', '');
+    await expect(page.locator('#crm-timeline')).not.toHaveAttribute('open', '');
+    // Role cue stays hidden while the welcome coach is teaching.
+    await expect(page.locator('#crm-360-role-title')).toHaveCount(0);
+    await expect(page.locator('#crm-welcome-coach')).toBeVisible();
     await expect(page.locator('#crm-identity-links')).not.toHaveAttribute('open', '');
 
     const results = await new AxeBuilder({ page })
@@ -114,5 +140,38 @@ test.describe('Granny-simple company 360', () => {
     await expect(verify.locator('select[data-evidence-for]')).toBeVisible();
     await expect(verify.locator('select[data-evidence-for]')).toHaveValue('activity_done');
     await expect(verify.locator('button[data-action="missed"]')).toBeVisible();
+  });
+
+  test('company edit keeps Advanced closed and axe clean', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await login(page, credsFromEnv('ADMIN'));
+
+    await page.goto('/apps/customercheck/companies/new');
+    await page.waitForSelector('#crm-company-form', { timeout: 30000 });
+    const suffix = Date.now().toString(36);
+    await page.locator('#crm-company-name').fill(`Edit Calm ${suffix}`);
+    await page.locator('#crm-company-form button[type="submit"]').click();
+    await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
+    const companyId = page.url().match(/companies\/(\d+)/)?.[1];
+    expect(companyId).toBeTruthy();
+
+    await page.goto(`/apps/customercheck/companies/${companyId}/edit`);
+    await page.waitForSelector('#crm-company-form[data-mode="edit"]', { timeout: 30000 });
+    await expect(page.locator('.crm-company-essentials')).toBeVisible();
+    await expect(page.locator('#crm-company-name')).toBeVisible();
+    await expect(page.locator('#crm-company-name-help')).toBeVisible();
+    await expect(page.locator('#crm-company-advanced')).not.toHaveAttribute('open', '');
+    await expect(page.locator('#crm-company-status')).toBeHidden();
+    await expect(page.locator('#crm-company-owner')).toBeHidden();
+    await page.locator('#crm-company-advanced > summary').click();
+    await expect(page.locator('#crm-company-advanced')).toHaveAttribute('open', '');
+    await expect(page.locator('#crm-company-status')).toBeVisible();
+
+    const results = await new AxeBuilder({ page })
+      .include('#crm-main-content')
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
+      .analyze();
+    const serious = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
+    expect(serious, JSON.stringify(serious, null, 2)).toEqual([]);
   });
 });

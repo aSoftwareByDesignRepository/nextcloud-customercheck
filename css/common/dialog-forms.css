@@ -1,0 +1,155 @@
+/**
+ * Shared Bachus polish for ALL content dialogs (not confirms).
+ * Roomier desktop widths, calm form rhythm, responsive phone layout, WCAG targets.
+ */
+
+/* —— Content dialog shell (createModal adds crm-dialog--content) —— */
+dialog.crm-native-dialog.crm-dialog--content.modal--md {
+	width: min(36rem, calc(100vw - 2rem));
+	max-width: calc(100vw - 2rem);
+	max-height: min(90dvh, calc(100vh - 2rem));
+}
+
+dialog.crm-native-dialog.crm-dialog--content.modal--sm {
+	width: min(28rem, calc(100vw - 2rem));
+	max-width: calc(100vw - 2rem);
+}
+
+dialog.crm-native-dialog.crm-dialog--content.modal--lg {
+	width: min(44rem, calc(100vw - 2rem));
+	max-width: calc(100vw - 2rem);
+}
+
+@media (min-width: 900px) {
+	dialog.crm-native-dialog.crm-dialog--content.modal--md {
+		width: min(40rem, calc(100vw - 3rem));
+	}
+
+	dialog.crm-native-dialog.crm-dialog--content.modal--lg {
+		width: min(48rem, calc(100vw - 3rem));
+	}
+}
+
+@media (max-width: 640px) {
+	dialog.crm-native-dialog.crm-dialog--content.modal--sm,
+	dialog.crm-native-dialog.crm-dialog--content.modal--md,
+	dialog.crm-native-dialog.crm-dialog--content.modal--lg {
+		width: calc(100vw - 1rem);
+		max-width: calc(100vw - 1rem);
+		max-height: min(94dvh, calc(100vh - 1rem));
+		margin: 0.5rem auto;
+	}
+
+	dialog.crm-native-dialog.crm-dialog--content .modal-header {
+		padding: var(--crm-space-3, 0.75rem);
+	}
+
+	dialog.crm-native-dialog.crm-dialog--content .modal-body {
+		padding: var(--crm-space-4, 1rem) var(--crm-space-3, 0.75rem);
+	}
+}
+
+dialog.crm-native-dialog.crm-dialog--content .modal-body {
+	padding: var(--crm-space-5, 1.25rem) var(--crm-space-5, 1.25rem) var(--crm-space-4, 1rem);
+}
+
+/* —— Stacked forms inside content dialogs —— */
+dialog.crm-native-dialog.crm-dialog--content .crm-form--stack {
+	display: flex;
+	flex-direction: column;
+	gap: var(--crm-space-4, 1rem);
+}
+
+dialog.crm-native-dialog.crm-dialog--content .crm-form--stack > .form-group,
+dialog.crm-native-dialog.crm-dialog--content .crm-form--stack > .crm-muted,
+dialog.crm-native-dialog.crm-dialog--content .crm-form--stack > .crm-advanced,
+dialog.crm-native-dialog.crm-dialog--content .crm-form--stack > .crm-form-actions,
+dialog.crm-native-dialog.crm-dialog--content .crm-form--stack > .crm-form-inline-error,
+dialog.crm-native-dialog.crm-dialog--content .crm-form--stack > .crm-callout {
+	margin: 0;
+}
+
+dialog.crm-native-dialog.crm-dialog--content .crm-form--stack .form-label {
+	display: block;
+	margin: 0 0 var(--crm-space-2, 0.5rem);
+	font-size: 0.8125rem;
+	font-weight: 700;
+	letter-spacing: 0.02em;
+	text-transform: uppercase;
+	color: var(--crm-muted, var(--color-text-maxcontrast));
+}
+
+dialog.crm-native-dialog.crm-dialog--content .crm-form--stack .form-help,
+dialog.crm-native-dialog.crm-dialog--content .crm-form--stack .crm-muted {
+	font-size: 0.875rem;
+	line-height: 1.4;
+	color: var(--crm-muted, var(--color-text-maxcontrast));
+}
+
+dialog.crm-native-dialog.crm-dialog--content .crm-form--stack .crm-input,
+dialog.crm-native-dialog.crm-dialog--content .crm-form--stack .form-input,
+dialog.crm-native-dialog.crm-dialog--content .crm-form--stack .form-select,
+dialog.crm-native-dialog.crm-dialog--content .crm-form--stack textarea.crm-input {
+	width: 100%;
+	max-width: 100%;
+	min-height: 44px;
+	box-sizing: border-box;
+}
+
+dialog.crm-native-dialog.crm-dialog--content .crm-form--stack textarea.crm-input,
+dialog.crm-native-dialog.crm-dialog--content .crm-form--stack textarea.form-input {
+	min-height: 5.5rem;
+	resize: vertical;
+}
+
+dialog.crm-native-dialog.crm-dialog--content .crm-form--stack .crm-form-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--crm-space-3, 0.75rem);
+	margin-top: var(--crm-space-1, 0.25rem);
+	padding-top: var(--crm-space-4, 1rem);
+	border-top: 1px solid var(--crm-border, var(--color-border));
+}
+
+dialog.crm-native-dialog.crm-dialog--content .crm-form--stack .crm-form-actions:not(.crm-form-actions--start) .crm-btn {
+	flex: 1 1 auto;
+	min-width: min(100%, 8.5rem);
+	min-height: 44px;
+	justify-content: center;
+}
+
+dialog.crm-native-dialog.crm-dialog--content .crm-form--stack .crm-form-actions--start {
+	border-top: 0;
+	padding-top: 0;
+}
+
+dialog.crm-native-dialog.crm-dialog--content .crm-form--stack .crm-form-actions--start .crm-btn {
+	flex: 0 1 auto;
+}
+
+dialog.crm-native-dialog.crm-dialog--content .crm-advanced {
+	margin: 0;
+}
+
+dialog.crm-native-dialog.crm-dialog--content .crm-advanced__body {
+	display: flex;
+	flex-direction: column;
+	gap: var(--crm-space-4, 1rem);
+	padding: 0 var(--crm-space-4, 1rem) var(--crm-space-4, 1rem);
+}
+
+@media (max-width: 640px) {
+	dialog.crm-native-dialog.crm-dialog--content .crm-form--stack {
+		gap: var(--crm-space-3, 0.75rem);
+	}
+
+	dialog.crm-native-dialog.crm-dialog--content .crm-form--stack .crm-form-actions:not(.crm-form-actions--start) .crm-btn {
+		flex: 1 1 100%;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	dialog.crm-native-dialog.crm-dialog--content {
+		scroll-behavior: auto;
+	}
+}

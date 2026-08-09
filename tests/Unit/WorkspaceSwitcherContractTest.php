@@ -4,60 +4,58 @@ declare(strict_types=1);
 
 namespace OCA\CustomerCheck\Tests\Unit;
 
+use OCA\CustomerCheck\Constants;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Workspace switcher must boot from shared navigation on every page
- * (not only persona.js mounts), use a disclosure (not select-onchange),
- * and expose SSR workspace context for race-safe persona loads.
+ * Single-organisation mode: no workspace switcher chrome; active workspace id
+ * still boots from shared navigation for race-safe persona/API loads.
  */
 final class WorkspaceSwitcherContractTest extends TestCase
 {
-	public function testNavigationOwnsWorkspaceSwitcher(): void
+	public function testMultiWorkspaceDisabled(): void
+	{
+		$this->assertFalse(Constants::MULTI_WORKSPACE_ENABLED);
+		$this->assertSame(1, Constants::WS_MAX_PER_INSTANCE);
+	}
+
+	public function testNavigationKeepsWorkspaceContextWithoutSwitcher(): void
 	{
 		$nav = file_get_contents(dirname(__DIR__, 2) . '/js/common/navigation.js');
 		$this->assertNotFalse($nav);
 		$this->assertStringContainsString('initWorkspaceSwitcher', $nav);
 		$this->assertStringContainsString('data-crm-workspace-switch', $nav);
-		$this->assertStringContainsString("api.get('/workspaces')", $nav);
 		$this->assertStringContainsString('workspaceId', $nav);
-		$this->assertStringContainsString('crm-workspace-switcher__trigger', $nav);
-		$this->assertStringContainsString('aria-expanded', $nav);
 		$this->assertStringNotContainsString('sel.addEventListener(\'change\'', $nav);
 		$this->assertStringNotContainsString("createElement('select')", $nav);
-		$this->assertStringNotContainsString('window.location.href = url.toString()', $nav);
 	}
 
-	public function testTemplateIsDisclosureNotSelect(): void
+	public function testTemplateHasContextHostNotSwitcherChrome(): void
 	{
 		$html = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/common/navigation.php');
-		$this->assertStringContainsString('crm-workspace-switcher', $html);
+		$this->assertStringContainsString('data-crm-workspace-switch', $html);
 		$this->assertStringContainsString('data-crm-active-workspace', $html);
-		$this->assertStringContainsString('crm-workspace-switcher__label', $html);
-		$this->assertStringContainsString('crm-workspace-switcher__trigger', $html);
-		$this->assertStringContainsString('crm-workspace-switcher__menu', $html);
-		$this->assertStringContainsString('workspaceSwitchUrls', $html);
-		$this->assertStringContainsString('count($workspaces) > 1', $html);
-		$this->assertStringNotContainsString('<select', $html);
+		$this->assertStringContainsString('crm-workspace-context', $html);
 		$this->assertStringContainsString("\$l->t('Deals, customers & money')", $html);
-		$this->assertStringContainsString("\$l->t('Workspace')", $html);
-		$this->assertStringContainsString("\$l->t('Your role: %s'", $html);
-		$this->assertStringContainsString("\$l->t('Pick which customer book you are working in.')", $html);
-		// Brand no longer duplicates the workspace name as subtitle.
+		$this->assertStringNotContainsString("\$l->t('Your role: %s'", $html);
+		$this->assertStringNotContainsString('crm-nav__role', $html);
+		$this->assertStringContainsString("\$l->t('Team & mailbox')", $html);
+		$this->assertStringNotContainsString('crm-workspace-switcher__trigger', $html);
+		$this->assertStringNotContainsString('crm-workspace-switcher__menu', $html);
+		$this->assertStringNotContainsString("\$l->t('Pick which customer book you are working in.')", $html);
+		$this->assertStringNotContainsString("\$l->t('Create workspace')", $html);
 		$this->assertDoesNotMatchRegularExpression(
 			'/app-brand__subtitle[^>]*>\s*<\?php\s*p\(\$workspaceName\)/',
 			$html,
 		);
 	}
 
-	public function testShellPassesWorkspaceListAndSwitchUrls(): void
+	public function testShellForcesNoPickerInSingleOrgMode(): void
 	{
 		$src = (string)file_get_contents(dirname(__DIR__, 2) . '/lib/Controller/PageShellTrait.php');
-		$this->assertStringContainsString("'workspaces'", $src);
-		$this->assertStringContainsString("'needsPicker'", $src);
-		$this->assertStringContainsString("'workspaceSwitchUrls'", $src);
-		$this->assertStringContainsString('listVisibleSummaries', $src);
-		$this->assertStringContainsString('WorkspaceSwitchUrlBuilder::buildMap', $src);
+		$this->assertStringContainsString('$needsPicker = false', $src);
+		$this->assertStringContainsString('MULTI_WORKSPACE_ENABLED', $src);
+		$this->assertStringContainsString("'workspaceId'", $src);
 		$this->assertStringContainsString("l10n->t('App admin')", $src);
 	}
 
@@ -80,20 +78,35 @@ final class WorkspaceSwitcherContractTest extends TestCase
 		$this->assertLessThan($navPos, $apiPos);
 	}
 
-	public function testCssDefinesAccessibleSwitcherChrome(): void
+	public function testCssHidesSwitcherChrome(): void
 	{
 		$css = (string)file_get_contents(dirname(__DIR__, 2) . '/css/navigation.css');
-		$this->assertStringContainsString('.crm-workspace-switcher__trigger', $css);
+		$this->assertStringContainsString('.crm-workspace-switcher', $css);
+		$this->assertStringContainsString('display: none', $css);
 		$this->assertStringContainsString('min-height: 44px', $css);
 		$this->assertStringContainsString(':focus-visible', $css);
 		$this->assertStringContainsString('prefers-reduced-motion', $css);
 		$this->assertStringContainsString('.app-brand__text h3', $css);
 		$this->assertStringContainsString('.app-brand__icon', $css);
+		$this->assertStringContainsString('.crm-nav__role', $css);
 	}
 
-	public function testIconCatalogHasChevronDown(): void
+	public function testCreateAndMoveLockedInServices(): void
 	{
-		$src = (string)file_get_contents(dirname(__DIR__, 2) . '/lib/Service/IconCatalog.php');
-		$this->assertStringContainsString("'chevron-down'", $src);
+		$ws = (string)file_get_contents(dirname(__DIR__, 2) . '/lib/Service/WorkspaceService.php');
+		$co = (string)file_get_contents(dirname(__DIR__, 2) . '/lib/Service/CompanyService.php');
+		$this->assertStringContainsString('MULTI_WORKSPACE_ENABLED', $ws);
+		$this->assertStringContainsString('Additional workspaces cannot be created', $ws);
+		$this->assertStringContainsString('MULTI_WORKSPACE_ENABLED', $co);
+		$this->assertStringContainsString('cannot be moved between workspaces', $co);
+	}
+
+	public function testCompanyDetailHasNoMoveWorkspaceAction(): void
+	{
+		$html = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/company-detail.php');
+		$mailbox = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/settings/workspace-mailbox.php');
+		$this->assertStringNotContainsString('crm-company-move-workspace', $html);
+		$this->assertStringNotContainsString('crm-ws-create-form', $mailbox);
+		$this->assertStringNotContainsString('Create workspace', $mailbox);
 	}
 }

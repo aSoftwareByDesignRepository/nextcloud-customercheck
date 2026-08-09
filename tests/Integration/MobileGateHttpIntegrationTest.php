@@ -255,11 +255,8 @@ final class MobileGateHttpIntegrationTest extends TestCase
 		$companyA = $this->createCompany();
 		$wsA = $this->workspaceIdForCompany($companyA);
 
-		$wsB = \OC::$server->get(WorkspaceService::class)->create(
-			'Foreign WS ' . $this->suffix,
-			'foreign-ws-' . $this->suffix,
-			$this->admin,
-		);
+		// Legacy multi-book row inserted outside WorkspaceService::create (single-org lock).
+		$wsB = $this->insertLegacyForeignWorkspace('foreign-ws-' . $this->suffix, 'Foreign WS ' . $this->suffix);
 		$wsBId = (int)$wsB->getId();
 		$companyB = \OC::$server->get(CompanyService::class)->create([
 			'name' => 'Foreign Co ' . $this->suffix,
@@ -279,6 +276,8 @@ final class MobileGateHttpIntegrationTest extends TestCase
 		$list = $this->controller()->companies($wsBId);
 		self::assertSame(404, $list->getStatus());
 		self::assertSame('NOT_FOUND', $list->getData()['error']);
+
+		$this->deleteWorkspaceCascade($wsBId);
 	}
 
 	public function testViewerCannotCreateActivity(): void
@@ -705,26 +704,11 @@ final class MobileGateHttpIntegrationTest extends TestCase
 		if ($this->runWorkspaceId !== null && $this->runWorkspaceId > 0) {
 			return $this->runWorkspaceId;
 		}
-		$svc = \OC::$server->get(WorkspaceService::class);
-		try {
-			$ws = $svc->create(
-				'Mobile Gate ' . $this->suffix,
-				'mg-' . $this->suffix,
-				$this->admin,
-			);
-		} catch (\OCA\CustomerCheck\Exception\ValidationException $e) {
-			if ($e->getErrorCode() !== Constants::ERR_WS_LIMIT) {
-				throw $e;
-			}
-			// Prior runs left mg-* books up to the instance cap — reclaim room.
-			$this->purgeStaleMobileGateWorkspaces();
-			$ws = $svc->create(
-				'Mobile Gate ' . $this->suffix,
-				'mg-' . $this->suffix,
-				$this->admin,
-			);
-		}
+		// Production create is locked to one organisation — tests mint an isolated
+		// book via the mapper so MobileGate ACL stays hermetic and never pollutes Default.
+		$ws = $this->insertLegacyForeignWorkspace('mg-' . $this->suffix, 'Mobile Gate ' . $this->suffix);
 		$this->runWorkspaceId = (int)$ws->getId();
+		$this->ensureMember($this->runWorkspaceId, $this->admin, 'manager');
 		return $this->runWorkspaceId;
 	}
 
@@ -736,6 +720,24 @@ final class MobileGateHttpIntegrationTest extends TestCase
 		}
 		$this->deleteWorkspaceCascade($this->runWorkspaceId);
 		$this->runWorkspaceId = null;
+	}
+
+	/**
+	 * Insert a non-default workspace row for legacy ACL isolation probes.
+	 * WorkspaceService::create is locked in single-org mode.
+	 */
+	private function insertLegacyForeignWorkspace(string $slug, string $name): \OCA\CustomerCheck\Db\Workspace
+	{
+		$mapper = \OC::$server->get(\OCA\CustomerCheck\Db\WorkspaceMapper::class);
+		$now = new \DateTime('now');
+		$ws = new \OCA\CustomerCheck\Db\Workspace();
+		$ws->setSlug($slug);
+		$ws->setName($name);
+		$ws->setIsDefault(0);
+		$ws->setCreatedBy($this->admin);
+		$ws->setCreatedAt($now);
+		$ws->setUpdatedAt($now);
+		return $mapper->insert($ws);
 	}
 
 	/**

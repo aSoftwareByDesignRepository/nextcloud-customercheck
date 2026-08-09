@@ -28,7 +28,7 @@ final class JumpNavContractTest extends TestCase
 		$html = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/company-detail.php');
 		$this->assertStringContainsString('crm-jump-nav.php', $html);
 		$this->assertStringNotContainsString('<nav class="crm-jump-nav"', $html);
-		foreach (['#crm-glance', '#crm-communication', '#crm-account-plan', '#crm-persons', '#crm-promises', '#crm-contracts', '#crm-open-tasks', '#crm-activities', '#crm-billing', '#crm-tickets', '#crm-deals', '#crm-projects', '#crm-documents', '#crm-identity-links', '#crm-prepare-meeting', '#crm-timeline'] as $href) {
+		foreach (['#crm-glance', '#crm-communication', '#crm-account-plan', '#crm-persons', '#crm-promises', '#crm-contracts', '#crm-open-tasks', '#crm-activities', '#crm-billing', '#crm-invoices', '#crm-tickets', '#crm-deals', '#crm-projects', '#crm-documents', '#crm-identity-links', '#crm-prepare-meeting', '#crm-timeline'] as $href) {
 			$this->assertStringContainsString($href, $html);
 		}
 		$this->assertStringContainsString("\$l->t('Talk')", $html);

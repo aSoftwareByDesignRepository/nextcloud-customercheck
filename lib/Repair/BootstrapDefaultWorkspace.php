@@ -57,6 +57,26 @@ final class BootstrapDefaultWorkspace implements IRepairStep
 			return (int)$row['id'];
 		}
 
+		// Single-org / fail-closed: never mint a second book. Prefer any existing row.
+		$any = $this->db->getQueryBuilder();
+		$any->select('id')
+			->from('crm_workspace')
+			->orderBy('id', 'ASC')
+			->setMaxResults(1);
+		$anyResult = $any->executeQuery();
+		$anyRow = $anyResult->fetch();
+		$anyResult->closeCursor();
+		if ($anyRow !== false) {
+			$id = (int)$anyRow['id'];
+			$promote = $this->db->getQueryBuilder();
+			$promote->update('crm_workspace')
+				->set('is_default', $promote->createNamedParameter(1))
+				->where($promote->expr()->eq('id', $promote->createNamedParameter($id)))
+				->executeStatement();
+			$output->info('Promoted existing workspace id=' . $id . ' to Default (single organisation).');
+			return $id;
+		}
+
 		$now = (new \DateTimeImmutable('now'))->format('Y-m-d H:i:s');
 		$ins = $this->db->getQueryBuilder();
 		$ins->insert('crm_workspace')

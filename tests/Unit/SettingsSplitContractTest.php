@@ -56,7 +56,7 @@ final class SettingsSplitContractTest extends TestCase
 	public function testNavListsBothSettingsEntriesForAdmins(): void
 	{
 		$nav = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/common/navigation.php');
-		$this->assertStringContainsString('Workspace settings', $nav);
+		$this->assertStringContainsString('Team & mailbox', $nav);
 		$this->assertStringContainsString('App settings', $nav);
 		$this->assertStringContainsString("u('appSettings')", $nav);
 		$this->assertStringContainsString('$canManageNav', $nav);

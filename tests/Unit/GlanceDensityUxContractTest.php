@@ -17,6 +17,8 @@ final class GlanceDensityUxContractTest extends TestCase
 		$this->assertStringContainsString('Also in linked apps', $tpl);
 		$this->assertStringContainsString('GlanceDensityPresenter::tiles', $tpl);
 		$this->assertStringContainsString('crm-glance-kpi__cta', $tpl);
+		$this->assertStringContainsString('crm-glance-density--calm', $tpl);
+		$this->assertStringContainsString('$densityNeedsAttention', $tpl);
 		$this->assertStringNotContainsString('crm-stat-tile--warning', $tpl);
 		$this->assertStringNotContainsString('crm-stat-strip', $tpl);
 	}
@@ -30,6 +32,9 @@ final class GlanceDensityUxContractTest extends TestCase
 		$this->assertStringContainsString('.crm-glance-kpi--offline', $css);
 		$this->assertStringContainsString('min-height: 44px', $css);
 		$this->assertStringContainsString('.crm-glance-kpi:focus-visible', $css);
+		$this->assertStringContainsString('.crm-glance-density--calm', $css);
+		$this->assertStringContainsString('.crm-deal-notes-preview', $css);
+		$this->assertStringContainsString('.crm-360-role .crm-callout__title', $css);
 	}
 
 	public function testPageControllerNeverSendsZeroUnpaidToOverdueList(): void

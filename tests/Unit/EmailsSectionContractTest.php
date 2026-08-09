@@ -47,5 +47,14 @@ final class EmailsSectionContractTest extends TestCase
 		$this->assertStringContainsString('You wrote them', $js);
 		$this->assertStringNotContainsString("name: 'fromAddr'", $js);
 		$this->assertStringContainsString('Add a person first', $js);
+		// Bachus: no people → confirm opens Add person (never alert-only dead end).
+		$this->assertStringContainsString("confirmLabel: t('Add person')", $js);
+		$this->assertStringContainsString("t('Not now')", $js);
+		// Single contact skips "With whom"; direction stays under More.
+		$this->assertStringContainsString('personOptions.length > 1', $js);
+		$this->assertMatchesRegularExpression(
+			"/name: 'direction'[\s\S]*?advanced: true/",
+			$js,
+		);
 	}
 }

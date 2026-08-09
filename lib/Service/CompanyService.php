@@ -356,6 +356,13 @@ class CompanyService
 		string $actor,
 		?string $updatedAtPrecondition,
 	): array {
+		if (!Constants::MULTI_WORKSPACE_ENABLED) {
+			throw ValidationException::field(
+				Constants::ERR_WS_LIMIT,
+				'workspaceId',
+				$this->l10n->t('CustomerCheck uses a single organisation. Companies cannot be moved between workspaces.'),
+			);
+		}
 		$company = $this->get($id);
 		OptimisticLock::assertFresh($company->getUpdatedAt(), $updatedAtPrecondition);
 
@@ -664,6 +671,7 @@ class CompanyService
 					'forecastBucket' => $d->getForecastBucket(),
 					'lostReason' => $d->getLostReason(),
 					'lostReasonCode' => $d->getLostReasonCode(),
+					'notes' => $d->getNotes(),
 				],
 				$this->dealMapper->findByCompany($id),
 			),
@@ -1627,7 +1635,7 @@ class CompanyService
 				}
 			} elseif ($ws > 0 && $ws !== (int)($company->getWorkspaceId() ?? 0)) {
 				// Moves require confirm slug + mail rematch — never via generic PUT.
-				$fields['workspaceId'] = $this->l10n->t('Use Move to workspace to change the book. Files sharing is not moved automatically.');
+				$fields['workspaceId'] = $this->l10n->t('Companies stay in the single organisation. Workspace moves are not available.');
 			}
 		}
 

@@ -13,7 +13,7 @@ final class PersonsRowUxContractTest extends TestCase
 	{
 		$html = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/company-detail.php');
 		$start = strpos($html, 'id="crm-persons-table"');
-		$end = strpos($html, 'id="crm-promises"', (int)$start);
+		$end = strpos($html, 'id="crm-deals"', (int)$start);
 		$chunk = substr($html, (int)$start, (int)$end - (int)$start);
 		foreach (['Last touch', 'Address book', 'Role in buying', 'Action', 'Log talk', 'Not linked'] as $needle) {
 			$this->assertStringContainsString("\$l->t('" . $needle . "')", $chunk, $needle);

@@ -45,14 +45,14 @@ test.describe('Simplified core UX journeys', () => {
     const jump = page.locator('[data-crm-jump-nav="1"]');
     await expect(jump.locator('.crm-jump-nav__list').first().locator('.crm-jump-nav__link')).toHaveCount(5);
     await expect(jump.locator('.crm-jump-nav__more')).toBeVisible();
-    await expect(jump.locator('.crm-jump-nav__link')).toHaveCount(16);
+    await expect(jump.locator('.crm-jump-nav__link')).toHaveCount(17);
 
     // New agreement keeps company context (EN or DE label).
     const newAg = page.locator('a', { hasText: /New agreement|Neue Vereinbarung/i }).first();
     await expect(newAg).toHaveAttribute('href', /companyId=\d+/);
 
-    // Add person + simplified log email.
-    await page.locator('#crm-add-person').click();
+    // Add person via coach (header Add person is hidden while coach owns the CTA).
+    await page.locator('#crm-welcome-coach [data-crm-trigger="crm-add-person"]').click();
     let form = page.locator('form[id^="crm-prompt-"]');
     await expect(form).toBeVisible({ timeout: 10000 });
     await form.locator('[name="name"]').fill('Ada');
@@ -63,7 +63,11 @@ test.describe('Simplified core UX journeys', () => {
     await page.locator('#crm-log-email').click();
     form = page.locator('form[id^="crm-prompt-"]');
     await expect(form).toBeVisible({ timeout: 10000 });
-    await expect(form.locator('[name="personId"]')).toBeVisible();
+    // Single contact → person picker is auto-filled and omitted (Bachus: fewer fields).
+    const personField = form.locator('[name="personId"]');
+    if (await personField.count()) {
+      await expect(personField).toBeVisible();
+    }
     await expect(form.locator('[name="subject"]')).toBeVisible();
     await expect(form.locator('[name="fromAddr"]')).toHaveCount(0);
     await form.locator('[name="subject"]').fill('Hello Ada');
@@ -71,11 +75,12 @@ test.describe('Simplified core UX journeys', () => {
     await page.waitForLoadState('networkidle');
     await expect(page.locator('#crm-emails table tbody tr').first()).toContainText('Hello Ada');
 
-    // Add activity + one-click Done (no confirm dialog).
+    // Add reminder + one-click Done (type under More; no confirm dialog on Done).
     await page.locator('#crm-add-activity').click();
     form = page.locator('form[id^="crm-prompt-"]');
     await expect(form).toBeVisible({ timeout: 10000 });
     await form.locator('[name="title"]').fill('Call Ada');
+    await form.locator('details.crm-advanced summary').click();
     await form.locator('[name="type"]').selectOption('call');
     const today = new Date().toISOString().slice(0, 10);
     await form.locator('[name="dueDate"]').fill(today);

@@ -78,12 +78,12 @@ final class WorkspaceSettingsSectionCatalog
 	public function label(IL10N $l, string $section): string
 	{
 		return match ($section) {
-			'mailbox' => $l->t('Workspace & mailbox'),
+			'mailbox' => $l->t('Team & mailbox'),
 			'preferences' => $l->t('Your preferences'),
 			'review-sources' => $l->t('Review inbox sources'),
 			'circles' => $l->t('Weekly promise check'),
 			'integrations' => $l->t('Integrations'),
-			default => $l->t('Workspace settings'),
+			default => $l->t('Team & mailbox'),
 		};
 	}
 
@@ -102,12 +102,12 @@ final class WorkspaceSettingsSectionCatalog
 	public function help(IL10N $l, string $section): string
 	{
 		return match ($section) {
-			'mailbox' => $l->t('Members, shared mailbox, and weekly limits for this customer book.'),
-			'preferences' => $l->t('How deals look for you in this workspace.'),
-			'review-sources' => $l->t('Which inboxes and folders feed Review for this workspace.'),
-			'circles' => $l->t('Who owes a weekly promise check in this book.'),
+			'mailbox' => $l->t('Members, shared mailbox, and weekly limits for your team.'),
+			'preferences' => $l->t('How deals look for you.'),
+			'review-sources' => $l->t('Which inboxes and folders feed Review.'),
+			'circles' => $l->t('Who owes a weekly promise check.'),
 			'integrations' => $l->t('Linked Check apps and how they show on companies.'),
-			default => $l->t('Preferences, members, mailbox, and integrations for this workspace.'),
+			default => $l->t('Preferences, members, mailbox, and integrations.'),
 		};
 	}
 }

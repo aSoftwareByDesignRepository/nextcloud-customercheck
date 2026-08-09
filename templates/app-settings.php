@@ -26,7 +26,7 @@ include __DIR__ . '/common/page-start.php';
 	data-pipeline-view="<?php p($settings['pipelineView'] ?? 'table'); ?>">
 
 	<nav class="crm-settings-switch" aria-label="<?php p($l->t('Settings areas')); ?>">
-		<a class="crm-btn" href="<?php p($wsUrl); ?>"><?php p($l->t('Workspace')); ?></a>
+		<a class="crm-btn" href="<?php p($wsUrl); ?>"><?php p($l->t('Team & mailbox')); ?></a>
 		<a class="crm-btn crm-btn--primary" href="<?php p($appSettingsUrl !== '' ? $appSettingsUrl : '#'); ?>" aria-current="page"><?php p($l->t('App')); ?></a>
 	</nav>
 
@@ -39,7 +39,7 @@ include __DIR__ . '/common/page-start.php';
 				</div>
 			</header>
 			<div class="crm-card__body">
-				<p><a class="crm-btn" href="<?php p($wsUrl); ?>"><?php p($l->t('Back to Workspace settings')); ?></a></p>
+				<p><a class="crm-btn" href="<?php p($wsUrl); ?>"><?php p($l->t('Back to Team & mailbox')); ?></a></p>
 			</div>
 		</section>
 	<?php else: ?>

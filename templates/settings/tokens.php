@@ -13,13 +13,13 @@ $settings = is_array($_['settings'] ?? null) ? $_['settings'] : [];
 		<div class="crm-card__body">
 			<?php if (!empty($settings['tokensVisible'])): ?>
 				<div class="form-group">
-					<label class="form-label" for="crm-ics-url"><?php p($l->t('Calendar feed for renewals (Default book)')); ?></label>
+					<label class="form-label" for="crm-ics-url"><?php p($l->t('Calendar feed for renewals')); ?></label>
 					<div class="crm-token-row">
 						<input id="crm-ics-url" class="form-input crm-input" type="text" readonly value="<?php p($settings['icsFeedUrl'] ?? ''); ?>">
 						<button type="button" class="crm-btn crm-btn--secondary" data-copy-target="crm-ics-url"><?php p($l->t('Copy')); ?></button>
 						<button type="button" class="crm-btn crm-btn--danger" data-rotate-token="ics"><?php p($l->t('Rotate')); ?></button>
 					</div>
-					<p class="form-help"><?php p($l->t('Default book only. Per-workspace feeds live under Workspace & mailbox so one leaked URL cannot dump every book.')); ?></p>
+					<p class="form-help"><?php p($l->t('Public calendar URL for agreement renewals. Rotate if the link leaks.')); ?></p>
 				</div>
 				<div class="form-group">
 					<label class="form-label" for="crm-lead-url"><?php p($l->t('Website lead link')); ?></label>

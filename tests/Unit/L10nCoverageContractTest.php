@@ -76,9 +76,15 @@ final class L10nCoverageContractTest extends TestCase
 	/** @return list<string> */
 	private function extractJsLiterals(): array
 	{
-		$dir = dirname(__DIR__, 2) . '/js/pages';
+		$root = dirname(__DIR__, 2);
+		// Must match scripts/sync-l10n-from-literals.php (pages + common + utils).
+		$globs = array_merge(
+			glob($root . '/js/pages/*.js') ?: [],
+			glob($root . '/js/common/*.js') ?: [],
+			glob($root . '/js/utils/*.js') ?: [],
+		);
 		$found = [];
-		foreach (glob($dir . '/*.js') ?: [] as $path) {
+		foreach ($globs as $path) {
 			$src = (string)file_get_contents($path);
 			// t('…') / tr('…') / t("…")
 			// Local helpers are t()/tr(); exclude window.t('customercheck', …).

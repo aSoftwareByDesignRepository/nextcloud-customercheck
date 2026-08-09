@@ -30,7 +30,7 @@ test.describe('Company detail jump nav', () => {
     await expect(nav.locator('.crm-jump-nav__label')).toHaveText(/On this page|Auf dieser Seite/i);
     await expect(nav.locator('.crm-jump-nav__list').first()).toBeVisible();
     // Command Center section inventory — primary 5 + More.
-    await expect(nav.locator('.crm-jump-nav__link')).toHaveCount(16);
+    await expect(nav.locator('.crm-jump-nav__link')).toHaveCount(17);
 
     // Mid-page primary (Deals) — always visible; sticky bar can offset the target.
     const dealsLink = nav.locator('.crm-jump-nav__link[href="#crm-deals"]');

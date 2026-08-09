@@ -68,6 +68,7 @@ final class ExtremeSimplicityUxContractTest extends TestCase
 	{
 		$html = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/company-form.php');
 		$this->assertStringContainsString('crm-advanced', $html);
+		$this->assertStringContainsString('crm-company-essentials', $html);
 		$this->assertStringContainsString('crm-company-slug', $html);
 		$this->assertLessThan(
 			strpos($html, 'crm-company-slug'),
@@ -83,6 +84,13 @@ final class ExtremeSimplicityUxContractTest extends TestCase
 		$statusPos = (int)strpos($html, 'crm-company-status');
 		$this->assertGreaterThan($namePos, $advancedPos);
 		$this->assertGreaterThan($advancedPos, $statusPos);
+		// Bachus: edit never force-opens Advanced (agreement parity).
+		$this->assertStringNotContainsString("if (\$mode === 'edit'): ?> open", $html);
+		$this->assertDoesNotMatchRegularExpression(
+			'/id="crm-company-advanced"[^>]*\sopen/',
+			$html,
+		);
+		$this->assertStringContainsString('Owner, status, and links stay under Advanced', $html);
 	}
 
 	public function testCompanyDetailOneLogEmailAndSimplePeople(): void
@@ -103,8 +111,12 @@ final class ExtremeSimplicityUxContractTest extends TestCase
 		$this->assertStringContainsString("\$l->t('Last touch')); ?></th>", $detail);
 		$this->assertStringContainsString("\$l->t('Role in buying')); ?></th>", $detail);
 		$this->assertStringContainsString("\$l->t('Log talk')", $detail);
+		$this->assertStringContainsString('data-crm-trigger="crm-log-email"', $detail);
+		$this->assertStringContainsString('$showWelcomeCoach', $detail);
+		$this->assertStringContainsString('$showRoleCue', $detail);
+		$this->assertStringContainsString('!$showWelcomeCoach', $detail);
 		$personsStart = strpos($detail, 'id="crm-persons-table"');
-		$personsEnd = strpos($detail, 'id="crm-promises"', (int)$personsStart);
+		$personsEnd = strpos($detail, 'id="crm-deals"', (int)$personsStart);
 		$personsChunk = substr($detail, (int)$personsStart, (int)$personsEnd - (int)$personsStart);
 		$this->assertStringNotContainsString('crm-more-menu', $personsChunk);
 	}
@@ -137,8 +149,11 @@ final class ExtremeSimplicityUxContractTest extends TestCase
 		$detail = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/company-detail.php');
 		$this->assertStringContainsString('crm-welcome-coach', $detail);
 		$this->assertStringContainsString('Next steps for this customer', $detail);
+		$this->assertStringContainsString('Three short steps to make this customer useful.', $detail);
+		$this->assertStringContainsString('crm-welcome-coach__step', $detail);
 		$this->assertStringContainsString('data-crm-trigger="crm-add-person"', $detail);
 		$this->assertStringContainsString('data-crm-trigger="crm-add-deal"', $detail);
+		$this->assertStringContainsString('data-crm-trigger="crm-log-email"', $detail);
 		$this->assertStringContainsString('data-crm-trigger="crm-add-activity"', $detail);
 		$this->assertStringContainsString('data-crm-trigger="crm-link-folder"', $detail);
 		$this->assertStringContainsString('A deal is a quote or opportunity', $detail);
@@ -175,10 +190,15 @@ final class ExtremeSimplicityUxContractTest extends TestCase
 		$this->assertStringContainsString("t('Try again')", $js);
 		$this->assertStringContainsString('crm-glance-summary', $js);
 		$this->assertStringContainsString('paintGlanceSummary', $js);
+		$this->assertStringContainsString('function paintHydrateFailure', $js);
+		$this->assertStringContainsString("paintHydrateFailure('crm-glance-summary'", $js);
+		$this->assertStringContainsString("paintHydrateFailure('crm-communication-feed'", $js);
+		$this->assertStringContainsString("paintHydrateFailure('crm-open-tasks-body'", $js);
+		$this->assertStringContainsString("paintHydrateFailure('crm-billing-body'", $js);
 		$this->assertMatchesRegularExpression(
-			'/Some overview data could not be loaded\.[\s\S]{0,250}getElementById\(\'crm-glance-summary\'\)[\s\S]{0,600}t\(\'Try again\'\)/',
+			'/Some overview data could not be loaded\.[\s\S]{0,400}paintHydrateFailure\(\'crm-glance-summary\'/',
 			$js,
-			'Glance load errors must show a visible Try again on #crm-glance-summary',
+			'Glance load errors must paint Try again via paintHydrateFailure on #crm-glance-summary',
 		);
 		$glance = (string)file_get_contents(dirname(__DIR__, 2) . '/js/common/glance-summary.js');
 		$this->assertStringContainsString("t('Needs links')", $glance);
@@ -521,14 +541,15 @@ final class ExtremeSimplicityUxContractTest extends TestCase
 	public function testSettingsMailboxAndTokensUsePlainLabels(): void
 	{
 		$mailbox = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/settings/workspace-mailbox.php');
-		$this->assertStringContainsString("\$l->t('Short address')", $mailbox);
+		$this->assertStringContainsString("\$l->t('Team & mailbox')", $mailbox);
+		$this->assertStringNotContainsString('crm-ws-create-form', $mailbox);
 		$this->assertStringNotContainsString("\$l->t('Slug')", $mailbox);
 		$this->assertStringContainsString("\$l->t('Quoted deals without a follow-up show on Today after this many days.')", $mailbox);
 		$tokens = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/settings/tokens.php');
 		$this->assertStringContainsString("\$l->t('First reply within (hours)')", $mailbox);
 		$this->assertStringContainsString("\$l->t('Calendar feed for renewals')", $mailbox);
 		$this->assertStringContainsString("\$l->t('Website lead link')", $tokens);
-		$this->assertStringContainsString("\$l->t('Calendar feed for renewals (Default book)')", $tokens);
+		$this->assertStringContainsString("\$l->t('Calendar feed for renewals')", $tokens);
 		$this->assertStringContainsString("\$l->t('Website order link')", $tokens);
 		$this->assertStringNotContainsString("\$l->t('Lead webhook')", $tokens);
 		$settingsJs = (string)file_get_contents(dirname(__DIR__, 2) . '/js/pages/settings.js');

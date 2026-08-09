@@ -779,7 +779,7 @@
     });
   }
 
-  // ── Workspace & mailbox (managers / app admins) ───────────────────────
+  // ── Team & mailbox (managers / app admins) ───────────────────────────
   let currentWorkspaceId = 0;
   /** False until boot + hydrate finish — prevents silent saves and hydrate clobber. */
   let workspaceBootReady = false;
@@ -858,7 +858,7 @@
     if (currentWorkspaceId > 0 && workspaceBootReady) {
       return true;
     }
-    const msg = tr('Workspace is still loading. Wait a moment, then try again.');
+    const msg = tr('Team settings are still loading. Wait a moment, then try again.');
     showWsError(msg);
     if (statusEl) statusEl.textContent = msg;
     return false;
@@ -1016,20 +1016,23 @@
         empty.setAttribute('role', 'status');
         empty.innerHTML = '<h4 class="crm-empty-state__title"></h4><p class="crm-empty-state__text"></p>';
         empty.querySelector('.crm-empty-state__title').textContent = tr('No members yet');
-        empty.querySelector('.crm-empty-state__text').textContent = tr('Add a colleague below so they can work in this book.');
+        empty.querySelector('.crm-empty-state__text').textContent = tr('Add a colleague below so they can help with customers.');
         wsMembers.appendChild(empty);
         return;
       }
       list.forEach((m) => {
         const uid = m.userId || m.id || '';
         const label = m.displayName || uid;
+        const role = String(m.role || 'member').toLowerCase();
+        const roleText = role === 'viewer'
+          ? tr('Look only')
+          : (role === 'manager' ? tr('Can manage team') : tr('Can edit'));
         const li = document.createElement('li');
         li.className = 'crm-ws-members__item';
-        li.innerHTML = '<span><strong></strong> · <span class="crm-muted"></span> · <span class="crm-badge"></span>' +
+        li.innerHTML = '<span><strong></strong> · <span class="crm-badge"></span>' +
           (m.canMailSend || m.can_mail_send ? ' · ' + tr('mail send') : '') + '</span>';
         li.querySelector('strong').textContent = label;
-        li.querySelector('.crm-muted').textContent = uid;
-        li.querySelector('.crm-badge').textContent = m.role || 'member';
+        li.querySelector('.crm-badge').textContent = roleText;
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'crm-btn crm-btn--ghost';
@@ -1156,7 +1159,7 @@
         await loadValueMaps();
       }
     } catch (e) {
-      showWsError((e.payload && e.payload.message) || e.message || tr('Could not load workspace settings.'));
+      showWsError((e.payload && e.payload.message) || e.message || tr('Could not load team settings.'));
     }
   }
 
@@ -1171,16 +1174,15 @@
     workspaceBootReady = false;
     setReviewSourcesLocked(true);
     showWsError('');
-    showWsStatus(tr('Loading workspace…'));
+    showWsStatus(tr('Loading team settings…'));
     try {
       const res = await Api.get('/workspaces');
       const data = res.data || {};
       const current = data.current || {};
       currentWorkspaceId = parseInt(String(current.id || 0), 10);
       if (wsCurrent) wsCurrent.hidden = !currentWorkspaceId;
-      if (wsCurrentLabel && currentWorkspaceId) {
-        wsCurrentLabel.textContent = (current.name || '') + ' · #' + currentWorkspaceId +
-          (current.role ? ' · ' + current.role : '');
+      if (wsCurrentLabel) {
+        wsCurrentLabel.textContent = '';
       }
       if (currentWorkspaceId) {
         await refreshWorkspaceSettings();
@@ -1192,35 +1194,28 @@
         }
         workspaceBootReady = true;
         setReviewSourcesLocked(false);
-        showWsStatus(tr('Working in workspace %s.', [current.name || ('#' + currentWorkspaceId)]));
+        showWsStatus(tr('Ready.'));
       } else {
         workspaceBootReady = false;
         setReviewSourcesLocked(true);
-        showWsStatus(tr('No current workspace resolved yet.'));
-        showWsError(tr('No current workspace resolved yet.'));
+        showWsStatus(tr('Team settings are still loading.'));
+        showWsError(tr('Team settings are still loading.'));
       }
     } catch (e) {
       workspaceBootReady = false;
       setReviewSourcesLocked(true);
       showWsStatus('');
-      showWsError((e.payload && e.payload.message) || e.message || tr('Could not load workspaces.'));
+      showWsError((e.payload && e.payload.message) || e.message || tr('Could not load team settings.'));
     }
   }
 
   const wsCreate = document.getElementById('crm-ws-create-form');
-  if (wsCreate && canManage) {
-    wsCreate.addEventListener('submit', async (ev) => {
-      ev.preventDefault();
-      showWsError('');
-      const name = (document.getElementById('crm-ws-name') || {}).value || '';
-      const slug = (document.getElementById('crm-ws-slug') || {}).value || '';
-      try {
-        await Api.post('/workspaces', { name: String(name).trim(), slug: String(slug).trim() });
-        location.reload();
-      } catch (e) {
-        showWsError((e.payload && e.payload.message) || e.message || tr('Could not create workspace.'));
-      }
-    });
+  if (wsCreate) {
+    wsCreate.remove();
+  }
+  const wsCreateCard = document.getElementById('crm-ws-create-card');
+  if (wsCreateCard) {
+    wsCreateCard.remove();
   }
 
   const wsSettingsForm = document.getElementById('crm-ws-settings-form');
@@ -1242,7 +1237,7 @@
           mailRetentionDays: mailRetentionDays,
           digestEnabled: digestEnabled,
         });
-        if (C && C.announce) C.announce(tr('Workspace settings saved'));
+        if (C && C.announce) C.announce(tr('Team & mailbox settings saved'));
       } catch (e) {
         showWsError((e.payload && e.payload.message) || e.message);
       }
@@ -1317,7 +1312,7 @@
         const skipped = Number(data.skipped || 0);
         let msg = tr('Imported %s people from the group.', [String(added)]);
         if (updated > 0) {
-          msg += ' ' + tr('%s already in the book had their role updated.', [String(updated)]);
+          msg += ' ' + tr('%s already on the team had their role updated.', [String(updated)]);
         }
         if (skipped > 0) {
           msg += ' ' + tr('%s skipped.', [String(skipped)]);
@@ -1368,7 +1363,7 @@
         const skipped = Number(data.skipped || 0);
         let msg = tr('Imported %s people from the Circle.', [String(added)]);
         if (updated > 0) {
-          msg += ' ' + tr('%s already in the book had their role updated.', [String(updated)]);
+          msg += ' ' + tr('%s already on the team had their role updated.', [String(updated)]);
         }
         if (skipped > 0) {
           msg += ' ' + tr('%s skipped.', [String(skipped)]);
@@ -1407,6 +1402,16 @@
     });
   }
 
+  function ensureMailboxServersVisible(payload) {
+    const details = document.getElementById('crm-mailbox-servers');
+    if (!details) return;
+    const imap = String((payload && payload.imapHost) || '').trim();
+    const smtp = String((payload && payload.smtpHost) || '').trim();
+    if (!imap || !smtp) {
+      details.open = true;
+    }
+  }
+
   if (mailboxTest && canManageWorkspace) {
     mailboxTest.addEventListener('click', async () => {
       if (!requireWorkspaceReady(mailboxTestStatus)) return;
@@ -1415,6 +1420,7 @@
       if (mailboxSave) mailboxSave.disabled = true;
       mailboxTest.disabled = true;
       const payload = mailboxPayloadFromForm();
+      ensureMailboxServersVisible(payload);
       try {
         const res = await Api.post('/workspaces/' + currentWorkspaceId + '/mailboxes/test', payload);
         const data = res.data || {};
@@ -1452,7 +1458,7 @@
       showInlineError(mailboxErr, '');
       const payload = mailboxPayloadFromForm();
       if (!payload.dsgvoAck) {
-        showInlineError(mailboxErr, tr('Confirm the shared-mailbox DSGVO acknowledgement.'));
+        showInlineError(mailboxErr, tr('Confirm this is a shared team inbox before saving.'));
         return;
       }
       if (mailboxSave) mailboxSave.disabled = true;
@@ -1701,12 +1707,12 @@
       const items = (res.data && res.data.items) || res.items || [];
       mount.removeAttribute('aria-busy');
       if (!items.length) {
-        mount.innerHTML = '<p class="crm-empty" role="status">' + escapeHtml(tr('No workspaces yet.')) + '</p>';
+        mount.innerHTML = '<p class="crm-empty" role="status">' + escapeHtml(tr('No promise checks yet.')) + '</p>';
         return;
       }
       let html = '<div class="table-container crm-table--responsive"><table class="table table--hover" aria-label="' +
         escapeHtml(tr('Weekly promise check')) + '"><thead><tr>';
-      html += '<th scope="col">' + escapeHtml(tr('Workspace')) + '</th>';
+      html += '<th scope="col">' + escapeHtml(tr('Team')) + '</th>';
       html += '<th scope="col">' + escapeHtml(tr('Week')) + '</th>';
       html += '<th scope="col">' + escapeHtml(tr('Promises')) + '</th>';
       html += '<th scope="col">' + escapeHtml(tr('Committed')) + '</th>';
@@ -1717,7 +1723,7 @@
       html += '</tr></thead><tbody>';
       items.forEach((it) => {
         html += '<tr>';
-        html += '<td data-label="' + escapeHtml(tr('Workspace')) + '">' + escapeHtml(it.name || '') + '</td>';
+        html += '<td data-label="' + escapeHtml(tr('Team')) + '">' + escapeHtml(it.name || '') + '</td>';
         html += '<td data-label="' + escapeHtml(tr('Week')) + '">' + escapeHtml(it.weekKey || '') + '</td>';
         html += '<td data-label="' + escapeHtml(tr('Promises')) + '">' + escapeHtml(String(it.wipUsed || 0) + '/' + String(it.wipLimit || 5)) + '</td>';
         html += '<td data-label="' + escapeHtml(tr('Committed')) + '">' + escapeHtml(String(it.committed || 0)) + '</td>';

@@ -56,12 +56,40 @@ class WorkspaceAccessService
 			}
 		}
 
+		// Single organisation: never ask the user to pick a book.
+		$forceNoPicker = !Constants::MULTI_WORKSPACE_ENABLED;
+
 		if ($requested !== null && $requested > 0) {
+			// When multi is off, ignore non-canonical book ids for ambient resolve
+			// (sidebar / mobile hydrate). Explicit ACL checks still pass the real id
+			// via assertCapability → resolveForUser($uid, $workspaceId).
+			if ($forceNoPicker && $requestedWorkspaceId === null) {
+				$canonical = $this->canonicalWorkspaceOrNull();
+				if ($canonical !== null && (int)$canonical->getId() !== $requested) {
+					$requested = (int)$canonical->getId();
+				}
+			}
 			$ws = $this->requireWorkspace($requested);
 			$member = $this->members->findMembershipOrNull((int)$ws->getId(), $userId);
 			if (!$isAppAdmin && $member === null) {
 				// Existence leak prevention: same as not found.
 				throw new NotFoundException($this->l10n->t('Workspace not found.'));
+			}
+			$this->remember($userId, (int)$ws->getId());
+			return [
+				'workspace' => $ws,
+				'role' => $isAppAdmin ? 'manager' : (string)$member->getRole(),
+				'isAppAdmin' => $isAppAdmin,
+				'member' => $member,
+				'needsPicker' => false,
+			];
+		}
+
+		if ($forceNoPicker) {
+			$ws = $this->requireCanonicalWorkspace($isAppAdmin, $userId);
+			$member = $this->members->findMembershipOrNull((int)$ws->getId(), $userId);
+			if (!$isAppAdmin && $member === null) {
+				throw new NotFoundException($this->l10n->t('You are not a member of any workspace.'));
 			}
 			$this->remember($userId, (int)$ws->getId());
 			return [
@@ -249,9 +277,7 @@ class WorkspaceAccessService
 	 */
 	public function listVisibleSummaries(string $userId): array
 	{
-		$rows = $this->access->isAppAdmin($userId)
-			? $this->workspaces->findAll()
-			: $this->workspaces->findForUser($userId);
+		$rows = $this->visibleWorkspaceEntities($userId);
 		$out = [];
 		foreach ($rows as $ws) {
 			$out[] = [
@@ -278,9 +304,7 @@ class WorkspaceAccessService
 	public function listForMobile(string $userId): array
 	{
 		$isAppAdmin = $this->access->isAppAdmin($userId);
-		$rows = $isAppAdmin
-			? $this->workspaces->findAll()
-			: $this->workspaces->findForUser($userId);
+		$rows = $this->visibleWorkspaceEntities($userId);
 		$out = [];
 		foreach ($rows as $ws) {
 			$wsId = (int)$ws->getId();
@@ -309,6 +333,51 @@ class WorkspaceAccessService
 			'workspaces' => $out,
 			'lastUsedWorkspaceId' => $lastId > 0 ? $lastId : null,
 		];
+	}
+
+	/**
+	 * @return list<Workspace>
+	 */
+	private function visibleWorkspaceEntities(string $userId): array
+	{
+		if (!Constants::MULTI_WORKSPACE_ENABLED) {
+			$canonical = $this->canonicalWorkspaceOrNull();
+			if ($canonical === null) {
+				return [];
+			}
+			$isAppAdmin = $this->access->isAppAdmin($userId);
+			if (!$isAppAdmin && $this->members->findMembershipOrNull((int)$canonical->getId(), $userId) === null) {
+				return [];
+			}
+			return [$canonical];
+		}
+
+		return $this->access->isAppAdmin($userId)
+			? $this->workspaces->findAll()
+			: $this->workspaces->findForUser($userId);
+	}
+
+	private function canonicalWorkspaceOrNull(): ?Workspace
+	{
+		$default = $this->workspaces->findDefault();
+		if ($default !== null) {
+			return $default;
+		}
+		$all = $this->workspaces->findAll(1);
+		return $all[0] ?? null;
+	}
+
+	private function requireCanonicalWorkspace(bool $isAppAdmin, string $userId): Workspace
+	{
+		$ws = $this->canonicalWorkspaceOrNull();
+		if ($ws === null) {
+			throw new NotFoundException(
+				$isAppAdmin
+					? $this->l10n->t('No workspace exists yet.')
+					: $this->l10n->t('You are not a member of any workspace.'),
+			);
+		}
+		return $ws;
 	}
 
 	private function remember(string $userId, int $workspaceId): void

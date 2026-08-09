@@ -9,18 +9,17 @@ include __DIR__ . '/common/page-start.php';
 	<section class="crm-card" aria-labelledby="crm-company-form-title">
 		<header class="crm-card__header">
 			<h2 id="crm-company-form-title" class="crm-card__title"><?php p($mode === 'edit' ? $l->t('Edit company') : $l->t('New company')); ?></h2>
-			<p class="crm-card__lead"><?php p($mode === 'edit' ? $l->t('Update the company name, owner, and links.') : $l->t('Just enter a name — you become the account owner; everything else is optional.')); ?></p>
+			<p class="crm-card__lead"><?php p($mode === 'edit' ? $l->t('Change the name if you need to. Owner, status, and links stay under Advanced.') : $l->t('Just enter a name — you become the account owner; everything else is optional.')); ?></p>
 		</header>
 		<div class="crm-card__body">
 			<form id="crm-company-form" class="crm-form" data-mode="<?php p($mode); ?>" data-id="<?php p($company ? $company->getId() : ''); ?>" data-updated-at="<?php p($company && $company->getUpdatedAt() ? $company->getUpdatedAt()->format(\DateTimeInterface::ATOM) : ''); ?>" novalidate>
-				<div class="form-group">
-					<label class="form-label" for="crm-company-name"><?php p($l->t('Name')); ?></label>
-					<input class="crm-input form-input crm-input--lg" id="crm-company-name" name="name" required maxlength="200" value="<?php p($company ? $company->getName() : ''); ?>" autocomplete="organization" autofocus />
-					<?php if ($mode !== 'edit'): ?>
-					<p class="form-help" id="crm-company-name-help"><?php p($l->t('That is enough — press Save. Optional details are under Advanced.')); ?></p>
-					<?php endif; ?>
+				<div class="form-group crm-company-essentials" role="group" aria-labelledby="crm-company-name-label">
+					<label class="form-label" id="crm-company-name-label" for="crm-company-name"><?php p($l->t('Name')); ?></label>
+					<input class="crm-input form-input crm-input--lg" id="crm-company-name" name="name" required maxlength="200" value="<?php p($company ? $company->getName() : ''); ?>" autocomplete="organization" autofocus aria-describedby="crm-company-name-help" />
+					<p class="form-help" id="crm-company-name-help"><?php p($mode === 'edit' ? $l->t('That is enough — press Save. Optional details stay under Advanced.') : $l->t('That is enough — press Save. Optional details are under Advanced.')); ?></p>
 				</div>
-				<details class="crm-advanced" id="crm-company-advanced"<?php if ($mode === 'edit'): ?> open<?php endif; ?>>
+				<?php /* Bachus: never force-open Advanced on edit — parity with agreement essentials-first. */ ?>
+				<details class="crm-advanced" id="crm-company-advanced">
 					<summary class="crm-advanced__summary"><?php p($l->t('Advanced')); ?></summary>
 					<div class="crm-advanced__body">
 						<div class="form-group">
@@ -74,9 +73,10 @@ include __DIR__ . '/common/page-start.php';
 						</div>
 						<div class="form-group">
 							<?php if (!empty($_['pcCustomersAvailable'])): ?>
-								<label class="form-label" for="crm-company-pc-filter"><?php p($l->t('ProjectCheck customer')); ?></label>
-								<input type="search" class="crm-input form-input" id="crm-company-pc-filter" autocomplete="off" placeholder="<?php p($l->t('Search by name…')); ?>" aria-controls="crm-company-pc" aria-describedby="crm-company-pc-help" />
-								<select class="crm-input form-select" id="crm-company-pc" name="pcCustomerId" data-crm-sibling-select>
+								<span class="form-label" id="crm-company-pc-label"><?php p($l->t('ProjectCheck customer')); ?></span>
+								<label class="visually-hidden" for="crm-company-pc-filter"><?php p($l->t('Search ProjectCheck customers')); ?></label>
+								<input type="search" class="crm-input form-input" id="crm-company-pc-filter" autocomplete="off" placeholder="<?php p($l->t('Search by name…')); ?>" aria-controls="crm-company-pc" aria-labelledby="crm-company-pc-label" aria-describedby="crm-company-pc-help" />
+								<select class="crm-input form-select" id="crm-company-pc" name="pcCustomerId" data-crm-sibling-select aria-labelledby="crm-company-pc-label" aria-describedby="crm-company-pc-help">
 									<option value=""><?php p($l->t('Not linked')); ?></option>
 									<?php foreach (($_['pcCustomerOptions'] ?? []) as $opt): ?>
 										<option value="<?php p((string)$opt['id']); ?>" <?php if ($company && (int)$company->getPcCustomerId() === (int)$opt['id']): ?>selected<?php endif; ?>><?php p($opt['label']); ?></option>
@@ -96,9 +96,10 @@ include __DIR__ . '/common/page-start.php';
 						</div>
 						<div class="form-group">
 							<?php if (!empty($_['tcCustomersAvailable'])): ?>
-								<label class="form-label" for="crm-company-tc-filter"><?php p($l->t('TicketCheck customer')); ?></label>
-								<input type="search" class="crm-input form-input" id="crm-company-tc-filter" autocomplete="off" placeholder="<?php p($l->t('Search by name…')); ?>" aria-controls="crm-company-tc" aria-describedby="crm-company-tc-help" />
-								<select class="crm-input form-select" id="crm-company-tc" name="tcCustomerId" data-crm-sibling-select>
+								<span class="form-label" id="crm-company-tc-label"><?php p($l->t('TicketCheck customer')); ?></span>
+								<label class="visually-hidden" for="crm-company-tc-filter"><?php p($l->t('Search TicketCheck customers')); ?></label>
+								<input type="search" class="crm-input form-input" id="crm-company-tc-filter" autocomplete="off" placeholder="<?php p($l->t('Search by name…')); ?>" aria-controls="crm-company-tc" aria-labelledby="crm-company-tc-label" aria-describedby="crm-company-tc-help" />
+								<select class="crm-input form-select" id="crm-company-tc" name="tcCustomerId" data-crm-sibling-select aria-labelledby="crm-company-tc-label" aria-describedby="crm-company-tc-help">
 									<option value=""><?php p($l->t('Not linked')); ?></option>
 									<?php foreach (($_['tcCustomerOptions'] ?? []) as $opt): ?>
 										<option value="<?php p((string)$opt['id']); ?>" <?php if ($company && (int)$company->getTcCustomerId() === (int)$opt['id']): ?>selected<?php endif; ?>><?php p($opt['label']); ?></option>

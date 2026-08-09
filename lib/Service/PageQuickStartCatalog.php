@@ -216,7 +216,7 @@ final class PageQuickStartCatalog
 					],
 					[
 						'title' => $l->t('3. Turn sources on'),
-						'text' => $l->t('Managers enable Contacts, Files, Calendar, Tasks, or import anomalies under Workspace settings.'),
+						'text' => $l->t('Managers enable Contacts, Files, Calendar, Tasks, or import anomalies under Team & mailbox.'),
 						'href' => $link('settingsSection', ['section' => 'review-sources']),
 						'linkLabel' => $l->t('Review source settings'),
 					],
@@ -434,7 +434,7 @@ final class PageQuickStartCatalog
 					],
 					[
 						'title' => $l->t('2. Configure mailbox if shared'),
-						'text' => $l->t('Shared mailbox powers Review mail. Keep credentials in Workspace settings — never in chat.'),
+						'text' => $l->t('Shared mailbox powers Review mail. Keep credentials in Team & mailbox — never in chat.'),
 					],
 					[
 						'title' => $l->t('3. Personal preference'),
@@ -457,9 +457,9 @@ final class PageQuickStartCatalog
 					],
 					[
 						'title' => $l->t('3. Seats and catalogue'),
-						'text' => $l->t('Mobile license seats and custom product codes are set here. Workspace members and mailbox stay on Workspace settings.'),
+						'text' => $l->t('Mobile license seats and custom product codes are set here. Team members and mailbox stay on Team & mailbox.'),
 						'href' => $link('settings'),
-						'linkLabel' => $l->t('Open Workspace settings'),
+						'linkLabel' => $l->t('Open Team & mailbox'),
 					],
 				],
 			],

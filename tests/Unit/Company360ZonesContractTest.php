@@ -16,8 +16,10 @@ final class Company360ZonesContractTest extends TestCase
 			$this->assertStringContainsString($z, $html);
 		}
 		$this->assertStringContainsString('How to use this page', $html);
-		$this->assertStringContainsString('Look-only role', $html);
-		$this->assertStringContainsString('You can edit. Work top to bottom', $html);
+		$this->assertStringContainsString('Buttons to add or change stay hidden', $html);
+		$this->assertStringContainsString('Work top to bottom: talk → people → deals → money.', $html);
+		$this->assertStringNotContainsString('Look-only role', $html);
+		$this->assertStringNotContainsString('You can edit. Work top to bottom', $html);
 		$this->assertStringContainsString('1 · Talk & people', $html);
 		$this->assertStringContainsString('2 · Sell & keep', $html);
 		$this->assertStringContainsString('3 · Money & files', $html);

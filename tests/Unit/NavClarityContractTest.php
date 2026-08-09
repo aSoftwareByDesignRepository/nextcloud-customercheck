@@ -22,7 +22,8 @@ final class NavClarityContractTest extends TestCase
 		$this->assertStringContainsString("\$l->t('Plans')", $html);
 		$this->assertStringContainsString("\$l->t('Deals, customers & money')", $html);
 		$this->assertStringContainsString("\$l->t('Clear what needs you now')", $html);
-		$this->assertStringContainsString("\$l->t('See how the book is doing')", $html);
+		$this->assertStringContainsString("\$l->t('See how your customers are doing')", $html);
+		$this->assertStringNotContainsString("\$l->t('See how the book is doing')", $html);
 		$this->assertStringContainsString('title="<?php p($jobTitle); ?>"', $html);
 	}
 
@@ -57,7 +58,9 @@ final class NavClarityContractTest extends TestCase
 		$src = (string)file_get_contents(dirname(__DIR__, 2) . '/lib/Service/PageHelpCatalog.php');
 		$this->assertStringNotContainsString('Job:', $src);
 		$this->assertStringNotContainsString('Aufgabe:', $src);
-		$this->assertStringContainsString('workspace', $src);
+		// User-visible leads must not mention multi-tenant jargon.
+		$this->assertDoesNotMatchRegularExpression("/\\\$l->t\\('[^']*workspace[^']*'\\)/", $src);
+		$this->assertDoesNotMatchRegularExpression("/\\\$l->t\\('[^']*customer book[^']*'\\)/", $src);
 		$this->assertGreaterThanOrEqual(15, substr_count($src, "\$l->t('"));
 	}
 

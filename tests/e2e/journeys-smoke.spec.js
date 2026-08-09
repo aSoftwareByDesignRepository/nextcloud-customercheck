@@ -131,13 +131,30 @@ test.describe('CustomerCheck journeys smoke', () => {
     const dialog = page.locator('dialog.crm-native-dialog[open]').first();
     await expect(dialog).toBeVisible({ timeout: 10000 });
     await expect(dialog).toHaveAttribute('aria-modal', 'true');
+    await expect(dialog).toHaveClass(/modal--md/);
+    await expect(dialog).toHaveClass(/crm-dialog--content/);
+    await expect(dialog).toHaveClass(/crm-dialog--new-deal/);
     await expect(dialog.locator('form.crm-form--stack')).toBeVisible();
-    await expect(dialog.locator('select[name="companyId"]')).toBeVisible({ timeout: 10000 });
+    await expect(dialog.locator('.crm-deal-company-picker')).toBeVisible({ timeout: 10000 });
+    await expect(dialog.locator('.crm-company-list, .crm-company-choice:not([hidden])').first()).toBeVisible();
+    await expect(dialog.locator('input[name="companyId"][type="hidden"]')).toBeAttached();
+    await expect(dialog.locator('select[name="companyId"]')).toHaveCount(0);
+    await expect(dialog.getByText('Showing %s companies')).toHaveCount(0);
+    await expect(dialog.locator('form.crm-form--new-deal')).toBeVisible();
     await expect(dialog.locator('input[name="title"]')).toBeVisible();
     await expect(dialog.locator('.modal-close, .crm-btn--secondary[data-cancel]').first()).toBeVisible();
     // Confirm helper also ships aria-modal (smoke the Confirm path via cancel then reopen not required).
     const hasPresent = await page.evaluate(() => !!(window.CustomerCheckDialogPresent && typeof window.CustomerCheckDialogPresent.safeExternalHref === 'function'));
     expect(hasPresent).toBeTruthy();
+    const hasPicker = await page.evaluate(() => !!(window.CustomerCheckCompanyPicker && typeof window.CustomerCheckCompanyPicker.mountListPanel === 'function'));
+    expect(hasPicker).toBeTruthy();
+
+    // Responsive: phone viewport must still fit the dialog without horizontal overflow.
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(dialog).toBeVisible();
+    const box = await dialog.boundingBox();
+    expect(box).toBeTruthy();
+    expect(box.width).toBeLessThanOrEqual(390);
   });
 
   test('agreements money activities expose AZC filter panels', async ({ page }) => {

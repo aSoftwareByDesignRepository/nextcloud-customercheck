@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace OCA\CustomerCheck\Service;
 
+use OCA\CustomerCheck\Constants;
 use OCP\IL10N;
 
 /**
@@ -418,6 +419,22 @@ final class DisplayLabelService
 			'lost' => $this->l10n->t('Lost'),
 			default => $stage !== '' ? $stage : $this->l10n->t('Unknown'),
 		};
+	}
+
+	/**
+	 * @return list<array{value: string, label: string}>
+	 */
+	public function dealStageOptions(): array
+	{
+		$out = [];
+		foreach (Constants::DEAL_STAGES as $stage) {
+			$out[] = [
+				'value' => $stage,
+				'label' => $this->dealStage($stage),
+			];
+		}
+
+		return $out;
 	}
 
 	public function activityType(string $type): string

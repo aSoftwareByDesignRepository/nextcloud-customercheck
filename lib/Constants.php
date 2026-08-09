@@ -275,8 +275,14 @@ final class Constants
 	/** Max skip_until horizon in days (§11.2). */
 	public const NEXT_ACTION_SKIP_MAX_DAYS = 7;
 
-	/** Max workspaces / members (§6). */
-	public const WS_MAX_PER_INSTANCE = 100;
+	/**
+	 * Multi-workspace (multi customer-book) is retired — one organisation per instance.
+	 * Schema/ACL still use workspace_id; create/move/switcher UX stay locked off.
+	 */
+	public const MULTI_WORKSPACE_ENABLED = false;
+
+	/** Max workspaces / members (§6). Single-org mode caps at one book. */
+	public const WS_MAX_PER_INSTANCE = 1;
 	public const WS_MAX_MEMBERS = 200;
 
 	/** Freemail domains — never auto domain-match (§14.2 / §18.3). */

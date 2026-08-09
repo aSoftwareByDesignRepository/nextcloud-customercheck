@@ -101,7 +101,7 @@ final class WorkspaceAccessIsolationTest extends TestCase
 		}
 	}
 
-	public function testListVisibleSummariesForMemberUsesFindForUser(): void
+	public function testListVisibleSummariesForMemberUsesCanonical(): void
 	{
 		$ws = new Workspace();
 		$ws->setId(3);
@@ -109,8 +109,18 @@ final class WorkspaceAccessIsolationTest extends TestCase
 		$ws->setName('Organisation');
 		$ws->setIsDefault(1);
 		$this->access->method('isAppAdmin')->willReturn(false);
-		$this->workspaces->expects($this->once())->method('findForUser')->with('alice')->willReturn([$ws]);
+		$this->workspaces->expects($this->once())->method('findDefault')->willReturn($ws);
+		$this->workspaces->expects($this->never())->method('findForUser');
 		$this->workspaces->expects($this->never())->method('findAll');
+		$this->members->method('findMembershipOrNull')->with(3, 'alice')->willReturn(
+			(static function () {
+				$m = new \OCA\CustomerCheck\Db\WorkspaceMember();
+				$m->setWorkspaceId(3);
+				$m->setUserId('alice');
+				$m->setRole('member');
+				return $m;
+			})(),
+		);
 
 		$list = $this->svc->listVisibleSummaries('alice');
 		$this->assertCount(1, $list);
@@ -121,20 +131,21 @@ final class WorkspaceAccessIsolationTest extends TestCase
 		$this->assertTrue($list[0]['isDefault']);
 	}
 
-	public function testListVisibleSummariesForAppAdminUsesFindAll(): void
+	public function testListVisibleSummariesForAppAdminUsesCanonical(): void
 	{
 		$ws = new Workspace();
 		$ws->setId(1);
 		$ws->setSlug('a');
 		$ws->setName('A');
-		$ws->setIsDefault(0);
+		$ws->setIsDefault(1);
 		$this->access->method('isAppAdmin')->willReturn(true);
-		$this->workspaces->expects($this->once())->method('findAll')->willReturn([$ws]);
+		$this->workspaces->expects($this->once())->method('findDefault')->willReturn($ws);
+		$this->workspaces->expects($this->never())->method('findAll');
 		$this->workspaces->expects($this->never())->method('findForUser');
 
 		$list = $this->svc->listVisibleSummaries('admin');
 		$this->assertCount(1, $list);
 		$this->assertSame(1, $list[0]['id']);
-		$this->assertFalse($list[0]['isDefault']);
+		$this->assertTrue($list[0]['isDefault']);
 	}
 }

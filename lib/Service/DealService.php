@@ -80,6 +80,7 @@ class DealService
 		$deal->setStage($stage);
 		$deal->setValueCents(max(0, (int)($data['valueCents'] ?? 0)));
 		$deal->setProducts(isset($data['products']) ? trim((string)$data['products']) : null);
+		$deal->setNotes($this->normalizeNotes($data['notes'] ?? null));
 		$close = DateMath::parseStrictDate((string)($data['expectedClose'] ?? ''));
 		$deal->setExpectedClose($close !== null ? new \DateTime($close->format('Y-m-d')) : null);
 		$owner = trim((string)($data['ownerUserId'] ?? $actor));
@@ -207,6 +208,9 @@ class DealService
 			}
 			if (array_key_exists('products', $data)) {
 				$deal->setProducts($data['products'] === null ? null : trim((string)$data['products']));
+			}
+			if (array_key_exists('notes', $data)) {
+				$deal->setNotes($this->normalizeNotes($data['notes']));
 			}
 			if (array_key_exists('expectedClose', $data)) {
 				$close = DateMath::parseStrictDate((string)($data['expectedClose'] ?? ''));
@@ -416,6 +420,7 @@ class DealService
 			'title' => (string)$deal->getTitle(),
 			'ownerUserId' => (string)($deal->getOwnerUserId() ?? ''),
 			'valueCents' => (int)$deal->getValueCents(),
+			'notes' => (string)($deal->getNotes() ?? ''),
 			'quoteSentOn' => $deal->getQuoteSentOn() !== null ? $deal->getQuoteSentOn()->format('Y-m-d') : '',
 			'forecastBucket' => (string)($deal->getForecastBucket() ?? ''),
 			'nextActionSkipUntil' => $deal->getNextActionSkipUntil() !== null
@@ -432,13 +437,30 @@ class DealService
 	private function dealIncomingPatch(array $data): array
 	{
 		$out = [];
-		foreach (['title', 'ownerUserId', 'valueCents', 'quoteSentOn', 'forecastBucket', 'nextActionSkipUntil', 'stage'] as $field) {
+		foreach (['title', 'ownerUserId', 'valueCents', 'notes', 'quoteSentOn', 'forecastBucket', 'nextActionSkipUntil', 'stage'] as $field) {
 			if (array_key_exists($field, $data)) {
 				$out[$field] = $data[$field];
 			}
 		}
 
 		return $out;
+	}
+
+	/**
+	 * Team-only deal notes (not shown to the customer). Empty → null; max 4000 chars.
+	 */
+	private function normalizeNotes(mixed $raw): ?string
+	{
+		$notes = trim((string)($raw ?? ''));
+		if (mb_strlen($notes) > 4000) {
+			throw ValidationException::field(
+				Constants::ERR_VALIDATION,
+				'notes',
+				$this->l10n->t('Keep the notes under 4000 characters.'),
+			);
+		}
+
+		return $notes === '' ? null : $notes;
 	}
 
 	/**
@@ -652,6 +674,7 @@ class DealService
 			'companyId' => (int)$deal->getCompanyId(),
 			'valueCents' => (int)$deal->getValueCents(),
 			'products' => $deal->getProducts(),
+			'notes' => $deal->getNotes(),
 			'expectedClose' => $deal->getExpectedClose()?->format('Y-m-d'),
 			'stageChangedAt' => OptimisticLock::format($deal->getStageChangedAt()),
 			'lostReason' => $deal->getLostReason(),

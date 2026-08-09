@@ -16,6 +16,7 @@ use OCP\IDBConnection;
 use OCP\IGroupManager;
 use OCP\IL10N;
 use OCP\IUserManager;
+use OCP\Lock\ILockingProvider;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
@@ -67,6 +68,7 @@ final class WorkspaceServiceAddMemberValidationTest extends TestCase
 			$this->users,
 			$this->groups,
 			$this->createMock(CirclesDirectoryService::class),
+			$this->createMock(ILockingProvider::class),
 		);
 	}
 
@@ -161,6 +163,7 @@ final class WorkspaceServiceAddMemberValidationTest extends TestCase
 			$this->users,
 			$this->groups,
 			$this->createMock(CirclesDirectoryService::class),
+			$this->createMock(ILockingProvider::class),
 		);
 
 		try {
@@ -249,6 +252,7 @@ final class WorkspaceServiceAddMemberValidationTest extends TestCase
 			$this->users,
 			$this->groups,
 			$circles,
+			$this->createMock(ILockingProvider::class),
 		);
 		$this->expectException(ValidationException::class);
 		$service->importMembersFromCircle(1, 'c1', 'member', false, 'actor');
@@ -289,6 +293,7 @@ final class WorkspaceServiceAddMemberValidationTest extends TestCase
 			$this->users,
 			$this->groups,
 			$circles,
+			$this->createMock(ILockingProvider::class),
 		);
 
 		$result = $service->importMembersFromCircle(1, 'circ-a', 'member', true, 'actor');

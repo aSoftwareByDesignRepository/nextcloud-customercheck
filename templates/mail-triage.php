@@ -10,7 +10,7 @@ include __DIR__ . '/common/page-start.php';
 			<p class="crm-card__lead"><?php p($l->t('Assign unmatched shared mailbox messages.')); ?></p>
 		</header>
 		<div class="crm-card__body">
-			<p class="crm-callout" role="status"><?php p($l->t('These messages come from the shared mailbox. Everyone in this workspace who can read mail can see them.')); ?></p>
+			<p class="crm-callout" role="status"><?php p($l->t('These messages come from the shared mailbox. Anyone on the team who can read mail can see them.')); ?></p>
 			<div
 				class="crm-skeleton crm-persona-mount"
 				data-crm-persona-mount="mail-triage"

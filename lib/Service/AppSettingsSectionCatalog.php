@@ -86,7 +86,7 @@ final class AppSettingsSectionCatalog
 			'jobs' => $l->t('When reminders and the weekly digest run.'),
 			'tokens' => $l->t('Calendar feed and website intake links for this Nextcloud.'),
 			'license' => $l->t('Official mobile seats — the web app stays free either way.'),
-			'product-codes' => $l->t('Labels and kinds for agreements in every workspace.'),
+			'product-codes' => $l->t('Labels and kinds for agreements across CustomerCheck.'),
 			default => $l->t('Access control, reminders, tokens, mobile license, and the agreement catalogue.'),
 		};
 	}

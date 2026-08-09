@@ -81,6 +81,39 @@ final class BachusSimplicityUxContractTest extends TestCase
 		);
 	}
 
+	public function testCompanyFormNeverForceOpensAdvancedOnEdit(): void
+	{
+		$html = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/company-form.php');
+		$this->assertStringContainsString('crm-company-essentials', $html);
+		$this->assertStringContainsString('id="crm-company-advanced"', $html);
+		$this->assertStringNotContainsString("if (\$mode === 'edit'): ?> open", $html);
+		$this->assertDoesNotMatchRegularExpression(
+			'/id="crm-company-advanced"[^>]*\sopen/',
+			$html,
+		);
+		$this->assertLessThan(
+			(int)strpos($html, 'crm-company-advanced'),
+			(int)strpos($html, 'crm-company-name'),
+		);
+		$this->assertGreaterThan(
+			(int)strpos($html, 'crm-company-advanced'),
+			(int)strpos($html, 'crm-company-status'),
+		);
+	}
+
+	public function testPipelineEmptyStateOffersCreateCompanyWhenNoCompanies(): void
+	{
+		$html = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/pipeline.php');
+		$this->assertStringContainsString('!$hasCompanies', $html);
+		$this->assertStringContainsString("\$l->t('Create company')", $html);
+		$this->assertStringContainsString("\$urls['companyNew']", $html);
+		$js = (string)file_get_contents(dirname(__DIR__, 2) . '/js/pages/pipeline.js');
+		$this->assertStringContainsString('offerCreateCompanyFirst', $js);
+		$this->assertStringContainsString('companyNewUrl', $js);
+		$this->assertStringContainsString("t('Create company')", $js);
+		$this->assertStringContainsString('confirmDialog', $js);
+	}
+
 	public function testEmailsSectionIsCollapsibleUnderTalked(): void
 	{
 		$html = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/common/crm-emails-section.php');
@@ -120,5 +153,67 @@ final class BachusSimplicityUxContractTest extends TestCase
 		$this->assertStringNotContainsString('%s rows · %s ready · %s need a choice · %s skip', $js);
 		$help = (string)file_get_contents(dirname(__DIR__, 2) . '/lib/Service/PageHelpCatalog.php');
 		$this->assertStringContainsString('nothing is saved until you say yes', $help);
+	}
+
+	public function testSingleOrgChromeDropsWorkspaceJargonAndTechIds(): void
+	{
+		$help = (string)file_get_contents(dirname(__DIR__, 2) . '/lib/Service/PageHelpCatalog.php');
+		$this->assertStringNotContainsString('this workspace', $help);
+		$this->assertStringNotContainsString('customer book', $help);
+		$nav = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/common/navigation.php');
+		$this->assertStringNotContainsString('Your role:', $nav);
+		$this->assertStringNotContainsString('crm-nav__role', $nav);
+		$mailbox = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/settings/workspace-mailbox.php');
+		$this->assertStringContainsString('crm-mailbox-servers', $mailbox);
+		$this->assertStringContainsString('Server settings (IMAP / SMTP)', $mailbox);
+		$this->assertStringNotContainsString('for this book', $mailbox);
+		$this->assertStringNotContainsString('colleagues in the workspace', $mailbox);
+		$this->assertStringContainsString('shared team inbox', $mailbox);
+		$reviewSrc = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/settings/workspace-review-sources.php');
+		$this->assertStringContainsString('Scan as teammate', $reviewSrc);
+		$this->assertStringNotContainsString('Scan as workspace member', $reviewSrc);
+		$settingsJs = (string)file_get_contents(dirname(__DIR__, 2) . '/js/pages/settings.js');
+		$this->assertStringNotContainsString("' · #' + currentWorkspaceId", $settingsJs);
+		$this->assertStringContainsString("tr('Add a colleague below so they can help with customers.')", $settingsJs);
+		$this->assertStringContainsString("tr('Look only')", $settingsJs);
+		$this->assertStringContainsString('ensureMailboxServersVisible', $settingsJs);
+		$detail = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/company-detail.php');
+		$this->assertStringNotContainsString('Look-only role', $detail);
+		$this->assertStringNotContainsString('You can edit. Work top to bottom', $detail);
+		$triage = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/mail-triage.php');
+		$this->assertStringNotContainsString('this workspace', $triage);
+		$review = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/review.php');
+		$this->assertStringNotContainsString('your workspace enabled', $review);
+	}
+
+	public function testCompany360CollapsesNoiseAndOneClickRenew(): void
+	{
+		$detail = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/company-detail.php');
+		$this->assertStringContainsString("\$l->t('Phone tasks')", $detail);
+		$this->assertStringContainsString("\$l->t('Add reminder')", $detail);
+		$this->assertStringContainsString("\$l->t('Reminders')", $detail);
+		$this->assertStringContainsString('crm-card--collapsible" id="crm-open-tasks"', $detail);
+		$this->assertStringContainsString('<details class="crm-card crm-card--collapsible" id="crm-prepare-meeting">', $detail);
+		$this->assertStringContainsString('<details class="crm-card crm-card--collapsible" id="crm-timeline">', $detail);
+		$this->assertStringContainsString('id="crm-create-folder"', $detail);
+		$this->assertStringContainsString("\$l->t('More document actions')", $detail);
+		// Reminders table is Title + Due + Action (type/origin badges live on the title cell).
+		$actStart = (int)strpos($detail, 'id="crm-activities"');
+		$actEnd = (int)strpos($detail, 'id="crm-billing"', $actStart);
+		$actChunk = substr($detail, $actStart, max(0, $actEnd - $actStart));
+		$this->assertStringContainsString("\$l->t('Title')", $actChunk);
+		$this->assertStringContainsString("\$l->t('Due')", $actChunk);
+		$this->assertStringContainsString("\$l->t('Action')", $actChunk);
+		$this->assertStringNotContainsString("\$l->t('Origin')", $actChunk);
+		$js = (string)file_get_contents(dirname(__DIR__, 2) . '/js/pages/company-detail.js');
+		$this->assertStringContainsString("t('Renew for one year?')", $js);
+		$this->assertStringContainsString("t('Renew for one year')", $js);
+		$this->assertStringContainsString("/agreements/' + id + '/supersede'", $js);
+		$this->assertStringNotContainsString("promptFields(t('Renew agreement')", $js);
+		$this->assertStringContainsString('requireReason: true', $js);
+		$this->assertStringNotContainsString("promptFields(t('Cancel agreement')", $js);
+		$this->assertStringContainsString("promptFields(t('Add reminder')", $js);
+		$this->assertStringContainsString("function paintHydrateFailure", $js);
+		$this->assertStringContainsString("paintHydrateFailure('crm-billing-body'", $js);
 	}
 }

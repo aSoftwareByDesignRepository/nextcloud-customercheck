@@ -46,7 +46,7 @@ $cases = [
 	],
 	[
 		'file' => $root . '/lib/Service/FrontEndAssetService.php',
-		'find' => "Util::addScript(Application::APP_ID, 'common/dialog-present');\n\t\tUtil::addScript(Application::APP_ID, 'common/components');",
+		'find' => "Util::addScript(Application::APP_ID, 'common/dialog-present');\n\t\tUtil::addScript(Application::APP_ID, 'common/company-picker');\n\t\tUtil::addScript(Application::APP_ID, 'common/components');",
 		'replace' => "Util::addScript(Application::APP_ID, 'common/components');",
 		'test' => 'DialogUxContractTest',
 		'label' => 'core assets drop dialog-present',
@@ -57,6 +57,27 @@ $cases = [
 		'replace' => "const dialog = document.createElement('div');\n      dialog.className = 'modal modal--sm confirm-dialog crm-dialog';",
 		'test' => 'DesignSystemAlignmentContractTest',
 		'label' => 'confirm dialog reverts to div modal',
+	],
+	[
+		'file' => $root . '/js/common/components.js',
+		'find' => 'crm-dialog crm-dialog--content',
+		'replace' => 'crm-dialog',
+		'test' => 'DialogUxContractTest',
+		'label' => 'createModal drops content polish class',
+	],
+	[
+		'file' => $root . '/js/common/shared-mail-send.js',
+		'find' => "class=\"crm-form crm-form--stack\"",
+		'replace' => "class=\"crm-form\"",
+		'test' => 'DialogUxContractTest',
+		'label' => 'mailbox pick dialog drops form stack',
+	],
+	[
+		'file' => $root . '/js/pages/company-detail.js',
+		'find' => "type: 'company'",
+		'replace' => "type: 'select'",
+		'test' => 'DialogUxContractTest',
+		'label' => 'merge dialog reverts to mega-select type',
 	],
 ];
 

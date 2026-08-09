@@ -19,7 +19,7 @@ use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Companion listForMobile: visible books only, no remember() side effects.
+ * Companion listForMobile — single organisation pins to the canonical book.
  */
 final class WorkspaceAccessListForMobileTest extends TestCase
 {
@@ -74,12 +74,13 @@ final class WorkspaceAccessListForMobileTest extends TestCase
 		return $m;
 	}
 
-	public function testAppAdminSeesAllWithManagerRole(): void
+	public function testAppAdminSeesOnlyCanonicalWithManagerRole(): void
 	{
+		$this->assertFalse(Constants::MULTI_WORKSPACE_ENABLED);
 		$a = $this->workspace(1, 'A', 'a', true);
-		$b = $this->workspace(2, 'B', 'b');
 		$this->access->method('isAppAdmin')->with('admin')->willReturn(true);
-		$this->workspaces->expects($this->once())->method('findAll')->willReturn([$a, $b]);
+		$this->workspaces->expects($this->once())->method('findDefault')->willReturn($a);
+		$this->workspaces->expects($this->never())->method('findAll');
 		$this->workspaces->expects($this->never())->method('findForUser');
 		$this->members->method('findMembershipOrNull')->willReturn(null);
 		$this->config->method('getUserValue')->willReturn('1');
@@ -87,18 +88,18 @@ final class WorkspaceAccessListForMobileTest extends TestCase
 
 		$result = $this->svc->listForMobile('admin');
 
-		$this->assertCount(2, $result['workspaces']);
+		$this->assertCount(1, $result['workspaces']);
+		$this->assertSame(1, $result['workspaces'][0]['id']);
 		$this->assertSame('manager', $result['workspaces'][0]['role']);
-		$this->assertSame('manager', $result['workspaces'][1]['role']);
 		$this->assertSame(1, $result['lastUsedWorkspaceId']);
 	}
 
-	public function testMemberSeesOnlyMemberships(): void
+	public function testMemberSeesCanonicalWhenMember(): void
 	{
 		$ws = $this->workspace(3, 'Mine', 'mine', true);
 		$this->access->method('isAppAdmin')->with('alice')->willReturn(false);
-		$this->workspaces->expects($this->once())->method('findForUser')->with('alice')->willReturn([$ws]);
-		$this->workspaces->expects($this->never())->method('findAll');
+		$this->workspaces->expects($this->once())->method('findDefault')->willReturn($ws);
+		$this->workspaces->expects($this->never())->method('findForUser');
 		$this->members->method('findMembershipOrNull')
 			->with(3, 'alice')
 			->willReturn($this->member(3, 'alice', 'member'));
@@ -113,11 +114,26 @@ final class WorkspaceAccessListForMobileTest extends TestCase
 		$this->assertSame(3, $result['lastUsedWorkspaceId']);
 	}
 
+	public function testMemberHiddenWhenNotOnCanonical(): void
+	{
+		$ws = $this->workspace(3, 'Org', 'org', true);
+		$this->access->method('isAppAdmin')->willReturn(false);
+		$this->workspaces->method('findDefault')->willReturn($ws);
+		$this->members->method('findMembershipOrNull')->with(3, 'alice')->willReturn(null);
+		$this->config->method('getUserValue')->willReturn('3');
+		$this->config->expects($this->never())->method('setUserValue');
+
+		$result = $this->svc->listForMobile('alice');
+
+		$this->assertSame([], $result['workspaces']);
+		$this->assertNull($result['lastUsedWorkspaceId']);
+	}
+
 	public function testLastUsedClearedWhenNotVisible(): void
 	{
-		$ws = $this->workspace(3, 'Mine', 'mine');
+		$ws = $this->workspace(3, 'Mine', 'mine', true);
 		$this->access->method('isAppAdmin')->willReturn(false);
-		$this->workspaces->method('findForUser')->willReturn([$ws]);
+		$this->workspaces->method('findDefault')->willReturn($ws);
 		$this->members->method('findMembershipOrNull')
 			->willReturn($this->member(3, 'alice', 'viewer'));
 		$this->config->expects($this->once())
@@ -135,7 +151,8 @@ final class WorkspaceAccessListForMobileTest extends TestCase
 	public function testDoesNotCallSetUserValueRemember(): void
 	{
 		$this->access->method('isAppAdmin')->willReturn(false);
-		$this->workspaces->method('findForUser')->willReturn([]);
+		$this->workspaces->method('findDefault')->willReturn(null);
+		$this->workspaces->method('findAll')->with(1)->willReturn([]);
 		$this->config->method('getUserValue')->willReturn('0');
 		$this->config->expects($this->never())->method('setUserValue');
 

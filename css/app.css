@@ -9,6 +9,8 @@
 @import url('common/base.css');
 @import url('common/components.css');
 @import url('common/user-picker.css');
+@import url('common/company-picker.css');
+@import url('common/dialog-forms.css');
 @import url('common/layout.css');
 @import url('common/app-layout.css');
 @import url('common/page-patterns.css');
@@ -1279,30 +1281,176 @@ dialog.crm-native-dialog .crm-form-actions--start {
 	justify-content: center;
 }
 
-#app-content.crm-app .crm-welcome-coach {
-	margin: 0 0 var(--crm-space-4);
+/* Welcome coach — BudgetCheck-style quickstart cards on CRM callout tokens */
+#app-content.crm-app .crm-callout.crm-welcome-coach {
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	flex-wrap: nowrap;
+	gap: var(--crm-space-4);
+	margin: 0 0 var(--crm-space-5);
+	padding: var(--crm-space-5);
+	border-radius: var(--crm-radius-md);
+}
+
+#app-content.crm-app .crm-welcome-coach__header {
+	display: flex;
+	align-items: flex-start;
+	gap: var(--crm-space-3);
+	min-width: 0;
+}
+
+#app-content.crm-app .crm-welcome-coach__intro {
+	display: flex;
+	flex-direction: column;
+	gap: var(--crm-space-1);
+	min-width: 0;
+	flex: 1 1 auto;
 }
 
 #app-content.crm-app .crm-welcome-coach__title {
-	margin: 0 0 var(--crm-space-2);
+	margin: 0;
 	font-size: var(--crm-fs-lg);
 	font-weight: 600;
+	line-height: var(--crm-line-tight, 1.25);
 	color: var(--crm-text);
 }
 
-#app-content.crm-app .crm-welcome-coach__steps {
-	margin: 0 0 var(--crm-space-3);
-	padding-left: 1.25rem;
+#app-content.crm-app .crm-welcome-coach__lead {
+	margin: 0;
 	max-width: 52ch;
+	font-size: var(--crm-fs-sm);
 	line-height: var(--crm-line-base);
+	color: var(--crm-muted, var(--color-text-maxcontrast));
 }
 
-#app-content.crm-app .crm-welcome-coach__steps li {
-	margin: 0 0 var(--crm-space-2);
+#app-content.crm-app .crm-welcome-coach__steps {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: grid;
+	gap: var(--crm-space-3);
+	grid-template-columns: minmax(0, 1fr);
+	width: 100%;
 }
 
-#app-content.crm-app .crm-welcome-coach__actions {
-	justify-content: flex-start;
+@media (min-width: 640px) {
+	#app-content.crm-app .crm-welcome-coach__steps {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+
+@media (min-width: 960px) {
+	#app-content.crm-app .crm-welcome-coach__steps {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+}
+
+#app-content.crm-app .crm-welcome-coach__step {
+	display: flex;
+	align-items: flex-start;
+	gap: var(--crm-space-3);
+	min-width: 0;
+	height: 100%;
+	margin: 0;
+	padding: var(--crm-space-4);
+	border: 1px solid var(--crm-border, var(--color-border));
+	border-radius: var(--crm-radius-sm);
+	background: var(--crm-bg-card, var(--color-main-background));
+	box-shadow: none;
+}
+
+#app-content.crm-app .crm-welcome-coach__step--done {
+	background: var(--crm-bg-soft, color-mix(in srgb, var(--color-main-background) 94%, var(--color-main-text) 6%));
+}
+
+#app-content.crm-app .crm-welcome-coach__step-num {
+	flex-shrink: 0;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 2rem;
+	height: 2rem;
+	min-width: 2rem;
+	min-height: 2rem;
+	border-radius: 999px;
+	border: 2px solid var(--color-primary-element, #0082c9);
+	background: color-mix(in srgb, var(--color-primary-element, #0082c9) 12%, var(--color-main-background));
+	color: var(--color-primary-element, #0082c9);
+	font-size: var(--crm-fs-sm);
+	font-weight: 700;
+	line-height: 1;
+}
+
+#app-content.crm-app .crm-welcome-coach__step--done .crm-welcome-coach__step-num {
+	border-color: var(--color-border-dark, var(--crm-border-strong, var(--color-border)));
+	background: var(--crm-bg-soft, color-mix(in srgb, var(--color-main-background) 92%, var(--color-main-text) 8%));
+	color: var(--crm-muted, var(--color-text-maxcontrast));
+}
+
+#app-content.crm-app .crm-welcome-coach__step-body {
+	display: flex;
+	flex-direction: column;
+	gap: var(--crm-space-2);
+	min-width: 0;
+	flex: 1 1 auto;
+	height: 100%;
+}
+
+#app-content.crm-app .crm-welcome-coach__step-title {
+	margin: 0;
+	font-size: var(--crm-fs-md);
+	font-weight: 600;
+	line-height: var(--crm-line-tight, 1.25);
+	color: var(--crm-text, var(--color-main-text));
+}
+
+#app-content.crm-app .crm-welcome-coach__step-text,
+#app-content.crm-app .crm-welcome-coach__step-status {
+	margin: 0;
+	font-size: var(--crm-fs-sm);
+	line-height: var(--crm-line-base);
+	color: var(--crm-muted, var(--color-text-maxcontrast));
+}
+
+#app-content.crm-app .crm-welcome-coach__step-status {
+	font-weight: 600;
+	color: var(--crm-text, var(--color-main-text));
+}
+
+#app-content.crm-app .crm-welcome-coach__step-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--crm-space-2);
+	margin-top: auto;
+	padding-top: var(--crm-space-2);
+}
+
+#app-content.crm-app .crm-welcome-coach__step-actions .crm-btn {
+	min-height: var(--crm-touch, 44px);
+	justify-content: center;
+}
+
+@media (max-width: 639px) {
+	#app-content.crm-app .crm-welcome-coach__step-actions {
+		width: 100%;
+	}
+
+	#app-content.crm-app .crm-welcome-coach__step-actions .crm-btn {
+		flex: 1 1 auto;
+		width: 100%;
+	}
+}
+
+@media (forced-colors: active) {
+	#app-content.crm-app .crm-welcome-coach__step {
+		border: 1px solid CanvasText;
+	}
+
+	#app-content.crm-app .crm-welcome-coach__step-num {
+		border: 2px solid CanvasText;
+		forced-color-adjust: none;
+	}
 }
 
 #app-content.crm-app .crm-form-inline-error,
@@ -2648,15 +2796,57 @@ dialog.crm-native-dialog .crm-advanced__body {
 	border-radius: var(--crm-radius-sm, 6px);
 	border-inline-start: 4px solid var(--color-primary-element, #0082c9);
 }
-#app-content.crm-app .crm-360-role .crm-card__header {
-	align-items: center;
+#app-content.crm-app .crm-360-role {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
 	gap: var(--crm-space-3, 0.75rem);
+	padding: var(--crm-space-3, 0.75rem) var(--crm-space-4, 1rem);
+}
+#app-content.crm-app .crm-360-role .crm-callout__body {
+	flex: 1 1 12rem;
+	min-width: 0;
+}
+#app-content.crm-app .crm-360-role .crm-callout__title {
+	margin: 0 0 0.25rem;
+	font-size: var(--crm-fs-md, 1rem);
+	font-weight: 600;
+}
+#app-content.crm-app .crm-360-role .crm-callout__text {
+	margin: 0;
+	font-size: var(--crm-fs-sm, 0.875rem);
 }
 #app-content.crm-app .crm-360-role .crm-badge {
 	min-height: 44px;
 	display: inline-flex;
 	align-items: center;
 	padding-inline: 0.85rem;
+	font-size: var(--crm-fs-sm, 0.875rem);
+	margin-inline-start: auto;
+}
+#app-content.crm-app .crm-deal-notes-preview {
+	margin: 0.25rem 0 0;
+	font-size: var(--crm-fs-sm, 0.875rem);
+	line-height: 1.35;
+	max-width: 36rem;
+}
+#app-content.crm-app .crm-glance-density--calm {
+	border-top: 1px solid var(--crm-border, var(--color-border));
+	padding-block-start: var(--crm-space-3, 0.75rem);
+}
+#app-content.crm-app .crm-glance-density__summary {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 0.5rem 1rem;
+	cursor: pointer;
+	list-style: none;
+	min-height: 44px;
+}
+#app-content.crm-app .crm-glance-density__summary::-webkit-details-marker {
+	display: none;
+}
+#app-content.crm-app .crm-glance-density__summary-hint {
 	font-size: var(--crm-fs-sm, 0.875rem);
 }
 /* Single sticky: jump-nav owns sticky; glance pin stays in flow so it does not fight chips. */

@@ -124,7 +124,7 @@ final class DirectoryPickerContractTest extends TestCase
 		$this->assertStringContainsString('function requireWorkspaceReady', $js);
 		$this->assertStringContainsString('function setReviewSourcesLocked', $js);
 		$this->assertStringContainsString('workspaceBootReady', $js);
-		$this->assertStringContainsString('Workspace is still loading. Wait a moment, then try again.', $js);
+		$this->assertStringContainsString('Team settings are still loading. Wait a moment, then try again.', $js);
 		$this->assertStringContainsString('if (!requireWorkspaceReady(status)) return;', $js);
 		$this->assertMatchesRegularExpression(
 			'/function setReviewSourcesLocked\(locked\) \{(?![\s\S]{0,80}if \(locked\) \{ return; \})[\s\S]{0,900}el\.disabled = true/',
@@ -224,16 +224,16 @@ final class DirectoryPickerContractTest extends TestCase
 		}
 	}
 
-	public function testCompanyMoveWorkspaceUsesConfirmAndOptimisticLock(): void
+	public function testCompanyMoveWorkspaceRetiredInSingleOrgMode(): void
 	{
 		$html = (string)file_get_contents($this->root . '/templates/company-detail.php');
 		$js = (string)file_get_contents($this->root . '/js/pages/company-detail.js');
 		$shared = (string)file_get_contents($this->root . '/js/common/shared-mail-send.js');
-		$this->assertStringContainsString('crm-company-move-workspace', $html);
-		$this->assertStringContainsString('/move-workspace', $js);
-		$this->assertStringContainsString('confirmSlug', $js);
-		$this->assertStringContainsString('updatedAt', $js);
-		$this->assertStringContainsString('Shared mailbox: everyone in this workspace', $shared);
+		$svc = (string)file_get_contents($this->root . '/lib/Service/CompanyService.php');
+		$this->assertStringNotContainsString('crm-company-move-workspace', $html);
+		$this->assertStringNotContainsString('/move-workspace', $js);
+		$this->assertStringContainsString('MULTI_WORKSPACE_ENABLED', $svc);
+		$this->assertStringContainsString('Shared mailbox: everyone on the team', $shared);
 	}
 
 	public function testMailTriageUsesCompanySearchNotTypedId(): void

@@ -28,8 +28,8 @@
 			<div class="crm-review-src-extra" data-review-extra="contact_suggest">
 				<?php
 				$crmPickerId = 'review-contacts-actor';
-				$crmPickerLabel = $l->t('Scan as workspace member');
-				$crmPickerHelp = $l->t('Periodic scan needs a member login. Without it, use Send to Review only. Never type a raw user id.');
+				$crmPickerLabel = $l->t('Scan as teammate');
+				$crmPickerHelp = $l->t('Periodic scan needs a teammate login. Without it, use Send to Review only. Never type a raw user id.');
 				include __DIR__ . '/../parts/directory-user-picker.php';
 				?>
 			</div>
@@ -51,8 +51,8 @@
 				</div>
 				<?php
 				$crmPickerId = 'review-file-actor';
-				$crmPickerLabel = $l->t('Scan as workspace member');
-				$crmPickerHelp = $l->t('Member who can read that folder. Never type a raw user id.');
+				$crmPickerLabel = $l->t('Scan as teammate');
+				$crmPickerHelp = $l->t('Teammate who can read that folder. Never type a raw user id.');
 				include __DIR__ . '/../parts/directory-user-picker.php';
 				?>
 			</div>
@@ -67,7 +67,7 @@
 				</div>
 				<?php
 				$crmPickerId = 'review-cal-actor';
-				$crmPickerLabel = $l->t('Scan as workspace member');
+				$crmPickerLabel = $l->t('Scan as teammate');
 				$crmPickerHelp = $l->t('Never type a raw user id — search and pick.');
 				include __DIR__ . '/../parts/directory-user-picker.php';
 				?>
@@ -83,7 +83,7 @@
 				</div>
 				<?php
 				$crmPickerId = 'review-task-actor';
-				$crmPickerLabel = $l->t('Scan as workspace member');
+				$crmPickerLabel = $l->t('Scan as teammate');
 				$crmPickerHelp = $l->t('Never type a raw user id — search and pick.');
 				include __DIR__ . '/../parts/directory-user-picker.php';
 				?>
@@ -92,10 +92,10 @@
 				<input type="checkbox" id="crm-review-src-import" data-review-kind="import_anomaly">
 				<span><?php p($l->t('Import anomalies (country / ambiguous names)')); ?></span>
 			</label>
-			<p class="crm-muted"><?php p($l->t('Off by default. Enable only after DSGVO acknowledgement — unmatched import values appear in Review.')); ?></p>
+			<p class="crm-muted"><?php p($l->t('Off by default. Turn on only after you confirm privacy for non-mail sources — unmatched import values appear in Review.')); ?></p>
 			<label class="crm-switch">
 				<input type="checkbox" id="crm-review-src-dsgvo" name="dsgvoAck" value="1">
-				<span><?php p($l->t('I confirm DSGVO disclosure for any newly enabled non-mail sources.')); ?></span>
+				<span><?php p($l->t('I confirm privacy disclosure for any newly enabled non-mail sources.')); ?></span>
 			</label>
 			<p id="crm-review-sources-status" class="form-help" role="status" aria-live="polite"></p>
 			<div class="crm-form-actions">

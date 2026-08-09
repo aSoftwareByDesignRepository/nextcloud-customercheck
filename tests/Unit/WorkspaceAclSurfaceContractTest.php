@@ -200,7 +200,8 @@ final class WorkspaceAclSurfaceContractTest extends TestCase
 		$this->assertStringContainsString("if (!empty(\$_['canWrite']))", $agreements);
 		$this->assertStringContainsString("if (!empty(\$_['canWrite']))", $detail);
 		$this->assertStringContainsString("if (!empty(\$_['canDelete']))", $detail);
-		$this->assertStringContainsString("if (!empty(\$_['canMove']))", $detail);
+		$this->assertStringNotContainsString("if (!empty(\$_['canMove']))", $detail);
+		$this->assertStringNotContainsString('crm-company-move-workspace', $detail);
 		$this->assertStringContainsString('data-crm-buying-role', $detail);
 		$this->assertStringContainsString("if (!empty(\$_['canWrite'])):", $detail);
 		$this->assertStringContainsString('$canWrite = !empty($_[\'canWrite\'])', $pipeline);
@@ -220,7 +221,7 @@ final class WorkspaceAclSurfaceContractTest extends TestCase
 		$detail = (string)file_get_contents($this->root . '/templates/company-detail.php');
 		$this->assertStringContainsString('id="crm-log-email"', $detail);
 		$this->assertStringContainsString(
-			"<?php if (!empty(\$_['canWrite'])): ?>\n\t\t\t\t<button type=\"button\" class=\"crm-btn crm-btn--primary crm-btn--sm\" id=\"crm-log-email\"",
+			"<?php if (!empty(\$_['canWrite'])): ?>\n\t\t\t\t<button type=\"button\" class=\"crm-btn crm-btn--primary\" id=\"crm-log-email\"",
 			$detail,
 		);
 		$companyJs = (string)file_get_contents($this->root . '/js/pages/company-detail.js');

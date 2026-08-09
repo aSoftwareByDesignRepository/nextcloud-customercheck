@@ -65,42 +65,27 @@
   const mergeBtn = document.getElementById('crm-company-merge');
   if (mergeBtn && !mergeBtn.disabled) {
     mergeBtn.addEventListener('click', async () => {
-      let companies = [];
-      try {
-        const res = await Api.get('/companies?limit=200');
-        companies = (res.data || []).filter((c) => parseInt(c.id, 10) !== companyId && !c.archivedAt);
-      } catch (e) {
-        await C.alertDialog({ title: t('Could not load companies'), message: (e.payload && e.payload.message) || e.message, variant: 'danger' });
-        return;
-      }
-      if (companies.length === 0) {
-        await C.alertDialog({
-          title: t('Nothing to merge into'),
-          message: t('Create or restore another active company first, then merge this duplicate into it.'),
-          variant: 'info',
-        });
-        return;
-      }
-      const options = companies.map((c) => ({
-        value: String(c.id),
-        label: (c.name || c.slug) + ' (' + (c.slug || c.id) + ')',
-        updatedAt: c.updatedAt || '',
-      }));
       const data = await promptFields(t('Merge into another company'), [
         {
           name: 'intoCompanyId',
           label: t('Keep this company'),
-          type: 'select',
-          options: options,
-          value: options[0].value,
+          type: 'company',
           required: true,
+          excludeIds: [companyId],
           hint: t('People, agreements, deals, activities and history move to the company you pick. This company is archived afterwards.'),
         },
       ]);
       if (!data) return;
-      const intoId = parseInt(data.intoCompanyId, 10);
-      const keeperOpt = options.find((o) => o.value === String(intoId)) || {};
-      const keeperLabel = keeperOpt.label || String(intoId);
+      const intoId = parseInt(String(data.intoCompanyId || '0'), 10);
+      if (!(intoId > 0) || intoId === companyId) {
+        await C.alertDialog({
+          title: t('Almost there'),
+          message: t('Choose a company to merge into.'),
+          variant: 'info',
+        });
+        return;
+      }
+      const keeperLabel = String(data.intoCompanyName || ('#' + intoId));
       const ok = await C.confirmDialog({
         title: t('Confirm merge'),
         message: t('Merge this company into “%s”? This cannot be undone automatically — the source becomes archived.', [keeperLabel]),
@@ -116,7 +101,7 @@
         const res = await Api.post('/companies/' + companyId + '/merge', {
           intoCompanyId: intoId,
           updatedAt: mergeBtn.getAttribute('data-updated-at') || null,
-          intoUpdatedAt: keeperOpt.updatedAt || null,
+          intoUpdatedAt: data.intoCompanyUpdatedAt || null,
         });
         const keeper = (res.data && res.data.keeperId) || intoId;
         if (live) live.textContent = t('Companies merged.');
@@ -130,95 +115,53 @@
   }
 
   const moveWsBtn = document.getElementById('crm-company-move-workspace');
-  if (moveWsBtn && !moveWsBtn.disabled) {
-    moveWsBtn.addEventListener('click', async () => {
-      const slug = moveWsBtn.getAttribute('data-slug') || '';
-      const fromWs = parseInt(moveWsBtn.getAttribute('data-workspace-id') || '0', 10);
-      let workspaces = [];
-      try {
-        const res = await Api.get('/workspaces');
-        const list = (res.data && res.data.workspaces) || res.data || [];
-        workspaces = (Array.isArray(list) ? list : []).filter((w) => parseInt(w.id, 10) !== fromWs);
-      } catch (e) {
-        await C.alertDialog({
-          title: t('Could not load workspaces'),
-          message: (e.payload && e.payload.message) || e.message,
-          variant: 'danger',
-        });
-        return;
-      }
-      if (workspaces.length === 0) {
-        await C.alertDialog({
-          title: t('No other workspace'),
-          message: t('Create another workspace where you are a manager, then move this company there.'),
-          variant: 'info',
-        });
-        return;
-      }
-      const options = workspaces.map((w) => ({
-        value: String(w.id),
-        label: w.name || ('#' + w.id),
-      }));
-      const data = await promptFields(t('Move to another workspace'), [
-        {
-          name: 'workspaceId',
-          label: t('Destination workspace'),
-          type: 'select',
-          options: options,
-          value: options[0].value,
-          required: true,
-          hint: t('Shared mail matches are cleared. Files folder sharing is not moved — review ACL manually.'),
-        },
-      ]);
-      if (!data) return;
-      const toWs = parseInt(data.workspaceId, 10);
-      const destLabel = (options.find((o) => o.value === String(toWs)) || {}).label || String(toWs);
-      const ok = await C.confirmDialog({
-        title: t('Confirm move'),
-        message: t('Move this company to “%s”? Type the short address to confirm. Files sharing stays as-is.', [destLabel]),
-        confirmLabel: t('Move'),
-        cancelLabel: t('Cancel'),
-        variant: 'warning',
-        requireTypedConfirm: true,
-        typedConfirmPhrase: slug,
-      });
-      if (!ok || !ok.confirmed) return;
-      moveWsBtn.disabled = true;
-      const live = document.getElementById('crm-live-region');
-      if (live) live.textContent = t('Moving company…');
-      try {
-        const res = await Api.post('/companies/' + companyId + '/move-workspace', {
-          workspaceId: toWs,
-          confirmSlug: slug,
-          updatedAt: moveWsBtn.getAttribute('data-updated-at') || null,
-        });
-        if (live) live.textContent = t('Company moved. Review Files sharing for this folder.');
-        const newWs = (res.data && res.data.workspaceId) || toWs;
-        window.location.href = OC.generateUrl('/apps/customercheck/companies/' + companyId + '?workspaceId=' + newWs);
-      } catch (e) {
-        moveWsBtn.disabled = false;
-        if (live) live.textContent = '';
-        await C.alertDialog({
-          title: t('Move failed'),
-          message: (e.payload && e.payload.message) || e.message,
-          variant: 'danger',
-        });
-      }
-    });
+  if (moveWsBtn) {
+    moveWsBtn.remove();
   }
 
   async function promptFields(title, fields) {
-    // Lightweight modal form via openDialog — supports progressive "More options" and checkboxes.
+    // Lightweight modal form via openDialog — supports progressive "More options", checkboxes, company picker.
     return new Promise((resolve) => {
       const id = 'crm-prompt-' + Date.now();
       const primary = fields.filter((f) => !f.advanced);
       const advanced = fields.filter((f) => f.advanced);
+      const companyFields = fields.filter((f) => f.type === 'company');
       const renderField = (f) => {
         const fname = String(f.name || '').replace(/[^a-zA-Z0-9_-]/g, '');
         const flabel = escapeHtml(f.label || fname);
         let html = '<div class="form-group"><label class="form-label" for="' + id + '-' + fname + '">' + flabel + '</label>';
+        if (f.type === 'company') {
+          html =
+            '<div class="form-group">' +
+            '<span class="form-label" id="' + id + '-' + fname + '-label">' + flabel + '</span>' +
+            '<div class="crm-company-picker" id="' + id + '-' + fname + '-picker" aria-labelledby="' + id + '-' + fname + '-label">' +
+            '<div class="crm-company-choice" id="' + id + '-' + fname + '-choice" hidden>' +
+            '<div class="crm-company-choice__card">' +
+            '<p class="crm-company-choice__name" id="' + id + '-' + fname + '-choice-name"></p>' +
+            '<button type="button" class="crm-btn crm-btn--secondary crm-btn--sm crm-company-choice__change" id="' +
+            id + '-' + fname + '-change">' + escapeHtml(t('Change company')) + '</button></div></div>' +
+            '<div class="crm-company-browse" id="' + id + '-' + fname + '-browse">' +
+            '<div class="crm-company-picker__filter-wrap" id="' + id + '-' + fname + '-filter-wrap" hidden>' +
+            '<label class="visually-hidden" for="' + id + '-' + fname + '-filter">' + escapeHtml(t('Filter companies')) + '</label>' +
+            '<input type="search" id="' + id + '-' + fname + '-filter" class="form-input crm-input crm-company-picker__filter" ' +
+            'autocomplete="off" placeholder="' + escapeHtml(t('Search by company name…')) + '" ' +
+            'aria-controls="' + id + '-' + fname + '-list" /></div>' +
+            '<ul id="' + id + '-' + fname + '-list" class="crm-company-list" role="listbox" aria-labelledby="' +
+            id + '-' + fname + '-label"></ul>' +
+            '<p class="crm-muted crm-company-picker__status" id="' + id + '-' + fname + '-status" role="status" aria-live="polite" hidden></p>' +
+            '</div>' +
+            '<input type="hidden" id="' + id + '-' + fname + '" name="' + fname + '" value=""' + (f.required ? ' required' : '') + ' />' +
+            '</div>';
+          if (f.hint) {
+            html += '<p class="form-help">' + escapeHtml(String(f.hint)) + '</p>';
+          }
+          html += '</div>';
+          return html;
+        }
         if (f.type === 'textarea') {
-          html += '<textarea class="crm-input form-input" id="' + id + '-' + fname + '" name="' + fname + '" rows="3"' + (f.required ? ' required' : '') + '>' +
+          html += '<textarea class="crm-input form-input" id="' + id + '-' + fname + '" name="' + fname + '" rows="3"' +
+            (f.maxlength !== undefined ? ' maxlength="' + escapeHtml(String(f.maxlength)) + '"' : '') +
+            (f.required ? ' required' : '') + '>' +
             (f.value ? escapeHtml(String(f.value)) : '') + '</textarea>';
         } else if (f.type === 'select') {
           html += '<select class="crm-input form-select" id="' + id + '-' + fname + '" name="' + fname + '"' + (f.required ? ' required' : '') + '>' +
@@ -251,18 +194,63 @@
       let html = '<form id="' + id + '-form" class="crm-form crm-form--stack">';
       primary.forEach((f) => { html += renderField(f); });
       if (advanced.length) {
-        html += '<details class="crm-advanced"><summary class="crm-advanced__summary">' + t('More options') + '</summary>';
+        html += '<details class="crm-advanced"><summary class="crm-advanced__summary">' + escapeHtml(t('More options')) + '</summary>';
+        html += '<div class="crm-advanced__body">';
         advanced.forEach((f) => { html += renderField(f); });
-        html += '</details>';
+        html += '</div></details>';
       }
       html += '<p class="crm-form-inline-error crm-callout crm-callout--danger" role="alert" hidden></p>';
-      html += '<div class="crm-form-actions"><button type="submit" class="crm-btn crm-btn--primary">' + t('Save') + '</button> <button type="button" class="crm-btn crm-btn--secondary" data-cancel>' + t('Cancel') + '</button></div></form>';
-      C.openDialog({ id: id, title: title, content: html, size: 'md' });
+      html += '<div class="crm-form-actions"><button type="submit" class="crm-btn crm-btn--primary">' + escapeHtml(t('Save')) + '</button> ' +
+        '<button type="button" class="crm-btn crm-btn--secondary" data-cancel>' + escapeHtml(t('Cancel')) + '</button></div></form>';
+      const panels = [];
+      C.openDialog({
+        id: id,
+        title: title,
+        content: html,
+        size: 'md',
+        onClose: () => {
+          panels.forEach((p) => {
+            if (p && typeof p.destroy === 'function') p.destroy();
+          });
+        },
+      });
       const form = document.getElementById(id + '-form');
       const errEl = form.querySelector('.crm-form-inline-error');
       const close = () => C.closeModal(document.getElementById(id));
       form.querySelector('[data-cancel]').addEventListener('click', () => { close(); resolve(null); });
-      const first = form.querySelector('input:not([type="hidden"]):not([type="checkbox"]), textarea, select');
+      const Picker = window.CustomerCheckCompanyPicker;
+      companyFields.forEach((f) => {
+        const fname = String(f.name || '').replace(/[^a-zA-Z0-9_-]/g, '');
+        if (!Picker || typeof Picker.mountListPanel !== 'function') {
+          return;
+        }
+        const panel = Picker.mountListPanel({
+          listEl: document.getElementById(id + '-' + fname + '-list'),
+          filterEl: document.getElementById(id + '-' + fname + '-filter'),
+          filterWrapEl: document.getElementById(id + '-' + fname + '-filter-wrap'),
+          browseEl: document.getElementById(id + '-' + fname + '-browse'),
+          choiceEl: document.getElementById(id + '-' + fname + '-choice'),
+          choiceNameEl: document.getElementById(id + '-' + fname + '-choice-name'),
+          changeBtn: document.getElementById(id + '-' + fname + '-change'),
+          hiddenEl: document.getElementById(id + '-' + fname),
+          statusEl: document.getElementById(id + '-' + fname + '-status'),
+          api: Api,
+          t: t,
+          browseLimit: 40,
+          filterMinCount: 8,
+          excludeIds: Array.isArray(f.excludeIds) ? f.excludeIds : [],
+          onReady: (count) => {
+            if (count < 1 && f.required) {
+              if (errEl) {
+                errEl.hidden = false;
+                errEl.textContent = t('Create or restore another active company first, then merge this duplicate into it.');
+              }
+            }
+          },
+        });
+        panels.push(panel);
+      });
+      const first = form.querySelector('input:not([type="hidden"]):not([type="checkbox"]), textarea, select, .crm-company-list__pick');
       if (first && typeof first.focus === 'function') {
         setTimeout(() => first.focus(), 50);
       }
@@ -295,9 +283,17 @@
           }
           if (f.type === 'checkbox') {
             data[f.name] = !!el.checked;
+          } else if (f.type === 'company') {
+            data[f.name] = el.value;
+            const metaBase = String(f.name || '').replace(/Id$/, '');
+            data[metaBase + 'Name'] = (el.dataset && el.dataset.companyName) || '';
+            data[metaBase + 'UpdatedAt'] = (el.dataset && el.dataset.updatedAt) || '';
           } else {
             data[f.name] = el.value;
           }
+        });
+        panels.forEach((p) => {
+          if (p && typeof p.destroy === 'function') p.destroy();
         });
         close();
         resolve(data);
@@ -360,7 +356,8 @@
       ]);
       if (!data) return;
       let contactsUid = null;
-      // Optional Contacts fill-in when the name looks like a search
+      // Optional Contacts fill-in when the name looks like a search.
+      // Bachus: one exact match applies silently; only ask when 2+ matches compete.
       if (contactsAvailable && data.name && data.name.length >= 2) {
         try {
           const resPayload = await Api.get('/contacts/suggest?q=' + encodeURIComponent(data.name) + '&limit=5');
@@ -368,8 +365,19 @@
           const items = (res && Array.isArray(res.items) && res.items.length)
             ? res.items
             : (res && Array.isArray(res.suggestions) ? res.suggestions : []);
-          const first = items[0] || null;
-          if (first && first.name) {
+          const applyContact = (match) => {
+            if (!match || !match.name) return;
+            data.name = match.name || data.name;
+            data.email = match.email || data.email || '';
+            data.phone = match.phone || data.phone || '';
+            if (match.uid) {
+              contactsUid = String(match.uid);
+            }
+          };
+          if (items.length === 1) {
+            applyContact(items[0]);
+          } else if (items.length > 1) {
+            const first = items[0];
             const use = await C.confirmDialog({
               title: t('Use Contacts match?'),
               message: first.name + (first.email ? ' <' + first.email + '>' : ''),
@@ -377,12 +385,7 @@
               cancelLabel: t('Keep what I typed'),
             });
             if (use) {
-              data.name = first.name || data.name;
-              data.email = first.email || data.email || '';
-              data.phone = first.phone || data.phone || '';
-              if (first.uid) {
-                contactsUid = String(first.uid);
-              }
+              applyContact(first);
             }
           }
         } catch (e) {
@@ -409,29 +412,59 @@
     } catch (e) {
       persons = [];
     }
-    if (!Array.isArray(persons) || persons.length === 0) {
-      await C.alertDialog({
+    if (!Array.isArray(persons)) {
+      persons = [];
+    }
+    const withEmail = persons.filter((p) => String((p && p.email) || '').trim() !== '');
+    if (persons.length === 0) {
+      // Bachus: never dead-end — offer Add person in one tap, then return here.
+      const goAdd = await C.confirmDialog({
         title: t('Add a person first'),
         message: t('Add someone under People with an email — then you can log what you wrote with them in one step.'),
-        variant: 'info',
+        confirmLabel: t('Add person'),
+        cancelLabel: t('Not now'),
       });
-      const peopleJump = document.querySelector('.crm-jump-nav__link[href="#crm-persons"]');
-      if (peopleJump) peopleJump.click();
+      if (goAdd) {
+        const addBtn = document.getElementById('crm-add-person');
+        if (addBtn) {
+          addBtn.click();
+        } else {
+          const peopleJump = document.querySelector('.crm-jump-nav__link[href="#crm-persons"]');
+          if (peopleJump) peopleJump.click();
+        }
+      }
       return;
     }
-    const personOptions = persons.map((p) => ({
+    if (withEmail.length === 0) {
+      const goCall = await C.confirmDialog({
+        title: t('Add an email first'),
+        message: t('Edit a person and add their email — or tap Call tomorrow if you spoke by phone.'),
+        confirmLabel: t('Call tomorrow'),
+        cancelLabel: t('Not now'),
+      });
+      if (goCall) {
+        const callBtn = document.getElementById('crm-schedule-callback');
+        if (callBtn) callBtn.click();
+      }
+      return;
+    }
+    const personOptions = withEmail.map((p) => ({
       value: String(p.id),
-      label: (p.name || p.email) + ' <' + p.email + '>',
+      label: (p.name || p.email) + (p.email ? ' <' + p.email + '>' : ''),
     }));
-    const data = await promptFields(t('Log email'), [
-      {
+    const fields = [];
+    if (personOptions.length > 1) {
+      fields.push({
         name: 'personId',
         label: t('With whom'),
         type: 'select',
         options: personOptions,
         value: personOptions[0].value,
         required: true,
-      },
+      });
+    }
+    fields.push(
+      { name: 'subject', label: t('Subject'), required: true, hint: t('What was the email about?') },
       {
         name: 'direction',
         label: t('Direction'),
@@ -441,14 +474,18 @@
           { value: 'outbound', label: t('You wrote them') },
           { value: 'inbound', label: t('They wrote you') },
         ],
+        advanced: true,
       },
-      { name: 'subject', label: t('Subject'), required: true },
-      { name: 'snippet', label: t('Short note (optional)'), type: 'textarea' },
-    ]);
+      { name: 'snippet', label: t('Short note (optional)'), type: 'textarea', advanced: true },
+    );
+    const data = await promptFields(t('Log email'), fields);
     if (!data) return;
+    const personId = personOptions.length === 1
+      ? parseInt(personOptions[0].value, 10)
+      : parseInt(data.personId, 10);
     try {
       await Api.post('/companies/' + companyId + '/emails', {
-        personId: parseInt(data.personId, 10),
+        personId: personId,
         direction: data.direction || 'outbound',
         subject: data.subject,
         snippet: data.snippet || '',
@@ -678,9 +715,10 @@
     const primary = dto.primaryPerson;
     const cov = dto.coverage || {};
     const nextTouch = dto.nextTouchOn || '';
-    const dl = document.createElement('dl');
-    dl.className = 'crm-glance-dl crm-stat-strip';
-    dl.setAttribute('aria-label', t('At a glance'));
+    const strip = document.createElement('div');
+    strip.className = 'crm-glance-dl crm-stat-strip';
+    strip.setAttribute('role', 'list');
+    strip.setAttribute('aria-label', t('At a glance'));
     const coverageLabel = cov.gap ? t('Needs links') : (cov.covered ? t('Covered') : t('Coverage'));
     const missingText = (cov.missingLabels && cov.missingLabels.length)
       ? cov.missingLabels.join(', ')
@@ -701,40 +739,42 @@
     rows.forEach(function (row) {
       const wrap = document.createElement('div');
       wrap.className = 'crm-stat-tile crm-stat-tile--neutral';
-      wrap.setAttribute('role', 'group');
-      const dte = document.createElement('dt');
-      dte.className = 'crm-stat-tile__label';
-      dte.textContent = row[0];
-      const dde = document.createElement('dd');
-      dde.className = 'crm-stat-tile__value';
-      dde.textContent = row[1];
-      wrap.appendChild(dte);
-      wrap.appendChild(dde);
+      wrap.setAttribute('role', 'listitem');
+      const label = document.createElement('span');
+      label.className = 'crm-stat-tile__label';
+      label.textContent = row[0];
+      const value = document.createElement('span');
+      value.className = 'crm-stat-tile__value';
+      value.textContent = row[1];
+      wrap.appendChild(label);
+      wrap.appendChild(value);
       if (row[2]) {
-        const meta = document.createElement('p');
+        const meta = document.createElement('span');
         meta.className = 'crm-stat-tile__meta';
         meta.textContent = row[2];
         wrap.appendChild(meta);
       }
-      dl.appendChild(wrap);
+      strip.appendChild(wrap);
     });
     while (body.firstChild) {
       body.removeChild(body.firstChild);
     }
-    body.appendChild(dl);
+    body.appendChild(strip);
   }
 
   const addActivity = document.getElementById('crm-add-activity');
   if (addActivity) {
     addActivity.addEventListener('click', async () => {
       const today = new Date().toISOString().slice(0, 10);
-      const data = await promptFields(t('Add activity'), [
-        { name: 'title', label: t('Title'), required: true },
+      const data = await promptFields(t('Add reminder'), [
+        { name: 'title', label: t('What should you remember?'), required: true, hint: t('Example: Call Anna about renewal.') },
+        { name: 'dueDate', label: t('Due date'), type: 'date', required: true, value: today },
         {
           name: 'type',
           label: t('Type'),
           type: 'select',
           value: 'todo',
+          advanced: true,
           options: [
             { value: 'call', label: t('Call') },
             { value: 'email', label: t('Email follow-up') },
@@ -742,15 +782,15 @@
             { value: 'todo', label: t('To-do') },
           ],
         },
-        { name: 'dueDate', label: t('Due date'), type: 'date', required: true, value: today },
       ]);
       if (!data) return;
       if (!data.dueDate) data.dueDate = today;
+      if (!data.type) data.type = 'todo';
       try {
         await Api.post('/activities', Object.assign({ companyId }, data));
         location.reload();
       } catch (e) {
-        await C.alertDialog({ title: t('Could not add activity'), message: (e.payload && e.payload.message) || e.message, variant: 'danger' });
+        await C.alertDialog({ title: t('Could not add reminder'), message: (e.payload && e.payload.message) || e.message, variant: 'danger' });
       }
     });
   }
@@ -765,6 +805,14 @@
           required: true,
           hint: t('Example: Renewal 2026 or Website project. A title is enough.'),
           maxlength: 255,
+        },
+        {
+          name: 'notes',
+          label: t('Notes'),
+          type: 'textarea',
+          advanced: true,
+          maxlength: 4000,
+          hint: t('Internal notes for your team — the customer does not see these.'),
         },
         { name: 'valueEur', label: t('Value (EUR, optional)'), type: 'number', min: 0, step: '0.01', advanced: true },
         { name: 'products', label: t('Products (optional)'), advanced: true, maxlength: 255 },
@@ -787,6 +835,7 @@
           stage: 'lead',
           valueCents,
           products: data.products || '',
+          notes: String(data.notes || '').trim(),
         });
         location.reload();
       } catch (e) {
@@ -794,6 +843,83 @@
       }
     });
   }
+
+  document.querySelectorAll('[data-crm-edit-chase]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const row = btn.closest('[data-deal-id]');
+      if (!row) return;
+      const dealId = row.getAttribute('data-deal-id');
+      const cents = parseInt(String(row.getAttribute('data-value-cents') || '0'), 10) || 0;
+      const valueEur = cents > 0 ? String((cents / 100).toFixed(2)) : '';
+      // Edit keeps title + notes primary (tweak what you wrote); expert fields under More.
+      const data = await promptFields(t('Edit deal'), [
+        {
+          name: 'title',
+          label: t('What is this deal?'),
+          required: true,
+          value: row.getAttribute('data-title') || '',
+          maxlength: 255,
+        },
+        {
+          name: 'notes',
+          label: t('Notes'),
+          type: 'textarea',
+          value: row.getAttribute('data-notes') || '',
+          maxlength: 4000,
+          hint: t('Internal notes for your team — the customer does not see these.'),
+        },
+        {
+          name: 'valueEur',
+          label: t('Value (EUR, optional)'),
+          type: 'number',
+          min: 0,
+          step: '0.01',
+          value: valueEur,
+          advanced: true,
+        },
+        {
+          name: 'products',
+          label: t('Products (optional)'),
+          value: row.getAttribute('data-products') || '',
+          advanced: true,
+          maxlength: 255,
+        },
+        {
+          name: 'expectedClose',
+          label: t('Expected close'),
+          type: 'date',
+          value: row.getAttribute('data-expected-close') || '',
+          advanced: true,
+        },
+      ]);
+      if (!data) return;
+      const title = String(data.title || '').trim();
+      if (!title) {
+        await C.alertDialog({
+          title: t('Almost there'),
+          message: t('Enter a short title for this deal.'),
+          variant: 'info',
+        });
+        return;
+      }
+      const valueCents = Math.round(parseFloat(data.valueEur || '0') * 100) || 0;
+      try {
+        await Api.put('/deals/' + dealId, {
+          title,
+          notes: String(data.notes || '').trim(),
+          valueCents,
+          products: data.products || '',
+          expectedClose: String(data.expectedClose || '').trim() || null,
+          updatedAt: row.getAttribute('data-updated-at') || null,
+        });
+        const live = document.getElementById('crm-live-region');
+        if (live) live.textContent = t('Deal saved.');
+        location.reload();
+      } catch (e) {
+        await C.alertDialog({ title: t('Could not save deal'), message: (e.payload && e.payload.message) || e.message, variant: 'danger' });
+      }
+    });
+  });
 
   async function openLogHours(agreementId) {
     const today = new Date().toISOString().slice(0, 10);
@@ -1018,6 +1144,28 @@
     return d.toISOString().slice(0, 10);
   }
 
+  function paintHydrateFailure(targetId, loadingLabel) {
+    const el = document.getElementById(targetId);
+    if (!el) return;
+    el.innerHTML = '';
+    const callout = document.createElement('div');
+    callout.className = 'crm-callout crm-callout--danger';
+    callout.setAttribute('role', 'alert');
+    const msg = document.createElement('p');
+    msg.textContent = t('Some overview data could not be loaded.');
+    const retry = document.createElement('button');
+    retry.type = 'button';
+    retry.className = 'crm-btn crm-btn--primary';
+    retry.textContent = t('Try again');
+    retry.addEventListener('click', () => {
+      el.innerHTML = '<p class="crm-muted">' + escapeHtml(loadingLabel) + '</p>';
+      loadCommandCenter();
+    });
+    callout.appendChild(msg);
+    callout.appendChild(retry);
+    el.appendChild(callout);
+  }
+
   async function renewAgreementFromRow(row) {
     const id = row.getAttribute('data-agreement-id') || row.getAttribute('data-id');
     const updatedAt = row.getAttribute('data-updated-at') || '';
@@ -1025,34 +1173,19 @@
     const amountCents = parseInt(row.getAttribute('data-amount-cents') || '0', 10) || 0;
     const label = row.getAttribute('data-label') || '';
     const suggestedUntil = addYears(prevUntil, 1);
-    const data = await promptFields(t('Renew agreement'), [
-      {
-        name: 'validUntil',
-        label: t('New valid until'),
-        type: 'date',
-        value: suggestedUntil,
-        required: true,
-        hint: t('Creates a new agreement and marks this one superseded. Reminders re-arm for the new date.'),
-      },
-      {
-        name: 'amountEur',
-        label: t('Amount (EUR)'),
-        type: 'number',
-        value: (amountCents / 100).toFixed(2),
-      },
-      {
-        name: 'label',
-        label: t('Label'),
-        value: label,
-      },
-    ]);
-    if (!data) return;
-    const amountEur = parseFloat(data.amountEur || '0');
+    const amountLabel = (amountCents / 100).toFixed(2) + ' €';
+    const ok = await C.confirmDialog({
+      title: t('Renew for one year?'),
+      message: t('New end date: %1$s. Amount stays %2$s. Creates a new agreement and stops reminders on this one.', [suggestedUntil, amountLabel]),
+      confirmLabel: t('Renew for one year'),
+      cancelLabel: t('Cancel'),
+    });
+    if (!ok || ok.confirmed === false) return;
     try {
       await Api.post('/agreements/' + id + '/supersede', {
-        validUntil: data.validUntil || null,
-        amountCents: Math.round((Number.isFinite(amountEur) ? amountEur : 0) * 100),
-        label: (data.label || label || '').trim() || undefined,
+        validUntil: suggestedUntil,
+        amountCents: amountCents,
+        label: (label || '').trim() || undefined,
         updatedAt: updatedAt || null,
       });
       const live = document.getElementById('crm-live-region');
@@ -1066,27 +1199,24 @@
   async function cancelAgreementFromRow(row) {
     const id = row.getAttribute('data-agreement-id') || row.getAttribute('data-id');
     const updatedAt = row.getAttribute('data-updated-at') || '';
-    const data = await promptFields(t('Cancel agreement'), [
-      {
-        name: 'reason',
-        label: t('Reason'),
-        type: 'textarea',
-        required: true,
-        hint: t('Required. Kept on the agreement record.'),
-      },
-    ]);
-    if (!data) return;
     const ok = await C.confirmDialog({
       title: t('Cancel this agreement?'),
       message: t('The agreement becomes cancelled and stops receiving renewal reminders.'),
       confirmLabel: t('Cancel agreement'),
       cancelLabel: t('Keep agreement'),
       variant: 'danger',
+      requireReason: true,
+      reasonLabel: t('Reason'),
     });
-    if (!ok || !ok.confirmed) return;
+    if (!ok || ok.confirmed === false) return;
+    const reason = String((ok && ok.reason) || '').trim();
+    if (!reason) {
+      await C.alertDialog({ title: t('Almost there'), message: t('Enter a short reason.'), variant: 'info' });
+      return;
+    }
     try {
       await Api.post('/agreements/' + id + '/cancel', {
-        reason: data.reason,
+        reason: reason,
         updatedAt: updatedAt || null,
       });
       const live = document.getElementById('crm-live-region');
@@ -1112,7 +1242,12 @@
   });
 
   /* ── Command Center M5 ───────────────────────────────────────── */
+  // Generation counters must be initialized before any hydrator runs.
+  // Calling loadAccountPlan/loadPromises while these lets are still in the TDZ
+  // throws outside try/catch and leaves the section stuck on “Loading…”.
   let commandCenterGeneration = 0;
+  let accountPlanGeneration = 0;
+  let promisesGeneration = 0;
   async function loadCommandCenter() {
     if (!companyId || !Api) return;
     const live = document.getElementById('crm-live-region');
@@ -1175,7 +1310,7 @@
             (canWrite
               ? '<div class="crm-empty-state__actions">' +
                 '<button type="button" class="crm-btn crm-btn--primary crm-btn--lg" data-crm-trigger="crm-log-email">' + escapeHtml(t('Log email')) + '</button> ' +
-                '<button type="button" class="crm-btn crm-btn--secondary" data-crm-trigger="crm-add-activity">' + escapeHtml(t('Add activity')) + '</button>' +
+                '<button type="button" class="crm-btn crm-btn--secondary" data-crm-trigger="crm-add-activity">' + escapeHtml(t('Add reminder')) + '</button>' +
                 '</div>'
               : '') +
             '</div>';
@@ -1226,9 +1361,14 @@
       if (tasksBody) {
         const items = (tasks.data && tasks.data.items) || tasks.items || [];
         if (!items.length) {
+          const canWriteTasks = shellCan('write');
           tasksBody.innerHTML = '<div class="crm-empty-state" role="status">' +
             '<h3 class="crm-empty-state__title">' + escapeHtml(t('No open tasks')) + '</h3>' +
-            '<p class="crm-empty-state__text">' + escapeHtml(t('Nothing open for this company.')) + '</p></div>';
+            '<p class="crm-empty-state__text">' + escapeHtml(t('Nothing open for this company.')) + '</p>' +
+            (canWriteTasks
+              ? '<div class="crm-empty-state__actions"><button type="button" class="crm-btn crm-btn--primary crm-btn--lg" data-crm-trigger="crm-new-task">' + escapeHtml(t('New task')) + '</button></div>'
+              : '') +
+            '</div>';
         } else {
           const table = document.createElement('div');
           table.className = 'table-container crm-table--responsive';
@@ -1333,26 +1473,10 @@
         return;
       }
       if (live) live.textContent = t('Some overview data could not be loaded.');
-      const glanceBody = document.getElementById('crm-glance-summary');
-      if (glanceBody) {
-        glanceBody.innerHTML = '';
-        const callout = document.createElement('div');
-        callout.className = 'crm-callout crm-callout--danger';
-        callout.setAttribute('role', 'alert');
-        const msg = document.createElement('p');
-        msg.textContent = t('Some overview data could not be loaded.');
-        const retry = document.createElement('button');
-        retry.type = 'button';
-        retry.className = 'crm-btn crm-btn--primary';
-        retry.textContent = t('Try again');
-        retry.addEventListener('click', () => {
-          glanceBody.innerHTML = '<p class="crm-muted">' + t('Loading overview…') + '</p>';
-          loadCommandCenter();
-        });
-        callout.appendChild(msg);
-        callout.appendChild(retry);
-        glanceBody.appendChild(callout);
-      }
+      paintHydrateFailure('crm-glance-summary', t('Loading overview…'));
+      paintHydrateFailure('crm-communication-feed', t('Loading talk…'));
+      paintHydrateFailure('crm-open-tasks-body', t('Loading tasks…'));
+      paintHydrateFailure('crm-billing-body', t('Loading money status…'));
     }
   }
 
@@ -1533,23 +1657,30 @@
       tomorrow.setDate(tomorrow.getDate() + 1);
       const ymd = tomorrow.toISOString().slice(0, 10);
       const data = await promptFields(t('New task'), [
-        { name: 'title', label: t('Title'), type: 'text', required: true },
-        { name: 'type', label: t('Type'), type: 'select', required: true, options: [
-          { value: 'todo', label: t('To-do') },
-          { value: 'call', label: t('Call') },
-          { value: 'email', label: t('Email') },
-          { value: 'meeting', label: t('Meeting') },
-        ], value: 'todo' },
+        { name: 'title', label: t('What needs doing?'), type: 'text', required: true },
         { name: 'dueDate', label: t('Due date'), type: 'date', required: true, value: ymd },
-        { name: 'pushToTasks', label: t('Also send to Tasks'), type: 'checkbox', value: true },
+        {
+          name: 'type',
+          label: t('Type'),
+          type: 'select',
+          advanced: true,
+          options: [
+            { value: 'todo', label: t('To-do') },
+            { value: 'call', label: t('Call') },
+            { value: 'email', label: t('Email') },
+            { value: 'meeting', label: t('Meeting') },
+          ],
+          value: 'todo',
+        },
+        { name: 'pushToTasks', label: t('Also send to Tasks'), type: 'checkbox', value: true, advanced: true },
       ]);
       if (!data) return;
       try {
         await Api.post('/companies/' + companyId + '/tasks', {
           title: data.title,
-          type: data.type,
-          dueDate: data.dueDate,
-          pushToTasks: !!data.pushToTasks,
+          type: data.type || 'todo',
+          dueDate: data.dueDate || ymd,
+          pushToTasks: data.pushToTasks === undefined ? true : !!data.pushToTasks,
         });
         await loadCommandCenter();
       } catch (e) {
@@ -1558,22 +1689,18 @@
     });
   }
 
-  loadCommandCenter();
-  loadAccountPlan();
-  loadPromises();
-
-  let accountPlanGeneration = 0;
   async function loadAccountPlan() {
     const body = document.getElementById('crm-account-plan-body');
     if (!body || !companyId) return;
-    const generation = ++accountPlanGeneration;
     const canWrite = shellCan('write');
     const priorityLabel = function (code) {
       if (code === 'p1') return t('High');
       if (code === 'p3') return t('Low');
       return t('Normal');
     };
+    let generation = 0;
     try {
+      generation = ++accountPlanGeneration;
       const res = await Api.get('/companies/' + companyId + '/account-plan');
       if (generation !== accountPlanGeneration) {
         return;
@@ -1603,7 +1730,7 @@
         body.innerHTML = html;
         return;
       }
-      html = '<form id="crm-account-plan-form" class="crm-form" data-plan-updated-at="' + escapeHtml(plan.updatedAt || '') + '">';
+      html = '<form id="crm-account-plan-form" class="crm-form crm-form--stack" data-plan-updated-at="' + escapeHtml(plan.updatedAt || '') + '">';
       html += '<div class="form-group"><label class="form-label" for="crm-plan-goal">' + escapeHtml(t('Goal')) + '</label>';
       html += '<textarea class="crm-input form-input" id="crm-plan-goal" name="goal" rows="3">' + escapeHtml(plan.goal || '') + '</textarea></div>';
       html += '<div class="form-group"><label class="form-label" for="crm-plan-priority">' + escapeHtml(t('Priority')) + '</label>';
@@ -1639,7 +1766,7 @@
       } else {
         html += '<p class="crm-muted">' + escapeHtml(t('No next steps yet.')) + '</p>';
       }
-      html += '<form id="crm-map-step-form" class="crm-form crm-form--inline" aria-label="' + escapeHtml(t('Add next step')) + '">';
+      html += '<form id="crm-map-step-form" class="crm-form crm-form--stack crm-form--inline" aria-label="' + escapeHtml(t('Add next step')) + '">';
       html += '<label class="form-label" for="crm-map-step-title">' + escapeHtml(t('New next step')) + '</label>';
       html += '<input class="crm-input form-input" id="crm-map-step-title" name="title" type="text" required maxlength="255" />';
       html += '<button type="submit" class="crm-btn crm-btn--secondary">' + escapeHtml(t('Add step')) + '</button></form>';
@@ -1788,7 +1915,7 @@
       retry.className = 'crm-btn crm-btn--primary';
       retry.textContent = t('Try again');
       retry.addEventListener('click', () => {
-        body.innerHTML = '<p class="crm-muted">' + t('Loading…') + '</p>';
+        body.innerHTML = '<p class="crm-muted">' + escapeHtml(t('Loading account plan…')) + '</p>';
         loadAccountPlan();
       });
       callout.appendChild(msg);
@@ -1797,12 +1924,12 @@
     }
   }
 
-  let promisesGeneration = 0;
   async function loadPromises() {
     const body = document.getElementById('crm-promises-body');
     if (!body || !companyId) return;
-    const generation = ++promisesGeneration;
+    let generation = 0;
     try {
+      generation = ++promisesGeneration;
       const res = await Api.get('/companies/' + companyId + '/promises');
       if (generation !== promisesGeneration) {
         return;
@@ -1895,7 +2022,7 @@
       retry.className = 'crm-btn crm-btn--primary';
       retry.textContent = t('Try again');
       retry.addEventListener('click', () => {
-        body.innerHTML = '<p class="crm-muted">' + t('Loading…') + '</p>';
+        body.innerHTML = '<p class="crm-muted">' + escapeHtml(t('Loading promises…')) + '</p>';
         loadPromises();
       });
       callout.appendChild(msg);
@@ -1903,6 +2030,11 @@
       body.appendChild(callout);
     }
   }
+
+  // Boot only after generation counters are initialized (avoids TDZ hang).
+  loadCommandCenter();
+  loadAccountPlan();
+  loadPromises();
 
   const addPromiseBtn = document.getElementById('crm-add-promise');
   if (addPromiseBtn) {

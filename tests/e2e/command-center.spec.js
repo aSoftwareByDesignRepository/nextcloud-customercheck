@@ -7,17 +7,24 @@ import AxeBuilder from '@axe-core/playwright';
 async function openFirstCompany(page) {
   await page.goto('/apps/customercheck/companies');
   await expect(page.locator('#crm-main-content')).toBeVisible({ timeout: 30000 });
-  const link = page.locator('#crm-main-content a[href*="/apps/customercheck/companies/"]').first();
-  const count = await link.count();
-  if (count === 0) {
-    // Create a company so 360 is reachable
+  // Prefer a real company id URL — never /companies/new or filter chips.
+  const detailHref = await page.locator('#crm-main-content a[href*="/apps/customercheck/companies/"]').evaluateAll((anchors) => {
+    for (const a of anchors) {
+      const href = a.getAttribute('href') || '';
+      if (/\/apps\/customercheck\/companies\/\d+(\?|$)/.test(href)) {
+        return href;
+      }
+    }
+    return null;
+  });
+  if (!detailHref) {
     await page.goto('/apps/customercheck/companies/new');
     await page.locator('#crm-company-name, input[name="name"]').first().fill('Command Center Acme');
     await page.getByRole('button', { name: /save|create|anlegen|speichern/i }).first().click();
     await page.waitForURL(/\/companies\/\d+/, { timeout: 30000 });
     return;
   }
-  await link.click();
+  await page.goto(detailHref);
   await page.waitForURL(/\/companies\/\d+/, { timeout: 30000 });
 }
 
@@ -32,13 +39,13 @@ test.describe('Command Center', () => {
       'crm-glance',
       'crm-communication',
       'crm-persons',
+      'crm-deals',
       'crm-contracts',
       'crm-open-tasks',
       'crm-billing',
+      'crm-documents',
       'crm-projects',
       'crm-tickets',
-      'crm-documents',
-      'crm-deals',
       'crm-timeline',
     ];
     const positions = await page.evaluate((ids) => {
@@ -89,6 +96,10 @@ test.describe('Command Center', () => {
     await openFirstCompany(page);
     const timeline = page.locator('#crm-timeline');
     await expect(timeline).toBeVisible({ timeout: 30000 });
+    // Collapsed by default (Bachus) — open to read labels.
+    if (!(await timeline.evaluate((el) => el instanceof HTMLDetailsElement && el.open))) {
+      await timeline.locator('summary').click();
+    }
     const body = timeline.locator('.crm-card__body');
     await expect(body).toBeVisible();
     const text = await body.innerText();

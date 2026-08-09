@@ -12,7 +12,7 @@ test.describe('Nav clarity and deal overview', () => {
     await expect(page.locator('#app-navigation')).toContainText(/Deals & money|Deals & Geld|Geschäfte & Geld/i);
     await expect(page.locator('#app-navigation a[title]').first()).toBeVisible();
     await expect(page.locator('#crm-page-title')).toContainText(/Today|Heute/i);
-    await expect(page.locator('.crm-page-header__lead')).toContainText(/workspace|Arbeitsbereich|Pick one|Folgen|finish|erledig/i);
+    await expect(page.locator('.crm-page-header__lead')).toContainText(/Pick one|Folgen|finish|erledig|waiting on you|wartet/i);
   });
 
   test('companies list exposes owner column', async ({ page }) => {
