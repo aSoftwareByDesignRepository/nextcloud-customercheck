@@ -516,8 +516,6 @@ i {
     color: var(--arbeitszeitcheck-text-color-primary) !important;
     text-decoration: underline !important;
   }
-
-  a.btn,
   a.crm-btn {
     text-decoration: none !important;
   }

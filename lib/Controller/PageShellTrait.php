@@ -1,8 +1,10 @@
 <?php
 declare(strict_types=1);
 namespace OCA\CustomerCheck\Controller;
+use OCA\CustomerCheck\Service\AppSettingsSectionCatalog;
 use OCA\CustomerCheck\Service\FrontEndAssetService;
 use OCA\CustomerCheck\Service\WorkspaceCapability;
+use OCA\CustomerCheck\Service\WorkspaceSettingsSectionCatalog;
 use OCA\CustomerCheck\Support\WorkspaceSwitchUrlBuilder;
 
 trait PageShellTrait
@@ -68,6 +70,30 @@ trait PageShellTrait
 			}
 		}
 		$urls = $this->buildShellUrls();
+		$wsQuery = $workspaceId > 0 ? ['workspaceId' => $workspaceId] : [];
+		$canManageWorkspace = WorkspaceCapability::allows($workspaceRole, 'members', $isAppAdminCtx);
+		$settingsSectionUrls = [];
+		$wsCatalog = new WorkspaceSettingsSectionCatalog();
+		foreach (WorkspaceSettingsSectionCatalog::SECTIONS as $sectionId) {
+			if (!$wsCatalog->isVisible($sectionId, $canManageWorkspace)) {
+				continue;
+			}
+			$settingsSectionUrls[$sectionId] = $this->urlGenerator->linkToRoute(
+				'customercheck.page.settingsSection',
+				array_merge(['section' => $sectionId], $wsQuery),
+			);
+		}
+		$appSettingsSectionUrls = [];
+		if ($isAppAdminCtx) {
+			foreach (AppSettingsSectionCatalog::SECTIONS as $sectionId) {
+				$appSettingsSectionUrls[$sectionId] = $this->urlGenerator->linkToRoute(
+					'customercheck.page.appSettingsSection',
+					array_merge(['section' => $sectionId], $wsQuery),
+				);
+			}
+		}
+		$urls['settingsSections'] = $settingsSectionUrls;
+		$urls['appSettingsSections'] = $appSettingsSectionUrls;
 		$requestUri = isset($this->request) ? (string)$this->request->getRequestUri() : '';
 		return [
 			'pageId' => $pageId,
@@ -93,6 +119,7 @@ trait PageShellTrait
 			'l' => $this->l10n,
 			'labels' => $this->labels,
 			'canManage' => $isAdmin,
+			'canManageWorkspace' => $canManageWorkspace,
 			'canWrite' => $canWrite,
 			'canDelete' => $canDelete,
 			'canMove' => $canMove,

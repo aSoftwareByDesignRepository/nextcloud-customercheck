@@ -1,6 +1,11 @@
 <?php
 /**
- * Workspace settings — preferences, members, mailbox, integrations.
+ * Workspace settings shell — one sub-page per section (SETTINGS-PAGES-STANDARD).
+ *
+ * The controller validates `settingsSection` against
+ * {@see \OCA\CustomerCheck\Service\WorkspaceSettingsSectionCatalog} and this
+ * template dispatches through a literal slug → file map, so no request value
+ * is ever used to build an include path.
  *
  * @var array $_
  * @var \OCP\IL10N $l
@@ -26,31 +31,20 @@ include __DIR__ . '/common/page-start.php';
 		<?php endif; ?>
 	</nav>
 
-	<?php if ($canManageWorkspace): ?>
-		<?php include __DIR__ . '/settings/workspace-mailbox.php'; ?>
-	<?php endif; ?>
-
-	<?php include __DIR__ . '/settings/preferences.php'; ?>
-
-	<?php if ($canManageWorkspace): ?>
-		<?php include __DIR__ . '/settings/workspace-review-sources.php'; ?>
-		<?php include __DIR__ . '/settings/circles-roll-call.php'; ?>
-	<?php endif; ?>
-
-	<?php include __DIR__ . '/settings/integrations.php'; ?>
-
-	<?php if ($canManage && $appSettingsUrl !== ''): ?>
-		<section class="crm-card" id="section-app-settings-link" aria-labelledby="section-app-settings-link-heading">
-			<header class="crm-card__header">
-				<div class="crm-card__header-text">
-					<h2 id="section-app-settings-link-heading" class="crm-card__title"><?php p($l->t('App settings')); ?></h2>
-					<p class="crm-card__lead"><?php p($l->t('Access control, reminders, tokens, mobile license, and the agreement catalogue.')); ?></p>
-				</div>
-			</header>
-			<div class="crm-card__body">
-				<p><a class="crm-btn" href="<?php p($appSettingsUrl); ?>"><?php p($l->t('Open App settings')); ?></a></p>
-			</div>
-		</section>
-	<?php endif; ?>
+<?php
+	$crmSettingsSectionFiles = [
+		'mailbox' => 'workspace-mailbox.php',
+		'preferences' => 'preferences.php',
+		'review-sources' => 'workspace-review-sources.php',
+		'circles' => 'circles-roll-call.php',
+		'integrations' => 'integrations.php',
+	];
+	$crmRequestedSection = (string) ($_['settingsSection'] ?? '');
+	include __DIR__ . '/parts/settings-nav.php';
+	if (!isset($crmSettingsSectionFiles[$crmRequestedSection])) {
+		throw new \RuntimeException('CustomerCheck workspace settings: unknown section reached the template dispatcher.');
+	}
+	include __DIR__ . '/settings/' . $crmSettingsSectionFiles[$crmRequestedSection];
+?>
 </div>
 <?php include __DIR__ . '/common/page-end.php'; ?>

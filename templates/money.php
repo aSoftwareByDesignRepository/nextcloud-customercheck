@@ -74,7 +74,14 @@ include __DIR__ . '/common/page-start.php';
 		</header>
 		<div class="crm-card__body">
 			<?php if ($rows === []): ?>
-				<p class="crm-muted" role="status"><?php p($l->t('Nothing in this group.')); ?></p>
+				<div class="crm-empty-state" role="status">
+					<h3 class="crm-empty-state__title"><?php p($l->t('Nothing in this group')); ?></h3>
+					<p class="crm-empty-state__text"><?php p($l->t('Try another filter, or show all money again.')); ?></p>
+					<div class="crm-empty-state__actions">
+						<a class="crm-btn crm-btn--primary" href="<?php p($moneyUrl); ?>"><?php p($l->t('Show all money')); ?></a>
+						<a class="crm-btn crm-btn--secondary" href="<?php p($urlGenerator->linkToRoute('customercheck.page.agreements')); ?>"><?php p($l->t('Open agreements')); ?></a>
+					</div>
+				</div>
 			<?php else: ?>
 			<div class="table-container crm-table--responsive">
 				<table class="table table--hover">
@@ -84,9 +91,7 @@ include __DIR__ . '/common/page-start.php';
 						<th scope="col"><?php p($l->t('Status')); ?></th>
 						<th scope="col"><?php p($l->t('Reference')); ?></th>
 						<th scope="col"><?php p($l->t('Amount')); ?></th>
-						<?php if ($key !== 'paid30d'): ?>
 						<th scope="col" class="crm-table-actions-col"><?php p($l->t('Actions')); ?></th>
-						<?php endif; ?>
 					</tr></thead>
 					<tbody>
 					<?php foreach ($rows as $row): ?>
@@ -109,19 +114,20 @@ include __DIR__ . '/common/page-start.php';
 							?></td>
 							<td data-label="<?php p($l->t('Reference')); ?>"><?php p($row['invoiceRef'] ?? '—'); ?></td>
 							<td data-label="<?php p($l->t('Amount')); ?>"><?php p(number_format(($row['amountCents'] ?? 0)/100, 2)); ?> €</td>
-							<?php if ($key !== 'paid30d'): ?>
 							<td data-label="<?php p($l->t('Actions')); ?>" class="actions-cell crm-table-actions-col">
 								<div class="crm-table-actions">
-									<?php if ($canWrite && !empty($row['agreementId'])): ?>
+									<?php
+									$crmRowOpenHref = $urlGenerator->linkToRoute('customercheck.page.companyDetail', ['id' => (int)($row['companyId'] ?? 0)]);
+									$crmRowOpenLabel = $l->t('Open');
+									include __DIR__ . '/common/crm-row-open.php';
+									?>
+									<?php if ($key !== 'paid30d' && $canWrite && !empty($row['agreementId'])): ?>
 									<button type="button" class="crm-btn crm-btn--sm crm-btn--secondary" data-crm-payment-reminder="<?php p($row['agreementId']); ?>" data-company-id="<?php p($row['companyId']); ?>"><?php p($l->t('Payment reminder')); ?></button>
-									<?php elseif (!empty($row['agreementId'])): ?>
-									<span class="crm-muted" aria-hidden="true">—</span>
-									<?php else: ?>
+									<?php elseif ($key !== 'paid30d' && empty($row['agreementId'])): ?>
 									<span class="crm-muted"><?php p($l->t('From InvoiceCheck')); ?></span>
 									<?php endif; ?>
 								</div>
 							</td>
-							<?php endif; ?>
 						</tr>
 					<?php endforeach; ?>
 					</tbody>

@@ -3,11 +3,13 @@
 declare(strict_types=1);
 
 /**
- * Sync en/de L10n from PHP ->t()/->n() and js/pages t()/tr() literals.
+ * Sync L10n catalogs from PHP ->t()/->n() and js/pages|common|utils t()/tr() literals.
  *
  * Catalogs are rebuilt from live literals only (orphans pruned).
  * German: DE_MAP wins, then existing non-identity DE, else identity.
  * The DE map itself is pruned to live keys so it cannot reintroduce dead strings.
+ * Secondary locales (da/es/fr/it/nb/nl/pl/sv): keep prior non-identity
+ * translations for live keys; new keys fall back to English until MT refresh.
  */
 
 $root = dirname(__DIR__);
@@ -48,7 +50,12 @@ function extractPhp(string $root): array
 function extractJs(string $root): array
 {
 	$found = [];
-	foreach (glob($root . '/js/pages/*.js') ?: [] as $path) {
+	$globs = array_merge(
+		glob($root . '/js/pages/*.js') ?: [],
+		glob($root . '/js/common/*.js') ?: [],
+		glob($root . '/js/utils/*.js') ?: [],
+	);
+	foreach ($globs as $path) {
 		$src = (string)file_get_contents($path);
 		if (preg_match_all("/(?<![\\w.])(?:t|tr)\\(\\s*'((?:\\\\'|[^'])*)'\\s*[,)]/", $src, $m)) {
 			foreach ($m[1] as $lit) {
@@ -163,6 +170,27 @@ file_put_contents(
 writeL10n($root, 'en', $enTr, $enPrev['pluralForm'] ?? null);
 writeL10n($root, 'de', $deTr, $dePrev['pluralForm'] ?? null);
 
+$secondary = ['da', 'es', 'fr', 'it', 'nb', 'nl', 'pl', 'sv'];
+$secondaryCounts = [];
+foreach ($secondary as $lang) {
+	$path = $root . '/l10n/' . $lang . '.json';
+	if (!is_file($path)) {
+		continue;
+	}
+	$prev = json_decode((string)file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
+	$old = is_array($prev['translations'] ?? null) ? $prev['translations'] : [];
+	$out = [];
+	foreach (array_keys($live) as $lit) {
+		if (array_key_exists($lit, $old) && $old[$lit] !== $lit) {
+			$out[$lit] = $old[$lit];
+		} else {
+			$out[$lit] = $lit;
+		}
+	}
+	writeL10n($root, $lang, $out, $prev['pluralForm'] ?? null);
+	$secondaryCounts[$lang] = count($out);
+}
+
 fwrite(
 	STDERR,
 	'L10n sync: added ' . $added
@@ -171,5 +199,16 @@ fwrite(
 	. '; en=' . count($enTr)
 	. ' de=' . count($deTr)
 	. ' map=' . count($mapLive)
+	. ( $secondaryCounts !== [] ? '; secondary=' . implode(',', array_map(
+		static fn (string $l, int $n): string => $l . '=' . $n,
+		array_keys($secondaryCounts),
+		array_values($secondaryCounts),
+	)) : '')
 	. "\n"
 );
+
+// Keep regional variants (de_DE, en_GB, …) in lockstep with base catalogs.
+passthru(escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg(__DIR__ . '/sync-l10n-variants.php'), $variantExit);
+if ($variantExit !== 0) {
+	exit($variantExit === 0 ? 1 : $variantExit);
+}

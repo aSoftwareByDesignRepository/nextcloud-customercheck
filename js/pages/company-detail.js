@@ -214,33 +214,36 @@
       const primary = fields.filter((f) => !f.advanced);
       const advanced = fields.filter((f) => f.advanced);
       const renderField = (f) => {
-        let html = '<div class="form-group"><label class="form-label" for="' + id + '-' + f.name + '">' + f.label + '</label>';
+        const fname = String(f.name || '').replace(/[^a-zA-Z0-9_-]/g, '');
+        const flabel = escapeHtml(f.label || fname);
+        let html = '<div class="form-group"><label class="form-label" for="' + id + '-' + fname + '">' + flabel + '</label>';
         if (f.type === 'textarea') {
-          html += '<textarea class="crm-input form-input" id="' + id + '-' + f.name + '" name="' + f.name + '" rows="3"' + (f.required ? ' required' : '') + '>' +
-            (f.value ? String(f.value).replace(/</g, '&lt;') : '') + '</textarea>';
+          html += '<textarea class="crm-input form-input" id="' + id + '-' + fname + '" name="' + fname + '" rows="3"' + (f.required ? ' required' : '') + '>' +
+            (f.value ? escapeHtml(String(f.value)) : '') + '</textarea>';
         } else if (f.type === 'select') {
-          html += '<select class="crm-input form-select" id="' + id + '-' + f.name + '" name="' + f.name + '"' + (f.required ? ' required' : '') + '>' +
+          html += '<select class="crm-input form-select" id="' + id + '-' + fname + '" name="' + fname + '"' + (f.required ? ' required' : '') + '>' +
             f.options.map((o) => {
               const value = typeof o === 'object' && o !== null ? String(o.value) : String(o);
               const label = typeof o === 'object' && o !== null ? String(o.label || o.value) : String(o);
               const selected = f.value !== undefined && String(f.value) === value ? ' selected' : '';
-              return '<option value="' + value.replace(/"/g, '&quot;') + '"' + selected + '>' + label.replace(/</g, '&lt;') + '</option>';
+              return '<option value="' + escapeHtml(value) + '"' + selected + '>' + escapeHtml(label) + '</option>';
             }).join('') + '</select>';
         } else if (f.type === 'checkbox') {
           const checked = f.value ? ' checked' : '';
-          html = '<div class="form-group crm-choice"><input class="crm-input" id="' + id + '-' + f.name + '" name="' + f.name + '" type="checkbox" value="1"' + checked + ' />' +
-            '<label class="form-label" for="' + id + '-' + f.name + '">' + f.label + '</label>';
+          html = '<div class="form-group"><label class="crm-choice" for="' + id + '-' + fname + '">' +
+            '<input class="crm-input" id="' + id + '-' + fname + '" name="' + fname + '" type="checkbox" value="1"' + checked + ' />' +
+            '<span>' + flabel + '</span></label>';
         } else {
-          const val = f.value !== undefined && f.value !== null ? ' value="' + String(f.value).replace(/"/g, '&quot;') + '"' : '';
-          const inputType = f.type || 'text';
-          html += '<input class="crm-input form-input" id="' + id + '-' + f.name + '" name="' + f.name + '" type="' + inputType + '"' + val +
-            (f.min !== undefined ? ' min="' + f.min + '"' : '') +
-            (f.step !== undefined ? ' step="' + f.step + '"' : '') +
-            (f.maxlength !== undefined ? ' maxlength="' + f.maxlength + '"' : '') +
+          const val = f.value !== undefined && f.value !== null ? ' value="' + escapeHtml(String(f.value)) + '"' : '';
+          const inputType = String(f.type || 'text').replace(/[^a-zA-Z0-9-]/g, '') || 'text';
+          html += '<input class="crm-input form-input" id="' + id + '-' + fname + '" name="' + fname + '" type="' + inputType + '"' + val +
+            (f.min !== undefined ? ' min="' + escapeHtml(String(f.min)) + '"' : '') +
+            (f.step !== undefined ? ' step="' + escapeHtml(String(f.step)) + '"' : '') +
+            (f.maxlength !== undefined ? ' maxlength="' + escapeHtml(String(f.maxlength)) + '"' : '') +
             ' ' + (f.required ? 'required' : '') + ' />';
         }
         if (f.hint) {
-          html += '<p class="form-help">' + String(f.hint).replace(/</g, '&lt;') + '</p>';
+          html += '<p class="form-help">' + escapeHtml(String(f.hint)) + '</p>';
         }
         html += '</div>';
         return html;
@@ -248,7 +251,7 @@
       let html = '<form id="' + id + '-form" class="crm-form crm-form--stack">';
       primary.forEach((f) => { html += renderField(f); });
       if (advanced.length) {
-        html += '<details class="crm-advanced"><summary>' + t('More options') + '</summary>';
+        html += '<details class="crm-advanced"><summary class="crm-advanced__summary">' + t('More options') + '</summary>';
         advanced.forEach((f) => { html += renderField(f); });
         html += '</details>';
       }
@@ -318,12 +321,12 @@
     }
   }
 
-  document.querySelectorAll('[data-crm-trigger]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const targetId = btn.getAttribute('data-crm-trigger') || '';
-      const target = targetId ? document.getElementById(targetId) : null;
-      if (target) target.click();
-    });
+  document.addEventListener('click', (ev) => {
+    const btn = ev.target && ev.target.closest ? ev.target.closest('[data-crm-trigger]') : null;
+    if (!btn) return;
+    const targetId = btn.getAttribute('data-crm-trigger') || '';
+    const target = targetId ? document.getElementById(targetId) : null;
+    if (target) target.click();
   });
 
   const addPerson = document.getElementById('crm-add-person');
@@ -574,7 +577,13 @@
     });
   });
 
+  const GlanceSummary = window.CustomerCheckGlanceSummary || null;
+  const Company360Present = window.CustomerCheckCompany360Present || null;
+
   function billingStateLabel(state) {
+    if (GlanceSummary && typeof GlanceSummary.billingStateLabel === 'function') {
+      return GlanceSummary.billingStateLabel(state, t);
+    }
     switch (state) {
       case 'ok': return t('Paid up');
       case 'attention': return t('Needs attention');
@@ -583,13 +592,136 @@
     }
   }
 
+  function billingTone(state) {
+    if (GlanceSummary && typeof GlanceSummary.billingTone === 'function') {
+      return GlanceSummary.billingTone(state);
+    }
+    switch (state) {
+      case 'ok': return 'success';
+      case 'attention': return 'warning';
+      case 'critical': return 'danger';
+      default: return 'neutral';
+    }
+  }
+
+  function safeInternalHref(href, fallback) {
+    if (Company360Present && typeof Company360Present.safeInternalHref === 'function') {
+      return Company360Present.safeInternalHref(href, fallback);
+    }
+    const fb = fallback == null ? '/' : String(fallback);
+    const s = String(href == null ? '' : href).trim();
+    if (!s) return fb;
+    const lower = s.toLowerCase();
+    if (lower.indexOf('javascript:') === 0 || lower.indexOf('data:') === 0 || lower.indexOf('vbscript:') === 0) return fb;
+    if (s.charAt(0) !== '/' || s.indexOf('//') === 0 || s.indexOf('\\') !== -1) return fb;
+    return s;
+  }
+
+  function paintBillingSummary(body, billing) {
+    if (!body || !billing) return;
+    if (Company360Present && typeof Company360Present.buildBillingSummaryTiles === 'function'
+      && typeof Company360Present.renderBillingSummaryTiles === 'function') {
+      const tiles = Company360Present.buildBillingSummaryTiles(billing, {
+        t: t,
+        billingStateLabel: billingStateLabel,
+        billingTone: billingTone,
+      });
+      Company360Present.renderBillingSummaryTiles(body, tiles, t);
+      return;
+    }
+    const b = billing;
+    const badge = b.state === 'critical' ? 'danger' : (b.state === 'attention' ? 'warning' : (b.state === 'ok' ? 'success' : 'neutral'));
+    body.textContent = '';
+    const p = document.createElement('p');
+    const span = document.createElement('span');
+    span.className = 'crm-badge crm-badge--' + badge;
+    span.textContent = billingStateLabel(b.state || 'unknown');
+    p.appendChild(span);
+    p.appendChild(document.createTextNode(' · ' + t('Overdue') + ': ' + (b.overdueCount || 0) + ' · ' + t('Open') + ': ' + (b.openCount || 0)));
+    body.appendChild(p);
+  }
+
   function coverageMissingLabel(slot) {
+    if (GlanceSummary && typeof GlanceSummary.coverageMissingLabel === 'function') {
+      return GlanceSummary.coverageMissingLabel(slot, t);
+    }
     switch (slot) {
       case 'economic_buyer': return t('Budget decision-maker');
       case 'champion': return t('Champion');
       case 'day_to_day_or_technical': return t('Day-to-day or technical contact');
       default: return slot ? String(slot) : '';
     }
+  }
+
+  /**
+   * Mount command-center glance as design-system KPI tiles (crm-stat-strip).
+   * Falls back to a plain dl if the shared helper failed to load.
+   */
+  function paintGlanceSummary(body, dto) {
+    if (!body || !dto) {
+      return;
+    }
+    if (GlanceSummary && typeof GlanceSummary.buildGlanceSummaryTiles === 'function'
+      && typeof GlanceSummary.renderGlanceSummaryTiles === 'function') {
+      const tiles = GlanceSummary.buildGlanceSummaryTiles(dto, {
+        t: t,
+        formatDisplayDate: formatDisplayDate,
+      });
+      GlanceSummary.renderGlanceSummaryTiles(body, tiles, t);
+      return;
+    }
+    // Fallback — keep labels/values readable without the shared module.
+    const next = dto.nextAction || {};
+    const last = dto.lastDiscussion || {};
+    const runway = dto.runway || {};
+    const billing = dto.billing || {};
+    const primary = dto.primaryPerson;
+    const cov = dto.coverage || {};
+    const nextTouch = dto.nextTouchOn || '';
+    const dl = document.createElement('dl');
+    dl.className = 'crm-glance-dl crm-stat-strip';
+    dl.setAttribute('aria-label', t('At a glance'));
+    const coverageLabel = cov.gap ? t('Needs links') : (cov.covered ? t('Covered') : t('Coverage'));
+    const missingText = (cov.missingLabels && cov.missingLabels.length)
+      ? cov.missingLabels.join(', ')
+      : ((cov.missing || []).map(coverageMissingLabel).filter(Boolean).join(', '));
+    const runwayText = runway.validUntil
+      ? (formatDisplayDate(runway.validUntil) + (runway.daysLeft != null ? ' · ' + t('%s days left', [String(runway.daysLeft)]) : ''))
+      : '—';
+    const rows = [
+      [t('Company'), dto.name || '—', ''],
+      [t('Primary contact'), primary ? ((primary.name || '') + (primary.role ? ' · ' + primary.role : '')) : t('No primary person'), ''],
+      [t('Coverage'), coverageLabel, missingText],
+      [t('Next touch'), nextTouch ? formatDisplayDate(nextTouch) : t('Not scheduled'), ''],
+      [t('Last discussion'), last.summary ? last.summary : t('Nothing logged yet'), last.summary && last.at ? formatDisplayDate(last.at) : ''],
+      [t('Next action'), next.label || t('No urgent action'), ''],
+      [t('Money'), billingStateLabel(billing.state || 'unknown') + (billing.overdueCount ? ' · ' + billing.overdueCount + ' ' + t('overdue') : ''), ''],
+      [t('Renewal'), runwayText, ''],
+    ];
+    rows.forEach(function (row) {
+      const wrap = document.createElement('div');
+      wrap.className = 'crm-stat-tile crm-stat-tile--neutral';
+      wrap.setAttribute('role', 'group');
+      const dte = document.createElement('dt');
+      dte.className = 'crm-stat-tile__label';
+      dte.textContent = row[0];
+      const dde = document.createElement('dd');
+      dde.className = 'crm-stat-tile__value';
+      dde.textContent = row[1];
+      wrap.appendChild(dte);
+      wrap.appendChild(dde);
+      if (row[2]) {
+        const meta = document.createElement('p');
+        meta.className = 'crm-stat-tile__meta';
+        meta.textContent = row[2];
+        wrap.appendChild(meta);
+      }
+      dl.appendChild(wrap);
+    });
+    while (body.firstChild) {
+      body.removeChild(body.firstChild);
+    }
+    body.appendChild(dl);
   }
 
   const addActivity = document.getElementById('crm-add-activity');
@@ -706,15 +838,20 @@
       try {
         const res = await Api.post('/agreements/' + agreementId + '/delivery-pack', {});
         const pack = res.data || {};
+        const extraActions =
+          '<button type="button" class="crm-btn crm-btn--secondary" id="crm-send-delivery">' + escapeHtml(t('Send from shared mailbox')) + '</button> ' +
+          '<button type="button" class="crm-btn crm-btn--secondary" id="crm-copy-delivery">' + escapeHtml(t('Copy')) + '</button>';
+        const content = (C && typeof C.buildMailPackDialogHtml === 'function')
+          ? C.buildMailPackDialogHtml(pack, { t: t, extraActionsHtml: extraActions })
+          : ('<p><strong>' + escapeHtml(pack.subject || '') + '</strong></p><pre class="crm-pre">' +
+            escapeHtml(pack.bodyText || '') + '</pre><div class="crm-form-actions">' +
+            '<a class="crm-btn crm-btn--primary" href="' + escapeHtml((C && C.safeExternalHref)
+              ? C.safeExternalHref(pack.mailAppUrl || pack.mailtoUrl || '#')
+              : '#') + '" rel="noopener noreferrer">' + escapeHtml(t('Open mail')) + '</a> ' + extraActions + '</div>');
         await C.openDialog({
           id: 'crm-delivery-pack',
           title: t('Delivery pack'),
-          content: '<p><strong>' + (pack.subject || '') + '</strong></p><pre class="crm-pre">' +
-            String(pack.bodyText || '').replace(/[<>&]/g, (ch) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[ch])) +
-            '</pre><div class="crm-form-actions">' +
-            '<a class="crm-btn crm-btn--primary" href="' + (pack.mailAppUrl || pack.mailtoUrl || '#') + '">' + t('Open mail') + '</a> ' +
-            '<button type="button" class="crm-btn crm-btn--secondary" id="crm-send-delivery">' + t('Send from shared mailbox') + '</button> ' +
-            '<button type="button" class="crm-btn crm-btn--secondary" id="crm-copy-delivery">' + t('Copy') + '</button></div>',
+          content: content,
           size: 'md',
         });
         const sendBtn = document.getElementById('crm-send-delivery');
@@ -739,9 +876,9 @@
               await C.openDialog({
                 id: 'crm-delivery-copy-fallback',
                 title: t('Copy manually'),
-                content: '<p>' + t('Clipboard access was denied. Select all text below and copy it.') + '</p>' +
+                content: '<p>' + escapeHtml(t('Clipboard access was denied. Select all text below and copy it.')) + '</p>' +
                   '<textarea class="crm-input form-textarea" id="crm-delivery-fallback-text" rows="12" readonly>' +
-                  String(text).replace(/[<>&]/g, (ch) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[ch])) +
+                  escapeHtml(text) +
                   '</textarea>',
                 size: 'md',
               });
@@ -975,9 +1112,11 @@
   });
 
   /* ── Command Center M5 ───────────────────────────────────────── */
+  let commandCenterGeneration = 0;
   async function loadCommandCenter() {
     if (!companyId || !Api) return;
     const live = document.getElementById('crm-live-region');
+    const generation = ++commandCenterGeneration;
     try {
       const [cmd, feed, tasks, billingLinks, platform] = await Promise.all([
         Api.get('/companies/' + companyId + '/command'),
@@ -986,6 +1125,9 @@
         Api.get('/companies/' + companyId + '/files-folder/children').catch(() => ({ data: { items: [], broken: false } })),
         Api.get('/companies/' + companyId + '/platform-links').catch(() => ({ data: {} })),
       ]);
+      if (generation !== commandCenterGeneration) {
+        return;
+      }
       const dto = cmd.data || cmd;
       const glance = document.getElementById('crm-glance');
       if (glance && dto) {
@@ -997,53 +1139,7 @@
           const pin = glance.querySelector('.crm-glance-pin') || glance;
           pin.appendChild(body);
         }
-        const next = dto.nextAction || {};
-        const last = dto.lastDiscussion || {};
-        const runway = dto.runway || {};
-        const billing = dto.billing || {};
-        const primary = dto.primaryPerson;
-        const cov = dto.coverage || {};
-        const nextTouch = dto.nextTouchOn || '';
-        const dl = document.createElement('dl');
-        dl.className = 'crm-glance-dl';
-        const coverageLabel = cov.gap ? t('Gap') : (cov.covered ? t('Covered') : t('Coverage'));
-        const coverageBadge = cov.gap ? 'warning' : (cov.covered ? 'success' : 'neutral');
-        const missingText = (cov.missingLabels && cov.missingLabels.length)
-          ? cov.missingLabels.join(', ')
-          : ((cov.missing || []).map(coverageMissingLabel).filter(Boolean).join(', '));
-        const runwayText = runway.validUntil
-          ? (formatDisplayDate(runway.validUntil) + (runway.daysLeft != null ? ' · ' + t('%s days left', [String(runway.daysLeft)]) : ''))
-          : '—';
-        const rows = [
-          [t('Company'), (dto.name || '') + ' · ' + (dto.slug || '')],
-          [t('Primary contact'), primary ? ((primary.name || '') + (primary.role ? ' · ' + primary.role : '')) : t('No primary person')],
-          [t('Coverage'), coverageLabel + (missingText ? ' · ' + missingText : '')],
-          [t('Next touch'), nextTouch ? formatDisplayDate(nextTouch) : t('Not scheduled')],
-          [t('Last discussion'), last.summary ? ((last.at ? formatDisplayDate(last.at) + ' · ' : '') + last.summary) : t('Nothing logged yet')],
-          [t('Next action'), next.label || t('No urgent action')],
-          [t('Money'), billingStateLabel(billing.state || 'unknown') + (billing.overdueCount ? ' · ' + billing.overdueCount + ' ' + t('overdue') : '')],
-          [t('Renewal'), runwayText],
-        ];
-        rows.forEach(([dt, dd]) => {
-          const dte = document.createElement('dt');
-          dte.textContent = dt;
-          const dde = document.createElement('dd');
-          if (dt === t('Coverage')) {
-            const badge = document.createElement('span');
-            badge.className = 'crm-badge crm-badge--' + coverageBadge;
-            badge.textContent = coverageLabel;
-            dde.appendChild(badge);
-            if (missingText) {
-              dde.appendChild(document.createTextNode(' · ' + missingText));
-            }
-          } else {
-            dde.textContent = dd;
-          }
-          dl.appendChild(dte);
-          dl.appendChild(dde);
-        });
-        body.innerHTML = '';
-        body.appendChild(dl);
+        paintGlanceSummary(body, dto);
       }
 
       const feedEl = document.getElementById('crm-communication-feed');
@@ -1072,37 +1168,54 @@
           }
         }
         if (!items.length) {
-          feedEl.innerHTML = '<div class="crm-empty-state" role="status"><p class="crm-empty-state__text">' + t('Nothing logged yet. Log an email or add an activity.') + '</p></div>';
+          const canWrite = shellCan('write');
+          feedEl.innerHTML = '<div class="crm-empty-state" role="status">' +
+            '<h3 class="crm-empty-state__title">' + escapeHtml(t('Nothing logged yet')) + '</h3>' +
+            '<p class="crm-empty-state__text">' + escapeHtml(t('Nothing logged yet. Log an email or add an activity.')) + '</p>' +
+            (canWrite
+              ? '<div class="crm-empty-state__actions">' +
+                '<button type="button" class="crm-btn crm-btn--primary crm-btn--lg" data-crm-trigger="crm-log-email">' + escapeHtml(t('Log email')) + '</button> ' +
+                '<button type="button" class="crm-btn crm-btn--secondary" data-crm-trigger="crm-add-activity">' + escapeHtml(t('Add activity')) + '</button>' +
+                '</div>'
+              : '') +
+            '</div>';
         } else {
           feedEl.innerHTML = '';
           items.forEach((item) => {
             const row = document.createElement('article');
             row.className = 'crm-feed__item';
+
+            const badges = document.createElement('div');
+            badges.className = 'crm-feed__badges';
             const badge = document.createElement('span');
             badge.className = 'crm-badge';
             badge.textContent = feedKindLabel(item.kind);
-            row.appendChild(badge);
+            badges.appendChild(badge);
             if (item.shared || item.kind === 'shared_mail') {
               const sharedBadge = document.createElement('span');
               sharedBadge.className = 'crm-badge crm-badge--warning';
               sharedBadge.textContent = t('Shared');
-              row.appendChild(document.createTextNode(' '));
-              row.appendChild(sharedBadge);
+              badges.appendChild(sharedBadge);
             }
             if (item.private || item.kind === 'mail_related') {
               const privBadge = document.createElement('span');
               privBadge.className = 'crm-badge crm-badge--neutral';
               privBadge.textContent = item.privacyBadge || t('Private to you');
-              row.appendChild(document.createTextNode(' '));
-              row.appendChild(privBadge);
+              badges.appendChild(privBadge);
             }
+            row.appendChild(badges);
+
             const strong = document.createElement('strong');
+            strong.className = 'crm-feed__subject';
             strong.textContent = item.subject || '';
-            const meta = document.createElement('span');
-            meta.className = 'crm-muted';
-            meta.textContent = ' · ' + (item.occurredAt ? formatDisplayDate(item.occurredAt) : '') + (item.personName ? ' · ' + item.personName : '');
-            row.appendChild(document.createTextNode(' '));
             row.appendChild(strong);
+
+            const meta = document.createElement('p');
+            meta.className = 'crm-feed__meta crm-muted';
+            const metaParts = [];
+            if (item.occurredAt) metaParts.push(formatDisplayDate(item.occurredAt));
+            if (item.personName) metaParts.push(item.personName);
+            meta.textContent = metaParts.join(' · ');
             row.appendChild(meta);
             feedEl.appendChild(row);
           });
@@ -1113,16 +1226,19 @@
       if (tasksBody) {
         const items = (tasks.data && tasks.data.items) || tasks.items || [];
         if (!items.length) {
-          tasksBody.innerHTML = '<div class="crm-empty-state" role="status"><p class="crm-empty-state__text">' + t('Nothing open for this company.') + '</p></div>';
+          tasksBody.innerHTML = '<div class="crm-empty-state" role="status">' +
+            '<h3 class="crm-empty-state__title">' + escapeHtml(t('No open tasks')) + '</h3>' +
+            '<p class="crm-empty-state__text">' + escapeHtml(t('Nothing open for this company.')) + '</p></div>';
         } else {
           const table = document.createElement('div');
           table.className = 'table-container crm-table--responsive';
-          let html = '<table class="table table--hover"><thead><tr><th>' + t('Title') + '</th><th>' + t('Due') + '</th><th>' + t('Tasks') + '</th></tr></thead><tbody>';
+          let html = '<table class="table table--hover"><thead><tr><th scope="col">' + escapeHtml(t('Title')) + '</th><th scope="col">' + escapeHtml(t('Due')) + '</th><th scope="col" class="crm-table-actions-col">' + escapeHtml(t('Action')) + '</th></tr></thead><tbody>';
           items.forEach((row) => {
+            const deep = safeInternalHref(row.tasksDeepLink || '/apps/tasks/', '/apps/tasks/');
             const tasksCell = row.inTasks
-              ? ('<a class="crm-btn crm-btn--sm crm-btn--secondary" href="' + (row.tasksDeepLink || '/apps/tasks/') + '">' + t('Open in Tasks') + '</a>')
-              : '—';
-            html += '<tr><td>' + (row.title || '') + (row.isCallback ? ' <span class="crm-badge">' + t('Callback') + '</span>' : '') + '</td><td>' + (row.dueDate ? formatDisplayDate(row.dueDate) : '—') + '</td><td>' + tasksCell + '</td></tr>';
+              ? ('<div class="crm-table-actions"><a class="crm-btn crm-btn--sm crm-btn--primary" href="' + escapeHtml(deep) + '">' + escapeHtml(t('Open in Tasks')) + '</a></div>')
+              : ('<div class="crm-table-actions"><span class="crm-muted" aria-hidden="true">—</span></div>');
+            html += '<tr><td data-label="' + escapeHtml(t('Title')) + '">' + escapeHtml(row.title || '') + (row.isCallback ? ' <span class="crm-badge">' + escapeHtml(t('Callback')) + '</span>' : '') + '</td><td data-label="' + escapeHtml(t('Due')) + '">' + escapeHtml(row.dueDate ? formatDisplayDate(row.dueDate) : '—') + '</td><td class="actions-cell crm-table-actions-col" data-label="' + escapeHtml(t('Action')) + '">' + tasksCell + '</td></tr>';
           });
           html += '</tbody></table>';
           table.innerHTML = html;
@@ -1133,9 +1249,7 @@
 
       const billingBody = document.getElementById('crm-billing-body');
       if (billingBody && dto && dto.billing) {
-        const b = dto.billing;
-        const badge = b.state === 'critical' ? 'danger' : (b.state === 'attention' ? 'warning' : (b.state === 'ok' ? 'success' : 'neutral'));
-        billingBody.innerHTML = '<p><span class="crm-badge crm-badge--' + badge + '">' + billingStateLabel(b.state || 'unknown') + '</span> · ' + t('Overdue') + ': ' + (b.overdueCount || 0) + ' · ' + t('Open') + ': ' + (b.openCount || 0) + '</p>';
+        paintBillingSummary(billingBody, dto.billing);
       }
 
       const docsBody = document.getElementById('crm-documents-body');
@@ -1186,7 +1300,13 @@
             docsBody.appendChild(empty);
           }
         } else {
-          docsBody.innerHTML = '<div class="crm-empty-state" role="status"><p class="crm-empty-state__text">' + t('No document folder linked yet. Browse your Nextcloud folders and choose one (contracts, offers, notes) so everyone finds customer files in one click.') + '</p></div>';
+          docsBody.innerHTML = '<div class="crm-empty-state" role="status">' +
+            '<h3 class="crm-empty-state__title">' + escapeHtml(t('No folder linked')) + '</h3>' +
+            '<p class="crm-empty-state__text">' + escapeHtml(t('No document folder linked yet. Browse your Nextcloud folders and choose one (contracts, offers, notes) so everyone finds customer files in one click.')) + '</p>' +
+            (shellCan('write')
+              ? '<div class="crm-empty-state__actions"><button type="button" class="crm-btn crm-btn--primary crm-btn--lg" data-crm-trigger="crm-link-folder">' + escapeHtml(t('Browse folders')) + '</button></div>'
+              : '') +
+            '</div>';
         }
       }
 
@@ -1209,7 +1329,30 @@
       }
       if (live) live.textContent = t('Company overview updated.');
     } catch (e) {
+      if (generation !== commandCenterGeneration) {
+        return;
+      }
       if (live) live.textContent = t('Some overview data could not be loaded.');
+      const glanceBody = document.getElementById('crm-glance-summary');
+      if (glanceBody) {
+        glanceBody.innerHTML = '';
+        const callout = document.createElement('div');
+        callout.className = 'crm-callout crm-callout--danger';
+        callout.setAttribute('role', 'alert');
+        const msg = document.createElement('p');
+        msg.textContent = t('Some overview data could not be loaded.');
+        const retry = document.createElement('button');
+        retry.type = 'button';
+        retry.className = 'crm-btn crm-btn--primary';
+        retry.textContent = t('Try again');
+        retry.addEventListener('click', () => {
+          glanceBody.innerHTML = '<p class="crm-muted">' + t('Loading overview…') + '</p>';
+          loadCommandCenter();
+        });
+        callout.appendChild(msg);
+        callout.appendChild(retry);
+        glanceBody.appendChild(callout);
+      }
     }
   }
 
@@ -1419,9 +1562,11 @@
   loadAccountPlan();
   loadPromises();
 
+  let accountPlanGeneration = 0;
   async function loadAccountPlan() {
     const body = document.getElementById('crm-account-plan-body');
     if (!body || !companyId) return;
+    const generation = ++accountPlanGeneration;
     const canWrite = shellCan('write');
     const priorityLabel = function (code) {
       if (code === 'p1') return t('High');
@@ -1430,6 +1575,9 @@
     };
     try {
       const res = await Api.get('/companies/' + companyId + '/account-plan');
+      if (generation !== accountPlanGeneration) {
+        return;
+      }
       const plan = res.data || res || {};
       const mapSteps = plan.mapSteps || [];
       let html = '';
@@ -1439,14 +1587,14 @@
         html += '<div><dt>' + escapeHtml(t('Priority')) + '</dt><dd>' + escapeHtml(priorityLabel(plan.priority || 'p2')) + '</dd></div>';
         html += '<div><dt>' + escapeHtml(t('Plan owner')) + '</dt><dd>' + escapeHtml(plan.ownerUserId || '—') + '</dd></div>';
         html += '<div><dt>' + escapeHtml(t('Next review')) + '</dt><dd>' + escapeHtml(plan.nextReviewOn || '—') + '</dd></div>';
-        if (plan.health) {
-          html += '<div><dt>' + escapeHtml(t('Health')) + '</dt><dd><span class="crm-badge">' + escapeHtml(plan.health) + '</span></dd></div>';
+        if (plan.healthLabel || plan.health) {
+          html += '<div><dt>' + escapeHtml(t('Health')) + '</dt><dd><span class="crm-badge">' + escapeHtml(plan.healthLabel || plan.health) + '</span></dd></div>';
         }
         html += '</dl>';
         if (mapSteps.length) {
           html += '<h3 class="crm-card__title">' + escapeHtml(t('Next steps')) + '</h3><ul class="crm-simple-list">';
           mapSteps.forEach((s) => {
-            html += '<li>' + escapeHtml(s.title || '') + ' · <span class="crm-badge">' + escapeHtml(s.status || '') + '</span></li>';
+            html += '<li>' + escapeHtml(s.title || '') + ' · <span class="crm-badge">' + escapeHtml(s.statusLabel || s.status || '') + '</span></li>';
           });
           html += '</ul>';
         } else {
@@ -1478,14 +1626,14 @@
       html += '</div><p class="crm-muted">' + escapeHtml(t('Search by name or login, then pick a colleague. Never type a raw user id.')) + '</p></div>';
       html += '<div class="form-group"><label class="form-label" for="crm-plan-review">' + escapeHtml(t('Next review')) + '</label>';
       html += '<input class="crm-input form-input" id="crm-plan-review" name="nextReviewOn" type="date" value="' + escapeHtml(plan.nextReviewOn || '') + '" /></div>';
-      if (plan.health) {
-        html += '<p role="status"><span class="crm-badge">' + escapeHtml(plan.health) + '</span></p>';
+      if (plan.healthLabel || plan.health) {
+        html += '<p role="status"><span class="crm-badge">' + escapeHtml(plan.healthLabel || plan.health) + '</span></p>';
       }
       html += '<div class="crm-form-actions"><button type="submit" class="crm-btn crm-btn--primary">' + escapeHtml(t('Save plan')) + '</button></div></form>';
       if (mapSteps.length) {
         html += '<h3 class="crm-card__title">' + escapeHtml(t('Next steps')) + '</h3><ul class="crm-simple-list">';
         mapSteps.forEach((s) => {
-          html += '<li>' + escapeHtml(s.title || '') + ' · <span class="crm-badge">' + escapeHtml(s.status || '') + '</span></li>';
+          html += '<li>' + escapeHtml(s.title || '') + ' · <span class="crm-badge">' + escapeHtml(s.statusLabel || s.status || '') + '</span></li>';
         });
         html += '</ul>';
       } else {
@@ -1626,18 +1774,53 @@
         });
       }
     } catch (e) {
-      body.innerHTML = '<div class="crm-callout crm-callout--danger" role="alert"><p>' + escapeHtml(t('Could not load account plan.')) + '</p></div>';
+      if (generation !== accountPlanGeneration) {
+        return;
+      }
+      body.innerHTML = '';
+      const callout = document.createElement('div');
+      callout.className = 'crm-callout crm-callout--danger';
+      callout.setAttribute('role', 'alert');
+      const msg = document.createElement('p');
+      msg.textContent = t('Could not load account plan.');
+      const retry = document.createElement('button');
+      retry.type = 'button';
+      retry.className = 'crm-btn crm-btn--primary';
+      retry.textContent = t('Try again');
+      retry.addEventListener('click', () => {
+        body.innerHTML = '<p class="crm-muted">' + t('Loading…') + '</p>';
+        loadAccountPlan();
+      });
+      callout.appendChild(msg);
+      callout.appendChild(retry);
+      body.appendChild(callout);
     }
   }
 
+  let promisesGeneration = 0;
   async function loadPromises() {
     const body = document.getElementById('crm-promises-body');
     if (!body || !companyId) return;
+    const generation = ++promisesGeneration;
     try {
       const res = await Api.get('/companies/' + companyId + '/promises');
+      if (generation !== promisesGeneration) {
+        return;
+      }
       const items = (res.data && res.data.items) || res.items || [];
       if (!items.length) {
-        body.innerHTML = '<div class="crm-empty-state" role="status"><p class="crm-empty-state__text">' + escapeHtml(t('No customer promises yet.')) + '</p></div>';
+        body.innerHTML = '<div class="crm-empty-state" role="status">' +
+          '<h3 class="crm-empty-state__title">' + escapeHtml(t('No promises yet')) + '</h3>' +
+          '<p class="crm-empty-state__text">' + escapeHtml(t('No customer promises yet.')) + '</p>' +
+          (shellCan('write')
+            ? '<div class="crm-empty-state__actions"><button type="button" class="crm-btn crm-btn--primary crm-btn--lg" id="crm-promises-empty-add">' + escapeHtml(t('Add promise')) + '</button></div>'
+            : '') +
+          '</div>';
+        const emptyAdd = document.getElementById('crm-promises-empty-add');
+        const headerAdd = document.getElementById('crm-add-promise');
+        if (emptyAdd && headerAdd) {
+          emptyAdd.addEventListener('click', () => headerAdd.click());
+        }
         return;
       }
       let html = '<div class="table-container crm-table--responsive"><table class="table table--hover"><thead><tr>';
@@ -1662,15 +1845,17 @@
       body.querySelectorAll('[data-crm-promise-done]').forEach((btn) => {
         btn.addEventListener('click', async () => {
           const id = btn.getAttribute('data-crm-promise-done');
-          const data = await promptFields(t('Mark promise done'), [
-            { name: 'evidence', label: t('Evidence (what was delivered?)'), type: 'textarea', required: true },
-          ]);
-          if (data === null) return;
+          if (!id || btn.disabled) return;
+          btn.disabled = true;
           try {
-            await Api.post('/companies/' + companyId + '/promises/' + id + '/done', { evidence: data.evidence || '' });
+            // Bachus: one tap — default note satisfies API without an Evidence jargon dialog.
+            await Api.post('/companies/' + companyId + '/promises/' + id + '/done', {
+              evidence: t('Done'),
+            });
             if (liveRegion()) liveRegion().textContent = t('Promise marked done.');
             await loadPromises();
           } catch (e) {
+            btn.disabled = false;
             await C.alertDialog({ title: t('Could not complete promise'), message: (e.payload && e.payload.message) || e.message, variant: 'danger' });
           }
         });
@@ -1696,7 +1881,26 @@
         });
       });
     } catch (e) {
-      body.innerHTML = '<div class="crm-callout crm-callout--danger" role="alert"><p>' + escapeHtml(t('Could not load promises.')) + '</p></div>';
+      if (generation !== promisesGeneration) {
+        return;
+      }
+      body.innerHTML = '';
+      const callout = document.createElement('div');
+      callout.className = 'crm-callout crm-callout--danger';
+      callout.setAttribute('role', 'alert');
+      const msg = document.createElement('p');
+      msg.textContent = t('Could not load promises.');
+      const retry = document.createElement('button');
+      retry.type = 'button';
+      retry.className = 'crm-btn crm-btn--primary';
+      retry.textContent = t('Try again');
+      retry.addEventListener('click', () => {
+        body.innerHTML = '<p class="crm-muted">' + t('Loading…') + '</p>';
+        loadPromises();
+      });
+      callout.appendChild(msg);
+      callout.appendChild(retry);
+      body.appendChild(callout);
     }
   }
 
@@ -1784,7 +1988,12 @@
         const existing = parseInt(fields[sibling === 'tc' ? 'existingTcCustomerId' : 'existingPcCustomerId'], 10);
         showAlert((e.payload && e.payload.message) || e.message);
         if (Number.isFinite(existing) && existing > 0) {
-          const ok = window.confirm(t('A customer with this name already exists. Link the existing one?'));
+          const ok = await C.confirmDialog({
+            title: t('Link existing customer?'),
+            message: t('A customer with this name already exists. Link the existing one?'),
+            confirmLabel: t('Link existing'),
+            cancelLabel: t('Cancel'),
+          });
           if (ok) {
             inFlight = false;
             setIdentityBusy(false);
@@ -1802,7 +2011,14 @@
       const msg = sibling === 'tc'
         ? t('Unlink TicketCheck? Tickets will hide until you link again.')
         : t('Unlink ProjectCheck? Projects and invoices will hide until you link again.');
-      if (!window.confirm(msg)) return;
+      const ok = await C.confirmDialog({
+        title: t('Unlink?'),
+        message: msg,
+        confirmLabel: t('Unlink'),
+        cancelLabel: t('Cancel'),
+        variant: 'danger',
+      });
+      if (!ok) return;
       showAlert('');
       const path = sibling === 'tc'
         ? '/companies/' + companyIdLocal + '/unlink/ticketcheck'
@@ -1823,9 +2039,24 @@
     box.querySelectorAll('[data-crm-identity-link]').forEach((btn) => {
       btn.addEventListener('click', async () => {
         const sibling = btn.getAttribute('data-crm-identity-link');
-        const raw = window.prompt(t('Enter the existing customer id to link'));
-        const id = parseInt(raw || '', 10);
-        if (!Number.isFinite(id) || id <= 0) return;
+        const data = await promptFields(t('Link existing customer'), [
+          {
+            name: 'existingId',
+            label: t('Customer id'),
+            required: true,
+            hint: t('Enter the existing customer id to link'),
+          },
+        ]);
+        if (!data) return;
+        const id = parseInt(data.existingId || '', 10);
+        if (!Number.isFinite(id) || id <= 0) {
+          await C.alertDialog({
+            title: t('Invalid id'),
+            message: t('Enter a positive customer id.'),
+            variant: 'warning',
+          });
+          return;
+        }
         await createOrLink(sibling, 'link', id);
       });
     });

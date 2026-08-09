@@ -24,6 +24,8 @@ $htmlLang = (string)($clientHints['htmlLang'] ?? 'en');
 $timezone = (string)($clientHints['timezone'] ?? 'UTC');
 $l = $_['l'] ?? $l;
 $urlGenerator = $_['urlGenerator'];
+$settingsSection = (string)($_['settingsSection'] ?? '');
+$breadcrumbParent = is_array($_['breadcrumbParent'] ?? null) ? $_['breadcrumbParent'] : null;
 
 $pageIcons = [
 	'today' => 'sun',
@@ -58,6 +60,12 @@ $urlsJson = htmlspecialchars(json_encode($urls, JSON_THROW_ON_ERROR | JSON_UNESC
 	data-crm-can-brief="<?php p(!empty($_['canBriefConfirm']) ? '1' : '0'); ?>"
 	data-crm-can-coach="<?php p(!empty($_['canTeamCoach']) ? '1' : '0'); ?>"
 	data-crm-can-bulk="<?php p(!empty($_['canBulk']) ? '1' : '0'); ?>"
+	<?php if ($pageId === 'settings' && $settingsSection !== ''): ?>
+	data-crm-settings-section="<?php p($settingsSection); ?>"
+	<?php endif; ?>
+	<?php if ($pageId === 'app-settings' && $settingsSection !== ''): ?>
+	data-crm-app-settings-section="<?php p($settingsSection); ?>"
+	<?php endif; ?>
 	data-crm-urls="<?php print_unescaped($urlsJson); ?>"
 	data-crm-timezone="<?php p($timezone); ?>">
 	<a class="crm-skip-link" href="#crm-main-content"><?php p($l->t('Skip to main content')); ?></a>
@@ -68,6 +76,9 @@ $urlsJson = htmlspecialchars(json_encode($urls, JSON_THROW_ON_ERROR | JSON_UNESC
 			<nav class="crm-breadcrumb" aria-label="<?php p($l->t('Breadcrumb')); ?>">
 				<ol class="crm-breadcrumb__list">
 					<li class="crm-breadcrumb__item"><a href="<?php p($urls['today'] ?? '#'); ?>"><?php p($l->t('CustomerCheck')); ?></a></li>
+					<?php if (is_array($breadcrumbParent) && ($breadcrumbParent['url'] ?? '') !== '' && ($breadcrumbParent['label'] ?? '') !== ''): ?>
+					<li class="crm-breadcrumb__item"><a href="<?php p((string)$breadcrumbParent['url']); ?>"><?php p((string)$breadcrumbParent['label']); ?></a></li>
+					<?php endif; ?>
 					<li class="crm-breadcrumb__item" aria-current="page"><?php p($pageTitle); ?></li>
 				</ol>
 			</nav>

@@ -30,8 +30,13 @@ final class ExtremeSimplicityUxContractTest extends TestCase
 		$this->assertStringContainsString("\$l->t('Edit deal')", $html);
 		$this->assertStringNotContainsString("\$l->t('Edit chase')", $html);
 		$this->assertStringContainsString('Tap New deal to add one', $html);
+		$this->assertStringContainsString('crm-empty-state', $html);
+		$this->assertStringContainsString('id="crm-pipeline-empty-new"', $html);
+		$this->assertStringContainsString("\$l->t('Deals view')", $html);
+		$this->assertStringNotContainsString("\$l->t('Pipeline view')", $html);
 		$this->assertStringNotContainsString('website lead webhook', $html);
-		$this->assertStringContainsString("\$l->t('More')", $html);
+		$this->assertStringContainsString("\$l->t('Action')", $html);
+		$this->assertStringContainsString('crm-btn--primary', $html);
 		$this->assertLessThan(
 			10,
 			substr_count($html, '<th scope="col">'),
@@ -40,6 +45,7 @@ final class ExtremeSimplicityUxContractTest extends TestCase
 		$js = (string)file_get_contents(dirname(__DIR__, 2) . '/js/pages/pipeline.js');
 		$this->assertStringContainsString("t('Edit deal')", $js);
 		$this->assertStringContainsString("t('More options')", $js);
+		$this->assertStringContainsString('crm-pipeline-empty-new', $js);
 		$this->assertStringNotContainsString("t('Edit chase')", $js);
 	}
 
@@ -92,7 +98,15 @@ final class ExtremeSimplicityUxContractTest extends TestCase
 		$this->assertStringContainsString('crm-persons-table', $detail);
 		$this->assertStringNotContainsString("\$l->t('Phone')); ?></th>", $detail);
 		$this->assertStringNotContainsString("\$l->t('Buying role')); ?></th>", $detail);
-		$this->assertStringNotContainsString("\$l->t('Address book')); ?></th>", $detail);
+		// Flat roster: last touch + address book + role visible — never a More scroll-trap.
+		$this->assertStringContainsString("\$l->t('Address book')); ?></th>", $detail);
+		$this->assertStringContainsString("\$l->t('Last touch')); ?></th>", $detail);
+		$this->assertStringContainsString("\$l->t('Role in buying')); ?></th>", $detail);
+		$this->assertStringContainsString("\$l->t('Log talk')", $detail);
+		$personsStart = strpos($detail, 'id="crm-persons-table"');
+		$personsEnd = strpos($detail, 'id="crm-promises"', (int)$personsStart);
+		$personsChunk = substr($detail, (int)$personsStart, (int)$personsEnd - (int)$personsStart);
+		$this->assertStringNotContainsString('crm-more-menu', $personsChunk);
 	}
 
 	public function testBriefVerifyDefaultsEvidenceAndPrimaryDone(): void
@@ -102,6 +116,20 @@ final class ExtremeSimplicityUxContractTest extends TestCase
 		$this->assertStringContainsString('crm-btn--primary" data-verify="\' + id + \'" data-action="done"', $js);
 		$this->assertStringContainsString('crm-brief-verify__more', $js);
 		$this->assertStringContainsString('crm-brief-verify__note', $js);
+		// Primary Done stands alone — evidence lives under More (Bachus: one obvious action).
+		$verifyFn = strpos($js, 'function verifyActionsHtml');
+		$this->assertNotFalse($verifyFn);
+		$chunk = substr($js, (int)$verifyFn, 1200);
+		$donePos = strpos($chunk, 'data-action="done"');
+		$morePos = strpos($chunk, 'crm-brief-verify__more');
+		$evidencePos = strpos($chunk, 'data-evidence-for');
+		$this->assertNotFalse($donePos);
+		$this->assertNotFalse($morePos);
+		$this->assertNotFalse($evidencePos);
+		$this->assertLessThan($morePos, $donePos, 'Done must appear before More');
+		$this->assertGreaterThan($morePos, $evidencePos, 'Evidence select must sit inside More');
+		$this->assertStringContainsString("evidence || 'activity_done'", $js);
+		$this->assertStringNotContainsString('Choose evidence before marking done.', $js);
 	}
 
 	public function testCompanyDetailEmptyStatesHavePrimaryCtasAndWelcomeCoach(): void
@@ -112,6 +140,7 @@ final class ExtremeSimplicityUxContractTest extends TestCase
 		$this->assertStringContainsString('data-crm-trigger="crm-add-person"', $detail);
 		$this->assertStringContainsString('data-crm-trigger="crm-add-deal"', $detail);
 		$this->assertStringContainsString('data-crm-trigger="crm-add-activity"', $detail);
+		$this->assertStringContainsString('data-crm-trigger="crm-link-folder"', $detail);
 		$this->assertStringContainsString('A deal is a quote or opportunity', $detail);
 		$this->assertStringContainsString('Loading overview…', $detail);
 		$this->assertStringNotContainsString('Loading command view', $detail);
@@ -135,11 +164,68 @@ final class ExtremeSimplicityUxContractTest extends TestCase
 		$this->assertStringNotContainsString("\$l->t('Slug')", $form);
 	}
 
+	public function testCompanyGlanceShowsVisibleRetryAndBansGapSlugPipelineJargon(): void
+	{
+		$js = (string)file_get_contents(dirname(__DIR__, 2) . '/js/pages/company-detail.js');
+		$this->assertStringContainsString("t('Needs links')", $js);
+		$this->assertStringNotContainsString("t('Gap')", $js);
+		$this->assertStringContainsString("[t('Company'), dto.name || '—', '']", $js);
+		$this->assertStringNotContainsString("dto.slug || ''", $js);
+		$this->assertStringContainsString("crm-callout--danger", $js);
+		$this->assertStringContainsString("t('Try again')", $js);
+		$this->assertStringContainsString('crm-glance-summary', $js);
+		$this->assertStringContainsString('paintGlanceSummary', $js);
+		$this->assertMatchesRegularExpression(
+			'/Some overview data could not be loaded\.[\s\S]{0,250}getElementById\(\'crm-glance-summary\'\)[\s\S]{0,600}t\(\'Try again\'\)/',
+			$js,
+			'Glance load errors must show a visible Try again on #crm-glance-summary',
+		);
+		$glance = (string)file_get_contents(dirname(__DIR__, 2) . '/js/common/glance-summary.js');
+		$this->assertStringContainsString("t('Needs links')", $glance);
+		$this->assertStringNotContainsString("t('Gap')", $glance);
+		$this->assertStringContainsString('crm-stat-strip', $glance);
+		$detail = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/company-detail.php');
+		$this->assertStringContainsString("\$l->t('Quotes and opportunities for this customer.')", $detail);
+		$this->assertStringNotContainsString('Pipeline opportunities for this company.', $detail);
+		$persona = (string)file_get_contents(dirname(__DIR__, 2) . '/js/pages/persona.js');
+		$this->assertStringContainsString("t('Open deals')", $persona);
+		$this->assertStringNotContainsString("t('Pipeline')", $persona);
+	}
+
+	public function testPromiseDoneIsOneClickWithoutEvidenceDialog(): void
+	{
+		$js = (string)file_get_contents(dirname(__DIR__, 2) . '/js/pages/company-detail.js');
+		$this->assertStringContainsString("data-crm-promise-done", $js);
+		$this->assertStringContainsString("/promises/' + id + '/done'", $js);
+		$this->assertStringContainsString("evidence: t('Done')", $js);
+		$this->assertStringNotContainsString("Evidence (what was delivered?)", $js);
+		$this->assertStringNotContainsString("promptFields(t('Mark promise done')", $js);
+		$this->assertStringContainsString('crm-promises-empty-add', $js);
+	}
+
+	public function testPersonaBootOffersTryAgainOnFailure(): void
+	{
+		$js = (string)file_get_contents(dirname(__DIR__, 2) . '/js/pages/persona.js');
+		$this->assertStringContainsString('function showMountLoadError', $js);
+		$this->assertMatchesRegularExpression(
+			'/function showMountLoadError\(mount, err\) \{(?![\s\S]{0,60}return;)[\s\S]{0,800}t\(\'Try again\'\)/',
+			$js,
+		);
+		$this->assertStringContainsString('showMountLoadError(mount, e)', $js);
+		$this->assertStringContainsString("t('Collect overdue money')", $js);
+		$this->assertStringNotContainsString("t('Chase overdue money')", $js);
+		$this->assertStringNotContainsString("c.slug ? ' (' + c.slug + ')'", $js);
+		$this->assertStringNotContainsString("meta.textContent = c.slug || ''", $js);
+	}
+
 	public function testAppWideGrannyEmptyCtasAndPlainTodayCopy(): void
 	{
 		$money = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/money.php');
 		$this->assertStringContainsString('Open agreements', $money);
 		$this->assertStringContainsString('Open companies', $money);
+		$this->assertStringContainsString('Show all money', $money);
+		$this->assertStringContainsString('Nothing in this group', $money);
+		$this->assertStringContainsString('Try another filter, or show all money again.', $money);
 		$activities = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/activities.php');
 		$this->assertStringContainsString('Nothing open right now', $activities);
 		$this->assertStringContainsString('Open companies', $activities);
@@ -158,12 +244,18 @@ final class ExtremeSimplicityUxContractTest extends TestCase
 		$qs = (string)file_get_contents(dirname(__DIR__, 2) . '/lib/Service/PageQuickStartCatalog.php');
 		$this->assertStringContainsString('Open Today', $qs);
 		$this->assertStringNotContainsString('Open Command Board', $qs);
+		$this->assertStringContainsString('Follow-ups, renewals, invoices, promises', $qs);
+		$this->assertStringNotContainsString('Chase, renewals', $qs);
 		$import = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/import.php');
-		$this->assertStringContainsString('Import clear rows', $import);
+		$this->assertStringContainsString('Import ready', $import);
+		$this->assertStringContainsString('crm-import-tile', $import);
+		$this->assertStringContainsString('crm-import-stats', $import);
 		$this->assertStringNotContainsString('customerId,companyName', $import);
 		$importJs = (string)file_get_contents(dirname(__DIR__, 2) . '/js/pages/import.js');
-		$this->assertStringContainsString('rows ·', $importJs);
+		$this->assertStringContainsString('crm-import-stat', $importJs);
 		$this->assertStringContainsString('actionLabel', $importJs);
+		$this->assertStringContainsString('Import %s ready companies', $importJs);
+		$this->assertStringNotContainsString('%s rows · %s ready', $importJs);
 		$pipeline = (string)file_get_contents(dirname(__DIR__, 2) . '/js/pages/pipeline.js');
 		$this->assertStringContainsString('stageLabel', $pipeline);
 		$persona = (string)file_get_contents(dirname(__DIR__, 2) . '/js/pages/persona.js');
@@ -391,14 +483,26 @@ final class ExtremeSimplicityUxContractTest extends TestCase
 			'/\.crm-choice[^{]*\{[^}]*align-items:\s*center\s*!important/s',
 			$css,
 		);
+		$this->assertMatchesRegularExpression(
+			'/\.crm-choice[^{]*\{[^}]*flex-direction:\s*row\s*!important/s',
+			$css,
+			'crm-choice must stay horizontal (control beside label)'
+		);
 		$this->assertStringContainsString('.crm-choice input[type="radio"]', $css);
 		$this->assertMatchesRegularExpression(
 			'/\.crm-choice input\[type="radio"\][\s\S]{0,500}max-width:\s*1\.25rem\s*!important/s',
 			$css,
 			'Native radios must stay a fixed control size (label is the touch target)'
 		);
+		$this->assertMatchesRegularExpression(
+			'/\.crm-import-tile[^{]*\{[^}]*flex-direction:\s*row\s*!important/s',
+			$css,
+			'Import source tiles must put radio beside title (not stacked/absolute)'
+		);
+		$this->assertStringContainsString('position: static !important', $css);
 		$import = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/import.php');
 		$this->assertStringContainsString('class="crm-choice"', $import);
+		$this->assertStringContainsString('crm-import-tile__text', $import);
 		$this->assertStringContainsString('type="radio"', $import);
 		$info = (string)file_get_contents(dirname(__DIR__, 2) . '/appinfo/info.xml');
 		$this->assertMatchesRegularExpression('/<version>1\.(5\.(1[6-9]|[2-9]\d)|[6-9]\.\d+)/', $info, 'Bump app version when shipping CSS cache-sensitive choice alignment');
@@ -446,5 +550,32 @@ final class ExtremeSimplicityUxContractTest extends TestCase
 		$this->assertNotFalse(strpos($settingsPage, 'workspace-mailbox.php'));
 		$this->assertTrue($mailboxPos < $prefsPos, 'People/mailbox before personal preferences');
 		$this->assertTrue($prefsPos < $reviewPos, 'Preferences before expert Review sources');
+	}
+
+	public function testCompany360RetriesAndHumanPlanLabels(): void
+	{
+		$js = (string)file_get_contents(dirname(__DIR__, 2) . '/js/pages/company-detail.js');
+		$this->assertStringContainsString("t('Could not load account plan.')", $js);
+		$this->assertStringContainsString("t('Could not load promises.')", $js);
+		$this->assertMatchesRegularExpression(
+			'/Could not load account plan\.[\s\S]{0,500}t\(\'Try again\'\)/',
+			$js,
+		);
+		$this->assertMatchesRegularExpression(
+			'/Could not load promises\.[\s\S]{0,500}t\(\'Try again\'\)/',
+			$js,
+		);
+		$this->assertStringContainsString('plan.healthLabel || plan.health', $js);
+		$this->assertStringContainsString('s.statusLabel || s.status', $js);
+		$this->assertStringContainsString('data-crm-trigger="crm-log-email"', $js);
+		$this->assertStringContainsString('data-crm-trigger="crm-link-folder"', $js);
+		$this->assertStringContainsString("closest('[data-crm-trigger]')", $js);
+		$planPhp = (string)file_get_contents(dirname(__DIR__, 2) . '/lib/Service/AccountPlanService.php');
+		$this->assertStringContainsString("'statusLabel' => \$this->labels->mapStepStatus", $planPhp);
+		$this->assertStringContainsString("'healthLabel' => \$this->labels->planHealth", $planPhp);
+		$emails = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/common/crm-emails-section.php');
+		$this->assertStringContainsString('Logged messages', $emails);
+		$this->assertStringContainsString('data-crm-trigger="crm-log-email"', $emails);
+		$this->assertStringNotContainsString('CRM email log', $emails);
 	}
 }

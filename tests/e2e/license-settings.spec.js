@@ -9,7 +9,7 @@ test.describe('Mobile app license settings (CUC2)', () => {
   test('license section is visible for app admins and explains the free web app', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await login(page, credsFromEnv('ADMIN'));
-    await page.goto('/apps/customercheck/app-settings');
+    await page.goto('/apps/customercheck/app-settings/license');
     await page.waitForSelector('#crm-main-content', { timeout: 30000 });
 
     const section = page.locator('#section-license');
@@ -26,7 +26,7 @@ test.describe('Mobile app license settings (CUC2)', () => {
 
   test('rejects a malformed license key with an accessible inline error', async ({ page }) => {
     await login(page, credsFromEnv('ADMIN'));
-    await page.goto('/apps/customercheck/app-settings');
+    await page.goto('/apps/customercheck/app-settings/license');
     await page.waitForSelector('#crm-license-form', { timeout: 30000 });
 
     await page.locator('#crm-license-key').fill('CUC2.this-is.not-a-valid-key');
@@ -44,7 +44,7 @@ test.describe('Mobile app license settings (CUC2)', () => {
 
   test('empty key submit shows a hint without a server round-trip crash', async ({ page }) => {
     await login(page, credsFromEnv('ADMIN'));
-    await page.goto('/apps/customercheck/app-settings');
+    await page.goto('/apps/customercheck/app-settings/license');
     await page.waitForSelector('#crm-license-form', { timeout: 30000 });
 
     await page.locator('#crm-license-key').fill('   ');
@@ -56,7 +56,7 @@ test.describe('Mobile app license settings (CUC2)', () => {
 
   test('seat search finds directory users and hides already-seated', async ({ page }) => {
     await login(page, credsFromEnv('ADMIN'));
-    await page.goto('/apps/customercheck/app-settings?workspaceId=1');
+    await page.goto('/apps/customercheck/app-settings/license?workspaceId=1');
     await page.waitForSelector('#section-license', { timeout: 30000 });
 
     // Unhide seats block for the picker journey even without a live key.
@@ -99,7 +99,7 @@ test.describe('Mobile app license settings (CUC2)', () => {
 
   test('seat assign stays on the page without a full reload', async ({ page }) => {
     await login(page, credsFromEnv('ADMIN'));
-    await page.goto('/apps/customercheck/app-settings');
+    await page.goto('/apps/customercheck/app-settings/license');
     await page.waitForSelector('#section-license', { timeout: 30000 });
 
     await page.locator('#section-license').scrollIntoViewIfNeeded();
@@ -126,7 +126,7 @@ test.describe('Mobile app license settings (CUC2)', () => {
 
   test('settings page (including license section) passes axe WCAG 2.1 AA', async ({ page }) => {
     await login(page, credsFromEnv('ADMIN'));
-    await page.goto('/apps/customercheck/app-settings');
+    await page.goto('/apps/customercheck/app-settings/license');
     await page.waitForSelector('#crm-main-content', { timeout: 30000 });
     const results = await new AxeBuilder({ page })
       .include('#crm-main-content')
@@ -139,7 +139,7 @@ test.describe('Mobile app license settings (CUC2)', () => {
   test('license section is hidden from non-admin CRM users', async ({ page }) => {
     test.skip(!process.env.NC_EMPLOYEE_USER, 'Requires NC employee credentials');
     await login(page, credsFromEnv('EMPLOYEE'));
-    await page.goto('/apps/customercheck/app-settings');
+    await page.goto('/apps/customercheck/app-settings/license');
     // Fail-closed allowlist may deny the employee entirely — that also means no license UI.
     const denied = page.locator('.crm-access-denied, [data-crm-access-denied="1"]');
     const main = page.locator('#crm-main-content');

@@ -21,43 +21,46 @@ body {
   --arbeitszeitcheck-color-primary-element-text: var(--color-primary-element-text);
   --arbeitszeitcheck-color-primary-background: var(--color-primary-background);
 
-  /* Primary — from Nextcloud */
-  --arbeitszeitcheck-color-primary: var(--color-primary);
-  --arbeitszeitcheck-color-primary-hover: var(--color-primary-hover);
+  /*
+   * Primary / accent — use --color-primary-element (WCAG solid), never brand
+   * --color-primary (often fails AA on light themes; ignores custom accents poorly).
+   */
+  --arbeitszeitcheck-color-primary: var(--color-primary-element);
+  --arbeitszeitcheck-color-primary-hover: var(--color-primary-element-hover, var(--color-primary-hover));
   --arbeitszeitcheck-color-primary-active: var(--color-primary-element);
-  --arbeitszeitcheck-color-primary-light: var(--color-primary-light);
-  --arbeitszeitcheck-color-primary-lighter: var(--color-primary-light);
+  --arbeitszeitcheck-color-primary-light: var(--color-primary-element-light, var(--color-primary-light));
+  --arbeitszeitcheck-color-primary-lighter: var(--color-primary-element-light, var(--color-primary-light));
 
   /* Secondary — derived from theme */
   --arbeitszeitcheck-color-secondary: var(--color-background-dark);
   --arbeitszeitcheck-color-secondary-hover: var(--color-background-hover);
   --arbeitszeitcheck-color-secondary-active: var(--color-background-hover);
 
-  /* Accent — use primary for consistency */
-  --arbeitszeitcheck-color-accent: var(--color-primary);
-  --arbeitszeitcheck-color-accent-hover: var(--color-primary-hover);
+  /* Accent — track interactive primary element */
+  --arbeitszeitcheck-color-accent: var(--color-primary-element);
+  --arbeitszeitcheck-color-accent-hover: var(--color-primary-element-hover, var(--color-primary-hover));
   --arbeitszeitcheck-color-accent-active: var(--color-primary-element);
-  --arbeitszeitcheck-color-accent-light: var(--color-primary-light);
+  --arbeitszeitcheck-color-accent-light: var(--color-primary-element-light, var(--color-primary-light));
 
-  /* Semantic — from Nextcloud */
-  --arbeitszeitcheck-color-success: var(--color-success);
-  --arbeitszeitcheck-color-success-hover: var(--color-success);
-  --arbeitszeitcheck-color-success-light: color-mix(in srgb, var(--color-success, #22c55e) 15%, transparent);
-  --arbeitszeitcheck-color-success-dark: var(--color-success);
+  /* Semantic — from Nextcloud (tints mix INTO main-background so they survive every theme) */
+  --arbeitszeitcheck-color-success: var(--color-success-text, var(--color-success));
+  --arbeitszeitcheck-color-success-hover: var(--color-success-text, var(--color-success));
+  --arbeitszeitcheck-color-success-light: color-mix(in srgb, var(--color-success-text, var(--color-success, #22c55e)) 15%, var(--color-main-background));
+  --arbeitszeitcheck-color-success-dark: var(--color-success-text, var(--color-success));
 
-  --arbeitszeitcheck-color-warning: var(--color-warning);
-  --arbeitszeitcheck-color-warning-hover: var(--color-warning);
-  --arbeitszeitcheck-color-warning-light: color-mix(in srgb, var(--color-warning, #f59e0b) 15%, transparent);
-  --arbeitszeitcheck-color-warning-dark: var(--color-warning);
+  --arbeitszeitcheck-color-warning: var(--color-warning-text, var(--color-warning));
+  --arbeitszeitcheck-color-warning-hover: var(--color-warning-text, var(--color-warning));
+  --arbeitszeitcheck-color-warning-light: color-mix(in srgb, var(--color-warning-text, var(--color-warning, #f59e0b)) 15%, var(--color-main-background));
+  --arbeitszeitcheck-color-warning-dark: var(--color-warning-text, var(--color-warning));
 
-  --arbeitszeitcheck-color-error: var(--color-error);
-  --arbeitszeitcheck-color-error-hover: var(--color-error);
-  --arbeitszeitcheck-color-error-light: color-mix(in srgb, var(--color-error, #ef4444) 15%, transparent);
-  --arbeitszeitcheck-color-error-dark: var(--color-error);
+  --arbeitszeitcheck-color-error: var(--color-error-text, var(--color-error));
+  --arbeitszeitcheck-color-error-hover: var(--color-error-text, var(--color-error));
+  --arbeitszeitcheck-color-error-light: color-mix(in srgb, var(--color-error-text, var(--color-error, #ef4444)) 15%, var(--color-main-background));
+  --arbeitszeitcheck-color-error-dark: var(--color-error-text, var(--color-error));
 
-  --arbeitszeitcheck-color-info: var(--color-primary);
-  --arbeitszeitcheck-color-info-hover: var(--color-primary-hover);
-  --arbeitszeitcheck-color-info-light: var(--color-primary-light);
+  --arbeitszeitcheck-color-info: var(--color-primary-element);
+  --arbeitszeitcheck-color-info-hover: var(--color-primary-element-hover, var(--color-primary-hover));
+  --arbeitszeitcheck-color-info-light: var(--color-primary-element-light, var(--color-primary-light));
   --arbeitszeitcheck-color-info-dark: var(--color-primary-element);
 
   /* Neutrals — from Nextcloud (theme-aware) */
@@ -72,16 +75,16 @@ body {
   --arbeitszeitcheck-color-text: var(--color-main-text);
   --arbeitszeitcheck-color-text-secondary: var(--color-text-maxcontrast);
   --arbeitszeitcheck-color-text-tertiary: var(--color-text-maxcontrast);
-  --arbeitszeitcheck-color-text-inverse: var(--color-primary-text);
+  --arbeitszeitcheck-color-text-inverse: var(--color-primary-element-text, var(--color-primary-text));
   --arbeitszeitcheck-color-text-muted: var(--color-text-maxcontrast);
 
   /* Borders */
   --arbeitszeitcheck-color-border: var(--color-border);
   --arbeitszeitcheck-color-border-secondary: var(--color-border);
   --arbeitszeitcheck-color-border-focus: var(--color-primary-element);
-  --arbeitszeitcheck-color-border-error: var(--color-error);
-  --arbeitszeitcheck-color-border-success: var(--color-success);
-  --arbeitszeitcheck-color-border-warning: var(--color-warning);
+  --arbeitszeitcheck-color-border-error: var(--color-error-text, var(--color-error));
+  --arbeitszeitcheck-color-border-success: var(--color-success-text, var(--color-success));
+  --arbeitszeitcheck-color-border-warning: var(--color-warning-text, var(--color-warning));
 
   /* Shadows — theme-adaptive via color-mix */
   --arbeitszeitcheck-shadow-subtle: 0 1px 2px color-mix(in srgb, var(--color-main-text) 8%, transparent);
@@ -99,7 +102,7 @@ body {
   --arbeitszeitcheck-color-status-online: var(--color-success);
   --arbeitszeitcheck-color-status-offline: var(--color-text-maxcontrast);
   --arbeitszeitcheck-color-status-busy: var(--color-warning);
-  --arbeitszeitcheck-color-status-away: var(--color-primary);
+  --arbeitszeitcheck-color-status-away: var(--color-primary-element);
 
   /* Time Entry */
   --arbeitszeitcheck-color-time-entry-billable: var(--color-success);
@@ -112,8 +115,8 @@ body {
   --arbeitszeitcheck-color-menu-background: var(--color-main-background);
   --arbeitszeitcheck-color-menu-border: var(--color-border);
   --arbeitszeitcheck-color-menu-item-hover: var(--color-background-hover);
-  --arbeitszeitcheck-color-menu-item-active: var(--color-primary);
-  --arbeitszeitcheck-color-menu-item-active-text: var(--color-primary-text);
+  --arbeitszeitcheck-color-menu-item-active: var(--color-primary-element);
+  --arbeitszeitcheck-color-menu-item-active-text: var(--color-primary-element-text, var(--color-primary-text));
   --arbeitszeitcheck-color-menu-section-header: var(--color-text-maxcontrast);
   --arbeitszeitcheck-color-menu-user-avatar: var(--color-primary-element);
   --arbeitszeitcheck-color-menu-user-avatar-text: var(--color-primary-element-text);
@@ -122,11 +125,11 @@ body {
   --arbeitszeitcheck-color-form-background: var(--color-main-background);
   --arbeitszeitcheck-color-form-border: var(--color-border);
   --arbeitszeitcheck-color-form-border-focus: var(--color-primary-element);
-  --arbeitszeitcheck-color-form-border-error: var(--color-error);
-  --arbeitszeitcheck-color-form-border-success: var(--color-success);
+  --arbeitszeitcheck-color-form-border-error: var(--color-error-text, var(--color-error));
+  --arbeitszeitcheck-color-form-border-success: var(--color-success-text, var(--color-success));
   --arbeitszeitcheck-color-form-label: var(--color-main-text);
   --arbeitszeitcheck-color-form-help: var(--color-text-maxcontrast);
-  --arbeitszeitcheck-color-form-required: var(--color-error);
+  --arbeitszeitcheck-color-form-required: var(--color-error-text, var(--color-error));
 
   /* Table */
   --arbeitszeitcheck-color-table-background: var(--color-main-background);
@@ -150,10 +153,10 @@ body {
   --arbeitszeitcheck-color-notification-error-background: color-mix(in srgb, var(--color-error) 14%, var(--color-main-background));
   --arbeitszeitcheck-color-notification-warning: var(--color-warning);
   --arbeitszeitcheck-color-notification-warning-background: color-mix(in srgb, var(--color-warning) 14%, var(--color-main-background));
-  --arbeitszeitcheck-color-notification-info: var(--color-primary);
-  --arbeitszeitcheck-color-notification-info-background: color-mix(in srgb, var(--color-primary) 14%, var(--color-main-background));
+  --arbeitszeitcheck-color-notification-info: var(--color-primary-element);
+  --arbeitszeitcheck-color-notification-info-background: color-mix(in srgb, var(--color-primary-element) 14%, var(--color-main-background));
 
-  /* Button */
+  /* Button — danger uses solid element fill (never pale --color-error tint) */
   --arbeitszeitcheck-color-button-primary: var(--color-primary-element);
   --arbeitszeitcheck-color-button-primary-hover: var(--color-primary-element-hover);
   --arbeitszeitcheck-color-button-primary-active: var(--color-primary-element);
@@ -162,9 +165,9 @@ body {
   --arbeitszeitcheck-color-button-secondary-hover: var(--color-background-hover);
   --arbeitszeitcheck-color-button-secondary-active: var(--color-background-hover);
   --arbeitszeitcheck-color-button-secondary-text: var(--color-main-text);
-  --arbeitszeitcheck-color-button-danger: var(--color-error);
-  --arbeitszeitcheck-color-button-danger-hover: var(--color-error);
-  --arbeitszeitcheck-color-button-danger-text: var(--color-primary-text);
+  --arbeitszeitcheck-color-button-danger: var(--crm-danger-fill, var(--color-element-error, var(--color-error)));
+  --arbeitszeitcheck-color-button-danger-hover: var(--crm-danger-fill, var(--color-element-error, var(--color-error)));
+  --arbeitszeitcheck-color-button-danger-text: var(--crm-danger-on-fill, var(--color-primary-element-text, var(--color-primary-text)));
 
   /* Loading */
   --arbeitszeitcheck-color-loading-spinner: var(--color-primary-element);

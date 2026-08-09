@@ -76,7 +76,7 @@
 }
 #app-navigation .crm-nav__group-label {
     display: block;
-    margin-left: 10px;
+    margin-left: var(--crm-space-3);
     font-size: 0.72rem;
     font-weight: 700;
     letter-spacing: 0.04em;
@@ -240,8 +240,8 @@
     content: '';
     position: absolute;
     left: var(--crm-nav-rail-left);
-    top: 0.35rem;
-    bottom: 0.35rem;
+    top: var(--crm-space-1);
+    bottom: var(--crm-space-1);
     width: 2px;
     border-radius: 1px;
     background: var(--color-border-maxcontrast, var(--color-border));
@@ -516,7 +516,7 @@
 .crm-workspace-switcher {
     display: flex;
     flex-direction: column;
-    gap: 0.35rem;
+    gap: var(--crm-space-1);
     min-width: 0;
 }
 
@@ -624,7 +624,7 @@
 .crm-workspace-switcher__menu {
     list-style: none;
     margin: 0;
-    padding: 0.35rem;
+    padding: var(--crm-space-1);
     border: 1px solid var(--crm-border, var(--color-border));
     border-radius: var(--crm-radius-md, 12px);
     background: var(--crm-bg-card, var(--color-main-background));

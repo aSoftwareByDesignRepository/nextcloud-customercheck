@@ -5,10 +5,36 @@
   const tr = (text, args) => (window.t ? window.t('customercheck', text, args || []) : text);
   if (C && C.init) { C.init(); }
 
+  const LegacyWs = window.CustomerCheckWorkspaceSettingsLegacyRedirect;
+  if (LegacyWs && typeof LegacyWs.resolve === 'function') {
+    const redirectUrl = LegacyWs.resolve(document, window.location);
+    if (redirectUrl) {
+      window.location.replace(redirectUrl);
+      return;
+    }
+  }
+  const LegacyApp = window.CustomerCheckAppSettingsLegacyRedirect;
+  if (LegacyApp && typeof LegacyApp.resolve === 'function') {
+    const redirectUrl = LegacyApp.resolve(document, window.location);
+    if (redirectUrl) {
+      window.location.replace(redirectUrl);
+      return;
+    }
+  }
+
   const root = document.getElementById('crm-settings-root');
   if (!root) return;
   const canManage = root.getAttribute('data-can-manage') === '1';
   const canManageWorkspace = root.getAttribute('data-can-manage-workspace') === '1' || canManage;
+
+  /** @type {{ selectedUid: () => string, clear: () => void, setUid: (uid: string, label?: string) => void } | null} */
+  let reviewContactsActorPicker = null;
+  /** @type {{ selectedUid: () => string, clear: () => void, setUid: (uid: string, label?: string) => void } | null} */
+  let reviewFileActorPicker = null;
+  /** @type {{ selectedUid: () => string, clear: () => void, setUid: (uid: string, label?: string) => void } | null} */
+  let reviewCalActorPicker = null;
+  /** @type {{ selectedUid: () => string, clear: () => void, setUid: (uid: string, label?: string) => void } | null} */
+  let reviewTaskActorPicker = null;
 
 	/**
 	 * @param {{
@@ -30,6 +56,7 @@
       return {
         selectedUid: () => '',
         clear: () => {},
+        setUid: () => {},
       };
     }
     let timer = null;
@@ -174,6 +201,14 @@
     return {
       selectedUid: () => String(hidden.value || '').trim(),
       clear: clearSelection,
+      setUid: (uid, label) => {
+        const id = String(uid || '').trim();
+        if (id === '') {
+          clearSelection();
+          return;
+        }
+        commitUser({ id: id, displayName: label || id });
+      },
     };
   }
 
@@ -338,7 +373,7 @@
   const wsIcsRotate = document.getElementById('crm-ws-ics-rotate');
   if (wsIcsRotate) {
     wsIcsRotate.addEventListener('click', async () => {
-      if (!currentWorkspaceId) return;
+      if (!requireWorkspaceReady()) return;
       const ok = await C.confirmDialog({
         title: tr('Rotate token'),
         message: tr('The old URL will stop working immediately (HTTP 410). Continue?'),
@@ -746,6 +781,13 @@
 
   // ── Workspace & mailbox (managers / app admins) ───────────────────────
   let currentWorkspaceId = 0;
+  /** False until boot + hydrate finish — prevents silent saves and hydrate clobber. */
+  let workspaceBootReady = false;
+  let mailboxTestOk = false;
+  /** @type {Array<Record<string, mixed>>} */
+  let mailboxCache = [];
+  /** Guards stale list paints when boot / save refresh overlap. */
+  let mailboxesGeneration = 0;
   const wsError = document.getElementById('crm-ws-error');
   const wsStatus = document.getElementById('crm-ws-status');
   const wsCurrent = document.getElementById('crm-ws-current');
@@ -753,15 +795,81 @@
   const wsMembers = document.getElementById('crm-ws-members');
 
   function showWsError(message) {
-    if (!wsError) return;
-    wsError.textContent = message || '';
-    wsError.hidden = !message;
+    const el = document.getElementById('crm-ws-error') || wsError;
+    if (!el) return;
+    el.textContent = message || '';
+    el.hidden = !message;
+  }
+
+  function showWsStatus(message) {
+    const el = document.getElementById('crm-ws-status') || wsStatus;
+    if (!el) return;
+    el.textContent = message || '';
+  }
+
+  /**
+   * Lock Review sources + mailbox form until workspace hydrate completes so boot cannot
+   * overwrite toggles the operator already flipped (settings-split race).
+   * @param {boolean} locked
+   */
+  function setReviewSourcesLocked(locked) {
+    const forms = [
+      document.getElementById('crm-review-sources-form'),
+      document.getElementById('crm-mailbox-form'),
+      document.getElementById('crm-ws-settings-form'),
+      document.getElementById('crm-ws-member-form'),
+    ].filter(Boolean);
+    forms.forEach((form) => {
+      form.setAttribute('aria-busy', locked ? 'true' : 'false');
+      form.setAttribute('data-crm-mailbox-locked', locked ? '1' : '0');
+      form.querySelectorAll('input, button, textarea, select').forEach((el) => {
+        if (locked) {
+          if (el.dataset.crmBootLock === undefined) {
+            el.dataset.crmBootLock = el.disabled ? '1' : '0';
+          }
+          el.disabled = true;
+        } else if (el.dataset.crmBootLock !== undefined) {
+          el.disabled = el.dataset.crmBootLock === '1';
+          delete el.dataset.crmBootLock;
+        } else {
+          el.disabled = false;
+        }
+      });
+    });
+    // Re-apply folder clear visibility (business state, not boot lock).
+    const folderId = parseInt(String((document.getElementById('crm-review-file-folder') || {}).value || '0'), 10);
+    const clearBtn = document.getElementById('crm-review-file-folder-clear');
+    if (clearBtn && !locked) {
+      clearBtn.hidden = !(folderId > 0);
+      clearBtn.disabled = !(folderId > 0);
+    }
+    // Keep Save mailbox disabled until a successful Test (business rule).
+    const mailboxSave = document.getElementById('crm-mailbox-save');
+    if (mailboxSave && !locked && !mailboxTestOk) {
+      mailboxSave.disabled = true;
+    }
+  }
+
+  /**
+   * @param {HTMLElement|null} [statusEl]
+   * @returns {boolean}
+   */
+  function requireWorkspaceReady(statusEl) {
+    if (currentWorkspaceId > 0 && workspaceBootReady) {
+      return true;
+    }
+    const msg = tr('Workspace is still loading. Wait a moment, then try again.');
+    showWsError(msg);
+    if (statusEl) statusEl.textContent = msg;
+    return false;
   }
 
   function mailboxPayloadFromForm() {
     const foldersRaw = (document.getElementById('crm-mbox-folders') || {}).value || '';
     const folders = String(foldersRaw).split(/\n/).map((s) => s.trim()).filter(Boolean);
-    return {
+    const idRaw = (document.getElementById('crm-mbox-id') || {}).value || '';
+    const id = parseInt(String(idRaw), 10);
+    const payload = {
       label: (document.getElementById('crm-mbox-label') || {}).value || '',
       emailAddress: (document.getElementById('crm-mbox-email') || {}).value || '',
       email: (document.getElementById('crm-mbox-email') || {}).value || '',
@@ -774,6 +882,125 @@
       folders: folders,
       dsgvoAck: !!(document.getElementById('crm-mbox-dsgvo') || {}).checked,
     };
+    if (id > 0) {
+      payload.id = id;
+    }
+    return payload;
+  }
+
+  function syncMailboxPasswordRequired() {
+    const pass = document.getElementById('crm-mbox-pass');
+    const id = parseInt(String((document.getElementById('crm-mbox-id') || {}).value || '0'), 10);
+    if (!pass) return;
+    pass.required = !(id > 0);
+  }
+
+  function resetMailboxForm() {
+    const form = document.getElementById('crm-mailbox-form');
+    if (!form) return;
+    form.reset();
+    const idEl = document.getElementById('crm-mbox-id');
+    if (idEl) idEl.value = '';
+    const portImap = document.getElementById('crm-mbox-imap-port');
+    const portSmtp = document.getElementById('crm-mbox-smtp-port');
+    if (portImap) portImap.value = '993';
+    if (portSmtp) portSmtp.value = '587';
+    mailboxTestOk = false;
+    const saveBtn = document.getElementById('crm-mailbox-save');
+    if (saveBtn) saveBtn.disabled = true;
+    const foldersWrapEl = document.getElementById('crm-mailbox-folders-wrap');
+    if (foldersWrapEl) foldersWrapEl.hidden = true;
+    const folderField = document.getElementById('crm-mbox-folders');
+    if (folderField) folderField.value = '';
+    showInlineError(document.getElementById('crm-mailbox-error'), '');
+    const statusEl = document.getElementById('crm-mailbox-test-status');
+    if (statusEl) statusEl.textContent = '';
+    const mode = document.getElementById('crm-mailbox-form-mode');
+    if (mode) {
+      mode.hidden = true;
+      mode.textContent = '';
+    }
+    const resetBtn = document.getElementById('crm-mailbox-reset');
+    if (resetBtn) resetBtn.hidden = true;
+    syncMailboxPasswordRequired();
+  }
+
+  function fillMailboxFormFromCache(id) {
+    const box = mailboxCache.find((m) => parseInt(String(m.id || 0), 10) === id);
+    const form = document.getElementById('crm-mailbox-form');
+    if (!box || !form) return;
+    const setVal = (elId, val) => {
+      const el = document.getElementById(elId);
+      if (el) el.value = val == null ? '' : String(val);
+    };
+    setVal('crm-mbox-id', id);
+    setVal('crm-mbox-label', box.label || '');
+    setVal('crm-mbox-email', box.emailAddress || box.email || '');
+    setVal('crm-mbox-imap-host', box.imapHost || '');
+    setVal('crm-mbox-imap-port', box.imapPort || 993);
+    setVal('crm-mbox-smtp-host', box.smtpHost || '');
+    setVal('crm-mbox-smtp-port', box.smtpPort || 587);
+    setVal('crm-mbox-user', box.username || '');
+    setVal('crm-mbox-pass', '');
+    setVal('crm-mbox-folders', '');
+    const dsgvo = document.getElementById('crm-mbox-dsgvo');
+    if (dsgvo) dsgvo.checked = true;
+    mailboxTestOk = false;
+    const saveBtn = document.getElementById('crm-mailbox-save');
+    if (saveBtn) saveBtn.disabled = true;
+    const foldersWrapEl = document.getElementById('crm-mailbox-folders-wrap');
+    if (foldersWrapEl) foldersWrapEl.hidden = true;
+    const statusEl = document.getElementById('crm-mailbox-test-status');
+    if (statusEl) {
+      statusEl.textContent = tr('Editing saved mailbox — test again before save. Leave password blank to keep it.');
+    }
+    const mode = document.getElementById('crm-mailbox-form-mode');
+    if (mode) {
+      mode.hidden = false;
+      mode.textContent = tr('Editing: %s', [box.label || ('#' + id)]);
+    }
+    const resetBtn = document.getElementById('crm-mailbox-reset');
+    if (resetBtn) resetBtn.hidden = false;
+    syncMailboxPasswordRequired();
+    form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  async function refreshMailboxes() {
+    const listHost = document.getElementById('crm-mailbox-list');
+    const emptyHost = document.getElementById('crm-mailbox-empty');
+    if (!currentWorkspaceId || !canManageWorkspace) return;
+    const generation = ++mailboxesGeneration;
+    try {
+      const res = await Api.get('/workspaces/' + currentWorkspaceId + '/mailboxes');
+      if (generation !== mailboxesGeneration) return;
+      const items = (res.data && (res.data.items || res.data.mailboxes)) || res.data || [];
+      mailboxCache = Array.isArray(items) ? items : [];
+      const Present = window.CustomerCheckMailboxSettingsPresent;
+      const rows = Present && typeof Present.buildMailboxListRows === 'function'
+        ? Present.buildMailboxListRows(mailboxCache, tr)
+        : mailboxCache.map((m) => ({
+          id: parseInt(String(m.id || 0), 10) || 0,
+          label: m.label || tr('Shared mailbox'),
+          email: m.emailAddress || '',
+          status: m.status || '',
+          statusLabel: m.status || tr('Unknown'),
+          tone: 'neutral',
+          meta: '',
+          lastError: m.lastError || '',
+        })).filter((r) => r.id > 0);
+      if (Present && typeof Present.renderMailboxList === 'function' && listHost) {
+        Present.renderMailboxList(listHost, rows, tr, fillMailboxFormFromCache);
+      } else if (listHost) {
+        listHost.textContent = rows.length ? tr('%s mailbox(es) connected.', [String(rows.length)]) : '';
+      }
+      if (emptyHost) {
+        emptyHost.hidden = rows.length > 0;
+      }
+    } catch (e) {
+      if (generation !== mailboxesGeneration) return;
+      showWsError((e.payload && e.payload.message) || e.message || tr('Could not load mailboxes.'));
+      if (emptyHost) emptyHost.hidden = false;
+    }
   }
 
   async function refreshWorkspaceMembers() {
@@ -784,10 +1011,13 @@
       const members = (res.data && (res.data.members || res.data.items)) || res.data || [];
       const list = Array.isArray(members) ? members : [];
       if (!list.length) {
-        const li = document.createElement('li');
-        li.className = 'crm-muted';
-        li.textContent = tr('No members yet.');
-        wsMembers.appendChild(li);
+        const empty = document.createElement('li');
+        empty.className = 'crm-empty-state crm-ws-members__empty';
+        empty.setAttribute('role', 'status');
+        empty.innerHTML = '<h4 class="crm-empty-state__title"></h4><p class="crm-empty-state__text"></p>';
+        empty.querySelector('.crm-empty-state__title').textContent = tr('No members yet');
+        empty.querySelector('.crm-empty-state__text').textContent = tr('Add a colleague below so they can work in this book.');
+        wsMembers.appendChild(empty);
         return;
       }
       list.forEach((m) => {
@@ -819,6 +1049,32 @@
     } catch (e) {
       showWsError((e.payload && e.payload.message) || e.message || tr('Could not load members.'));
     }
+  }
+
+  /**
+   * Review file source folder — directory picker only (never a typed file id).
+   * @param {number} fileId
+   * @param {string} [path]
+   */
+  function setReviewFolderSelection(fileId, path) {
+    const id = fileId && fileId > 0 ? parseInt(String(fileId), 10) : 0;
+    const label = path ? String(path).trim() : '';
+    const hidden = document.getElementById('crm-review-file-folder');
+    const pathHidden = document.getElementById('crm-review-file-folder-path');
+    const status = document.getElementById('crm-review-file-folder-status');
+    const clearBtn = document.getElementById('crm-review-file-folder-clear');
+    if (hidden) hidden.value = id > 0 ? String(id) : '';
+    if (pathHidden) pathHidden.value = id > 0 && label ? label : '';
+    if (status) {
+      if (id > 0 && label) {
+        status.textContent = tr('Review folder linked: %s', [label]);
+      } else if (id > 0) {
+        status.textContent = tr('Review folder linked.');
+      } else {
+        status.textContent = tr('No review folder selected.');
+      }
+    }
+    if (clearBtn) clearBtn.hidden = id < 1;
   }
 
   async function refreshWorkspaceSettings() {
@@ -862,39 +1118,39 @@
           el.checked = !!sources[kind].enabled;
         }
       });
-      const contactsActor = document.getElementById('crm-review-contacts-actor');
-      if (contactsActor) {
+      const contactsActor = document.getElementById('crm-review-contacts-actor-uid');
+      if (reviewContactsActorPicker && typeof reviewContactsActorPicker.setUid === 'function') {
+        reviewContactsActorPicker.setUid((sources.contact_suggest && sources.contact_suggest.scanActor) || '');
+      } else if (contactsActor) {
         contactsActor.value = (sources.contact_suggest && sources.contact_suggest.scanActor) || '';
       }
-      const fileFolder = document.getElementById('crm-review-file-folder');
-      const fileActor = document.getElementById('crm-review-file-actor');
-      if (fileFolder) {
-        fileFolder.value = sources.file && sources.file.rootFolderId
-          ? String(sources.file.rootFolderId)
-          : '';
-      }
-      if (fileActor) {
-        fileActor.value = (sources.file && sources.file.scanActor) || '';
+      const folderId = sources.file && sources.file.rootFolderId
+        ? parseInt(String(sources.file.rootFolderId), 10)
+        : 0;
+      const folderPath = sources.file && sources.file.rootFolderPath
+        ? String(sources.file.rootFolderPath)
+        : '';
+      setReviewFolderSelection(folderId > 0 ? folderId : 0, folderPath);
+      if (reviewFileActorPicker && typeof reviewFileActorPicker.setUid === 'function') {
+        reviewFileActorPicker.setUid((sources.file && sources.file.scanActor) || '');
       }
       const calUris = document.getElementById('crm-review-cal-uris');
-      const calActor = document.getElementById('crm-review-cal-actor');
       if (calUris) {
         calUris.value = sources.calendar_event && Array.isArray(sources.calendar_event.calendarUris)
           ? sources.calendar_event.calendarUris.join('\n')
           : '';
       }
-      if (calActor) {
-        calActor.value = (sources.calendar_event && sources.calendar_event.scanActor) || '';
+      if (reviewCalActorPicker && typeof reviewCalActorPicker.setUid === 'function') {
+        reviewCalActorPicker.setUid((sources.calendar_event && sources.calendar_event.scanActor) || '');
       }
       const taskLists = document.getElementById('crm-review-task-lists');
-      const taskActor = document.getElementById('crm-review-task-actor');
       if (taskLists) {
         taskLists.value = sources.task && Array.isArray(sources.task.listIds)
           ? sources.task.listIds.join('\n')
           : '';
       }
-      if (taskActor) {
-        taskActor.value = (sources.task && sources.task.scanActor) || '';
+      if (reviewTaskActorPicker && typeof reviewTaskActorPicker.setUid === 'function') {
+        reviewTaskActorPicker.setUid((sources.task && sources.task.scanActor) || '');
       }
       if (typeof loadValueMaps === 'function') {
         await loadValueMaps();
@@ -905,18 +1161,22 @@
   }
 
   async function bootWorkspaceSection() {
-    if (!canManageWorkspace || !document.getElementById('section-workspace-mailbox')) return;
+    if (!canManageWorkspace) return;
+    const needsWorkspaceBoot = !!(
+      document.getElementById('section-workspace-mailbox')
+      || document.getElementById('crm-review-sources-form')
+      || document.getElementById('crm-circles-roll-call')
+    );
+    if (!needsWorkspaceBoot) return;
+    workspaceBootReady = false;
+    setReviewSourcesLocked(true);
     showWsError('');
+    showWsStatus(tr('Loading workspace…'));
     try {
       const res = await Api.get('/workspaces');
       const data = res.data || {};
       const current = data.current || {};
       currentWorkspaceId = parseInt(String(current.id || 0), 10);
-      if (wsStatus) {
-        wsStatus.textContent = currentWorkspaceId
-          ? tr('Working in workspace %s.', [current.name || ('#' + currentWorkspaceId)])
-          : tr('No current workspace resolved yet.');
-      }
       if (wsCurrent) wsCurrent.hidden = !currentWorkspaceId;
       if (wsCurrentLabel && currentWorkspaceId) {
         wsCurrentLabel.textContent = (current.name || '') + ' · #' + currentWorkspaceId +
@@ -924,10 +1184,25 @@
       }
       if (currentWorkspaceId) {
         await refreshWorkspaceSettings();
-        await refreshWorkspaceMembers();
+        if (document.getElementById('crm-ws-members')) {
+          await refreshWorkspaceMembers();
+        }
+        if (document.getElementById('crm-mailbox-form') || document.getElementById('crm-mailbox-list')) {
+          await refreshMailboxes();
+        }
+        workspaceBootReady = true;
+        setReviewSourcesLocked(false);
+        showWsStatus(tr('Working in workspace %s.', [current.name || ('#' + currentWorkspaceId)]));
+      } else {
+        workspaceBootReady = false;
+        setReviewSourcesLocked(true);
+        showWsStatus(tr('No current workspace resolved yet.'));
+        showWsError(tr('No current workspace resolved yet.'));
       }
     } catch (e) {
-      if (wsStatus) wsStatus.textContent = '';
+      workspaceBootReady = false;
+      setReviewSourcesLocked(true);
+      showWsStatus('');
       showWsError((e.payload && e.payload.message) || e.message || tr('Could not load workspaces.'));
     }
   }
@@ -952,7 +1227,7 @@
   if (wsSettingsForm && canManageWorkspace) {
     wsSettingsForm.addEventListener('submit', async (ev) => {
       ev.preventDefault();
-      if (!currentWorkspaceId) return;
+      if (!requireWorkspaceReady()) return;
       showWsError('');
       const wip = parseInt(String((document.getElementById('crm-ws-wip') || {}).value || '5'), 10);
       const leadSlaHours = parseInt(String((document.getElementById('crm-ws-lead-sla') || {}).value || '24'), 10);
@@ -987,7 +1262,7 @@
   if (wsMemberForm && canManageWorkspace) {
     wsMemberForm.addEventListener('submit', async (ev) => {
       ev.preventDefault();
-      if (!currentWorkspaceId) return;
+      if (!requireWorkspaceReady()) return;
       showWsError('');
       const userId = wsMemberPicker.selectedUid();
       if (userId === '') {
@@ -1017,7 +1292,7 @@
   if (wsImportForm && canManageWorkspace) {
     wsImportForm.addEventListener('submit', async (ev) => {
       ev.preventDefault();
-      if (!currentWorkspaceId) return;
+      if (!requireWorkspaceReady()) return;
       showWsError('');
       const groupId = String((document.getElementById('crm-ws-import-group') || {}).value || '').trim();
       if (groupId === '') {
@@ -1068,7 +1343,7 @@
   if (wsImportCircleForm && canManageWorkspace) {
     wsImportCircleForm.addEventListener('submit', async (ev) => {
       ev.preventDefault();
-      if (!currentWorkspaceId) return;
+      if (!requireWorkspaceReady()) return;
       showWsError('');
       const circleId = String((document.getElementById('crm-ws-import-circle') || {}).value || '').trim();
       if (circleId === '') {
@@ -1115,20 +1390,30 @@
     });
   }
 
-  let mailboxTestOk = false;
   const mailboxTest = document.getElementById('crm-mailbox-test');
   const mailboxSave = document.getElementById('crm-mailbox-save');
   const mailboxForm = document.getElementById('crm-mailbox-form');
   const mailboxErr = document.getElementById('crm-mailbox-error');
   const mailboxTestStatus = document.getElementById('crm-mailbox-test-status');
   const foldersWrap = document.getElementById('crm-mailbox-folders-wrap');
+  const mailboxReset = document.getElementById('crm-mailbox-reset');
+
+  mailboxTestOk = false;
+  syncMailboxPasswordRequired();
+
+  if (mailboxReset && canManageWorkspace) {
+    mailboxReset.addEventListener('click', () => {
+      resetMailboxForm();
+    });
+  }
 
   if (mailboxTest && canManageWorkspace) {
     mailboxTest.addEventListener('click', async () => {
-      if (!currentWorkspaceId) return;
+      if (!requireWorkspaceReady(mailboxTestStatus)) return;
       showInlineError(mailboxErr, '');
       mailboxTestOk = false;
       if (mailboxSave) mailboxSave.disabled = true;
+      mailboxTest.disabled = true;
       const payload = mailboxPayloadFromForm();
       try {
         const res = await Api.post('/workspaces/' + currentWorkspaceId + '/mailboxes/test', payload);
@@ -1150,6 +1435,8 @@
       } catch (e) {
         showInlineError(mailboxErr, (e.payload && e.payload.message) || e.message);
         if (mailboxTestStatus) mailboxTestStatus.textContent = '';
+      } finally {
+        mailboxTest.disabled = false;
       }
     });
   }
@@ -1157,7 +1444,8 @@
   if (mailboxForm && canManageWorkspace) {
     mailboxForm.addEventListener('submit', async (ev) => {
       ev.preventDefault();
-      if (!currentWorkspaceId || !mailboxTestOk) {
+      if (!requireWorkspaceReady(mailboxTestStatus)) return;
+      if (!mailboxTestOk) {
         showInlineError(mailboxErr, tr('Test the connection successfully before saving.'));
         return;
       }
@@ -1167,12 +1455,18 @@
         showInlineError(mailboxErr, tr('Confirm the shared-mailbox DSGVO acknowledgement.'));
         return;
       }
+      if (mailboxSave) mailboxSave.disabled = true;
+      if (mailboxTest) mailboxTest.disabled = true;
       try {
         await Api.post('/workspaces/' + currentWorkspaceId + '/mailboxes', payload);
         if (C && C.announce) C.announce(tr('Mailbox saved'));
-        location.reload();
+        resetMailboxForm();
+        await refreshMailboxes();
       } catch (e) {
         showInlineError(mailboxErr, (e.payload && e.payload.message) || e.message);
+        if (mailboxSave) mailboxSave.disabled = !mailboxTestOk;
+      } finally {
+        if (mailboxTest) mailboxTest.disabled = false;
       }
     });
   }
@@ -1194,7 +1488,7 @@
           '<span>' + escapeHtml(String(it.raw || '')) + ' → ' + escapeHtml(String(it.canonical || '')) +
           ' <span class="crm-muted">(' + escapeHtml(String(it.fieldKey || 'country')) + ')</span></span>' +
           '<button type="button" class="crm-btn crm-btn--secondary" data-vm-delete="' + escapeHtml(id) +
-          '" style="min-height:44px;min-width:44px">' + escapeHtml(tr('Remove')) + '</button></div>';
+          '">' + escapeHtml(tr('Remove')) + '</button></div>';
       }).join('');
       list.querySelectorAll('[data-vm-delete]').forEach((btn) => {
         btn.addEventListener('click', async () => {
@@ -1220,8 +1514,8 @@
   if (valueMapsForm && canManageWorkspace) {
     valueMapsForm.addEventListener('submit', async (ev) => {
       ev.preventDefault();
-      if (!currentWorkspaceId) return;
       const status = document.getElementById('crm-value-maps-status');
+      if (!requireWorkspaceReady(status)) return;
       const raw = String((document.getElementById('crm-vm-raw') || {}).value || '').trim();
       const canonical = String((document.getElementById('crm-vm-canonical') || {}).value || '').trim();
       try {
@@ -1241,48 +1535,158 @@
 
   const reviewSourcesForm = document.getElementById('crm-review-sources-form');
   if (reviewSourcesForm && canManageWorkspace) {
+    setReviewSourcesLocked(true);
+    reviewContactsActorPicker = bindDirectoryUserPicker({
+      searchId: 'crm-review-contacts-actor-search',
+      suggestId: 'crm-review-contacts-actor-suggest',
+      hiddenId: 'crm-review-contacts-actor-uid',
+      clearId: 'crm-review-contacts-actor-clear',
+      enabled: true,
+      workspaceIdFn: () => currentWorkspaceId || 0,
+    });
+    reviewFileActorPicker = bindDirectoryUserPicker({
+      searchId: 'crm-review-file-actor-search',
+      suggestId: 'crm-review-file-actor-suggest',
+      hiddenId: 'crm-review-file-actor-uid',
+      clearId: 'crm-review-file-actor-clear',
+      enabled: true,
+      workspaceIdFn: () => currentWorkspaceId || 0,
+    });
+    reviewCalActorPicker = bindDirectoryUserPicker({
+      searchId: 'crm-review-cal-actor-search',
+      suggestId: 'crm-review-cal-actor-suggest',
+      hiddenId: 'crm-review-cal-actor-uid',
+      clearId: 'crm-review-cal-actor-clear',
+      enabled: true,
+      workspaceIdFn: () => currentWorkspaceId || 0,
+    });
+    reviewTaskActorPicker = bindDirectoryUserPicker({
+      searchId: 'crm-review-task-actor-search',
+      suggestId: 'crm-review-task-actor-suggest',
+      hiddenId: 'crm-review-task-actor-uid',
+      clearId: 'crm-review-task-actor-clear',
+      enabled: true,
+      workspaceIdFn: () => currentWorkspaceId || 0,
+    });
+
+    const pickFolderBtn = document.getElementById('crm-review-file-folder-pick');
+    const clearFolderBtn = document.getElementById('crm-review-file-folder-clear');
+    if (pickFolderBtn) {
+      pickFolderBtn.addEventListener('click', async () => {
+        if (pickFolderBtn.disabled) return;
+        pickFolderBtn.disabled = true;
+        try {
+          const Picker = window.CustomerCheckFolderPicker;
+          if (!Picker || typeof Picker.pickFolder !== 'function') {
+            if (C && typeof C.alertDialog === 'function') {
+              await C.alertDialog({
+                title: tr('Folder browser unavailable'),
+                message: tr('Open Files, then try again from this page.'),
+                variant: 'warning',
+              });
+            }
+            return;
+          }
+          const picked = await Picker.pickFolder({ skipIntro: true });
+          if (!picked || picked.unavailable) {
+            if (picked && picked.unavailable && C && typeof C.alertDialog === 'function') {
+              await C.alertDialog({
+                title: tr('Folder browser unavailable'),
+                message: tr('Open Files, then try again from this page.'),
+                variant: 'warning',
+              });
+            }
+            return;
+          }
+          const fileId = picked.fileId ? parseInt(String(picked.fileId), 10) : 0;
+          const path = picked.path ? String(picked.path) : '';
+          if (!(fileId > 0) && path === '') {
+            if (C && typeof C.alertDialog === 'function') {
+              await C.alertDialog({
+                title: tr('Could not link folder'),
+                message: tr('Could not resolve that folder. Open it in the picker, then click Choose at the bottom.'),
+                variant: 'danger',
+              });
+            }
+            return;
+          }
+          let resolvedId = fileId;
+          if (!(resolvedId > 0) && path && typeof Picker.resolveFolderFileId === 'function') {
+            resolvedId = await Picker.resolveFolderFileId(path);
+          }
+          setReviewFolderSelection(resolvedId > 0 ? resolvedId : 0, path);
+          if (!(resolvedId > 0)) {
+            if (C && typeof C.alertDialog === 'function') {
+              await C.alertDialog({
+                title: tr('Could not link folder'),
+                message: tr('Could not resolve that folder. Open it in the picker, then click Choose at the bottom.'),
+                variant: 'danger',
+              });
+            }
+            setReviewFolderSelection(0, '');
+          }
+        } catch (e) {
+          if (C && typeof C.alertDialog === 'function') {
+            await C.alertDialog({
+              title: tr('Could not link folder'),
+              message: (e && e.message) || tr('Could not resolve that folder. Open it in the picker, then click Choose at the bottom.'),
+              variant: 'danger',
+            });
+          }
+        } finally {
+          pickFolderBtn.disabled = false;
+        }
+      });
+    }
+    if (clearFolderBtn) {
+      clearFolderBtn.addEventListener('click', () => setReviewFolderSelection(0, ''));
+    }
+
     reviewSourcesForm.addEventListener('submit', async (ev) => {
       ev.preventDefault();
-      if (!currentWorkspaceId) return;
       const status = document.getElementById('crm-review-sources-status');
+      if (!requireWorkspaceReady(status)) return;
       const dsgvo = !!(document.getElementById('crm-review-src-dsgvo') || {}).checked;
       const sources = {};
       reviewSourcesForm.querySelectorAll('[data-review-kind]').forEach((el) => {
         const kind = el.getAttribute('data-review-kind');
         sources[kind] = { enabled: !!el.checked, dsgvoAck: dsgvo };
       });
-      const contactsActor = document.getElementById('crm-review-contacts-actor');
       if (sources.contact_suggest) {
-        sources.contact_suggest.scanActor = contactsActor ? String(contactsActor.value || '').trim() : '';
+        sources.contact_suggest.scanActor = reviewContactsActorPicker
+          ? reviewContactsActorPicker.selectedUid()
+          : '';
       }
       const fileFolder = document.getElementById('crm-review-file-folder');
-      const fileActor = document.getElementById('crm-review-file-actor');
+      const fileFolderPath = document.getElementById('crm-review-file-folder-path');
       if (sources.file) {
         sources.file.rootFolderId = fileFolder ? parseInt(fileFolder.value || '0', 10) : 0;
-        sources.file.scanActor = fileActor ? String(fileActor.value || '').trim() : '';
+        sources.file.rootFolderPath = fileFolderPath ? String(fileFolderPath.value || '').trim() : '';
+        sources.file.scanActor = reviewFileActorPicker ? reviewFileActorPicker.selectedUid() : '';
       }
       const calUris = document.getElementById('crm-review-cal-uris');
-      const calActor = document.getElementById('crm-review-cal-actor');
       if (sources.calendar_event) {
         sources.calendar_event.calendarUris = calUris
           ? String(calUris.value || '').split(/\n+/).map((s) => s.trim()).filter(Boolean)
           : [];
-        sources.calendar_event.scanActor = calActor ? String(calActor.value || '').trim() : '';
+        sources.calendar_event.scanActor = reviewCalActorPicker ? reviewCalActorPicker.selectedUid() : '';
       }
       const taskLists = document.getElementById('crm-review-task-lists');
-      const taskActor = document.getElementById('crm-review-task-actor');
       if (sources.task) {
         sources.task.listIds = taskLists
           ? String(taskLists.value || '').split(/\n+/).map((s) => s.trim()).filter(Boolean)
           : [];
-        sources.task.scanActor = taskActor ? String(taskActor.value || '').trim() : '';
+        sources.task.scanActor = reviewTaskActorPicker ? reviewTaskActorPicker.selectedUid() : '';
       }
       try {
         await Api.put('/workspaces/' + currentWorkspaceId + '/review/sources', { sources: sources });
+        showWsError('');
         if (status) status.textContent = tr('Review sources saved.');
         if (C && C.announce) C.announce(tr('Review sources saved.'));
       } catch (e) {
-        if (status) status.textContent = (e.payload && e.payload.message) || e.message;
+        const msg = (e.payload && e.payload.message) || e.message;
+        if (status) status.textContent = msg;
+        showWsError(msg);
       }
     });
   }

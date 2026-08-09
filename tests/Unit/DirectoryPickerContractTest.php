@@ -49,6 +49,93 @@ final class DirectoryPickerContractTest extends TestCase
 		$this->assertStringContainsString('Never type a raw user id', $html);
 	}
 
+	public function testReviewSourcesScanActorsUseDirectoryPickers(): void
+	{
+		$html = (string)file_get_contents($this->root . '/templates/settings/workspace-review-sources.php');
+		$this->assertSame(4, substr_count($html, "include __DIR__ . '/../parts/directory-user-picker.php';"));
+		foreach (['review-contacts-actor', 'review-file-actor', 'review-cal-actor', 'review-task-actor'] as $slug) {
+			$this->assertStringContainsString("\$crmPickerId = '" . $slug . "'", $html);
+		}
+		$this->assertStringContainsString('Never type a raw user id', $html);
+		$this->assertDoesNotMatchRegularExpression(
+			'/<input[^>]+type="text"[^>]+id="crm-review-[^"]*"/',
+			$html,
+		);
+		$partial = (string)file_get_contents($this->root . '/templates/parts/directory-user-picker.php');
+		$this->assertStringContainsString('role="combobox"', $partial);
+		$this->assertStringContainsString("type=\"hidden\"", $partial);
+		$this->assertStringContainsString('user-picker__search', $partial);
+		$js = (string)file_get_contents($this->root . '/js/pages/settings.js');
+		$this->assertStringContainsString('crm-review-contacts-actor-uid', $js);
+		$this->assertStringContainsString('reviewContactsActorPicker', $js);
+		$this->assertStringContainsString('setUid:', $js);
+	}
+
+	public function testReviewFolderUsesFolderPickerNotRawFileId(): void
+	{
+		$html = (string)file_get_contents($this->root . '/templates/settings/workspace-review-sources.php');
+		$this->assertStringContainsString('id="crm-review-file-folder-pick"', $html);
+		$this->assertStringContainsString('id="crm-review-file-folder"', $html);
+		$this->assertStringContainsString('type="hidden"', $html);
+		$this->assertStringContainsString('Never type a raw folder file id', $html);
+		$this->assertStringNotContainsString('Review folder file id', $html);
+		$this->assertStringNotContainsString('Nextcloud file id of the folder', $html);
+		$this->assertDoesNotMatchRegularExpression(
+			'/<input[^>]+id="crm-review-file-folder"[^>]+type="number"/',
+			$html,
+		);
+		$this->assertDoesNotMatchRegularExpression(
+			'/<input[^>]+type="number"[^>]+id="crm-review-file-folder"/',
+			$html,
+		);
+		$js = (string)file_get_contents($this->root . '/js/pages/settings.js');
+		$this->assertStringContainsString('CustomerCheckFolderPicker', $js);
+		$this->assertStringContainsString('pickFolder', $js);
+		$this->assertStringContainsString('setReviewFolderSelection', $js);
+		$this->assertStringContainsString('crm-review-sources-form', $js);
+		$this->assertStringContainsString("document.getElementById('crm-review-sources-form')", $js);
+		$this->assertStringContainsString("document.getElementById('section-workspace-mailbox')", $js);
+		$this->assertMatchesRegularExpression(
+			"/crm-review-sources-form[\s\S]{0,120}crm-circles-roll-call|crm-circles-roll-call[\s\S]{0,120}crm-review-sources-form/",
+			$js,
+		);
+		$controller = (string)file_get_contents($this->root . '/lib/Controller/PageController.php');
+		$this->assertStringContainsString(
+			"registerFrontEndAssets('pages/settings', null, [], ['common/folder-picker', 'common/mailbox-settings-present', 'workspace-settings-legacy-redirect'])",
+			$controller,
+		);
+	}
+
+	public function testWorkspaceSettingsSectionsExposeBootStatusAndRefuseSilentSaves(): void
+	{
+		$partial = (string)file_get_contents($this->root . '/templates/parts/workspace-boot-status.php');
+		$this->assertStringContainsString('id="crm-ws-status"', $partial);
+		$this->assertStringContainsString('id="crm-ws-error"', $partial);
+		$this->assertStringContainsString('role="alert"', $partial);
+		foreach ([
+			'templates/settings/workspace-mailbox.php',
+			'templates/settings/workspace-review-sources.php',
+			'templates/settings/circles-roll-call.php',
+		] as $rel) {
+			$html = (string)file_get_contents($this->root . '/' . $rel);
+			$this->assertStringContainsString("parts/workspace-boot-status.php", $html, $rel);
+		}
+		$js = (string)file_get_contents($this->root . '/js/pages/settings.js');
+		$this->assertStringContainsString('function requireWorkspaceReady', $js);
+		$this->assertStringContainsString('function setReviewSourcesLocked', $js);
+		$this->assertStringContainsString('workspaceBootReady', $js);
+		$this->assertStringContainsString('Workspace is still loading. Wait a moment, then try again.', $js);
+		$this->assertStringContainsString('if (!requireWorkspaceReady(status)) return;', $js);
+		$this->assertMatchesRegularExpression(
+			'/function setReviewSourcesLocked\(locked\) \{(?![\s\S]{0,80}if \(locked\) \{ return; \})[\s\S]{0,900}el\.disabled = true/',
+			$js,
+		);
+		$this->assertStringNotContainsString(
+			"ev.preventDefault();\n      if (!currentWorkspaceId) return;\n      const status = document.getElementById('crm-review-sources-status');",
+			$js,
+		);
+	}
+
 	public function testAccessAllowListUsesSearchChipsNotRawUidHelp(): void
 	{
 		$html = (string)file_get_contents($this->root . '/templates/settings/access.php');

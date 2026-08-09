@@ -53,7 +53,7 @@
 	width: min(28rem, 55vw);
 	height: min(28rem, 55vw);
 	border-radius: 50%;
-	background: color-mix(in srgb, var(--color-primary-element) 10%, transparent);
+	background: color-mix(in srgb, var(--color-primary-element) 10%, var(--color-main-background));
 	pointer-events: none;
 	z-index: 0;
 }
@@ -355,8 +355,8 @@
 	min-height: 1.75rem;
 	padding: 0.2rem 0.65rem;
 	border-radius: var(--crm-radius-pill, 999px);
-	border: 1px solid color-mix(in srgb, var(--color-primary-element) 35%, transparent);
-	background: color-mix(in srgb, var(--color-primary-element) 14%, transparent);
+	border: 1px solid color-mix(in srgb, var(--color-primary-element) 35%, var(--color-main-background));
+	background: color-mix(in srgb, var(--color-primary-element) 14%, var(--color-main-background));
 	font-size: var(--crm-fs-xs, 0.8125rem);
 	font-weight: 700;
 	letter-spacing: 0.04em;

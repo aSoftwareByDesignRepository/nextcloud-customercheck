@@ -9,6 +9,8 @@
 const CustomerCheckComponents = {
   _modalLockDepth: 0,
   _modalEscHandlerBound: false,
+  /** @type {null|((result: mixed) => void)} */
+  _activeConfirmCleanup: null,
 
   /**
    * Lock nav/main for inline overlays (e.g. calendar day panel). Live regions stay active.
@@ -143,7 +145,19 @@ const CustomerCheckComponents = {
     });
   },
 
+  _getOpenNativeDialogs() {
+    return Array.from(document.querySelectorAll('dialog.crm-native-dialog[open], dialog.crm-dialog[open]'));
+  },
+
+  _isNativeDialog(el) {
+    return !!(el && el.tagName === 'DIALOG');
+  },
+
   _getTopmostBackdropModal() {
+    const natives = this._getOpenNativeDialogs();
+    if (natives.length > 0) {
+      return natives[natives.length - 1];
+    }
     const backdrops = this._getVisibleModalBackdrops();
     if (backdrops.length === 0) {
       return null;
@@ -161,7 +175,7 @@ const CustomerCheckComponents = {
         return;
       }
       const inBackdrop = modal.closest('.modal-backdrop');
-      const standalone = modal.dataset.azcFocusTrapStandalone === '1';
+      const standalone = modal.dataset.azcFocusTrapStandalone === '1' || this._isNativeDialog(modal);
       if (!inBackdrop && !standalone) {
         return;
       }
@@ -213,7 +227,7 @@ const CustomerCheckComponents = {
       });
     });
 
-    // Close modals on backdrop click (topmost only)
+    // Legacy backdrop click (topmost only) — native dialogs use dialog click / cancel.
     document.addEventListener('click', (e) => {
       if (!e.target.classList.contains('modal-backdrop')) {
         return;
@@ -235,7 +249,7 @@ const CustomerCheckComponents = {
           return;
         }
         // Native <dialog> handles Escape via the `cancel` event.
-        if (document.querySelector('dialog[open]')) {
+        if (this._getOpenNativeDialogs().length > 0) {
           return;
         }
         const modal = this._getTopmostBackdropModal();
@@ -253,7 +267,7 @@ const CustomerCheckComponents = {
         return;
       }
       e.preventDefault();
-      const modal = btn.closest('.modal');
+      const modal = btn.closest('.modal, dialog.crm-native-dialog');
       if (modal) {
         this.closeModal(modal);
       }
@@ -261,7 +275,28 @@ const CustomerCheckComponents = {
   },
 
   /**
-   * Open modal by ID
+   * AudioCheck-style single-flight for content dialogs: close other open
+   * non-confirm, non-persist dialogs so double-clicks cannot stack locks.
+   * Confirm/alertdialogs may still sit on top of a content dialog.
+   * @param {HTMLElement} except
+   */
+  _closeOtherContentDialogs(except) {
+    this._getOpenNativeDialogs().forEach((d) => {
+      if (d === except) {
+        return;
+      }
+      if (d.classList.contains('confirm-dialog')) {
+        return;
+      }
+      if (d.dataset.azcModalPersist === 'true') {
+        return;
+      }
+      this.closeModal(d);
+    });
+  },
+
+  /**
+   * Open modal by ID (native <dialog> preferred; legacy backdrop fallback).
    */
   openModal(modalId) {
     const modal = typeof modalId === 'string' ? document.getElementById(modalId) : modalId;
@@ -274,35 +309,41 @@ const CustomerCheckComponents = {
       modal._azcReturnFocus = document.activeElement;
     }
 
-    // Create backdrop if it doesn't exist
-    let backdrop = modal.closest('.modal-backdrop');
-    if (!backdrop) {
-      backdrop = document.createElement('div');
-      backdrop.className = 'modal-backdrop crm-modal-backdrop';
-      backdrop.setAttribute('role', 'presentation');
-      document.body.appendChild(backdrop);
-      if (modal.parentNode) {
-        modal.parentNode.removeChild(modal);
+    if (this._isNativeDialog(modal)) {
+      if (!modal.classList.contains('confirm-dialog')) {
+        this._closeOtherContentDialogs(modal);
       }
-      backdrop.appendChild(modal);
+      delete modal.dataset.azcClosed;
+      delete modal.dataset.azcClosing;
+      delete modal.dataset.azcOnCloseFired;
+      modal.dataset.azcFocusTrapStandalone = '1';
+      modal.removeAttribute('aria-hidden');
+      if (!modal.hasAttribute('aria-modal')) {
+        modal.setAttribute('aria-modal', 'true');
+      }
+      if (typeof modal.showModal === 'function' && !modal.open) {
+        try {
+          modal.showModal();
+        } catch (_err) {
+          modal.setAttribute('open', 'open');
+        }
+      } else if (!modal.open) {
+        modal.setAttribute('open', 'open');
+      }
+      this._lockPageBehindModal();
+      this._bindFocusTrap(modal);
+      setTimeout(() => {
+        const closeBtn = modal.querySelector('.modal-close');
+        this.focusFirstElement(modal, closeBtn ? null : undefined);
+      }, 50);
+      window.dispatchEvent(new CustomEvent('modal-open', {
+        detail: { modalId: modal.id || modalId, modal }
+      }));
+      return;
     }
 
-    backdrop.style.display = 'flex';
-    modal.style.display = 'flex';
-    modal.setAttribute('aria-hidden', 'false');
-    modal.removeAttribute('inert');
-
-    this._lockPageBehindModal();
-    this._bindFocusTrap(modal);
-
-    setTimeout(() => {
-      const closeBtn = modal.querySelector('.modal-close');
-      this.focusFirstElement(modal, closeBtn ? null : undefined);
-    }, 50);
-
-    window.dispatchEvent(new CustomEvent('modal-open', {
-      detail: { modalId: modal.id || modalId, modal }
-    }));
+    // Design system: only native <dialog> is supported. Legacy backdrop path removed.
+    console.error('CustomerCheck openModal: expected a native <dialog>, got', modal && modal.tagName);
   },
 
   /**
@@ -317,13 +358,50 @@ const CustomerCheckComponents = {
       return;
     }
 
+    // Idempotent: close button + document delegation (and Esc cancel) can race.
+    if (modalElement.dataset.azcClosed === '1' || modalElement.dataset.azcClosing === '1') {
+      return;
+    }
+    modalElement.dataset.azcClosing = '1';
+
     const returnFocus = modalElement._azcReturnFocus;
     delete modalElement._azcReturnFocus;
 
     this._unbindFocusTrap(modalElement);
 
+    if (this._isNativeDialog(modalElement)) {
+      const persist = modalElement.dataset.azcModalPersist === 'true';
+      try {
+        if (typeof modalElement.close === 'function' && modalElement.open) {
+          modalElement.close();
+        } else {
+          modalElement.removeAttribute('open');
+        }
+      } catch (_err) {
+        modalElement.removeAttribute('open');
+      }
+      modalElement.setAttribute('aria-hidden', 'true');
+      modalElement.dataset.azcClosed = '1';
+      delete modalElement.dataset.azcClosing;
+      this._unlockPageBehindModal();
+      if (!persist) {
+        setTimeout(() => {
+          if (modalElement.parentNode && !modalElement.open) {
+            modalElement.remove();
+          }
+        }, 0);
+      }
+      this._restoreModalFocus(returnFocus);
+      window.dispatchEvent(new CustomEvent('modal-close', {
+        detail: { modalId: modalElement.id, modal: modalElement }
+      }));
+      return;
+    }
+
     const backdrop = modalElement.closest('.modal-backdrop');
     const persist = modalElement.dataset.azcModalPersist === 'true';
+    modalElement.dataset.azcClosed = '1';
+    delete modalElement.dataset.azcClosing;
 
     if (!backdrop) {
       modalElement.style.display = 'none';
@@ -386,10 +464,19 @@ const CustomerCheckComponents = {
    */
   openDialog(options = {}) {
     const { id, open = true, ...rest } = options;
-    let modal = id ? document.getElementById(id) : null;
-    if (!modal) {
-      modal = this.createModal({ id, ...rest });
+    // Always rebuild when an id is reused so content cannot go stale (delivery pack, etc.).
+    let existing = id ? document.getElementById(id) : null;
+    if (existing) {
+      const wasOpen = !!(existing.open || existing.hasAttribute('open'));
+      if (wasOpen) {
+        this.closeModal(existing);
+      }
+      existing = id ? document.getElementById(id) : null;
+      if (existing && existing.parentNode) {
+        existing.parentNode.removeChild(existing);
+      }
     }
+    const modal = this.createModal({ id, ...rest });
     if (open !== false) {
       this.openModal(modal);
     }
@@ -397,7 +484,7 @@ const CustomerCheckComponents = {
   },
 
   /**
-   * Create modal dynamically
+   * Create modal dynamically as a native <dialog> (SETTINGS / DS principle: native dialog).
    */
   createModal(options = {}) {
     const {
@@ -411,8 +498,8 @@ const CustomerCheckComponents = {
       onClose = null
     } = options;
 
-    const modal = document.createElement('div');
-    modal.className = `modal modal--${size} crm-dialog`;
+    const modal = document.createElement('dialog');
+    modal.className = `crm-native-dialog modal modal--${size} crm-dialog`;
     modal.id = id;
     modal.setAttribute('role', 'dialog');
     modal.setAttribute('aria-modal', 'true');
@@ -420,7 +507,7 @@ const CustomerCheckComponents = {
       modal.setAttribute('aria-labelledby', `${id}-title`);
     }
     modal.setAttribute('aria-hidden', 'true');
-    modal.style.display = 'none';
+    modal.dataset.azcFocusTrapStandalone = '1';
     if (persist) {
       modal.dataset.azcModalPersist = 'true';
     }
@@ -435,21 +522,56 @@ const CustomerCheckComponents = {
     modal.innerHTML = `
       <div class="modal-header">
         <h2 class="modal-title" id="${id}-title">${this._escapeHtml(title)}</h2>
-        ${closable ? `<button type="button" class="modal-close" aria-label="${this._escapeHtml(closeLabel)}">&times;</button>` : ''}
+        ${closable ? `<button type="button" class="modal-close crm-btn crm-btn--ghost" aria-label="${this._escapeHtml(closeLabel)}">&times;</button>` : ''}
       </div>
       <div class="modal-body">
         ${content}
       </div>
     `;
 
-    // Add event listeners
+    const runOnCloseOnce = () => {
+      if (!onClose || modal.dataset.azcOnCloseFired === '1') {
+        return;
+      }
+      modal.dataset.azcOnCloseFired = '1';
+      try {
+        onClose();
+      } catch (_err) { /* caller errors must not break teardown */ }
+    };
+
     if (closable) {
       const closeBtn = modal.querySelector('.modal-close');
-      closeBtn.addEventListener('click', () => {
+      // Prefer document-level .modal-close delegation; this only runs onClose once.
+      closeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
         this.closeModal(modal);
-        if (onClose) onClose();
+        runOnCloseOnce();
       });
     }
+
+    modal.addEventListener('cancel', (e) => {
+      if (modal.dataset.azcModalDismiss === 'false') {
+        e.preventDefault();
+        return;
+      }
+      // Let the dialog close, then clean up via closeModal once.
+      setTimeout(() => {
+        this.closeModal(modal);
+        runOnCloseOnce();
+      }, 0);
+    });
+
+    // Chromium: click on ::backdrop targets the dialog element itself.
+    modal.addEventListener('click', (e) => {
+      if (e.target !== modal) {
+        return;
+      }
+      if (modal.dataset.azcModalDismiss === 'false') {
+        return;
+      }
+      this.closeModal(modal);
+      runOnCloseOnce();
+    });
 
     document.body.appendChild(modal);
     return modal;
@@ -503,10 +625,10 @@ const CustomerCheckComponents = {
     toast.innerHTML = `
       <div class="toast-icon crm-notif-icon-well crm-notif-icon-well--${toastWellClass}" aria-hidden="true">${icon}</div>
       <div class="toast-content">
-        ${title ? `<div class="toast-title">${title}</div>` : ''}
-        <div class="toast-message">${message}</div>
+        ${title ? `<div class="toast-title">${this._escapeHtml(title)}</div>` : ''}
+        <div class="toast-message">${this._escapeHtml(message)}</div>
       </div>
-      <button type="button" class="toast-close" aria-label="${closeLabel}">&times;</button>
+      <button type="button" class="toast-close" aria-label="${this._escapeHtml(closeLabel)}">&times;</button>
     `;
 
     container.appendChild(toast);
@@ -634,22 +756,19 @@ const CustomerCheckComponents = {
     const needsExplicitAck = requireCheckbox || requireReason || requireTypedConfirm;
 
     return new Promise((resolve) => {
+      // Single-flight confirms: dismiss any prior confirm so double-clicks cannot stack.
+      if (typeof this._activeConfirmCleanup === 'function') {
+        const prev = this._activeConfirmCleanup;
+        this._activeConfirmCleanup = null;
+        try {
+          prev(false);
+        } catch (_err) { /* prior cleanup must not block */ }
+      }
+
       const dialogId = `confirm-dialog-${Date.now()}`;
       const htmlLang = document.querySelector('[data-crm-html-lang]')?.getAttribute('data-crm-html-lang')
         || document.documentElement.lang
         || 'en';
-
-      const backdrop = document.createElement('div');
-      backdrop.className = 'modal-backdrop crm-modal-backdrop';
-      backdrop.setAttribute('role', 'presentation');
-
-      const dialog = document.createElement('div');
-      dialog.className = 'modal modal--sm confirm-dialog crm-dialog';
-      dialog.id = dialogId;
-      dialog.setAttribute('role', 'alertdialog');
-      dialog.setAttribute('aria-modal', 'true');
-      dialog.setAttribute('aria-labelledby', `${dialogId}-title`);
-      dialog.setAttribute('lang', htmlLang);
 
       const iconName = isDestructive ? 'alert-triangle' : (variant === 'warning' ? 'circle-alert' : 'info');
       const iconHtml = (window.AzcCatalog && window.AzcCatalog.render)
@@ -659,10 +778,10 @@ const CustomerCheckComponents = {
       let extraFields = '';
       if (requireCheckbox) {
         extraFields += `
-          <div class="form-checkbox confirm-dialog__checkbox-row">
+          <label class="crm-choice confirm-dialog__checkbox-row" for="${dialogId}-ack">
             <input type="checkbox" id="${dialogId}-ack" class="confirm-dialog__ack">
-            <label for="${dialogId}-ack">${this._escapeHtml(checkboxLabel)}</label>
-          </div>`;
+            <span>${this._escapeHtml(checkboxLabel)}</span>
+          </label>`;
       }
       if (requireReason) {
         extraFields += `
@@ -677,12 +796,20 @@ const CustomerCheckComponents = {
 
       const describedBy = [`${dialogId}-message`];
       if (requireReason) describedBy.push(`${dialogId}-reason`);
-      dialog.setAttribute('aria-describedby', describedBy.join(' '));
 
       const footerButtons = alertOnly
-        ? `<button type="button" class="btn btn--primary confirm-dialog__confirm">${this._escapeHtml(confirmLabel)}</button>`
-        : `<button type="button" class="btn btn--secondary confirm-dialog__cancel">${this._escapeHtml(cancelLabel)}</button>
-          <button type="button" class="btn btn--${isDestructive ? 'danger' : 'primary'} confirm-dialog__confirm"${isDestructive && needsExplicitAck ? ' disabled' : ''}>${this._escapeHtml(confirmLabel)}</button>`;
+        ? `<button type="button" class="crm-btn crm-btn--primary confirm-dialog__confirm">${this._escapeHtml(confirmLabel)}</button>`
+        : `<button type="button" class="crm-btn crm-btn--secondary confirm-dialog__cancel">${this._escapeHtml(cancelLabel)}</button>
+          <button type="button" class="crm-btn crm-btn--${isDestructive ? 'danger' : 'primary'} confirm-dialog__confirm"${isDestructive && needsExplicitAck ? ' disabled' : ''}>${this._escapeHtml(confirmLabel)}</button>`;
+
+      const dialog = document.createElement('dialog');
+      dialog.className = 'crm-native-dialog modal modal--sm confirm-dialog crm-dialog';
+      dialog.id = dialogId;
+      dialog.setAttribute('role', 'alertdialog');
+      dialog.setAttribute('aria-modal', 'true');
+      dialog.setAttribute('aria-labelledby', `${dialogId}-title`);
+      dialog.setAttribute('lang', htmlLang);
+      dialog.setAttribute('aria-describedby', describedBy.join(' '));
 
       dialog.innerHTML = `
         <div class="modal-header">
@@ -698,10 +825,12 @@ const CustomerCheckComponents = {
         </div>
       `;
 
-      backdrop.appendChild(dialog);
-      document.body.appendChild(backdrop);
-      backdrop.style.display = 'flex';
-      dialog.style.display = 'flex';
+      document.body.appendChild(dialog);
+      if (typeof dialog.showModal === 'function') {
+        dialog.showModal();
+      } else {
+        dialog.setAttribute('open', 'open');
+      }
 
       this._lockPageBehindModal();
       this._bindFocusTrap(dialog);
@@ -730,15 +859,33 @@ const CustomerCheckComponents = {
         if (focusTarget) focusTarget.focus();
       }, 50);
 
+      let settled = false;
       const cleanup = (result) => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        if (this._activeConfirmCleanup === cleanup) {
+          this._activeConfirmCleanup = null;
+        }
         this._unbindFocusTrap(dialog);
-        backdrop.remove();
+        try {
+          if (typeof dialog.close === 'function' && dialog.open) {
+            dialog.close();
+          }
+        } catch (_err) { /* noop */ }
+        dialog.remove();
         this._unlockPageBehindModal();
         if (previouslyFocused && previouslyFocused.focus) {
-          previouslyFocused.focus();
+          try {
+            previouslyFocused.focus();
+          } catch (_err) { /* detached */ }
+        } else {
+          this._restoreModalFocus(null);
         }
         resolve(result);
       };
+      this._activeConfirmCleanup = cleanup;
 
       confirmBtn.addEventListener('click', () => {
         if (confirmBtn.disabled) return;
@@ -752,37 +899,14 @@ const CustomerCheckComponents = {
         cancelBtn.addEventListener('click', () => cleanup(false));
       }
 
-      const keyHandler = (e) => {
-        if (e.key === 'Escape' && (!isDestructive || alertOnly)) {
-          document.removeEventListener('keydown', keyHandler);
-          cleanup(alertOnly ? true : false);
+      dialog.addEventListener('cancel', (e) => {
+        if (isDestructive && !alertOnly) {
+          e.preventDefault();
+          return;
         }
-      };
-      document.addEventListener('keydown', keyHandler);
-
-      if (!isDestructive || alertOnly) {
-        backdrop.addEventListener('click', (e) => {
-          if (e.target === backdrop) {
-            document.removeEventListener('keydown', keyHandler);
-            cleanup(alertOnly ? true : false);
-          }
-        });
-      }
-
-      dialog.addEventListener('keydown', (e) => {
-        if (e.key !== 'Tab') return;
-        const focusable = Array.from(
-          dialog.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')
-        ).filter((el) => !el.disabled);
-        if (focusable.length === 0) return;
-        const first = focusable[0];
-        const last = focusable[focusable.length - 1];
-        if (e.shiftKey) {
-          if (document.activeElement === first) { e.preventDefault(); last.focus(); }
-        } else {
-          if (document.activeElement === last) { e.preventDefault(); first.focus(); }
-        }
+        cleanup(alertOnly ? true : false);
       });
+      // Focus trap is _bindFocusTrap only — no second Tab handler (double-trap race).
     }).then((result) => {
       if (result && typeof result === 'object' && result.confirmed) {
         return result;
@@ -795,9 +919,56 @@ const CustomerCheckComponents = {
    * Escape HTML special characters to prevent XSS when inserting into innerHTML.
    */
   _escapeHtml(str) {
+    const Present = typeof window !== 'undefined' ? window.CustomerCheckDialogPresent : null;
+    if (Present && typeof Present.escapeHtml === 'function') {
+      return Present.escapeHtml(str);
+    }
     const div = document.createElement('div');
-    div.textContent = String(str);
+    div.textContent = String(str == null ? '' : str);
     return div.innerHTML;
+  },
+
+  /**
+   * Allow only http(s), mailto, or same-origin paths in dialog action hrefs.
+   * @param {unknown} href
+   * @param {string} [fallback='#']
+   * @returns {string}
+   */
+  safeExternalHref(href, fallback = '#') {
+    const Present = typeof window !== 'undefined' ? window.CustomerCheckDialogPresent : null;
+    if (Present && typeof Present.safeExternalHref === 'function') {
+      return Present.safeExternalHref(href, fallback);
+    }
+    const raw = String(href == null ? '' : href).trim();
+    if (!raw) return fallback;
+    const lower = raw.toLowerCase();
+    if (lower.startsWith('javascript:') || lower.startsWith('data:') || lower.startsWith('vbscript:')) {
+      return fallback;
+    }
+    if (/^https?:\/\//i.test(raw) || /^mailto:/i.test(raw) || raw.startsWith('/')) {
+      return raw;
+    }
+    return fallback;
+  },
+
+  /**
+   * XSS-safe mail-pack dialog body (subject / body / Open mail href).
+   * @param {object} pack
+   * @param {object} [opts]
+   * @returns {string}
+   */
+  buildMailPackDialogHtml(pack, opts) {
+    const Present = typeof window !== 'undefined' ? window.CustomerCheckDialogPresent : null;
+    if (Present && typeof Present.buildMailPackDialogHtml === 'function') {
+      return Present.buildMailPackDialogHtml(pack, opts || {});
+    }
+    const t = (opts && opts.t) || ((m) => m);
+    const subject = this._escapeHtml((pack && pack.subject) || '');
+    const body = this._escapeHtml((pack && pack.bodyText) || '');
+    const href = this._escapeHtml(this.safeExternalHref((pack && (pack.mailAppUrl || pack.mailtoUrl)) || '#'));
+    return '<p><strong>' + subject + '</strong></p><pre class="crm-pre">' + body + '</pre>'
+      + '<div class="crm-form-actions"><a class="crm-btn crm-btn--primary" href="' + href
+      + '" rel="noopener noreferrer">' + this._escapeHtml(t('Open mail')) + '</a></div>';
   },
 
   // ===== UTILITY FUNCTIONS =====

@@ -3,36 +3,11 @@
  * Follows projectcheck pattern with arbeitszeitcheck-specific CSS variables
  */
 
-/* ===== BUTTON COMPONENTS ===== */
-
-/* Button Base Styles */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
-  min-height: 44px; /* Minimum touch target size for accessibility (WCAG 2.5.5) */
-  min-width: 44px; /* Minimum touch target size for accessibility */
-  padding: var(--space-2) var(--space-4);
-  font-family: var(--arbeitszeitcheck-font-family-sans);
-  font-size: var(--arbeitszeitcheck-font-size-base);
-  font-weight: var(--arbeitszeitcheck-font-weight-medium);
-  line-height: var(--arbeitszeitcheck-line-height-normal);
-  text-decoration: none;
-  border: 1px solid transparent;
-  border-radius: var(--radius-base);
-  cursor: pointer;
-  transition: all 0.15s ease-in-out;
-  user-select: none;
-  white-space: nowrap;
-  vertical-align: middle;
-  box-sizing: border-box;
-}
-
-.btn:focus-visible {
-  outline: 2px solid var(--color-primary-element);
-  outline-offset: 2px;
-}
+/* ===== BUTTON COMPONENTS =====
+ * Design system: only `.crm-btn` (app.css). Legacy `.btn` / `.button` chrome removed.
+ * Keep `:not(.btn)` in link resets (CrmBtnCascadeContractTest) so old class names
+ * never regain underlined-link demotion if reintroduced by mistake.
+ */
 
 a:focus-visible,
 button:focus-visible,
@@ -41,216 +16,6 @@ select:focus-visible,
 textarea:focus-visible {
   outline: 2px solid var(--color-primary-element);
   outline-offset: 2px;
-}
-
-.btn:disabled {
-  opacity: 0.75;
-  cursor: not-allowed;
-  pointer-events: none;
-}
-
-/* Button Variants — Nextcloud theme variables for light/dark/high-contrast */
-.btn--primary {
-  background-color: var(--color-primary-element);
-  border-color: var(--color-primary-element);
-  color: var(--color-primary-element-text);
-}
-
-.btn--primary:hover:not(:disabled) {
-  background-color: var(--color-primary-element-hover);
-  border-color: var(--color-primary-element-hover);
-}
-
-.btn--primary:active:not(:disabled) {
-  background-color: var(--color-primary-element);
-  border-color: var(--color-primary-element);
-}
-
-.btn--secondary {
-  background-color: var(--color-background-dark);
-  border-color: var(--color-border);
-  color: var(--color-main-text);
-}
-
-.btn--secondary:hover:not(:disabled) {
-  background-color: var(--color-background-hover);
-  border-color: var(--color-border);
-}
-
-.btn--secondary:active:not(:disabled) {
-  background-color: var(--color-background-hover);
-  border-color: var(--color-border);
-}
-
-.btn--tertiary {
-  background-color: transparent;
-  border-color: transparent;
-  color: var(--color-primary-element);
-}
-
-.btn--tertiary:hover:not(:disabled) {
-  background-color: var(--color-primary-element-light);
-  border-color: transparent;
-}
-
-.btn--danger {
-  background-color: var(--color-error);
-  border-color: var(--color-error);
-  color: var(--color-primary-text);
-}
-
-.btn--danger:hover:not(:disabled) {
-  background-color: var(--color-error-hover);
-  border-color: var(--color-error-hover);
-}
-
-.btn--success {
-  background-color: var(--color-success);
-  border-color: var(--color-success);
-  color: var(--color-primary-text);
-}
-
-.btn--success:hover:not(:disabled) {
-  background-color: var(--color-success-hover);
-  border-color: var(--color-success-hover);
-}
-
-.btn--warning {
-  background-color: var(--color-warning);
-  border-color: var(--color-warning);
-  color: var(--color-primary-text);
-}
-
-.btn--warning:hover:not(:disabled) {
-  background-color: var(--color-warning-hover);
-  border-color: var(--color-warning-hover);
-}
-
-/* Button Sizes */
-.btn--sm {
-  min-height: 44px; /* WCAG 2.5.5 / design-system rule 4: never below 44×44 px */
-  min-width: 44px;
-  padding: var(--space-1) var(--space-3);
-  font-size: var(--arbeitszeitcheck-font-size-sm);
-  border-radius: var(--radius-sm);
-}
-
-.btn--lg {
-  padding: var(--space-3) var(--space-6);
-  font-size: var(--arbeitszeitcheck-font-size-lg);
-  border-radius: var(--radius-lg);
-}
-
-/* Button States */
-.btn--loading {
-  position: relative;
-  color: transparent;
-}
-
-.btn--loading::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 1rem;
-  height: 1rem;
-  margin: -0.5rem 0 0 -0.5rem;
-  border: 2px solid currentColor;
-  border-radius: 50%;
-  border-top-color: transparent;
-  animation: btn-spin 0.6s linear infinite;
-}
-
-@keyframes btn-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* Button Groups */
-.btn-group {
-  display: inline-flex;
-  border-radius: var(--radius-base);
-  overflow: hidden;
-}
-
-.btn-group .btn {
-  border-radius: 0;
-  border-right-width: 0;
-}
-
-.btn-group .btn:first-child {
-  border-top-left-radius: var(--radius-base);
-  border-bottom-left-radius: var(--radius-base);
-}
-
-.btn-group .btn:last-child {
-  border-top-right-radius: var(--radius-base);
-  border-bottom-right-radius: var(--radius-base);
-  border-right-width: 1px;
-}
-
-/* Legacy button class support */
-.button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-4);
-  font-family: var(--arbeitszeitcheck-font-family-sans);
-  font-size: var(--arbeitszeitcheck-font-size-base);
-  font-weight: var(--arbeitszeitcheck-font-weight-medium);
-  line-height: var(--arbeitszeitcheck-line-height-normal);
-  text-decoration: none;
-  border: 1px solid transparent;
-  border-radius: var(--radius-base);
-  cursor: pointer;
-  transition: all 0.15s ease-in-out;
-  white-space: nowrap;
-}
-
-.button.primary,
-.btn-primary {
-  background-color: var(--color-primary-element);
-  border-color: var(--color-primary-element);
-  color: var(--color-primary-element-text);
-}
-
-.button.primary:hover:not(:disabled),
-.btn-primary:hover:not(:disabled) {
-  background-color: var(--color-primary-element-hover);
-  border-color: var(--color-primary-element-hover);
-}
-
-.button.secondary,
-.btn-secondary {
-  background-color: var(--color-background-dark);
-  border-color: var(--color-border);
-  color: var(--color-main-text);
-}
-
-.button.secondary:hover:not(:disabled),
-.btn-secondary:hover:not(:disabled) {
-  background-color: var(--color-background-hover);
-}
-
-.button.error,
-.btn-danger {
-  background-color: var(--color-error);
-  border-color: var(--color-error);
-  color: var(--color-primary-text);
-}
-
-.button.error:hover:not(:disabled),
-.btn-danger:hover:not(:disabled) {
-  background-color: var(--color-error-hover);
-  border-color: var(--color-error-hover);
-}
-
-.button.small,
-.btn-small {
-  padding: var(--space-1) var(--space-3);
-  font-size: var(--arbeitszeitcheck-font-size-sm);
 }
 
 /* ===== FORM COMPONENTS ===== */
@@ -554,10 +319,6 @@ body[data-theme-dark-highcontrast] .form-input.form-select option {
   flex: 1;
 }
 
-.form-input-group .btn {
-  flex-shrink: 0;
-}
-
 /* Break Entry Styling - Base styles, can be overridden in page-specific CSS */
 .break-entry {
   margin-bottom: var(--space-4, 1rem);
@@ -580,7 +341,7 @@ body[data-theme-dark-highcontrast] .form-input.form-select option {
   color: var(--arbeitszeitcheck-color-main-text);
   background-color: color-mix(in srgb, var(--color-error) 14%, var(--color-main-background));
   border: 1px solid color-mix(in srgb, var(--color-error) 35%, var(--color-border));
-  border-left: 4px solid var(--color-error);
+  border-left: 4px solid var(--color-error-text, var(--color-error));
   border-radius: var(--radius-base);
   padding: var(--space-2) var(--space-3);
   margin-top: var(--space-1);
@@ -644,7 +405,7 @@ body[data-theme-dark-highcontrast] .form-input.form-select option {
   background-color: color-mix(in srgb, var(--color-error) 14%, var(--color-main-background));
   border: 1px solid color-mix(in srgb, var(--color-error) 35%, var(--color-border));
   border-left-width: 4px;
-  border-left-color: var(--color-error);
+  border-left-color: var(--color-error-text, var(--color-error));
   border-radius: var(--radius-base);
   padding: var(--space-2) var(--space-3);
 }
@@ -670,7 +431,7 @@ body[data-theme-dark-highcontrast] .form-input.form-select option {
   background-color: color-mix(in srgb, var(--color-success) 14%, var(--color-main-background));
   border: 1px solid color-mix(in srgb, var(--color-success) 35%, var(--color-border));
   border-left-width: 4px;
-  border-left-color: var(--color-success);
+  border-left-color: var(--color-success-text, var(--color-success));
   border-radius: var(--radius-base);
   padding: var(--space-2) var(--space-3);
 }
@@ -758,7 +519,7 @@ body[data-theme-dark-highcontrast] .form-input.form-select option {
   background-color: color-mix(in srgb, var(--color-error) 14%, var(--color-main-background));
   border: 1px solid color-mix(in srgb, var(--color-error) 35%, var(--color-border));
   border-left-width: 4px;
-  border-left-color: var(--color-error);
+  border-left-color: var(--color-error-text, var(--color-error));
   border-radius: var(--radius-base);
   padding: var(--space-2) var(--space-3);
 }
@@ -772,7 +533,7 @@ body[data-theme-dark-highcontrast] .form-input.form-select option {
   color: var(--color-main-text);
   border: 1px solid color-mix(in srgb, var(--color-error) 35%, var(--color-border));
   border-left-width: 4px;
-  border-left-color: var(--color-error);
+  border-left-color: var(--color-error-text, var(--color-error));
   border-radius: var(--radius-base);
   background-color: color-mix(in srgb, var(--color-error) 14%, var(--color-main-background));
   padding: var(--space-2) var(--space-3);
@@ -919,7 +680,8 @@ body[data-theme-dark-highcontrast] .form-input.form-select option {
 
 /* ===== TABLE COMPONENTS ===== */
 
-/* Scrollable table region (bordered card). .table-responsive is an alias for legacy markup. */
+/* Scrollable table region. Inside a headed card body, drop the wrap border
+ * (principle 14 — one visible frame; card already provides the frame). */
 .table-container,
 .table-responsive,
 .crm-table-wrap {
@@ -930,6 +692,17 @@ body[data-theme-dark-highcontrast] .form-input.form-select option {
   -webkit-overflow-scrolling: touch;
   width: 100%;
   box-sizing: border-box;
+}
+
+.crm-card__body > .table-container,
+.crm-card__body > .table-responsive,
+.crm-card__body > .crm-table-wrap,
+.crm-card--table-solo > .table-container,
+.crm-card--table-solo > .table-responsive,
+.crm-card--table-solo > .crm-table-wrap {
+  border: none;
+  border-radius: 0;
+  background-color: transparent;
 }
 
 /* Table Base */
@@ -1087,7 +860,8 @@ body[data-theme-dark-highcontrast] .form-input.form-select option {
 }
 
 /* Keep the panel from shrinking when the backdrop scrolls (flex + overflow). */
-.modal-backdrop > .modal {
+.modal-backdrop > .modal,
+dialog.crm-native-dialog > .modal {
   flex-shrink: 0;
 }
 
@@ -1107,6 +881,23 @@ body[data-theme-dark-highcontrast] .form-input.form-select option {
   flex-direction: column;
   gap: 0;
   z-index: var(--z-modal);
+}
+
+/*
+ * Native <dialog class="modal">: UA default is display:none when closed.
+ * Our .modal { display:flex } would otherwise force closed dialogs visible.
+ */
+dialog.crm-native-dialog.modal:not([open]),
+dialog.crm-native-dialog.crm-dialog:not([open]),
+dialog.crm-dialog:not([open]) {
+  display: none;
+}
+
+dialog.crm-native-dialog.modal[open],
+dialog.crm-native-dialog.crm-dialog[open],
+dialog.crm-dialog[open] {
+  display: flex;
+  flex-direction: column;
 }
 
 /* Modal Variants */
@@ -1210,9 +1001,11 @@ body[data-theme-dark-highcontrast] .form-input.form-select option {
   padding: var(--space-1);
   border-radius: var(--radius-base);
   transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out;
-  width: 2rem;
-  height: 2rem;
-  display: flex;
+  min-width: var(--crm-touch, 44px);
+  min-height: var(--crm-touch, 44px);
+  width: auto;
+  height: auto;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
 }
@@ -1451,8 +1244,8 @@ body[data-theme-dark-highcontrast] .form-input.form-select option {
   width: 2.5rem;
   height: 2.5rem;
   border-radius: 50%;
-  background-color: var(--arbeitszeitcheck-color-primary);
-  color: var(--arbeitszeitcheck-color-text-inverse);
+  background-color: var(--color-primary-element, var(--arbeitszeitcheck-color-primary));
+  color: var(--color-primary-element-text, var(--arbeitszeitcheck-color-text-inverse));
   font-weight: var(--arbeitszeitcheck-font-weight-medium);
   font-size: var(--arbeitszeitcheck-font-size-sm);
   overflow: hidden;
@@ -1711,10 +1504,6 @@ body[data-theme-dark-highcontrast] .form-input.form-select option {
   margin-right: auto;
 }
 
-.empty-state .btn {
-  margin-top: var(--space-4);
-}
-
 /* Responsive Components */
 @media (max-width: 768px) {
   .form--horizontal,
@@ -1755,7 +1544,7 @@ body[data-theme-dark-highcontrast] .form-input.form-select option {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .btn,
+  .crm-btn,
   .card,
   .modal,
   .toast,
@@ -1905,7 +1694,7 @@ body[data-theme-dark-highcontrast] .form-input.form-select option {
 
 .manager-stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr));
   gap: var(--space-4);
 }
 
@@ -1926,7 +1715,7 @@ body[data-theme-dark-highcontrast] .form-input.form-select option {
 
 .team-compliance-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr));
   gap: var(--space-4);
   margin-bottom: var(--space-4);
 }
@@ -2013,17 +1802,17 @@ body[data-theme-dark-highcontrast] .form-input.form-select option {
 
 .team-compliance-stat--ok {
   border-left-width: 4px;
-  border-left-color: var(--color-success);
+  border-left-color: var(--color-success-text, var(--color-success));
 }
 
 .team-compliance-stat--warning {
   border-left-width: 4px;
-  border-left-color: var(--color-warning);
+  border-left-color: var(--color-warning-text, var(--color-warning));
 }
 
 .team-compliance-stat--error {
   border-left-width: 4px;
-  border-left-color: var(--color-error);
+  border-left-color: var(--color-error-text, var(--color-error));
 }
 
 .team-compliance-stat--info {
@@ -2032,11 +1821,11 @@ body[data-theme-dark-highcontrast] .form-input.form-select option {
 }
 
 .team-compliance-stat--has-issues {
-  border-color: var(--color-warning);
+  border-color: var(--color-warning-text, var(--color-warning));
 }
 
 .team-compliance-stat.team-compliance-stat--error.team-compliance-stat--has-issues {
-  border-color: var(--color-error);
+  border-color: var(--color-error-text, var(--color-error));
 }
 
 .team-compliance-note {
@@ -2047,7 +1836,7 @@ body[data-theme-dark-highcontrast] .form-input.form-select option {
 
 .team-compliance-note--success {
   color: var(--arbeitszeitcheck-color-text-maxcontrast, var(--color-text-maxcontrast, var(--arbeitszeitcheck-color-text-secondary)));
-  border-left: 3px solid var(--color-success);
+  border-left: 3px solid var(--color-success-text, var(--color-success));
   padding-left: var(--space-2);
 }
 
@@ -2184,12 +1973,6 @@ body[data-theme-dark-highcontrast] .form-input.form-select option {
   gap: var(--space-3);
   flex: 1 1 100%;
   margin-top: var(--space-2);
-}
-
-.substitution-request-card__actions .btn {
-  min-height: 44px;
-  min-width: 44px;
-  padding: var(--space-2) var(--space-4);
 }
 
 .substitution-requests-empty {

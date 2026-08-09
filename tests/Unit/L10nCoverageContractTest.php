@@ -11,10 +11,17 @@ use RegexIterator;
 use SplFileInfo;
 
 /**
- * AC10: every literal passed to PHP $l->t() / ->n() and page JS t()/tr() must exist in en.json and de.json.
+ * AC10: every literal passed to PHP $l->t() / ->n() and page JS t()/tr() must exist in all locale catalogs.
+ * Locales match arbeitszeitcheck: en, de, da, es, fr, it, nb, nl, pl, sv.
  */
 final class L10nCoverageContractTest extends TestCase
 {
+	/** @var list<string> */
+	private const LOCALES = ['en', 'de', 'da', 'es', 'fr', 'it', 'nb', 'nl', 'pl', 'sv'];
+
+	/** @var list<string> Regional variants mirrored from base catalogs (de_DE etc.). */
+	private const VARIANT_LOCALES = ['en_GB', 'de_DE', 'es_EC', 'es_MX'];
+
 	/** @return array{translations: array<string, string>, pluralForm?: string} */
 	private function loadJson(string $lang): array
 	{
@@ -90,15 +97,31 @@ final class L10nCoverageContractTest extends TestCase
 		return array_values(array_unique($found));
 	}
 
-	public function testEnAndDeHaveIdenticalTranslationKeys(): void
+	public function testAllLocalesHaveIdenticalTranslationKeys(): void
 	{
 		$en = $this->loadJson('en');
-		$de = $this->loadJson('de');
 		$enKeys = array_keys($en['translations']);
-		$deKeys = array_keys($de['translations']);
-		sort($enKeys);
-		sort($deKeys);
-		$this->assertSame($enKeys, $deKeys, 'en.json and de.json must have identical translation keys');
+		$enKeysSorted = $enKeys;
+		sort($enKeysSorted);
+		foreach (self::LOCALES as $lang) {
+			if ($lang === 'en') {
+				continue;
+			}
+			$other = $this->loadJson($lang);
+			$otherKeys = array_keys($other['translations']);
+			$sorted = $otherKeys;
+			sort($sorted);
+			$this->assertSame(
+				$enKeysSorted,
+				$sorted,
+				$lang . '.json must have identical translation keys to en.json'
+			);
+			$this->assertSame(
+				$enKeys,
+				$otherKeys,
+				$lang . '.json must preserve en.json key order'
+			);
+		}
 	}
 
 	public function testPhpTemplateLiteralsExistInBothLocales(): void
@@ -154,7 +177,7 @@ final class L10nCoverageContractTest extends TestCase
 
 	public function testL10nJsRegistersMatchJson(): void
 	{
-		foreach (['en', 'de'] as $lang) {
+		foreach (array_merge(self::LOCALES, self::VARIANT_LOCALES) as $lang) {
 			$json = $this->loadJson($lang)['translations'];
 			$jsPath = dirname(__DIR__, 2) . '/l10n/' . $lang . '.js';
 			$this->assertFileExists($jsPath);
@@ -164,6 +187,25 @@ final class L10nCoverageContractTest extends TestCase
 			foreach (array_slice(array_keys($json), 0, 25) as $key) {
 				$this->assertStringContainsString(json_encode($key, JSON_UNESCAPED_UNICODE), $js);
 			}
+		}
+	}
+
+	public function testRegionalVariantsMatchBaseKeySets(): void
+	{
+		$bases = [
+			'en_GB' => 'en',
+			'de_DE' => 'de',
+			'es_EC' => 'es',
+			'es_MX' => 'es',
+		];
+		foreach ($bases as $variant => $base) {
+			$baseKeys = array_keys($this->loadJson($base)['translations']);
+			$variantKeys = array_keys($this->loadJson($variant)['translations']);
+			$this->assertSame(
+				$baseKeys,
+				$variantKeys,
+				$variant . '.json must mirror ' . $base . '.json keys and order'
+			);
 		}
 	}
 

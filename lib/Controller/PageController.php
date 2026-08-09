@@ -5,6 +5,7 @@ use OCA\CustomerCheck\Service\AccessControlService;
 use OCA\CustomerCheck\Service\ActivityService;
 use OCA\CustomerCheck\Service\AgreementService;
 use OCA\CustomerCheck\Service\AgreementStatusService;
+use OCA\CustomerCheck\Service\AppSettingsSectionCatalog;
 use OCA\CustomerCheck\Service\CommandBoardService;
 use OCA\CustomerCheck\Service\CompanyCommandService;
 use OCA\CustomerCheck\Service\CompanyHealthService;
@@ -26,12 +27,15 @@ use OCA\CustomerCheck\Service\SettingsService;
 use OCA\CustomerCheck\Service\TimelineService;
 use OCA\CustomerCheck\Service\TodayService;
 use OCA\CustomerCheck\Service\WorkspaceAccessService;
+use OCA\CustomerCheck\Service\WorkspaceCapability;
 use OCA\CustomerCheck\Service\WorkspaceService;
+use OCA\CustomerCheck\Service\WorkspaceSettingsSectionCatalog;
 use OCA\CustomerCheck\Support\DensityCounts;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http;
+use OCP\AppFramework\Http\NotFoundResponse;
 use OCP\AppFramework\Http\RedirectResponse;
 use OCP\AppFramework\Http\TemplateResponse;
 use OCP\AppFramework\Utility\ITimeFactory;
@@ -73,6 +77,8 @@ class PageController extends Controller
 		private readonly ProductCodeRegistry $productCodes,
 		private readonly WorkspaceAccessService $workspaceAccess,
 		private readonly WorkspaceService $workspaceService,
+		private readonly WorkspaceSettingsSectionCatalog $workspaceSettingsSections,
+		private readonly AppSettingsSectionCatalog $appSettingsSections,
 		private readonly IURLGenerator $urlGenerator,
 		private readonly IL10N $l10n,
 		private readonly IFactory $l10nFactory,
@@ -412,7 +418,7 @@ class PageController extends Controller
 	#[NoCSRFRequired]
 	public function companyDetail(int $id): TemplateResponse
 	{
-		$this->registerFrontEndAssets('pages/company-detail', null, ['common/identity-links'], ['common/jump-nav', 'common/folder-picker', 'pages/persona']);
+		$this->registerFrontEndAssets('pages/company-detail', null, ['common/identity-links'], ['common/jump-nav', 'common/folder-picker', 'common/glance-summary', 'common/company360-present', 'pages/persona']);
 		$company = $this->requireCompanyPage($id);
 		$now = $this->timeFactory->getDateTime();
 		$agreements = [];
@@ -580,15 +586,19 @@ class PageController extends Controller
 						'invoicecheck.page.show',
 						['id' => $firstUnpaid],
 					);
-				} else {
+				} elseif ($unpaidInvoiceCount > 0) {
 					$density['invoicesHref'] = $this->urlGenerator->linkToRoute(
 						'invoicecheck.page.receivables',
 						['bucket' => 'overdue'],
 					);
+				} else {
+					// Zero unpaid: stay on this page — never dump granny on an empty overdue list.
+					$density['invoicesHref'] = '#crm-invoices';
 				}
 			}
 		} catch (\Throwable) {
 		}
+		$density = \OCA\CustomerCheck\Support\GlanceDensityPresenter::normalizeInvoiceHref($density);
 		try {
 			if ($density['ticketcheck'] && $tcCustomerId > 0) {
 				$density['ticketsHref'] = $this->urlGenerator->linkToRoute(
@@ -971,78 +981,223 @@ class PageController extends Controller
 		));
 	}
 
+	/**
+	 * Workspace settings index — redirects to the role-aware default sub-page
+	 * while preserving `?workspaceId=`.
+	 */
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
-	public function settings(): TemplateResponse
+	public function settings(): RedirectResponse
 	{
-		$this->registerFrontEndAssets('pages/settings');
 		$uid = $this->accessControl->currentUserId();
-		$settings = $this->settings->getForUser($uid);
 		$canManage = $this->accessControl->isAppAdmin($uid);
+		$canManageWorkspace = $this->resolveCanManageWorkspace($uid, $canManage);
+		$params = [
+			'section' => $this->workspaceSettingsSections->defaultSection($canManageWorkspace),
+		];
+		$wsQuery = $this->workspaceQueryParams();
+		if ($wsQuery !== []) {
+			$params = array_merge($params, $wsQuery);
+		}
+
+		return new RedirectResponse($this->urlGenerator->linkToRoute(
+			'customercheck.page.settingsSection',
+			$params,
+		));
+	}
+
+	/**
+	 * One Workspace settings sub-page per former mega-page section.
+	 *
+	 * The route requirement already restricts {section} to the allowlist; the
+	 * catalog check below is defense in depth. Manager-only sections redirect
+	 * to the role-aware default — never render privileged partials to viewers.
+	 */
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function settingsSection(string $section): TemplateResponse|RedirectResponse|NotFoundResponse
+	{
+		$section = strtolower(trim($section));
+		if (!$this->workspaceSettingsSections->isSection($section)) {
+			return new NotFoundResponse();
+		}
+
+		$uid = $this->accessControl->currentUserId();
+		$canManage = $this->accessControl->isAppAdmin($uid);
+		$canManageWorkspace = $this->resolveCanManageWorkspace($uid, $canManage);
+		if (!$this->workspaceSettingsSections->isVisible($section, $canManageWorkspace)) {
+			$params = [
+				'section' => $this->workspaceSettingsSections->defaultSection($canManageWorkspace),
+			];
+			$wsQuery = $this->workspaceQueryParams();
+			if ($wsQuery !== []) {
+				$params = array_merge($params, $wsQuery);
+			}
+
+			return new RedirectResponse($this->urlGenerator->linkToRoute(
+				'customercheck.page.settingsSection',
+				$params,
+			));
+		}
+
+		$this->registerFrontEndAssets('pages/settings', null, [], ['common/folder-picker', 'common/mailbox-settings-present', 'workspace-settings-legacy-redirect']);
+		$settings = $this->settings->getForUser($uid);
+		$settingsSectionLabels = [];
+		foreach (WorkspaceSettingsSectionCatalog::SECTIONS as $sectionId) {
+			if (!$this->workspaceSettingsSections->isVisible($sectionId, $canManageWorkspace)) {
+				continue;
+			}
+			$settingsSectionLabels[$sectionId] = $this->workspaceSettingsSections->navLabel($this->l10n, $sectionId);
+		}
+
 		$shell = $this->mergeShellPageParams(
 			'settings',
-			$this->l10n->t('Workspace settings'),
-			$this->l10n->t('Preferences, members, mailbox, and integrations for this workspace.'),
+			$this->workspaceSettingsSections->label($this->l10n, $section),
+			$this->workspaceSettingsSections->help($this->l10n, $section),
 			[
 				'settings' => $settings,
 				'capabilities' => $this->facades->capabilityMatrix(),
 				'canManage' => $canManage,
+				'canManageWorkspace' => $canManageWorkspace,
+				'settingsSection' => $section,
+				'settingsSectionLabels' => $settingsSectionLabels,
+				'breadcrumbParent' => [
+					'label' => $this->l10n->t('Workspace settings'),
+					'url' => $this->urlGenerator->linkToRoute(
+						'customercheck.page.settings',
+						$this->workspaceQueryParams(),
+					),
+				],
+				'availableGroups' => $canManageWorkspace ? $this->directory->availableGroups() : [],
+				'circlesAvailable' => $this->circlesDirectory->isAvailable(),
+				'availableCircles' => ($canManageWorkspace && $this->circlesDirectory->isAvailable())
+					? $this->circlesDirectory->availableCirclesForUser($uid)
+					: [],
 			],
+			true,
 		);
-		$workspaceRole = (string)($shell['workspaceRole'] ?? 'viewer');
-		$shell['canManageWorkspace'] = \OCA\CustomerCheck\Service\WorkspaceCapability::allows(
-			$workspaceRole,
-			'members',
-			$canManage,
-		);
-		$shell['availableGroups'] = !empty($shell['canManageWorkspace'])
-			? $this->directory->availableGroups()
-			: [];
-		$shell['circlesAvailable'] = $this->circlesDirectory->isAvailable();
-		$shell['availableCircles'] = (!empty($shell['canManageWorkspace']) && $shell['circlesAvailable'])
-			? $this->circlesDirectory->availableCirclesForUser($this->accessControl->currentUserId())
-			: [];
 
 		return new TemplateResponse('customercheck', 'settings', $shell);
 	}
 
+	/**
+	 * App settings index — redirects to the default sub-page while preserving
+	 * `?workspaceId=`. Non-admins still land on the denied shell via access.
+	 */
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
-	public function appSettings(): TemplateResponse
+	public function appSettings(): RedirectResponse
 	{
-		$this->registerFrontEndAssets('pages/settings');
+		$params = ['section' => AppSettingsSectionCatalog::DEFAULT_SECTION];
+		$wsQuery = $this->workspaceQueryParams();
+		if ($wsQuery !== []) {
+			$params = array_merge($params, $wsQuery);
+		}
+
+		return new RedirectResponse($this->urlGenerator->linkToRoute(
+			'customercheck.page.appSettingsSection',
+			$params,
+		));
+	}
+
+	/**
+	 * One App settings sub-page per former mega-page section.
+	 */
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function appSettingsSection(string $section): TemplateResponse|RedirectResponse|NotFoundResponse
+	{
+		$section = strtolower(trim($section));
+		if (!$this->appSettingsSections->isSection($section)) {
+			return new NotFoundResponse();
+		}
+
+		$this->registerFrontEndAssets('pages/settings', null, [], ['app-settings-legacy-redirect']);
 		$uid = $this->accessControl->currentUserId();
 		$settings = $this->settings->getForUser($uid);
 		$canManage = $this->accessControl->isAppAdmin($uid);
+		$canManageWorkspace = $this->resolveCanManageWorkspace($uid, $canManage);
 		$allowedUserIds = is_array($settings['access_allowed_user_ids'] ?? null)
 			? $settings['access_allowed_user_ids']
 			: [];
 		$appAdminUserIds = is_array($settings['app_admin_user_ids'] ?? null)
 			? $settings['app_admin_user_ids']
 			: [];
+
+		$appSettingsSectionLabels = [];
+		if ($canManage) {
+			foreach (AppSettingsSectionCatalog::SECTIONS as $sectionId) {
+				$appSettingsSectionLabels[$sectionId] = $this->appSettingsSections->navLabel($this->l10n, $sectionId);
+			}
+		}
+
 		$shell = $this->mergeShellPageParams(
 			'app-settings',
-			$this->l10n->t('App settings'),
-			$this->l10n->t('Access control, reminders, tokens, mobile license, and the agreement catalogue.'),
+			$this->appSettingsSections->label($this->l10n, $section),
+			$this->appSettingsSections->help($this->l10n, $section),
 			[
 				'settings' => $settings,
 				'capabilities' => $this->facades->capabilityMatrix(),
 				'canManage' => $canManage,
+				'canManageWorkspace' => $canManageWorkspace,
+				'settingsSection' => $section,
+				'appSettingsSectionLabels' => $appSettingsSectionLabels,
+				'breadcrumbParent' => [
+					'label' => $this->l10n->t('App settings'),
+					'url' => $this->urlGenerator->linkToRoute(
+						'customercheck.page.appSettings',
+						$this->workspaceQueryParams(),
+					),
+				],
 				'availableGroups' => $canManage ? $this->directory->availableGroups() : [],
 				'selectedAllowedUsers' => $canManage ? $this->directory->resolveUsers($allowedUserIds) : [],
 				'selectedAppAdmins' => $canManage ? $this->directory->resolveUsers($appAdminUserIds) : [],
 				'license' => $canManage ? $this->license->status() : null,
 				'licenseSeats' => $canManage ? $this->license->listSeats(200, 0) : null,
 			],
-		);
-		$workspaceRole = (string)($shell['workspaceRole'] ?? 'viewer');
-		$shell['canManageWorkspace'] = \OCA\CustomerCheck\Service\WorkspaceCapability::allows(
-			$workspaceRole,
-			'members',
-			$canManage,
+			true,
 		);
 
 		return new TemplateResponse('customercheck', 'app-settings', $shell);
+	}
+
+	/**
+	 * @return array{workspaceId?: int}
+	 */
+	private function workspaceQueryParams(): array
+	{
+		$rawId = $this->request->getParam('workspaceId');
+		$wid = is_numeric($rawId) ? (int)$rawId : 0;
+		if ($wid > 0) {
+			return ['workspaceId' => $wid];
+		}
+		try {
+			$uid = $this->accessControl->currentUserIdOrEmpty();
+			if ($uid === '') {
+				return [];
+			}
+			$ctx = $this->workspaceAccess->resolveForUser($uid);
+			$resolved = (int)$ctx['workspace']->getId();
+
+			return $resolved > 0 ? ['workspaceId' => $resolved] : [];
+		} catch (\Throwable) {
+			return [];
+		}
+	}
+
+	private function resolveCanManageWorkspace(string $uid, bool $canManage): bool
+	{
+		$workspaceRole = $canManage ? 'manager' : 'viewer';
+		try {
+			$ctx = $this->workspaceAccess->resolveForUser($uid);
+			$workspaceRole = WorkspaceCapability::normalizeRole((string)($ctx['role'] ?? 'viewer'));
+			if (!empty($ctx['isAppAdmin'])) {
+				$canManage = true;
+			}
+		} catch (\Throwable) {
+		}
+
+		return WorkspaceCapability::allows($workspaceRole, 'members', $canManage);
 	}
 
 	#[NoAdminRequired]

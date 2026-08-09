@@ -37,16 +37,7 @@
 }
 
 /* Global button alignment with icons */
-.button {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-}
 
-.button .lucide-icon {
-  margin: 0;
-  vertical-align: baseline;
-}
 
 /* Navigation menu alignment — top-level links only.
  * Must NOT match .nav-submenu > li > a: a padding shorthand here used to
@@ -360,21 +351,28 @@ template {
   outline-offset: 2px;
 }
 
-/* Skip Links for Accessibility */
-.skip-link {
+/* Skip Links for Accessibility — solid primary-element (never brand --color-primary) */
+.skip-link,
+.crm-skip-link--nav {
   position: absolute;
   top: -40px;
   left: 6px;
-  background: var(--arbeitszeitcheck-color-primary);
-  color: var(--arbeitszeitcheck-color-text-inverse);
-  padding: 8px;
+  background: var(--color-primary-element, var(--arbeitszeitcheck-color-primary));
+  color: var(--color-primary-element-text, var(--arbeitszeitcheck-color-text-inverse));
+  padding: var(--crm-space-2, 8px) var(--crm-space-4, 16px);
   text-decoration: none;
-  border-radius: 4px;
+  border-radius: var(--crm-radius-sm, 6px);
   z-index: 1000;
   transition: top 0.3s;
+  min-height: var(--crm-touch, 44px);
+  min-width: var(--crm-touch, 44px);
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
 }
 
-.skip-link:focus {
+.skip-link:focus,
+.crm-skip-link--nav:focus {
   top: 6px;
 }
 
@@ -442,8 +440,6 @@ template {
   a:not(.btn):not(.crm-btn):visited {
     text-decoration: underline;
   }
-
-  a.btn,
   a.crm-btn {
     text-decoration: none !important;
   }
@@ -493,8 +489,8 @@ template {
   }
 }
 
-/* High Contrast Mode Support */
-@media (prefers-contrast: high) {
+/* High Contrast Mode Support (prefers-contrast: more — "high" is invalid) */
+@media (prefers-contrast: more) {
   * {
     border-color: currentColor !important;
   }

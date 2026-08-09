@@ -4,20 +4,24 @@
 $canManage = !empty($_['canManage']);
 $canManageWorkspace = !empty($_['canManageWorkspace']);
 ?>
-<section class="crm-card" id="section-workspace-mailbox" aria-labelledby="section-workspace-mailbox-heading">
+<section class="crm-mailbox-settings" id="section-workspace-mailbox" aria-labelledby="section-workspace-mailbox-heading">
+	<header class="crm-mailbox-settings__intro">
+		<h2 id="section-workspace-mailbox-heading" class="crm-card__title"><?php p($l->t('Workspace & mailbox')); ?></h2>
+		<p class="crm-card__lead"><?php p($l->t('Manage members, weekly promise limits, and connect a shared mailbox. Only app administrators can create new workspaces.')); ?></p>
+	</header>
+
+	<?php include __DIR__ . '/../parts/workspace-boot-status.php'; ?>
+
+	<?php if ($canManage): ?>
+	<section class="crm-card" id="crm-ws-create-card" aria-labelledby="crm-ws-create-title">
 		<header class="crm-card__header">
 			<div class="crm-card__header-text">
-				<h2 id="section-workspace-mailbox-heading" class="crm-card__title"><?php p($l->t('Workspace & mailbox')); ?></h2>
-				<p class="crm-card__lead"><?php p($l->t('Manage members, weekly promise limits, and connect a shared mailbox. Only app administrators can create new workspaces.')); ?></p>
+				<h3 id="crm-ws-create-title" class="crm-card__title"><?php p($l->t('Create workspace')); ?></h3>
+				<p class="crm-card__lead"><?php p($l->t('Start a new customer book. You become the first manager.')); ?></p>
 			</div>
 		</header>
 		<div class="crm-card__body">
-			<p id="crm-ws-status" class="crm-muted" role="status" aria-live="polite"><?php p($l->t('Loading workspace…')); ?></p>
-			<p id="crm-ws-error" class="form-error" role="alert" hidden></p>
-
-			<?php if ($canManage): ?>
-			<form id="crm-ws-create-form" class="crm-form" novalidate>
-				<h3 class="crm-card__title"><?php p($l->t('Create workspace')); ?></h3>
+			<form id="crm-ws-create-form" class="crm-form crm-form--stack" novalidate>
 				<div class="form-group">
 					<label class="form-label" for="crm-ws-name"><?php p($l->t('Name')); ?></label>
 					<input type="text" id="crm-ws-name" name="name" class="form-input crm-input" required maxlength="120" autocomplete="organization">
@@ -31,13 +35,22 @@ $canManageWorkspace = !empty($_['canManageWorkspace']);
 					<button type="submit" class="crm-btn crm-btn--primary"><?php p($l->t('Create workspace')); ?></button>
 				</div>
 			</form>
-			<?php endif; ?>
+		</div>
+	</section>
+	<?php endif; ?>
 
-			<div id="crm-ws-current" hidden>
-				<h3 class="crm-card__title"><?php p($l->t('Current workspace')); ?></h3>
-				<p id="crm-ws-current-label" class="crm-muted"></p>
+	<div id="crm-ws-current" class="crm-page-stack crm-mailbox-settings__stack" hidden>
+		<p id="crm-ws-current-label" class="crm-muted crm-mailbox-settings__current"></p>
 
-				<form id="crm-ws-settings-form" class="crm-form" novalidate>
+		<section class="crm-card" id="crm-ws-limits-card" aria-labelledby="crm-ws-limits-title">
+			<header class="crm-card__header">
+				<div class="crm-card__header-text">
+					<h3 id="crm-ws-limits-title" class="crm-card__title"><?php p($l->t('Weekly limits')); ?></h3>
+					<p class="crm-card__lead"><?php p($l->t('How many promises, how fast leads get a reply, and how long shared mail stays indexed.')); ?></p>
+				</div>
+			</header>
+			<div class="crm-card__body">
+				<form id="crm-ws-settings-form" class="crm-form crm-form--stack" novalidate>
 					<div class="form-group">
 						<label class="form-label" for="crm-ws-wip"><?php p($l->t('Weekly promise limit')); ?></label>
 						<input type="number" id="crm-ws-wip" name="wipLimit" class="form-input crm-input" min="3" max="15" step="1" required>
@@ -75,10 +88,19 @@ $canManageWorkspace = !empty($_['canManageWorkspace']);
 						<button type="submit" class="crm-btn crm-btn--secondary"><?php p($l->t('Save workspace settings')); ?></button>
 					</div>
 				</form>
+			</div>
+		</section>
 
-				<h3 class="crm-card__title"><?php p($l->t('Members')); ?></h3>
+		<section class="crm-card" id="crm-ws-members-card" aria-labelledby="crm-ws-members-title">
+			<header class="crm-card__header">
+				<div class="crm-card__header-text">
+					<h3 id="crm-ws-members-title" class="crm-card__title"><?php p($l->t('Members')); ?></h3>
+					<p class="crm-card__lead"><?php p($l->t('Who can work in this book — and who may send from the shared mailbox.')); ?></p>
+				</div>
+			</header>
+			<div class="crm-card__body">
 				<ul id="crm-ws-members" class="crm-ws-members" aria-label="<?php p($l->t('Workspace members')); ?>"></ul>
-				<form id="crm-ws-member-form" class="crm-form" novalidate>
+				<form id="crm-ws-member-form" class="crm-form crm-form--stack" novalidate>
 					<div class="form-group">
 						<label class="form-label" for="crm-ws-member-search"><?php p($l->t('Colleague')); ?></label>
 						<div class="user-picker" id="crm-ws-member-picker">
@@ -114,7 +136,7 @@ $canManageWorkspace = !empty($_['canManageWorkspace']);
 				</form>
 
 				<details class="crm-advanced" id="crm-ws-member-import">
-					<summary><?php p($l->t('Import a Nextcloud group once')); ?></summary>
+					<summary class="crm-advanced__summary"><?php p($l->t('Import a Nextcloud group once')); ?></summary>
 					<p class="crm-muted"><?php p($l->t('Adds everyone in that group to this book now. Not live sync — run again if the group changes.')); ?></p>
 					<form id="crm-ws-member-import-form" class="crm-form crm-form--stack" novalidate>
 						<div class="form-group">
@@ -152,7 +174,7 @@ $canManageWorkspace = !empty($_['canManageWorkspace']);
 
 				<?php if (!empty($_['circlesAvailable'])): ?>
 				<details class="crm-advanced" id="crm-ws-member-import-circle">
-					<summary><?php p($l->t('Import a Circle once')); ?></summary>
+					<summary class="crm-advanced__summary"><?php p($l->t('Import a Circle once')); ?></summary>
 					<p class="crm-muted"><?php p($l->t('Adds local people from a Circle you belong to. Not live sync — run again if the Circle changes.')); ?></p>
 					<form id="crm-ws-member-import-circle-form" class="crm-form crm-form--stack" novalidate>
 						<div class="form-group">
@@ -188,42 +210,81 @@ $canManageWorkspace = !empty($_['canManageWorkspace']);
 					</form>
 				</details>
 				<?php endif; ?>
+			</div>
+		</section>
 
-				<h3 class="crm-card__title"><?php p($l->t('Shared mailbox')); ?></h3>
-				<p class="crm-callout" role="status"><?php p($l->t('Messages from a connected mailbox are shared with everyone in this workspace who can read mail. Do not connect a personal inbox.')); ?></p>
-				<form id="crm-mailbox-form" class="crm-form" novalidate>
-					<div class="form-group">
-						<label class="form-label" for="crm-mbox-label"><?php p($l->t('Label')); ?></label>
-						<input type="text" id="crm-mbox-label" name="label" class="form-input crm-input" required maxlength="120">
-					</div>
-					<div class="form-group">
-						<label class="form-label" for="crm-mbox-email"><?php p($l->t('Email')); ?></label>
-						<input type="email" id="crm-mbox-email" name="email" class="form-input crm-input" required autocomplete="off">
-					</div>
-					<div class="form-group">
-						<label class="form-label" for="crm-mbox-imap-host"><?php p($l->t('IMAP host')); ?></label>
-						<input type="text" id="crm-mbox-imap-host" name="imapHost" class="form-input crm-input" required autocomplete="off">
-					</div>
-					<div class="form-group">
-						<label class="form-label" for="crm-mbox-imap-port"><?php p($l->t('IMAP port')); ?></label>
-						<input type="number" id="crm-mbox-imap-port" name="imapPort" class="form-input crm-input" value="993" min="1" max="65535">
-					</div>
-					<div class="form-group">
-						<label class="form-label" for="crm-mbox-smtp-host"><?php p($l->t('SMTP host')); ?></label>
-						<input type="text" id="crm-mbox-smtp-host" name="smtpHost" class="form-input crm-input" required autocomplete="off">
-					</div>
-					<div class="form-group">
-						<label class="form-label" for="crm-mbox-smtp-port"><?php p($l->t('SMTP port')); ?></label>
-						<input type="number" id="crm-mbox-smtp-port" name="smtpPort" class="form-input crm-input" value="587" min="1" max="65535">
-					</div>
-					<div class="form-group">
-						<label class="form-label" for="crm-mbox-user"><?php p($l->t('Username')); ?></label>
-						<input type="text" id="crm-mbox-user" name="username" class="form-input crm-input" required autocomplete="off">
-					</div>
-					<div class="form-group">
-						<label class="form-label" for="crm-mbox-pass"><?php p($l->t('Password')); ?></label>
-						<input type="password" id="crm-mbox-pass" name="password" class="form-input crm-input" required autocomplete="new-password">
-					</div>
+		<section class="crm-card" id="crm-ws-mailbox-card" aria-labelledby="crm-ws-mailbox-title">
+			<header class="crm-card__header">
+				<div class="crm-card__header-text">
+					<h3 id="crm-ws-mailbox-title" class="crm-card__title"><?php p($l->t('Shared mailbox')); ?></h3>
+					<p class="crm-card__lead"><?php p($l->t('One team inbox for this book. Test the connection, then save.')); ?></p>
+				</div>
+			</header>
+			<div class="crm-card__body">
+				<div class="crm-callout crm-callout--warning" role="status">
+					<span class="crm-callout__icon" aria-hidden="true"></span>
+					<p class="crm-callout__text"><?php p($l->t('Messages from a connected mailbox are shared with everyone in this workspace who can read mail. Do not connect a personal inbox.')); ?></p>
+				</div>
+
+				<div id="crm-mailbox-list" class="crm-mailbox-list-host" aria-live="polite"></div>
+				<div id="crm-mailbox-empty" class="crm-empty-state" role="status" hidden>
+					<h4 class="crm-empty-state__title"><?php p($l->t('No shared mailbox yet')); ?></h4>
+					<p class="crm-empty-state__text"><?php p($l->t('Connect a team inbox below so Talk and Review can show shared mail. Personal inboxes stay out.')); ?></p>
+				</div>
+
+				<form id="crm-mailbox-form" class="crm-form crm-form--stack" novalidate data-crm-mailbox-locked="0">
+					<input type="hidden" id="crm-mbox-id" name="id" value="">
+					<p id="crm-mailbox-form-mode" class="crm-muted" hidden></p>
+
+					<fieldset class="crm-fieldset">
+						<legend class="crm-fieldset__legend"><?php p($l->t('1 · Who')); ?></legend>
+						<div class="form-group">
+							<label class="form-label" for="crm-mbox-label"><?php p($l->t('Label')); ?></label>
+							<input type="text" id="crm-mbox-label" name="label" class="form-input crm-input" required maxlength="120">
+						</div>
+						<div class="form-group">
+							<label class="form-label" for="crm-mbox-email"><?php p($l->t('Email')); ?></label>
+							<input type="email" id="crm-mbox-email" name="email" class="form-input crm-input" required autocomplete="off">
+						</div>
+					</fieldset>
+
+					<fieldset class="crm-fieldset">
+						<legend class="crm-fieldset__legend"><?php p($l->t('2 · Receive (IMAP)')); ?></legend>
+						<div class="form-group">
+							<label class="form-label" for="crm-mbox-imap-host"><?php p($l->t('IMAP host')); ?></label>
+							<input type="text" id="crm-mbox-imap-host" name="imapHost" class="form-input crm-input" required autocomplete="off">
+						</div>
+						<div class="form-group">
+							<label class="form-label" for="crm-mbox-imap-port"><?php p($l->t('IMAP port')); ?></label>
+							<input type="number" id="crm-mbox-imap-port" name="imapPort" class="form-input crm-input" value="993" min="1" max="65535">
+						</div>
+					</fieldset>
+
+					<fieldset class="crm-fieldset">
+						<legend class="crm-fieldset__legend"><?php p($l->t('3 · Send (SMTP)')); ?></legend>
+						<div class="form-group">
+							<label class="form-label" for="crm-mbox-smtp-host"><?php p($l->t('SMTP host')); ?></label>
+							<input type="text" id="crm-mbox-smtp-host" name="smtpHost" class="form-input crm-input" required autocomplete="off">
+						</div>
+						<div class="form-group">
+							<label class="form-label" for="crm-mbox-smtp-port"><?php p($l->t('SMTP port')); ?></label>
+							<input type="number" id="crm-mbox-smtp-port" name="smtpPort" class="form-input crm-input" value="587" min="1" max="65535">
+						</div>
+					</fieldset>
+
+					<fieldset class="crm-fieldset">
+						<legend class="crm-fieldset__legend"><?php p($l->t('4 · Sign-in')); ?></legend>
+						<div class="form-group">
+							<label class="form-label" for="crm-mbox-user"><?php p($l->t('Username')); ?></label>
+							<input type="text" id="crm-mbox-user" name="username" class="form-input crm-input" required autocomplete="off">
+						</div>
+						<div class="form-group">
+							<label class="form-label" for="crm-mbox-pass"><?php p($l->t('Password')); ?></label>
+							<input type="password" id="crm-mbox-pass" name="password" class="form-input crm-input" required autocomplete="new-password">
+							<p id="crm-mbox-pass-help" class="form-help"><?php p($l->t('Required for a new mailbox. When editing, leave blank to keep the saved password.')); ?></p>
+						</div>
+					</fieldset>
+
 					<div id="crm-mailbox-folders-wrap" class="form-group" hidden>
 						<label class="form-label" for="crm-mbox-folders"><?php p($l->t('Folders to sync')); ?></label>
 						<textarea id="crm-mbox-folders" name="folders" class="form-input crm-input" rows="4" placeholder="<?php p($l->t('One folder path per line, e.g. INBOX')); ?>"></textarea>
@@ -236,30 +297,32 @@ $canManageWorkspace = !empty($_['canManageWorkspace']);
 					<p id="crm-mailbox-error" class="form-error" role="alert" hidden></p>
 					<p id="crm-mailbox-test-status" class="form-help" role="status" aria-live="polite"></p>
 					<div class="crm-form-actions">
+						<button type="button" class="crm-btn crm-btn--ghost" id="crm-mailbox-reset" hidden><?php p($l->t('New mailbox')); ?></button>
 						<button type="button" class="crm-btn crm-btn--secondary" id="crm-mailbox-test"><?php p($l->t('Test connection')); ?></button>
 						<button type="submit" class="crm-btn crm-btn--primary" id="crm-mailbox-save" disabled><?php p($l->t('Save mailbox')); ?></button>
 					</div>
 				</form>
-
-				<details class="crm-advanced" id="crm-value-maps">
-					<summary><?php p($l->t('Data quality — country maps')); ?></summary>
-					<p class="crm-muted"><?php p($l->t('Learned country aliases for this workspace. Remove a mapping if it was wrong.')); ?></p>
-					<div id="crm-value-maps-list" class="crm-stack" role="region" aria-live="polite" aria-busy="false"></div>
-					<form id="crm-value-maps-form" class="crm-form crm-form--stack" novalidate>
-						<div class="form-group">
-							<label class="form-label" for="crm-vm-raw"><?php p($l->t('Raw value')); ?></label>
-							<input type="text" id="crm-vm-raw" class="form-input crm-input" autocomplete="off" placeholder="<?php p($l->t('e.g. Deutschland')); ?>">
-						</div>
-						<div class="form-group">
-							<label class="form-label" for="crm-vm-canonical"><?php p($l->t('ISO country')); ?></label>
-							<input type="text" id="crm-vm-canonical" class="form-input crm-input" maxlength="2" autocomplete="off" placeholder="<?php p($l->t('DE')); ?>">
-						</div>
-						<p id="crm-value-maps-status" class="form-help" role="status" aria-live="polite"></p>
-						<div class="crm-form-actions">
-							<button type="submit" class="crm-btn crm-btn--secondary" id="crm-value-maps-learn" style="min-height:44px"><?php p($l->t('Apply & learn')); ?></button>
-						</div>
-					</form>
-				</details>
 			</div>
-		</div>
-	</section>
+		</section>
+
+		<details class="crm-advanced crm-card" id="crm-value-maps">
+			<summary class="crm-advanced__summary"><?php p($l->t('Data quality — country maps')); ?></summary>
+			<p class="crm-muted"><?php p($l->t('Learned country aliases for this workspace. Remove a mapping if it was wrong.')); ?></p>
+			<div id="crm-value-maps-list" class="crm-stack" role="region" aria-live="polite" aria-busy="false"></div>
+			<form id="crm-value-maps-form" class="crm-form crm-form--stack" novalidate>
+				<div class="form-group">
+					<label class="form-label" for="crm-vm-raw"><?php p($l->t('Raw value')); ?></label>
+					<input type="text" id="crm-vm-raw" class="form-input crm-input" autocomplete="off" placeholder="<?php p($l->t('e.g. Deutschland')); ?>">
+				</div>
+				<div class="form-group">
+					<label class="form-label" for="crm-vm-canonical"><?php p($l->t('ISO country')); ?></label>
+					<input type="text" id="crm-vm-canonical" class="form-input crm-input" maxlength="2" autocomplete="off" placeholder="<?php p($l->t('DE')); ?>">
+				</div>
+				<p id="crm-value-maps-status" class="form-help" role="status" aria-live="polite"></p>
+				<div class="crm-form-actions">
+					<button type="submit" class="crm-btn crm-btn--secondary" id="crm-value-maps-learn"><?php p($l->t('Apply & learn')); ?></button>
+				</div>
+			</form>
+		</details>
+	</div>
+</section>

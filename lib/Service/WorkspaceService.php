@@ -439,7 +439,18 @@ class WorkspaceService
 			if (is_array($incoming)) {
 				if ($kind === 'file') {
 					if (array_key_exists('rootFolderId', $incoming)) {
-						$current[$kind]['rootFolderId'] = max(0, (int)$incoming['rootFolderId']);
+						$folderId = max(0, (int)$incoming['rootFolderId']);
+						$current[$kind]['rootFolderId'] = $folderId;
+						if ($folderId === 0 && !array_key_exists('rootFolderPath', $incoming)) {
+							$current[$kind]['rootFolderPath'] = null;
+						}
+					}
+					if (array_key_exists('rootFolderPath', $incoming)) {
+						$path = trim((string)$incoming['rootFolderPath']);
+						$path = preg_replace('/[\x00-\x1F\x7F]/u', '', $path) ?? '';
+						$current[$kind]['rootFolderPath'] = $path !== ''
+							? mb_substr($path, 0, 512)
+							: null;
 					}
 					if (array_key_exists('scanActor', $incoming)) {
 						$actorName = trim((string)$incoming['scanActor']);
@@ -551,6 +562,12 @@ class WorkspaceService
 			if ($kind === 'file') {
 				if (isset($decoded[$kind]['rootFolderId'])) {
 					$merged['rootFolderId'] = max(0, (int)$decoded[$kind]['rootFolderId']);
+				}
+				if (isset($decoded[$kind]['rootFolderPath']) && is_string($decoded[$kind]['rootFolderPath'])) {
+					$path = trim($decoded[$kind]['rootFolderPath']);
+					if ($path !== '') {
+						$merged['rootFolderPath'] = mb_substr($path, 0, 512);
+					}
 				}
 				if (isset($decoded[$kind]['scanActor'])) {
 					$merged['scanActor'] = (string)$decoded[$kind]['scanActor'];

@@ -21,7 +21,6 @@ input:focus-visible,
 select:focus-visible,
 textarea:focus-visible,
 [tabindex="0"]:focus-visible,
-.btn:focus-visible,
 .form-input:focus-visible,
 .form-select:focus-visible,
 .form-textarea:focus-visible,
@@ -31,10 +30,6 @@ textarea:focus-visible,
 .nav-menu a:focus-visible,
 .header__nav-link:focus-visible,
 .breadcrumb a:focus-visible,
-.btn-nav:focus-visible,
-.btn-close:focus-visible,
-.card-actions .btn:focus-visible,
-.form-actions .btn:focus-visible,
 .form-actions a:focus-visible {
   outline: 2px solid var(--color-primary-element, var(--arbeitszeitcheck-color-primary));
   outline-offset: 2px;
@@ -69,7 +64,7 @@ textarea:focus:not(:focus-visible) {
   input:focus-visible,
   select:focus-visible,
   textarea:focus-visible {
-    outline-color: var(--arbeitszeitcheck-color-primary);
+    outline-color: var(--color-primary-element, var(--arbeitszeitcheck-color-primary));
   }
 }
 
@@ -105,24 +100,28 @@ textarea:focus:not(:focus-visible) {
 /* ===== SKIP LINKS ===== */
 
 /* Skip link is already styled in base.css, but ensure it's accessible */
-.skip-link {
+.skip-link,
+.crm-skip-link--nav {
   position: absolute;
   top: -40px;
   left: 6px;
-  background: var(--arbeitszeitcheck-color-primary);
-  color: var(--arbeitszeitcheck-color-text-inverse);
+  background: var(--color-primary-element, var(--arbeitszeitcheck-color-primary));
+  color: var(--color-primary-element-text, var(--arbeitszeitcheck-color-text-inverse));
   padding: var(--space-2) var(--space-4);
   text-decoration: none;
   border-radius: var(--radius-base);
   z-index: 10000;
   font-weight: var(--arbeitszeitcheck-font-weight-medium);
   transition: top 0.2s ease-in-out;
-  min-height: 44px; /* WCAG touch target size */
-  display: flex;
+  min-height: var(--crm-touch, 44px);
+  min-width: var(--crm-touch, 44px);
+  display: inline-flex;
   align-items: center;
+  box-sizing: border-box;
 }
 
-.skip-link:focus {
+.skip-link:focus,
+.crm-skip-link--nav:focus {
   top: 6px;
   outline: 2px solid var(--arbeitszeitcheck-color-border-focus);
   outline-offset: 2px;
@@ -130,9 +129,9 @@ textarea:focus:not(:focus-visible) {
 
 /* ===== HIGH CONTRAST MODE SUPPORT ===== */
 
-@media (prefers-contrast: high) {
+@media (prefers-contrast: more) {
   /* Increase border visibility */
-  .btn,
+  .crm-btn,
   .form-input,
   .form-select,
   .form-textarea {
@@ -153,12 +152,12 @@ textarea:focus:not(:focus-visible) {
   .nav-link.active,
   .nav-menu a.active,
   [aria-current="page"] {
-    border-color: var(--arbeitszeitcheck-color-primary);
+    border-color: var(--color-primary-element, var(--arbeitszeitcheck-color-primary));
     border-width: 2px;
   }
 
   /* Ensure buttons have visible borders */
-  .btn {
+  .crm-btn {
     border: 2px solid var(--arbeitszeitcheck-color-text);
   }
 
@@ -171,6 +170,24 @@ textarea:focus:not(:focus-visible) {
     outline-width: 3px;
     outline-offset: 3px;
   }
+}
+
+/* Nextcloud High-Contrast themes (body data-theme-*) — borders + focus weight */
+body[data-theme-light-highcontrast] #app-content.crm-app .crm-btn,
+body[data-theme-dark-highcontrast] #app-content.crm-app .crm-btn,
+body[data-theme-light-highcontrast] #app-content.crm-app .form-input,
+body[data-theme-dark-highcontrast] #app-content.crm-app .form-input,
+body[data-theme-light-highcontrast] #app-content.crm-app .form-select,
+body[data-theme-dark-highcontrast] #app-content.crm-app .form-select,
+body[data-theme-light-highcontrast] #app-content.crm-app .form-textarea,
+body[data-theme-dark-highcontrast] #app-content.crm-app .form-textarea {
+  border-width: 2px;
+}
+
+body[data-theme-light-highcontrast] #app-content.crm-app :focus-visible,
+body[data-theme-dark-highcontrast] #app-content.crm-app :focus-visible {
+  outline-width: 3px;
+  outline-offset: 3px;
 }
 
 /* ===== REDUCED MOTION SUPPORT ===== */
@@ -194,10 +211,10 @@ textarea:focus:not(:focus-visible) {
 /* ===== TOUCH TARGET SIZE (WCAG 2.5.5 AA - minimum 44x44px, prefer 48x48) ===== */
 
 /* Ensure all interactive elements meet minimum touch target for security-critical time tracking */
-.btn:not(.btn--sm),
+.crm-btn:not(.crm-btn--sm),
 .nav-link,
 .nav-menu a,
-button:not(.btn--sm),
+button:not(.crm-btn--sm),
 a[role="button"],
 input[type="button"],
 input[type="submit"],
@@ -206,18 +223,15 @@ input[type="reset"] {
   min-width: 44px;
 }
 
-/* Primary/danger actions: larger for clarity and reduced mis-taps (WCAG 2.5.5) */
-.btn--primary,
-.btn--danger,
-.card-actions .btn--primary,
-.card-actions .btn--danger,
-.btn-clock-out {
+/* Primary/danger page actions: larger for clarity (WCAG 2.5.5). */
+.crm-btn--primary,
+.crm-btn--danger {
   min-height: 48px;
   padding: var(--space-3) var(--space-6);
 }
 
-/* Small buttons keep the compact padding but never drop below the AA target size */
-.btn--sm {
+/* Small buttons keep compact padding but never drop below the AA target size */
+.crm-btn--sm {
   min-height: 44px;
   min-width: 44px;
 }
@@ -378,11 +392,48 @@ dialog.entitlement-explain-dialog[open] {
 	max-height: min(90dvh, calc(100vh - 2rem));
 }
 
+dialog.crm-native-dialog.confirm-dialog,
+dialog.crm-native-dialog.crm-dialog,
+dialog.crm-native-dialog.modal {
+	border: 1px solid var(--crm-border, var(--color-border));
+	border-radius: var(--crm-radius-md, 12px);
+	padding: 0;
+	background: var(--color-main-background);
+	color: var(--color-main-text);
+	box-shadow: var(--crm-shadow-md, 0 8px 24px color-mix(in srgb, var(--color-main-text) 12%, transparent));
+	width: min(32rem, calc(100vw - 2rem));
+	max-width: calc(100vw - 2rem);
+	max-height: min(90dvh, calc(100vh - 2rem));
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;
+}
+
+dialog.crm-native-dialog.modal--sm {
+	width: min(400px, calc(100vw - 2rem));
+}
+
+dialog.crm-native-dialog.modal--md {
+	width: min(560px, calc(100vw - 2rem));
+}
+
+dialog.crm-native-dialog.modal--lg {
+	width: min(720px, calc(100vw - 2rem));
+}
+
+dialog.crm-native-dialog.modal--xl {
+	width: min(960px, calc(100vw - 2rem));
+}
+
+dialog.crm-native-dialog::backdrop {
+	background: color-mix(in srgb, var(--color-main-text) 45%, transparent);
+}
+
 /* ===== RESPONSIVE ACCESSIBILITY ===== */
 
 @media (max-width: 768px) {
   /* Ensure touch targets remain accessible on mobile */
-  .btn,
+  .crm-btn,
   .nav-link,
   button,
   a[role="button"] {
@@ -393,7 +444,7 @@ dialog.entitlement-explain-dialog[open] {
 
   /* Increase spacing between touch targets on mobile */
   .nav-item + .nav-item,
-  .btn + .btn {
+  .crm-btn + .crm-btn {
     margin-top: var(--space-2);
   }
 }

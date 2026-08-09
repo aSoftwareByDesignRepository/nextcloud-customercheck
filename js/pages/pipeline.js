@@ -127,7 +127,7 @@
         '<option value="' + escapeHtml(o.value) + '">' + escapeHtml(o.label || o.value) + '</option>'
       ).join('');
       const html =
-        '<form id="' + id + '-form" class="crm-form">' +
+        '<form id="' + id + '-form" class="crm-form crm-form--stack">' +
         '<div class="form-group"><label class="form-label" for="' + id + '-code">' + escapeHtml(t('Loss reason')) + '</label>' +
         '<select class="crm-input form-select" id="' + id + '-code" name="lostReasonCode" required>' +
         '<option value="">' + escapeHtml(t('Pick a reason')) + '</option>' + optsHtml +
@@ -411,7 +411,7 @@
       '>' + escapeHtml(o.label || o.value) + '</option>'
     ).join('');
     const html =
-      '<form id="' + dialogId + '-form" class="crm-form">' +
+      '<form id="' + dialogId + '-form" class="crm-form crm-form--stack">' +
       '<p class="crm-muted" role="status">' + escapeHtml(t('Planning labels — not expected cash.')) + '</p>' +
       '<div class="form-group">' +
       '<label class="form-label" for="' + dialogId + '-owner-search">' + escapeHtml(t('Owner')) + '</label>' +
@@ -433,7 +433,7 @@
       '<span class="form-label" id="' + dialogId + '-pdf-label">' + escapeHtml(t('Quote PDF')) + '</span>' +
       '<p class="crm-muted" id="' + dialogId + '-pdf-hint">' +
       escapeHtml(t('Link a PDF from Files (optional). We check you can read it.')) + '</p>' +
-      '<div class="crm-form-actions" style="justify-content:flex-start;gap:0.5rem;flex-wrap:wrap">' +
+      '<div class="crm-form-actions crm-form-actions--start">' +
       '<button type="button" class="crm-btn crm-btn--secondary" id="' + dialogId + '-pdf-pick" aria-describedby="' +
       dialogId + '-pdf-hint">' + escapeHtml(t('Pick PDF')) + '</button>' +
       '<button type="button" class="crm-btn crm-btn--secondary" id="' + dialogId + '-pdf-clear" hidden>' +
@@ -441,7 +441,7 @@
       '<p class="crm-muted" id="' + dialogId + '-pdf-name" role="status" aria-live="polite"></p>' +
       '<input type="hidden" id="' + dialogId + '-pdf" name="quoteFileId" value="" />' +
       '</div>' +
-      '<div class="form-group"><label class="form-label" for="' + dialogId + '-forecast">' + escapeHtml(t('Forecast')) + '</label>' +
+      '<div class="form-group"><label class="form-label" for="' + dialogId + '-forecast">' + escapeHtml(t('Win chance')) + '</label>' +
       '<select class="crm-input form-select" id="' + dialogId + '-forecast" name="forecastBucket">' + forecastOpts + '</select></div>' +
       '<div class="crm-form-actions">' +
       '<button type="submit" class="crm-btn crm-btn--primary">' + escapeHtml(t('Save')) + '</button> ' +
@@ -537,6 +537,13 @@
   });
 
   const newDealBtn = document.getElementById('crm-pipeline-new-deal');
+  const emptyNewDealBtn = document.getElementById('crm-pipeline-empty-new');
+  const openNewDeal = () => {
+    if (newDealBtn) newDealBtn.click();
+  };
+  if (emptyNewDealBtn) {
+    emptyNewDealBtn.addEventListener('click', openNewDeal);
+  }
   if (newDealBtn && C) {
     newDealBtn.addEventListener('click', async () => {
       const options = companyOptions();
@@ -550,19 +557,19 @@
       }
       const id = 'crm-new-deal-' + Date.now();
       const selectHtml = options.map((c) =>
-        '<option value="' + c.id + '">' +
-        String(c.name).replace(/[<>&]/g, (ch) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[ch])) +
+        '<option value="' + escapeHtml(String(c.id)) + '">' +
+        escapeHtml(String(c.name)) +
         '</option>'
       ).join('');
       const html =
-        '<form id="' + id + '-form" class="crm-form form crm-form--stack">' +
+        '<form id="' + id + '-form" class="crm-form crm-form--stack">' +
         '<div class="form-group"><label class="form-label" for="' + id + '-company">' + t('Company') + '</label>' +
         '<select class="form-select crm-input" id="' + id + '-company" name="companyId" required>' + selectHtml + '</select></div>' +
         '<div class="form-group"><label class="form-label" for="' + id + '-title">' + t('What is this deal?') + '</label>' +
         '<input class="form-input crm-input" id="' + id + '-title" name="title" required maxlength="255" />' +
         '<p class="form-help">' + t('A title is enough. Value and products are optional.') + '</p></div>' +
         '<details class="crm-advanced">' +
-        '<summary>' + t('More options') + '</summary>' +
+        '<summary class="crm-advanced__summary">' + t('More options') + '</summary>' +
         '<div class="form-group"><label class="form-label" for="' + id + '-value">' + t('Value (EUR, optional)') + '</label>' +
         '<input class="form-input crm-input" id="' + id + '-value" name="valueEur" type="number" min="0" step="0.01" /></div>' +
         '<div class="form-group"><label class="form-label" for="' + id + '-products">' + t('Products (optional)') + '</label>' +

@@ -124,19 +124,28 @@ include __DIR__ . '/common/page-start.php';
 							?></td>
 							<td data-label="<?php p($l->t('Amount')); ?>"><?php p(number_format(($a['amountCents'] ?? 0)/100, 2)); ?> €</td>
 							<td data-label="<?php p($l->t('Actions')); ?>" class="actions-cell crm-table-actions-col">
-								<?php if ($canWrite): ?>
 								<div class="crm-table-actions">
-									<?php if (($a['kind'] ?? '') === 'partner'): ?>
-										<button type="button" class="crm-btn crm-btn--sm crm-btn--primary" data-crm-partner-session="<?php p($a['id']); ?>" data-company-id="<?php p((int)($a['companyId'] ?? 0)); ?>"><?php p($l->t('Email & log hours')); ?></button>
-										<button type="button" class="crm-btn crm-btn--sm crm-btn--ghost" data-crm-log-hours="<?php p($a['id']); ?>"><?php p($l->t('Hours only')); ?></button>
-									<?php endif; ?>
-									<?php if (($a['kind'] ?? '') === 'license' && (!empty($a['salesLogId']) || !empty($a['keyFingerprint']))): ?>
-										<button type="button" class="crm-btn crm-btn--sm crm-btn--secondary" data-crm-delivery-pack="<?php p($a['id']); ?>" data-company-id="<?php p((int)($a['companyId'] ?? 0)); ?>"><?php p($l->t('Delivery pack')); ?></button>
+									<?php if ($canWrite): ?>
+										<?php
+										$crmRowOpenHref = $urlGenerator->linkToRoute('customercheck.page.agreementEdit', ['id' => (int)$a['id']]);
+										$crmRowOpenLabel = $l->t('Edit');
+										include __DIR__ . '/common/crm-row-open.php';
+										?>
+										<?php if (($a['kind'] ?? '') === 'partner'): ?>
+											<button type="button" class="crm-btn crm-btn--sm crm-btn--secondary" data-crm-partner-session="<?php p($a['id']); ?>" data-company-id="<?php p((int)($a['companyId'] ?? 0)); ?>"><?php p($l->t('Email & log hours')); ?></button>
+											<button type="button" class="crm-btn crm-btn--sm crm-btn--ghost" data-crm-log-hours="<?php p($a['id']); ?>"><?php p($l->t('Hours only')); ?></button>
+										<?php endif; ?>
+										<?php if (($a['kind'] ?? '') === 'license' && (!empty($a['salesLogId']) || !empty($a['keyFingerprint']))): ?>
+											<button type="button" class="crm-btn crm-btn--sm crm-btn--secondary" data-crm-delivery-pack="<?php p($a['id']); ?>" data-company-id="<?php p((int)($a['companyId'] ?? 0)); ?>"><?php p($l->t('Delivery pack')); ?></button>
+										<?php endif; ?>
+									<?php else: ?>
+										<?php
+										$crmRowOpenHref = $urlGenerator->linkToRoute('customercheck.page.companyDetail', ['id' => (int)($a['companyId'] ?? 0)]);
+										$crmRowOpenLabel = $l->t('Open');
+										include __DIR__ . '/common/crm-row-open.php';
+										?>
 									<?php endif; ?>
 								</div>
-								<?php else: ?>
-									<span class="crm-muted" aria-hidden="true">—</span>
-								<?php endif; ?>
 							</td>
 						</tr>
 					<?php endforeach; ?>

@@ -87,6 +87,7 @@
 	/** Full-viewport fixed layers — never treat as sticky bottom chrome. */
 	const OVERLAY_CHROME_SKIP_SEL = [
 		'.modal-backdrop',
+		'dialog.crm-native-dialog',
 		'.iv-dialog-overlay',
 		'.oc-dialog-dim',
 		'[role="presentation"]',

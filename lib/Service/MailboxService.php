@@ -34,7 +34,7 @@ class MailboxService
 		}
 		$qb = $this->db->getQueryBuilder();
 		$qb->select('id', 'workspace_id', 'label', 'email_address', 'imap_host', 'imap_port', 'imap_enc',
-			'smtp_host', 'smtp_port', 'smtp_enc', 'username', 'status', 'auth_fail_count', 'last_sync_at', 'last_error', 'dsgvo_ack_at')
+			'smtp_host', 'smtp_port', 'smtp_enc', 'username', 'secret_enc', 'status', 'auth_fail_count', 'last_sync_at', 'last_error', 'dsgvo_ack_at')
 			->from('crm_mailbox')
 			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId)));
 		$r = $qb->executeQuery();
@@ -56,7 +56,7 @@ class MailboxService
 				'lastSyncAt' => $row['last_sync_at'] ?? null,
 				'lastError' => $row['last_error'] ?? null,
 				'dsgvoAckAt' => $row['dsgvo_ack_at'] ?? null,
-				'hasSecret' => true,
+				'hasSecret' => trim((string)($row['secret_enc'] ?? '')) !== '',
 			];
 		}
 		$r->closeCursor();

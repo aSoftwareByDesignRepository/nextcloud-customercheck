@@ -5,6 +5,133 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.6.40 - 2026-08-08
+
+### Theme / responsive / a11y (Aristoteles)
+
+- Primary/accent aliases map to `--color-primary-element` (accent + WCAG solid), not brand `--color-primary`
+- Semantic light tints mix into `--color-main-background`; danger button tokens use `--crm-danger-fill`
+- `prefers-contrast: more` + Nextcloud HC body theme boosts (invalid `high` media removed)
+- Mobile: drop `100vw` max-width footgun; kanban/metric/import grids use `minmax(min(…, 100%), 1fr)`; form rows stack &lt;768
+- Skip links / avatars / alert borders use element / `*-text` tokens
+
+## 1.6.39 - 2026-08-08
+
+### UX (Bachus)
+
+- Money filtered empty state: full empty chrome + **Show all money** (no muted dead end)
+- Company 360 docs / Talk feed / email log empty states expose in-body primary CTAs
+- Email section: **Logged messages** (plain language) + Log email from empty state
+- Account plan / promises load failures show **Try again**; plan health and step status use human labels
+
+## 1.6.38 - 2026-08-08
+
+### UX (Bachus)
+
+- Company 360 **Mark done** is one tap (default note) — no Evidence jargon dialog
+- Persona pages show **Try again** when load fails (Overview, This week, Review, …)
+- Mail triage / Review company pickers show **name only** (no slug chrome)
+- Brief chip: Collect overdue money; Deals view aria-label (not Pipeline view)
+
+## 1.6.37 - 2026-08-08
+
+### UX (Bachus)
+
+- Company glance shows a visible error + **Try again** when overview load fails (no eternal Loading…)
+- Coverage says **Needs links** (not Gap); glance shows company name without slug; Deals/Overview drop Pipeline jargon
+- This week **Done** is one primary tap — evidence choices live under More (defaults to Activity done)
+- Today quickstart copy drops Chase jargon
+
+## 1.6.36 - 2026-08-08
+
+### Reliability / UX
+
+- Workspace settings boot status/error hosts on mailbox, Review sources, and Circles (no silent failures after the settings split)
+- Review sources form locks until hydrate finishes; save uses a visible ready-guard instead of a silent no-op
+
+## 1.6.35 - 2026-08-08
+
+### UX / Design system
+
+- Review inbox **Files** source uses the Nextcloud folder picker (no raw folder file-id typing — principle 11)
+- Confirm-dialog acknowledgement checkbox uses `label.crm-choice` (44×44 dialog chrome)
+- Workspace settings boot also runs on Review sources / Circles pages so save/load is not a silent no-op after the settings split
+
+## 1.6.34 - 2026-08-08
+
+### UX / Design system
+
+- Team **Manager tools** is a single collapsible card (`crm-card--collapsible`), not `crm-advanced` nested inside a card (principle 14 — no box-in-box)
+- Auto-open when someone needs help targets `details.crm-team-capacity-shell` directly
+
+## 1.6.33 - 2026-08-08
+
+### UX / Design system / a11y
+
+- Fixed orphan CSS in `icons.css` after empty-state icon rule (brace integrity)
+- Dialog hosts for `.crm-simple-list`, `.crm-dl`, `.crm-card__title`; global `.crm-empty-state__text`
+- Contract: every feature CSS file must brace-balance and must not leave orphan properties after `}`
+
+## 1.6.32 - 2026-08-08
+
+### UX / Design system hygiene
+
+- Removed dead legacy `.btn` / `.button` chrome CSS — production uses `.crm-btn` only (`:not(.btn)` link exclusions kept so cascade contracts stay fail-closed)
+- Danger CTAs pinned to `--crm-danger-fill` via `.crm-btn--danger` (no pale `.btn-danger` alias path)
+
+## 1.6.31 - 2026-08-07
+
+### UX / Design system / a11y
+
+- Dialog hosts for `.crm-muted`, `.crm-list` (+ items), `.crm-pre`, and `code`/`pre` so mail/deal modals keep WCAG contrast and readable layout
+- Workspace mailbox advanced blocks use `crm-advanced__summary` (44×44); page-level bare `.crm-advanced > summary` also gets touch chrome
+
+## 1.6.30 - 2026-08-07
+
+### UX / Design system / a11y
+
+- Dialog hosts for `.crm-choice` / `.crm-check`, `.crm-advanced` (+ 44×44 summaries), and `.crm-form-inline-error[hidden]` so modal forms keep granny layout and never leak hidden danger callouts
+- `openModal` no longer builds legacy `.modal-backdrop` — native `<dialog>` only
+- Pipeline / company-detail / persona advanced summaries use `crm-advanced__summary`; dialog checkboxes use `label.crm-choice`
+- Support Us + jump-nav semantic fills mix into `--color-main-background`
+
+## 1.6.29 - 2026-08-07
+
+### UX / Design system / a11y
+
+- Native `<dialog>` is a first-class chrome host: `.crm-btn*`, callouts/alerts/notices, switches, user-pickers, and form stacks apply inside `dialog.crm-native-dialog` (dialogs append to `document.body`, so `#app-content` scoping alone left modal CTAs unstyled)
+- Import row semantic fills mix into `--color-main-background` (not `transparent`)
+- Team empty-state CTA opens `/settings/mailbox` (members live there), not the settings mega-root
+
+## 1.6.28 - 2026-08-07
+
+### UX / Design system / a11y
+
+- **All programmatic modals** (`createModal` / `openModal`) use native `<dialog class="crm-native-dialog">` with `showModal()`, focus restore, and idempotent close (no double-unlock race)
+- Closed native dialogs stay hidden despite `.modal { display:flex }` (critical CSS display override)
+- Persona empty-state CTA links to `/settings/review-sources`; country placeholder uses l10n
+- Switch fields / keep-focused-visible treat native dialogs like modal surfaces
+
+## 1.6.27 - 2026-08-07
+
+### UX / Design system / security
+
+- **Confirm dialogs** use native `<dialog class="crm-native-dialog">` + `crm-btn` (no pale `.btn` / backdrop-only stack for confirms)
+- **Review sources** scan actors use directory combobox pickers (no raw username typing)
+- Legacy `.btn-danger` / `.button.error` fills use `--crm-danger-fill` (WCAG solid error)
+- Table wraps inside headed cards drop double borders (principle 14)
+- Modal close / touch targets enforced at 44×44; spacing hotspots moved onto `--crm-space-*`
+
+## 1.6.26 - 2026-08-07
+
+### UX / Design system (settings multipage)
+
+- **Workspace settings** split to `/settings/{section}` (mailbox, preferences, review-sources, circles, integrations) with chip nav + legacy `#anchor` forwarding
+- **App settings** split to `/app-settings/{section}` (access, jobs, tokens, license, product-codes) with the same pattern
+- Catalog-driven route allowlists; fail-closed template dispatchers (no request path concatenation)
+- Manager-only workspace sections redirect instead of rendering privileged partials to viewers
+- Purge remaining `style=` on company 360 identity, pipeline chips, company form, mailbox, settings JS dialogs — token utility classes instead
+
 ## 1.6.16 - 2026-08-03
 
 ### UX (Bachus — Review / Conflicts / Import / Settings / Team)

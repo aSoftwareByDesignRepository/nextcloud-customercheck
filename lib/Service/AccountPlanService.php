@@ -383,6 +383,7 @@ class AccountPlanService
 				'id' => (int)$row['id'],
 				'title' => (string)$row['title'],
 				'status' => (string)$row['status'],
+				'statusLabel' => $this->labels->mapStepStatus((string)$row['status']),
 				'sortOrder' => (int)$row['sort_order'],
 			];
 		}

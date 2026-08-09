@@ -22,7 +22,8 @@ final class SharedIdentityUiContractTest extends TestCase
 		$this->assertStringContainsString('data-crm-identity-link="pc"', $html);
 		$this->assertStringContainsString('role="alert"', $html);
 		$this->assertStringContainsString('Create in ProjectCheck', $html);
-		$this->assertStringContainsString('min-height:44px', $html);
+		$this->assertStringContainsString('min-height: 44px', $css);
+		$this->assertStringNotContainsString('style="', $html);
 	}
 
 	public function testCompanyDetailJsWiresIdentity(): void

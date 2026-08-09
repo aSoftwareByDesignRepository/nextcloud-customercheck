@@ -9,7 +9,10 @@
         "test:js": "vitest run",
         "test:unit:php": "php vendor/bin/phpunit --testsuite unit",
         "test:integration:php": "php vendor/bin/phpunit --testsuite integration",
-        "test:mutation": "php tests/Mutation/run-critical-service-mutations.php"
+        "test:mutation": "php tests/Mutation/run-critical-service-mutations.php",
+        "check:l10n": "php scripts/check-l10n-parity.php && php scripts/check-l10n-placeholders.php && php scripts/sync-l10n-variants.php --check",
+        "l10n:js": "php scripts/rebuild-l10n-js.php",
+        "l10n:variants": "php scripts/sync-l10n-variants.php && php scripts/rebuild-l10n-js.php"
     },
     "devDependencies": {
         "@axe-core/playwright": "^4.10.1",

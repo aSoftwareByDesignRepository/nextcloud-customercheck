@@ -1,6 +1,11 @@
 <?php
 /**
- * App settings — access, jobs, tokens, license, catalogue (app admins).
+ * App settings shell — one sub-page per section (SETTINGS-PAGES-STANDARD).
+ *
+ * The controller validates `settingsSection` against
+ * {@see \OCA\CustomerCheck\Service\AppSettingsSectionCatalog} and this
+ * template dispatches through a literal slug → file map, so no request value
+ * is ever used to build an include path.
  *
  * @var array $_
  * @var \OCP\IL10N $l
@@ -44,29 +49,27 @@ include __DIR__ . '/common/page-start.php';
 				<p><?php p($l->t('Access restriction is on and no users or groups are allowlisted. Only app administrators can use CustomerCheck. Add colleagues below.')); ?></p>
 			</div>
 		<?php endif; ?>
-		<?php if (!$restrictionOn): ?>
+		<?php if (!$restrictionOn && (string)($_['settingsSection'] ?? '') === 'access'): ?>
 			<div class="crm-callout crm-callout--warning" role="status">
 				<p><?php p($l->t('Access restriction is off — every logged-in user can see sales data. Not recommended.')); ?></p>
 			</div>
 		<?php endif; ?>
 
-		<?php include __DIR__ . '/settings/access.php'; ?>
-		<?php include __DIR__ . '/settings/jobs.php'; ?>
-		<?php include __DIR__ . '/settings/tokens.php'; ?>
-		<?php include __DIR__ . '/settings/license.php'; ?>
-		<?php include __DIR__ . '/settings/product-codes.php'; ?>
-
-		<section class="crm-card" id="section-workspace-settings-link" aria-labelledby="section-workspace-settings-link-heading">
-			<header class="crm-card__header">
-				<div class="crm-card__header-text">
-					<h2 id="section-workspace-settings-link-heading" class="crm-card__title"><?php p($l->t('Workspace settings')); ?></h2>
-					<p class="crm-card__lead"><?php p($l->t('Preferences, members, mailbox, weekly promise check, and integrations.')); ?></p>
-				</div>
-			</header>
-			<div class="crm-card__body">
-				<p><a class="crm-btn" href="<?php p($wsUrl); ?>"><?php p($l->t('Open Workspace settings')); ?></a></p>
-			</div>
-		</section>
+<?php
+	$crmAppSettingsSectionFiles = [
+		'access' => 'access.php',
+		'jobs' => 'jobs.php',
+		'tokens' => 'tokens.php',
+		'license' => 'license.php',
+		'product-codes' => 'product-codes.php',
+	];
+	$crmRequestedSection = (string) ($_['settingsSection'] ?? '');
+	include __DIR__ . '/parts/app-settings-nav.php';
+	if (!isset($crmAppSettingsSectionFiles[$crmRequestedSection])) {
+		throw new \RuntimeException('CustomerCheck app settings: unknown section reached the template dispatcher.');
+	}
+	include __DIR__ . '/settings/' . $crmAppSettingsSectionFiles[$crmRequestedSection];
+?>
 	<?php endif; ?>
 </div>
 <?php include __DIR__ . '/common/page-end.php'; ?>

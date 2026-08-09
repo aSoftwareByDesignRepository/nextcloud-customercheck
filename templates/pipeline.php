@@ -35,7 +35,7 @@ include __DIR__ . '/common/page-start.php';
 	echo json_encode($lossReasonCodeOptions, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR);
 ?></script>
 <div class="crm-page-actions-source header-actions" hidden>
-	<div class="crm-btn-group" role="group" aria-label="<?php p($l->t('Pipeline view')); ?>">
+	<div class="crm-btn-group" role="group" aria-label="<?php p($l->t('Deals view')); ?>">
 		<button type="button" class="crm-btn crm-btn--sm <?php p($pipelineView === 'table' ? 'crm-btn--primary' : 'crm-btn--secondary'); ?>" data-crm-pipeline-view="table"><?php p($l->t('Table')); ?></button>
 		<button type="button" class="crm-btn crm-btn--sm <?php p($pipelineView === 'board' ? 'crm-btn--primary' : 'crm-btn--secondary'); ?>" data-crm-pipeline-view="board"><?php p($l->t('Board')); ?></button>
 	</div>
@@ -57,13 +57,11 @@ include __DIR__ . '/common/page-start.php';
 			?>
 		<a class="crm-btn crm-btn--sm <?php p($active ? 'crm-btn--primary' : 'crm-btn--secondary'); ?>"
 			href="<?php p($href); ?>"
-			aria-current="<?php p($active ? 'true' : 'false'); ?>"
-			style="min-height:44px"><?php p($plabel); ?></a>
+			aria-current="<?php p($active ? 'true' : 'false'); ?>"><?php p($plabel); ?></a>
 		<?php endforeach; ?>
 		<button type="button" class="crm-btn crm-btn--sm crm-btn--secondary" id="crm-pipeline-period-custom"
 			aria-expanded="<?php p($periodFilter === 'custom' ? 'true' : 'false'); ?>"
-			aria-controls="crm-pipeline-filter"
-			style="min-height:44px"><?php p($l->t('Custom')); ?></button>
+			aria-controls="crm-pipeline-filter"><?php p($l->t('Custom')); ?></button>
 	</div>
 	<button type="button" class="crm-btn crm-btn--secondary" id="crm-pipeline-filter-toggle" aria-expanded="false" aria-controls="crm-pipeline-filter"><?php p($l->t('Filter')); ?></button>
 	<?php if (!empty($_['canWrite'])): ?>
@@ -128,7 +126,7 @@ include __DIR__ . '/common/page-start.php';
 							<th scope="col"><?php p($l->t('Company')); ?></th>
 							<th scope="col"><?php p($l->t('Value')); ?></th>
 							<th scope="col"><?php p($l->t('Stage')); ?></th>
-							<th scope="col" class="crm-table-actions-col"><?php p($l->t('More')); ?></th>
+							<th scope="col" class="crm-table-actions-col"><?php p($l->t('Action')); ?></th>
 						</tr>
 					</thead>
 					<tbody>
@@ -201,17 +199,33 @@ include __DIR__ . '/common/page-start.php';
 									<span class="crm-badge"><?php p($stageLabels[$d['stage']] ?? (string)$d['stage']); ?></span>
 								<?php endif; ?>
 							</td>
-							<td data-label="<?php p($l->t('More')); ?>" class="actions-cell crm-table-actions-col">
+							<td data-label="<?php p($l->t('Action')); ?>" class="actions-cell crm-table-actions-col">
+								<div class="crm-table-actions">
 								<?php if ($canWrite): ?>
-								<button type="button" class="crm-btn crm-btn--sm crm-btn--secondary" data-crm-edit-chase="<?php p($d['id']); ?>" <?php if (in_array($d['stage'], ['won', 'lost'], true)): ?>disabled<?php endif; ?>><?php p($l->t('Edit deal')); ?></button>
+								<button type="button" class="crm-btn crm-btn--sm crm-btn--primary" data-crm-edit-chase="<?php p($d['id']); ?>" <?php if (in_array($d['stage'], ['won', 'lost'], true)): ?>disabled<?php endif; ?>><?php p($l->t('Edit deal')); ?></button>
 								<?php else: ?>
-									<span class="crm-muted" aria-hidden="true">—</span>
+									<?php
+									$crmRowOpenHref = $urlGenerator->linkToRoute('customercheck.page.companyDetail', ['id' => (int)($d['companyId'] ?? 0)]);
+									$crmRowOpenLabel = $l->t('Open');
+									include __DIR__ . '/common/crm-row-open.php';
+									?>
 								<?php endif; ?>
+								</div>
 							</td>
 						</tr>
 					<?php endforeach; ?>
 					<?php if (($_['deals'] ?? []) === []): ?>
-						<tr><td colspan="5"><div class="crm-callout crm-callout--info" role="status"><p><?php p($l->t('No deals yet. Tap New deal to add one.')); ?></p></div></td></tr>
+						<tr>
+							<td colspan="5">
+								<div class="crm-empty-state" role="status">
+									<h3 class="crm-empty-state__title"><?php p($l->t('No deals yet')); ?></h3>
+									<p class="crm-empty-state__text"><?php p($l->t('A deal is a quote or opportunity. Tap New deal to add one.')); ?></p>
+									<?php if (!empty($_['canWrite'])): ?>
+										<button type="button" class="crm-btn crm-btn--primary" id="crm-pipeline-empty-new"><?php p($l->t('New deal')); ?></button>
+									<?php endif; ?>
+								</div>
+							</td>
+						</tr>
 					<?php endif; ?>
 					</tbody>
 				</table>
@@ -365,7 +379,7 @@ include __DIR__ . '/common/page-start.php';
 								</select>
 								<span id="board-stage-hint-<?php p($d['id']); ?>" class="crm-sr-only"><?php p($l->t('Change stage with this list, or use Left and Right arrow keys when the card is focused.')); ?></span>
 							</div>
-							<button type="button" class="crm-btn crm-btn--sm crm-btn--secondary" data-crm-edit-chase="<?php p($d['id']); ?>"><?php p($l->t('Edit deal')); ?></button>
+							<button type="button" class="crm-btn crm-btn--sm crm-btn--primary" data-crm-edit-chase="<?php p($d['id']); ?>"><?php p($l->t('Edit deal')); ?></button>
 							<?php endif; ?>
 						</li>
 					<?php endforeach; ?>

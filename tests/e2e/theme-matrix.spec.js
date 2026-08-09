@@ -33,16 +33,26 @@ const PAGES = [
 
 /** Enable a user theme via the theming OCS API (CSRF-protected route). */
 async function enableTheme(page, themeId) {
-  const status = await page.evaluate(async (id) => {
-    const token = document.head?.dataset?.requesttoken
-      // @ts-ignore Nextcloud global
-      || (window.OC && window.OC.requestToken);
-    const res = await fetch(`${window.location.origin}/ocs/v2.php/apps/theming/api/v1/theme/${id}/enable`, {
-      method: 'PUT',
-      headers: { requesttoken: token || '', 'OCS-APIRequest': 'true' },
-    });
-    return res.status;
-  }, themeId);
+  let status = 0;
+  for (let attempt = 1; attempt <= 4; attempt++) {
+    status = await page.evaluate(async (id) => {
+      const token = document.head?.dataset?.requesttoken
+        // @ts-ignore Nextcloud global
+        || (window.OC && window.OC.requestToken);
+      const res = await fetch(`${window.location.origin}/ocs/v2.php/apps/theming/api/v1/theme/${id}/enable`, {
+        method: 'PUT',
+        headers: { requesttoken: token || '', 'OCS-APIRequest': 'true' },
+      });
+      return res.status;
+    }, themeId);
+    if (status === 200) break;
+    // Theming can briefly 503 under load — back off and retry before failing the suite.
+    if (status === 503 || status === 429) {
+      await page.waitForTimeout(500 * attempt);
+      continue;
+    }
+    break;
+  }
   expect(status, `theming API must accept enabling theme "${themeId}"`).toBe(200);
   await page.reload({ waitUntil: 'domcontentloaded' });
   await expect

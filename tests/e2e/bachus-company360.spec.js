@@ -39,6 +39,15 @@ test.describe('Bachus company 360 effortless flows', () => {
     await page.waitForLoadState('networkidle');
     await expect(page.locator('#crm-persons-table')).toBeVisible({ timeout: 15000 });
     await expect(page.locator('#crm-persons-table')).toContainText(`Pat ${suffix}`);
+    await expect(page.locator('#crm-persons-table thead th', { hasText: /Address book|Adressbuch/i })).toBeVisible();
+    await expect(page.locator('#crm-persons-table details.crm-more-menu')).toHaveCount(0);
+    await expect(page.locator('#crm-persons-table .crm-table-actions .crm-btn--primary').first()).toBeVisible();
+    await expect(page.locator('#crm-persons-table [data-crm-buying-role]').first()).toBeVisible();
+
+    await expect(page.locator('#crm-deals .crm-card__lead')).toContainText(/Quotes and opportunities|Angebote und Chancen/i);
+    await expect(page.locator('#crm-deals .crm-card__lead')).not.toContainText(/Pipeline opportunities/i);
+    await expect(page.locator('#crm-glance-summary')).not.toContainText(/^Gap$/i);
+    await expect(page.locator('#crm-glance')).toBeVisible();
 
     // Deal: title only under progressive disclosure.
     await page.locator('#crm-deals .crm-empty-state [data-crm-trigger="crm-add-deal"]').click();

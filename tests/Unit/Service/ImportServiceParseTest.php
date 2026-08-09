@@ -67,11 +67,31 @@ class ImportServiceParseTest extends TestCase
 		$this->assertSame(2, $parsed['rows'][0]['mobileSeats']);
 	}
 
-	public function testMissingHeaderRejected(): void
+	public function testMissingCompanyNameHeaderRejected(): void
 	{
-		$parsed = $this->service()->parseCsv("foo,bar\nx,y\n");
+		$parsed = $this->service()->parseCsv("customerId,email\nacme,a@b.test\n");
 		$this->assertSame([], $parsed['rows']);
 		$this->assertNotEmpty($parsed['errors']);
+		$this->assertSame('companyName', $parsed['errors'][0]['column']);
+		$this->assertSame('missing_header', $parsed['errors'][0]['reason']);
+	}
+
+	public function testCompanyNameOnlyHeaderIsAccepted(): void
+	{
+		$parsed = $this->service()->parseCsv("companyName\nAcme GmbH\n");
+		$this->assertSame([], $parsed['errors']);
+		$this->assertCount(1, $parsed['rows']);
+		$this->assertSame('Acme GmbH', $parsed['rows'][0]['companyName']);
+		$this->assertNotSame('', $parsed['rows'][0]['customerId']);
+	}
+
+	public function testOneCompanyNamePerLineWithoutHeader(): void
+	{
+		$parsed = $this->service()->parseCsv("Acme GmbH\nBeta AG\n");
+		$this->assertSame([], $parsed['errors']);
+		$this->assertCount(2, $parsed['rows']);
+		$this->assertSame('Acme GmbH', $parsed['rows'][0]['companyName']);
+		$this->assertSame('Beta AG', $parsed['rows'][1]['companyName']);
 	}
 
 	public function testInvalidEmailRejected(): void
@@ -116,5 +136,129 @@ class ImportServiceParseTest extends TestCase
 		$this->assertSame(2, $out[1]['salesLogId']);
 		$this->assertSame('active', $out[1]['_chainRole']);
 		$this->assertSame(1, $out[1]['_supersedesSalesLogId']);
+	}
+
+	public function testSalesLogCsvMapsContactEmailAlias(): void
+	{
+		$csv = "product,customerId,companyName,contactEmail,invoiceId,mobileSeats,terminalDevices,validUntil,amountEur\n"
+			. "azc,mueller-gmbh,Müller GmbH,it@mueller.de,INV-1,30,1,2027-05-29,154.00\n";
+		$parsed = $this->service()->parseTextPayload($csv);
+		$this->assertSame('csv', $parsed['format']);
+		$this->assertSame([], $parsed['errors']);
+		$this->assertCount(1, $parsed['rows']);
+		$this->assertSame('it@mueller.de', $parsed['rows'][0]['email']);
+		$this->assertSame('mueller-gmbh', $parsed['rows'][0]['customerId']);
+		$this->assertSame('azc', $parsed['rows'][0]['productCode']);
+	}
+
+	public function testSemicolonCsvAndBomAreAccepted(): void
+	{
+		$csv = "\xEF\xBB\xBFcompanyName;email\nBeta AG;beta@example.test\n";
+		$parsed = $this->service()->parseCsv($csv);
+		$this->assertSame([], $parsed['errors']);
+		$this->assertSame('Beta AG', $parsed['rows'][0]['companyName']);
+		$this->assertSame('beta@example.test', $parsed['rows'][0]['email']);
+	}
+
+	public function testTrailingColumnMismatchIsForgiven(): void
+	{
+		$csv = "companyName,email\nAcme GmbH,a@acme.test,extra-ignored\n";
+		$parsed = $this->service()->parseCsv($csv);
+		$this->assertSame([], $parsed['errors']);
+		$this->assertSame('Acme GmbH', $parsed['rows'][0]['companyName']);
+	}
+
+	public function testJsonRowsArrayIsAccepted(): void
+	{
+		$json = json_encode([
+			'rows' => [
+				[
+					'customerId' => 'acme-gmbh',
+					'companyName' => 'Acme GmbH',
+					'contactEmail' => 'ada@acme.test',
+					'product' => 'azc',
+					'mobileSeats' => 5,
+					'validUntil' => '2027-01-01',
+					'amountEurCents' => 9900,
+				],
+			],
+		], JSON_THROW_ON_ERROR);
+		$parsed = $this->service()->parseTextPayload($json);
+		$this->assertSame('json', $parsed['format']);
+		$this->assertSame([], $parsed['errors']);
+		$this->assertCount(1, $parsed['rows']);
+		$this->assertSame('ada@acme.test', $parsed['rows'][0]['email']);
+		$this->assertSame('99', $parsed['rows'][0]['amountEur']);
+		$this->assertSame('azc', $parsed['rows'][0]['productCode']);
+	}
+
+	public function testGdprCompanyJsonExpandsAgreements(): void
+	{
+		$json = json_encode([
+			'exportedAt' => '2026-08-07T12:00:00+00:00',
+			'company' => [
+				'slug' => 'mueller-gmbh',
+				'name' => 'Müller GmbH',
+				'country' => 'DE',
+				'notes' => 'VIP',
+			],
+			'persons' => [
+				['name' => 'Hans', 'email' => 'hans@mueller.de', 'isPrimary' => true],
+			],
+			'agreements' => [
+				[
+					'productCode' => 'azc',
+					'validUntil' => '2027-05-29',
+					'amountCents' => 15400,
+					'invoiceRef' => 'INV-9',
+					'limits' => ['mobileSeats' => 30, 'terminalDevices' => 1],
+				],
+			],
+		], JSON_THROW_ON_ERROR);
+		$parsed = $this->service()->parseJson($json);
+		$this->assertSame([], $parsed['errors']);
+		$this->assertCount(1, $parsed['rows']);
+		$row = $parsed['rows'][0];
+		$this->assertSame('mueller-gmbh', $row['customerId']);
+		$this->assertSame('Müller GmbH', $row['companyName']);
+		$this->assertSame('hans@mueller.de', $row['email']);
+		$this->assertSame('Hans', $row['contactName']);
+		$this->assertSame('azc', $row['productCode']);
+		$this->assertSame('154', $row['amountEur']);
+		$this->assertSame('INV-9', $row['invoiceId']);
+		$this->assertSame(30, $row['mobileSeats']);
+	}
+
+	public function testInvalidJsonIsRejectedCleanly(): void
+	{
+		$parsed = $this->service()->parseTextPayload('{not-json');
+		$this->assertSame([], $parsed['rows']);
+		$this->assertSame('json_invalid', $parsed['errors'][0]['reason']);
+	}
+
+	public function testMapImportKeysAliasesContactEmail(): void
+	{
+		$mapped = $this->service()->mapImportKeys([
+			'companyName' => 'Acme',
+			'contactEmail' => 'a@acme.test',
+			'amountEurCents' => 2500,
+		]);
+		$this->assertSame('a@acme.test', $mapped['email']);
+		$this->assertArrayNotHasKey('contactEmail', $mapped);
+		$this->assertSame('25', $mapped['amountEur']);
+
+		$mappedLower = $this->service()->mapImportKeys([
+			'companyName' => 'Beta',
+			'contactemail' => 'b@beta.test',
+		]);
+		$this->assertSame('b@beta.test', $mappedLower['email']);
+	}
+
+	public function testCanonicalizeSalesLogContactEmailHeader(): void
+	{
+		$csv = "companyName,contactEmail\nAcme GmbH,ops@acme.test\n";
+		$parsed = $this->service()->parseCsv($csv);
+		$this->assertSame([], $parsed['errors']);
+		$this->assertSame('ops@acme.test', $parsed['rows'][0]['email']);
 	}
 }

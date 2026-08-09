@@ -651,7 +651,21 @@ class AgreementService
 		}
 
 		if ($isCreate || array_key_exists('limits', $input) || array_key_exists('kind', $input) || array_key_exists('productCode', $input)) {
-			$rawLimits = $input['limits'] ?? $agreement->decodedLimits();
+			if ($isCreate && !array_key_exists('limits', $input)) {
+				// Form omits limits — apply sellable product defaults (never 0+0 seats).
+				$rawLimits = $this->defaultLimitsFor($productCode);
+				if ($kind === 'license') {
+					$seats = (int)($rawLimits['mobileSeats'] ?? 0);
+					$terminals = (int)($rawLimits['terminalDevices'] ?? 0);
+					if ($seats + $terminals <= 0) {
+						$rawLimits['mobileSeats'] = 1;
+						$rawLimits['terminalDevices'] = $terminals;
+						$rawLimits['bundle'] = $rawLimits['bundle'] ?? false;
+					}
+				}
+			} else {
+				$rawLimits = $input['limits'] ?? $agreement->decodedLimits();
+			}
 			if (is_string($rawLimits)) {
 				$decoded = json_decode($rawLimits, true);
 				$rawLimits = is_array($decoded) ? $decoded : [];

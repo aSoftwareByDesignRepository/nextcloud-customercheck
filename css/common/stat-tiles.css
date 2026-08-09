@@ -39,7 +39,7 @@
 	padding: var(--crm-space-4, 1rem);
 	border: none;
 	border-left: 3px solid var(--crm-border, var(--color-border));
-	border-radius: var(--crm-radius-md, 10px);
+	border-radius: var(--crm-radius-md, 12px);
 	background: var(--crm-bg-card, var(--color-main-background));
 	box-shadow: none;
 	text-align: left;

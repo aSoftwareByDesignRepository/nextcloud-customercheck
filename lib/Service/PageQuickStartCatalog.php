@@ -75,7 +75,7 @@ final class PageQuickStartCatalog
 				'steps' => [
 					[
 						'title' => $l->t('1. Scan the queues'),
-						'text' => $l->t('Chase, renewals, invoices, promises, mail, and tasks from this workspace are grouped. Start at the top — that is what needs you first.'),
+						'text' => $l->t('Follow-ups, renewals, invoices, promises, mail, and tasks from this workspace are grouped. Start at the top — that is what needs you first.'),
 					],
 					[
 						'title' => $l->t('2. Take one action'),
@@ -217,7 +217,7 @@ final class PageQuickStartCatalog
 					[
 						'title' => $l->t('3. Turn sources on'),
 						'text' => $l->t('Managers enable Contacts, Files, Calendar, Tasks, or import anomalies under Workspace settings.'),
-						'href' => $link('settings') . '#crm-review-sources',
+						'href' => $link('settingsSection', ['section' => 'review-sources']),
 						'linkLabel' => $l->t('Review source settings'),
 					],
 				],
@@ -352,19 +352,19 @@ final class PageQuickStartCatalog
 				],
 			],
 			'agreement-form' => [
-				'lead' => $l->t('Add a license or partner package — pick the company first.'),
+				'lead' => $l->t('Name, end date, and amount first — More holds type and product.'),
 				'steps' => [
 					[
-						'title' => $l->t('1. Choose the company'),
+						'title' => $l->t('1. Pick the company'),
 						'text' => $l->t('Agreements always hang under a customer. Create the company first if it is missing.'),
 					],
 					[
-						'title' => $l->t('2. Fill product and dates'),
-						'text' => $l->t('Use a clear label, product code when you have one, and honest start/end dates.'),
+						'title' => $l->t('2. Name, until, amount'),
+						'text' => $l->t('A clear label, when it ends, and the euro amount. That is enough for Money and renewals.'),
 					],
 					[
-						'title' => $l->t('3. Save'),
-						'text' => $l->t('You can edit later. Renewals and Money views pick up the new dates automatically.'),
+						'title' => $l->t('3. Save — renew later'),
+						'text' => $l->t('On edit, Renew extends one year. Cancel lives under End this agreement.'),
 					],
 				],
 			],
@@ -407,19 +407,19 @@ final class PageQuickStartCatalog
 				],
 			],
 			'import' => [
-				'lead' => $l->t('Bring customers in from CSV or linked apps — review before you commit.'),
+				'lead' => $l->t('Bring customers in from a mail file or another app — preview, then import.'),
 				'steps' => [
 					[
-						'title' => $l->t('1. Pick a source'),
-						'text' => $l->t('Paste a CSV or pull from ProjectCheck / TicketCheck when those apps are enabled.'),
+						'title' => $l->t('1. Drop the file from mail'),
+						'text' => $l->t('CSV or JSON works. You can also paste the contents or pick ProjectCheck / TicketCheck.'),
 					],
 					[
-						'title' => $l->t('2. Preview matches'),
-						'text' => $l->t('Check duplicates and names carefully. Bad imports are hard to untangle later.'),
+						'title' => $l->t('2. Check the preview'),
+						'text' => $l->t('Green “Ready” rows are safe. Names that need a pick wait for you.'),
 					],
 					[
-						'title' => $l->t('3. Import, then enrich'),
-						'text' => $l->t('Tap Import clear rows for ready matches, then open companies to add people.'),
+						'title' => $l->t('3. Import ready, then add people'),
+						'text' => $l->t('Tap Import ready, then open companies to add contacts.'),
 						'href' => $link('companies'),
 						'linkLabel' => $l->t('Open Companies'),
 					],

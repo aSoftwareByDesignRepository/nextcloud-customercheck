@@ -69,12 +69,15 @@ test.describe('CustomerCheck journeys smoke', () => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await login(page, credsFromEnv('ADMIN'));
     await page.goto('/apps/customercheck/app-settings');
+    await page.waitForURL(/\/app-settings\/access/, { timeout: 30000 });
     await page.waitForSelector('#crm-main-content', { timeout: 30000 });
     await expect(page.locator('#section-access')).toBeVisible();
-    await expect(page.locator('#section-tokens')).toBeVisible();
+    await expect(page.locator('#crm-settings-access-form')).toBeVisible();
+
+    await page.goto('/apps/customercheck/app-settings/tokens');
+    await page.waitForSelector('#section-tokens', { timeout: 30000 });
     await expect(page.locator('#crm-ics-url')).toBeVisible();
     await expect(page.locator('#crm-lead-url')).toBeVisible();
-    await expect(page.locator('#crm-settings-access-form')).toBeVisible();
     const ics = await page.locator('#crm-ics-url').inputValue();
     expect(ics).toMatch(/\/feed\/.+\/renewals\.ics$/);
   });
@@ -125,10 +128,16 @@ test.describe('CustomerCheck journeys smoke', () => {
     await page.goto('/apps/customercheck/pipeline');
     await page.waitForSelector('#crm-main-content', { timeout: 30000 });
     await page.locator('#crm-pipeline-new-deal').click({ force: true });
-    const dialog = page.locator('.crm-modal:not([hidden]), .crm-native-dialog:not([hidden]), [role="dialog"]:visible').first();
+    const dialog = page.locator('dialog.crm-native-dialog[open]').first();
     await expect(dialog).toBeVisible({ timeout: 10000 });
+    await expect(dialog).toHaveAttribute('aria-modal', 'true');
+    await expect(dialog.locator('form.crm-form--stack')).toBeVisible();
     await expect(dialog.locator('select[name="companyId"]')).toBeVisible({ timeout: 10000 });
     await expect(dialog.locator('input[name="title"]')).toBeVisible();
+    await expect(dialog.locator('.modal-close, .crm-btn--secondary[data-cancel]').first()).toBeVisible();
+    // Confirm helper also ships aria-modal (smoke the Confirm path via cancel then reopen not required).
+    const hasPresent = await page.evaluate(() => !!(window.CustomerCheckDialogPresent && typeof window.CustomerCheckDialogPresent.safeExternalHref === 'function'));
+    expect(hasPresent).toBeTruthy();
   });
 
   test('agreements money activities expose AZC filter panels', async ({ page }) => {

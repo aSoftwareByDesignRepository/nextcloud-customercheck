@@ -62,7 +62,7 @@
   function commitmentKindLabel(kind) {
     const key = String(kind || '');
     const map = {
-      ar_chase: t('Chase overdue money'),
+      ar_chase: t('Collect overdue money'),
       renewal_act: t('Act on renewals'),
       plan_push: t('Push a stalled plan'),
       link_debt: t('Fix missing links'),
@@ -441,7 +441,7 @@
       pulseStat(euros(overdueCents), t('Overdue'), null, overdueCents > 0 ? 'alert' : '') +
       pulseStat(euros(m.openCents), t('Unpaid')) +
       pulseStat(euros(m.paid30dCents), t('Paid lately')) +
-      pulseStat(euros(m.pipelineCents), t('Pipeline')) +
+      pulseStat(euros(m.pipelineCents), t('Open deals')) +
       '</div></div>' +
       '<div class="crm-pulse-glance__group" role="group" aria-labelledby="crm-pulse-work-title">' +
       '<h3 id="crm-pulse-work-title" class="crm-pulse-glance__heading">' + escapeHtml(t('Work')) + '</h3>' +
@@ -486,8 +486,12 @@
 
   function verifyActionsHtml(id) {
     return '<div class="crm-brief-verify" role="group" aria-label="' + escapeHtml(t('Check this promise')) + '">' +
-      '<label class="crm-sr-only" for="crm-evidence-' + id + '">' + t('Evidence') + '</label>' +
-      '<select id="crm-evidence-' + id + '" class="crm-input crm-input--sm" data-evidence-for="' + id + '" aria-label="' + escapeHtml(t('Evidence for done')) + '">' +
+      '<button type="button" class="crm-btn crm-btn--primary" data-verify="' + id + '" data-action="done">' + t('Done') + '</button>' +
+      '<details class="crm-more-menu crm-brief-verify__more">' +
+      '<summary class="crm-btn crm-btn--ghost crm-btn--sm">' + t('More') + '</summary>' +
+      '<div class="crm-more-menu__panel" role="group" aria-label="' + escapeHtml(t('Other outcomes')) + '">' +
+      '<label class="form-label" for="crm-evidence-' + id + '">' + t('How was it done?') + '</label>' +
+      '<select id="crm-evidence-' + id + '" class="crm-input crm-input--sm" data-evidence-for="' + id + '" aria-label="' + escapeHtml(t('How was it done?')) + '">' +
       '<option value="activity_done" selected>' + t('Activity done') + '</option>' +
       '<option value="invoice_paid">' + t('Invoice paid') + '</option>' +
       '<option value="links_fixed">' + t('Links fixed') + '</option>' +
@@ -496,10 +500,6 @@
       '</select>' +
       '<label class="crm-sr-only" for="crm-evidence-note-' + id + '">' + t('Reason for manager override') + '</label>' +
       '<input id="crm-evidence-note-' + id + '" type="text" class="crm-input crm-input--sm crm-brief-verify__note" data-evidence-note-for="' + id + '" placeholder="' + escapeHtml(t('Reason for manager override')) + '" autocomplete="off" hidden />' +
-      '<button type="button" class="crm-btn crm-btn--primary" data-verify="' + id + '" data-action="done">' + t('Done') + '</button>' +
-      '<details class="crm-more-menu crm-brief-verify__more">' +
-      '<summary class="crm-btn crm-btn--ghost crm-btn--sm">' + t('More') + '</summary>' +
-      '<div class="crm-more-menu__panel" role="group" aria-label="' + escapeHtml(t('Other outcomes')) + '">' +
       '<button type="button" class="crm-btn crm-btn--secondary" data-verify="' + id + '" data-action="missed">' + t('Missed') + '</button>' +
       '<button type="button" class="crm-btn crm-btn--secondary" data-verify="' + id + '" data-action="carry">' + t('Carry') + '</button>' +
       '<button type="button" class="crm-btn crm-btn--ghost" data-verify="' + id + '" data-action="abandon">' + t('Abandon') + '</button>' +
@@ -532,14 +532,14 @@
       pulseStat(euros(cash.expectedInThisMonthCents), t('Expected cash this month')) +
       pulseStat(euros(cash.renewalsThisMonthCents), t('Renewals this month')) +
       '</div>' +
-      '<details class="crm-advanced"><summary>' + escapeHtml(t('More money detail')) + '</summary>' +
+      '<details class="crm-advanced"><summary class="crm-advanced__summary">' + escapeHtml(t('More money detail')) + '</summary>' +
       '<div class="crm-today-role__stats" role="list">' +
       pulseStat(euros(cash.arDueThisMonthCents), t('Due this month')) +
       pulseStat(euros(cash.arDueNextMonthCents), t('Due next month')) +
       pulseStat(euros(cash.renewalsNextMonthCents), t('Renewals next month')) +
       '</div>' +
       '<p class="crm-muted" role="status">' + escapeHtml(t('Open deals not counted')) + ': ' + euros(cash.pipelineExcludedCents) +
-      ' · ' + escapeHtml(t('Never multiply pipeline by hope.')) + '</p></details>' +
+      ' · ' + escapeHtml(t('Open deals are not cash.')) + '</p></details>' +
       '</div></section>' +
       '<section class="crm-card" aria-labelledby="crm-brief-last-title">' +
       '<header class="crm-card__header"><h2 id="crm-brief-last-title" class="crm-card__title">' +
@@ -587,12 +587,9 @@
         if (action === 'done') {
           const sel = last.querySelector('[data-evidence-for="' + id + '"]');
           const evidence = sel ? String(sel.value || '').trim() : '';
-          if (!evidence) {
-            showAlert(mount, t('Choose evidence before marking done.'));
-            return;
-          }
-          payload.evidence = evidence;
-          if (evidence === 'manager_override') {
+          const chosen = evidence || 'activity_done';
+          payload.evidence = chosen;
+          if (chosen === 'manager_override') {
             const noteEl = last.querySelector('[data-evidence-note-for="' + id + '"]');
             const note = noteEl ? String(noteEl.value || '').trim() : '';
             if (!note) {
@@ -961,7 +958,7 @@
         '<p class="crm-empty-state__text">' + escapeHtml(t('Add people to this workspace in Settings, then come back to help them.')) + '</p>' +
         '<div class="crm-empty-state__actions">' +
         '<a class="crm-btn crm-btn--primary crm-btn--lg" href="' +
-        escapeHtml(OC.generateUrl('/apps/customercheck/settings') + '?workspaceId=' + ws) + '">' +
+        escapeHtml(OC.generateUrl('/apps/customercheck/settings/mailbox') + '?workspaceId=' + ws) + '">' +
         escapeHtml(t('Open Settings')) + '</a></div>';
       mount.appendChild(empty);
     } else {
@@ -1011,20 +1008,21 @@
           '<td data-label="' + escapeHtml(t('Missing coverage')) + '">' + (r.coverageGaps || 0) + '</td>' +
           '<td data-label="' + escapeHtml(t('Overdue work')) + '">' + (r.overdueWork || 0) + '</td>' +
           '<td data-label="' + escapeHtml(t('Away')) + '">' + oooHtml + '</td>' +
-          '<td data-label="' + escapeHtml(t('Actions')) + '" class="crm-table-actions">' +
+          '<td data-label="' + escapeHtml(t('Actions')) + '" class="actions-cell crm-table-actions-col">' +
+          '<div class="crm-table-actions">' +
           (!data.selfOnly
-            ? ('<button type="button" class="crm-btn crm-btn--sm crm-btn--secondary" data-crm-one-on-one="' +
+            ? ('<button type="button" class="crm-btn crm-btn--sm crm-btn--primary" data-crm-one-on-one="' +
               escapeHtml(r.userId || '') + '">' + escapeHtml(t('Coach')) + '</button> ')
             : '') +
-          '<a class="crm-btn crm-btn--sm crm-btn--ghost" href="#capacity">' + escapeHtml(t('Tools')) + '</a>' +
-          '</td>';
+          '<a class="crm-btn crm-btn--sm crm-btn--secondary" href="#capacity">' + escapeHtml(t('Tools')) + '</a>' +
+          '</div></td>';
         tbody.appendChild(tr);
       });
       table.appendChild(tbody);
       wrap.appendChild(table);
       mount.appendChild(wrap);
       if (stuckCount > 0 && !data.selfOnly) {
-        const shell = document.querySelector('#capacity details.crm-team-capacity-shell');
+        const shell = document.querySelector('details.crm-team-capacity-shell');
         if (shell instanceof HTMLDetailsElement) {
           shell.open = true;
         }
@@ -1446,15 +1444,11 @@
                 opt.setAttribute('aria-selected', 'false');
                 const nameEl = document.createElement('span');
                 nameEl.className = 'user-picker__name';
-                nameEl.textContent = c.name || c.slug || String(c.id);
-                const meta = document.createElement('span');
-                meta.className = 'user-picker__meta';
-                meta.textContent = c.slug || '';
+                nameEl.textContent = c.name || ('#' + String(c.id || ''));
                 opt.appendChild(nameEl);
-                opt.appendChild(meta);
                 opt.addEventListener('click', function () {
                   hidden.value = String(c.id || '');
-                  search.value = (c.name || c.slug || '') + (c.slug ? ' (' + c.slug + ')' : '');
+                  search.value = c.name || ('#' + String(c.id || ''));
                   suggest.innerHTML = '';
                   suggest.hidden = true;
                   search.setAttribute('aria-expanded', 'false');
@@ -1522,7 +1516,7 @@
           let actions = '';
           if (canSendDrafts) {
             actions =
-              '<div class="crm-form-actions" style="justify-content:flex-start;gap:0.5rem;flex-wrap:wrap">' +
+              '<div class="crm-form-actions crm-form-actions--start">' +
               '<button type="button" class="crm-btn crm-btn--primary" data-crm-draft-resend="' + escapeHtml(String(did)) + '">' +
               escapeHtml(t('Send again')) + '</button>' +
               '<button type="button" class="crm-btn crm-btn--secondary" data-crm-draft-delete="' + escapeHtml(String(did)) + '">' +
@@ -1884,7 +1878,7 @@
     const filterBar = document.createElement('details');
     filterBar.className = 'crm-advanced';
     filterBar.innerHTML =
-      '<summary>' + escapeHtml(t('More options')) + '</summary>' +
+      '<summary class="crm-advanced__summary">' + escapeHtml(t('More options')) + '</summary>' +
       '<label class="crm-switch" for="crm-review-include-archived">' +
       '<input type="checkbox" id="crm-review-include-archived" class="crm-input" ' + (includeArchived ? 'checked ' : '') + '/>' +
       '<span>' + escapeHtml(t('Include archived companies in suggestions')) + '</span></label>';
@@ -1977,7 +1971,7 @@
             '<button type="button" class="crm-btn crm-btn--secondary" data-crm-review-none>' + escapeHtml(t('No relation')) + '</button>' +
             '</div></div>' +
             '<details class="crm-advanced crm-review-more">' +
-            '<summary>' + escapeHtml(t('More options')) + '</summary>' +
+            '<summary class="crm-advanced__summary">' + escapeHtml(t('More options')) + '</summary>' +
             '<p class="crm-muted" data-crm-review-overhead-hint>' + overheadHint + '</p>' +
             '<label class="form-label" for="crm-review-deal-' + escapeHtml(String(item.id)) + '">' + escapeHtml(t('Deal (optional)')) + '</label>' +
             '<select id="crm-review-deal-' + escapeHtml(String(item.id)) + '" name="dealId" class="form-select crm-input" data-crm-review-deal>' +
@@ -2001,11 +1995,11 @@
           const raw = String(ref.raw || item.snippet || '');
           if (fieldKey === 'country' && raw) {
             actions +=
-              '<details class="crm-advanced"><summary>' + escapeHtml(t('Fix country mapping')) + '</summary>' +
+              '<details class="crm-advanced"><summary class="crm-advanced__summary">' + escapeHtml(t('Fix country mapping')) + '</summary>' +
               '<form class="crm-form crm-form--row" data-crm-review-learn="' + escapeHtml(String(item.id)) + '">' +
               '<label class="form-label" for="crm-learn-' + escapeHtml(String(item.id)) + '">' + escapeHtml(t('ISO country')) + '</label>' +
               '<input type="text" id="crm-learn-' + escapeHtml(String(item.id)) + '" class="form-input crm-input" maxlength="2" ' +
-              'placeholder="DE" autocomplete="off" />' +
+              'placeholder="' + escapeHtml(t('DE')) + '" autocomplete="off" />' +
               '<button type="button" class="crm-btn crm-btn--secondary" data-crm-review-apply-once>' +
               escapeHtml(t('Apply once')) + '</button>' +
               '<button type="submit" class="crm-btn crm-btn--primary">' + escapeHtml(t('Apply & learn')) + '</button>' +
@@ -2031,7 +2025,7 @@
         '<h3 class="crm-empty-state__title">' + escapeHtml(t('Nothing to review')) + '</h3>' +
         '<p class="crm-empty-state__text">' + escapeHtml(t('When shared mail or other sources need a company, they show up here.')) + '</p>' +
         '<p class="crm-empty-state__actions"><a class="crm-btn crm-btn--primary" href="' +
-        escapeHtml(OC.generateUrl('/apps/customercheck/settings') + '#crm-review-sources') +
+        escapeHtml(OC.generateUrl('/apps/customercheck/settings/review-sources')) +
         '">' + escapeHtml(t('Open review source settings')) + '</a></p>';
       body.appendChild(emptyCta);
     }
@@ -2041,7 +2035,7 @@
       const send = document.createElement('details');
       send.className = 'crm-advanced';
       send.innerHTML =
-        '<summary>' + escapeHtml(t('Send a contact to Review')) + '</summary>';
+        '<summary class="crm-advanced__summary">' + escapeHtml(t('Send a contact to Review')) + '</summary>';
       const sendForm = document.createElement('form');
       sendForm.className = 'crm-form crm-form--row';
       sendForm.setAttribute('aria-label', t('Send contact to Review'));
@@ -2234,10 +2228,10 @@
                 const opt = document.createElement('li');
                 opt.className = 'user-picker__item';
                 opt.setAttribute('role', 'option');
-                opt.textContent = c.name || c.slug || String(c.id);
+                opt.textContent = c.name || ('#' + String(c.id || ''));
                 opt.addEventListener('click', function () {
                   hidden.value = String(c.id || '');
-                  search.value = c.name || '';
+                  search.value = c.name || ('#' + String(c.id || ''));
                   suggest.hidden = true;
                   search.setAttribute('aria-expanded', 'false');
                   nav.reset();
@@ -2557,6 +2551,30 @@
     }
   }
 
+  function showMountLoadError(mount, err) {
+    clearMountBusy(mount);
+    const msg = (err && err.message) ? String(err.message) : String(err || t('Something went wrong.'));
+    mount.innerHTML = '';
+    const callout = document.createElement('div');
+    callout.className = 'crm-callout crm-callout--danger';
+    callout.setAttribute('role', 'alert');
+    const p = document.createElement('p');
+    p.textContent = msg;
+    const retry = document.createElement('button');
+    retry.type = 'button';
+    retry.className = 'crm-btn crm-btn--primary';
+    retry.textContent = t('Try again');
+    retry.addEventListener('click', function () {
+      mount.innerHTML = '<p class="crm-muted">' + escapeHtml(t('Loading…')) + '</p>';
+      mount.classList.add('crm-skeleton');
+      mount.setAttribute('aria-busy', 'true');
+      boot();
+    });
+    callout.appendChild(p);
+    callout.appendChild(retry);
+    mount.appendChild(callout);
+  }
+
   async function boot() {
     const mount = qs('[data-crm-persona-mount]');
     if (!mount) return;
@@ -2576,9 +2594,7 @@
         mount.innerHTML = '<p class="crm-muted">' + t('Open a company to continue.') + '</p>';
       }
     } catch (e) {
-      clearMountBusy(mount);
-      mount.innerHTML = '<div class="crm-callout crm-callout--danger" role="alert"><p>' +
-        escapeHtml(e.message || String(e)) + '</p></div>';
+      showMountLoadError(mount, e);
     }
   }
 

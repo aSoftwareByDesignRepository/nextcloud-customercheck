@@ -33,6 +33,12 @@ class ImportService
 		'amountEur', 'paidAt', 'keyIssuedAt', 'renewalDue', 'notes',
 	];
 
+	/** Security cap — mail/ops exports stay well under this. */
+	public const MAX_PAYLOAD_BYTES = 2097152;
+
+	/** Soft row cap so scan/apply stay interactive. */
+	public const MAX_ROWS = 5000;
+
 	public function __construct(
 		private readonly ImportMatcher $matcher,
 		private readonly CompanyService $companies,
@@ -71,7 +77,7 @@ class ImportService
 		$rows = [];
 
 		if ($source === 'csv') {
-			$parsed = $this->parseCsv((string)($payload['csv'] ?? ''));
+			$parsed = $this->parseTextPayload((string)($payload['csv'] ?? ''));
 			$rows = $parsed['rows'];
 			$errors = $parsed['errors'];
 		} elseif ($source === 'sales_log') {
@@ -317,8 +323,256 @@ class ImportService
 	/**
 	 * @return array{rows:list<array<string,mixed>>,errors:list<array{line:int,column:?string,reason:string}>}
 	 */
+	/**
+	 * Auto-detect CSV or JSON (mail/ops exports). Source id stays `csv` for API BC.
+	 *
+	 * @return array{rows:list<array<string,mixed>>,errors:list<array<string,mixed>>,format:string}
+	 */
+	public function parseTextPayload(string $raw): array
+	{
+		$raw = $this->stripBom($raw);
+		if (trim($raw) === '') {
+			return ['rows' => [], 'errors' => [['line' => 0, 'column' => null, 'reason' => 'empty']], 'format' => 'empty'];
+		}
+		if (strlen($raw) > self::MAX_PAYLOAD_BYTES) {
+			return [
+				'rows' => [],
+				'errors' => [['line' => 0, 'column' => null, 'reason' => 'too_large']],
+				'format' => 'rejected',
+			];
+		}
+
+		$trim = ltrim($raw);
+		$first = $trim[0] ?? '';
+		if ($first === '{' || $first === '[') {
+			$parsed = $this->parseJson($raw);
+			$parsed['format'] = 'json';
+			return $this->capRows($parsed);
+		}
+
+		$parsed = $this->parseCsv($raw);
+		$parsed['format'] = 'csv';
+		return $this->capRows($parsed);
+	}
+
+	/**
+	 * @param array{rows:list<array<string,mixed>>,errors:list<array<string,mixed>>} $parsed
+	 * @return array{rows:list<array<string,mixed>>,errors:list<array<string,mixed>>,format?:string}
+	 */
+	private function capRows(array $parsed): array
+	{
+		if (count($parsed['rows']) <= self::MAX_ROWS) {
+			return $parsed;
+		}
+		$parsed['rows'] = array_slice($parsed['rows'], 0, self::MAX_ROWS);
+		$parsed['errors'][] = [
+			'line' => self::MAX_ROWS + 1,
+			'column' => null,
+			'reason' => 'too_many_rows',
+		];
+		return $parsed;
+	}
+
+	private function stripBom(string $raw): string
+	{
+		if (str_starts_with($raw, "\xEF\xBB\xBF")) {
+			return substr($raw, 3);
+		}
+		return $raw;
+	}
+
+	/**
+	 * JSON from ops mail / GDPR company export / row arrays.
+	 *
+	 * @return array{rows:list<array<string,mixed>>,errors:list<array<string,mixed>>}
+	 */
+	public function parseJson(string $json): array
+	{
+		$data = json_decode($json, true, 32);
+		if (!is_array($data)) {
+			return ['rows' => [], 'errors' => [['line' => 0, 'column' => null, 'reason' => 'json_invalid']]];
+		}
+
+		$errors = [];
+		$rowsIn = [];
+
+		if (array_is_list($data)) {
+			$rowsIn = $data;
+		} elseif (isset($data['rows']) && is_array($data['rows'])) {
+			$rowsIn = $data['rows'];
+		} elseif (isset($data['companies']) && is_array($data['companies'])) {
+			foreach ($data['companies'] as $item) {
+				if (!is_array($item)) {
+					continue;
+				}
+				foreach ($this->expandJsonCompany($item) as $row) {
+					$rowsIn[] = $row;
+				}
+			}
+		} elseif (isset($data['company']) && is_array($data['company'])) {
+			$rowsIn = $this->expandJsonCompany($data);
+		} else {
+			// Single flat object (sales-log style).
+			$rowsIn = [$data];
+		}
+
+		$rows = [];
+		foreach ($rowsIn as $i => $item) {
+			$lineNo = $i + 1;
+			if (!is_array($item)) {
+				$errors[] = ['line' => $lineNo, 'column' => null, 'reason' => 'json_row_invalid'];
+				continue;
+			}
+			// Nested GDPR-ish company object inside a list.
+			if (isset($item['company']) && is_array($item['company'])) {
+				foreach ($this->expandJsonCompany($item) as $expanded) {
+					$mapped = $this->mapImportKeys($expanded);
+					$rowError = $this->validateCsvRow($mapped, $lineNo);
+					if ($rowError !== null) {
+						$errors[] = $rowError;
+						continue;
+					}
+					$rows[] = $this->normalizeCsvRow($mapped);
+				}
+				continue;
+			}
+			$mapped = $this->mapImportKeys($item);
+			$rowError = $this->validateCsvRow($mapped, $lineNo);
+			if ($rowError !== null) {
+				$errors[] = $rowError;
+				continue;
+			}
+			$rows[] = $this->normalizeCsvRow($mapped);
+		}
+
+		return ['rows' => $rows, 'errors' => $errors];
+	}
+
+	/**
+	 * Flatten a GDPR export (or {company, persons, agreements}) into import rows.
+	 *
+	 * @param array<string,mixed> $payload
+	 * @return list<array<string,mixed>>
+	 */
+	private function expandJsonCompany(array $payload): array
+	{
+		$company = isset($payload['company']) && is_array($payload['company'])
+			? $payload['company']
+			: $payload;
+		$persons = isset($payload['persons']) && is_array($payload['persons']) ? $payload['persons'] : [];
+		$agreements = isset($payload['agreements']) && is_array($payload['agreements']) ? $payload['agreements'] : [];
+
+		$contactName = '';
+		$email = '';
+		foreach ($persons as $person) {
+			if (!is_array($person)) {
+				continue;
+			}
+			$isPrimary = !empty($person['isPrimary']);
+			if ($contactName === '' || $isPrimary) {
+				$contactName = trim((string)($person['name'] ?? ''));
+				$email = trim((string)($person['email'] ?? ''));
+				if ($isPrimary) {
+					break;
+				}
+			}
+		}
+
+		$base = [
+			'customerId' => (string)($company['slug'] ?? $company['customerId'] ?? ''),
+			'companyName' => (string)($company['name'] ?? $company['companyName'] ?? ''),
+			'contactName' => $contactName,
+			'email' => $email,
+			'country' => (string)($company['country'] ?? ''),
+			'notes' => (string)($company['notes'] ?? ''),
+		];
+
+		if ($agreements === []) {
+			return [$base];
+		}
+
+		$out = [];
+		foreach ($agreements as $agreement) {
+			if (!is_array($agreement)) {
+				continue;
+			}
+			$limits = is_array($agreement['limits'] ?? null) ? $agreement['limits'] : [];
+			$amountCents = $agreement['amountCents'] ?? $agreement['amountEurCents'] ?? null;
+			$amountEur = $agreement['amountEur'] ?? null;
+			if ($amountEur === null && $amountCents !== null) {
+				$amountEur = ((int)$amountCents) / 100;
+			}
+			$out[] = array_merge($base, [
+				'productCode' => (string)($agreement['productCode'] ?? $agreement['product'] ?? ''),
+				'validUntil' => (string)($agreement['validUntil'] ?? ''),
+				'invoiceId' => (string)($agreement['invoiceRef'] ?? $agreement['invoiceId'] ?? ''),
+				'amountEur' => $amountEur !== null ? (string)$amountEur : '0',
+				'paidAt' => (string)($agreement['paidAt'] ?? ''),
+				'mobileSeats' => (int)($limits['mobileSeats'] ?? $agreement['mobileSeats'] ?? 0),
+				'terminalDevices' => (int)($limits['terminalDevices'] ?? $agreement['terminalDevices'] ?? 0),
+				'notes' => trim($base['notes'] . (isset($agreement['notes']) && $agreement['notes'] !== '' ? ("\n" . $agreement['notes']) : '')),
+			]);
+		}
+		return $out !== [] ? $out : [$base];
+	}
+
+	/**
+	 * Normalize mail/ops header aliases onto ImportService columns.
+	 *
+	 * @param array<string,mixed> $row
+	 * @return array<string,string>
+	 */
+	public function mapImportKeys(array $row): array
+	{
+		$aliases = [
+			'name' => 'companyName',
+			'company' => 'companyName',
+			'company_name' => 'companyName',
+			'slug' => 'customerId',
+			'customer_id' => 'customerId',
+			'contactemail' => 'email',
+			'contact_email' => 'email',
+			'contactEmail' => 'email',
+			'product' => 'productCode',
+			'product_code' => 'productCode',
+			'invoiceref' => 'invoiceId',
+			'invoice_ref' => 'invoiceId',
+			'invoiceRef' => 'invoiceId',
+			'keyprefix' => 'keyFingerprint',
+			'key_prefix' => 'keyFingerprint',
+			'keyPrefix' => 'keyFingerprint',
+			'licensekeyprefix' => 'keyFingerprint',
+			'licenseKeyPrefix' => 'keyFingerprint',
+		];
+
+		$out = [];
+		foreach ($row as $key => $value) {
+			$k = (string)$key;
+			$canon = $aliases[$k] ?? $aliases[mb_strtolower($k)] ?? $k;
+			if (is_array($value) || is_object($value)) {
+				continue;
+			}
+			$out[$canon] = trim((string)$value);
+		}
+
+		// Cents → euros when amountEur missing.
+		if (($out['amountEur'] ?? '') === '' || ($out['amountEur'] ?? '0') === '0') {
+			if (isset($row['amountEurCents']) && is_numeric($row['amountEurCents'])) {
+				$out['amountEur'] = (string)(((int)$row['amountEurCents']) / 100);
+			} elseif (isset($row['amountCents']) && is_numeric($row['amountCents'])) {
+				$out['amountEur'] = (string)(((int)$row['amountCents']) / 100);
+			}
+		}
+
+		return $out;
+	}
+
+	/**
+	 * @return array{rows:list<array<string,mixed>>,errors:list<array<string,mixed>>}
+	 */
 	public function parseCsv(string $csv): array
 	{
+		$csv = $this->stripBom($csv);
 		$csv = str_replace("\r\n", "\n", $csv);
 		$csv = str_replace("\r", "\n", $csv);
 		$lines = array_values(array_filter(explode("\n", trim($csv)), static fn ($l) => trim($l) !== ''));
@@ -328,29 +582,70 @@ class ImportService
 			return ['rows' => [], 'errors' => [['line' => 0, 'column' => null, 'reason' => 'empty']]];
 		}
 
-		$header = str_getcsv(array_shift($lines));
-		$header = array_map(static fn ($h) => trim((string)$h), $header);
-		$required = ['customerId', 'companyName'];
-		foreach ($required as $col) {
-			if (!in_array($col, $header, true)) {
-				$errors[] = ['line' => 1, 'column' => $col, 'reason' => 'missing_header'];
+		$delimiter = $this->detectDelimiter($lines[0]);
+		$known = array_map('strtolower', self::CSV_COLUMNS);
+		foreach (['name', 'company', 'company_name', 'product', 'contactemail', 'contact_email', 'slug', 'invoice_ref', 'invoiceref'] as $alias) {
+			$known[] = $alias;
+		}
+
+		$firstCells = array_map(
+			static fn ($h) => mb_strtolower(trim((string)$h)),
+			str_getcsv($lines[0], $delimiter)
+		);
+		$looksLikeHeader = false;
+		foreach ($firstCells as $cell) {
+			if ($cell !== '' && in_array($cell, $known, true)) {
+				$looksLikeHeader = true;
+				break;
 			}
 		}
-		if ($errors !== []) {
-			return ['rows' => [], 'errors' => $errors];
+
+		if (!$looksLikeHeader) {
+			foreach ($lines as $i => $line) {
+				$lineNo = $i + 1;
+				$name = trim((string)(str_getcsv($line, $delimiter)[0] ?? ''));
+				if ($name === '') {
+					$errors[] = ['line' => $lineNo, 'column' => 'companyName', 'reason' => 'required'];
+					continue;
+				}
+				$row = ['companyName' => $name, 'customerId' => ''];
+				$rowError = $this->validateCsvRow($row, $lineNo);
+				if ($rowError !== null) {
+					$errors[] = $rowError;
+					continue;
+				}
+				$rows[] = $this->normalizeCsvRow($row);
+			}
+			return ['rows' => $rows, 'errors' => $errors];
+		}
+
+		$headerRaw = str_getcsv(array_shift($lines), $delimiter);
+		$header = [];
+		foreach ($headerRaw as $h) {
+			$header[] = $this->canonicalizeHeader((string)$h);
+		}
+
+		if (!in_array('companyName', $header, true)) {
+			return [
+				'rows' => [],
+				'errors' => [['line' => 1, 'column' => 'companyName', 'reason' => 'missing_header']],
+			];
 		}
 
 		foreach ($lines as $i => $line) {
 			$lineNo = $i + 2;
-			$cells = str_getcsv($line);
-			if (count($cells) !== count($header)) {
-				$errors[] = ['line' => $lineNo, 'column' => null, 'reason' => 'column_count'];
-				continue;
+			$cells = str_getcsv($line, $delimiter);
+			// Excel / mail CSVs often pad or drop trailing empties — forgive length mismatch.
+			if (count($cells) < count($header)) {
+				$cells = array_pad($cells, count($header), '');
+			} elseif (count($cells) > count($header)) {
+				$cells = array_slice($cells, 0, count($header));
 			}
 			$row = [];
 			foreach ($header as $idx => $col) {
 				$row[$col] = trim((string)($cells[$idx] ?? ''));
 			}
+			$row = $this->mapImportKeys($row);
 			$rowError = $this->validateCsvRow($row, $lineNo);
 			if ($rowError !== null) {
 				$errors[] = $rowError;
@@ -360,6 +655,35 @@ class ImportService
 		}
 
 		return ['rows' => $rows, 'errors' => $errors];
+	}
+
+	private function detectDelimiter(string $headerLine): string
+	{
+		$commas = substr_count($headerLine, ',');
+		$semis = substr_count($headerLine, ';');
+		$tabs = substr_count($headerLine, "\t");
+		if ($semis > $commas && $semis >= $tabs) {
+			return ';';
+		}
+		if ($tabs > $commas && $tabs >= $semis) {
+			return "\t";
+		}
+		return ',';
+	}
+
+	private function canonicalizeHeader(string $raw): string
+	{
+		$col = trim($raw);
+		$lower = mb_strtolower($col);
+		return match ($lower) {
+			'name', 'company', 'company_name' => 'companyName',
+			'slug', 'customer_id' => 'customerId',
+			'product' => 'productCode',
+			'contactemail', 'contact_email' => 'email',
+			'invoiceref', 'invoice_ref' => 'invoiceId',
+			'keyprefix', 'key_prefix', 'licensekeyprefix' => 'keyFingerprint',
+			default => $col,
+		};
 	}
 
 	/**
@@ -530,9 +854,14 @@ class ImportService
 	/** @param array<string,string> $row @return array<string,mixed> */
 	private function normalizeCsvRow(array $row): array
 	{
+		$name = trim($row['companyName'] ?? '');
+		$customerId = mb_strtolower(trim($row['customerId'] ?? ''));
+		if ($customerId === '' && $name !== '') {
+			$customerId = SlugService::slugify($name);
+		}
 		return [
-			'customerId' => mb_strtolower(trim($row['customerId'] ?? '')),
-			'companyName' => trim($row['companyName'] ?? ''),
+			'customerId' => $customerId,
+			'companyName' => $name,
 			'contactName' => trim($row['contactName'] ?? ''),
 			'email' => mb_strtolower(trim($row['email'] ?? '')),
 			'country' => trim($row['country'] ?? ''),

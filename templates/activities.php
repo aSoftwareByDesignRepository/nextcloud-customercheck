@@ -110,17 +110,20 @@ include __DIR__ . '/common/page-start.php';
 								}
 							?></td>
 							<td data-label="<?php p($l->t('Actions')); ?>" class="actions-cell crm-table-actions-col">
-								<?php if ($canWrite): ?>
 								<div class="crm-table-actions">
-									<?php if (empty($act['doneAt'])): ?>
-										<button type="button" class="crm-btn crm-btn--sm crm-btn--primary" data-crm-complete-activity="<?php p($act['id']); ?>" data-updated-at="<?php p($act['updatedAt'] ?? ''); ?>"><?php p($l->t('Done')); ?></button>
-									<?php else: ?>
-										<button type="button" class="crm-btn crm-btn--sm crm-btn--secondary" data-crm-undo-activity="<?php p($act['id']); ?>" data-updated-at="<?php p($act['updatedAt'] ?? ''); ?>"><?php p($l->t('Undo')); ?></button>
+									<?php
+									$crmRowOpenHref = $urlGenerator->linkToRoute('customercheck.page.companyDetail', ['id' => (int)($act['companyId'] ?? 0)]);
+									$crmRowOpenLabel = $l->t('Open');
+									include __DIR__ . '/common/crm-row-open.php';
+									?>
+									<?php if ($canWrite): ?>
+										<?php if (empty($act['doneAt'])): ?>
+											<button type="button" class="crm-btn crm-btn--sm crm-btn--secondary" data-crm-complete-activity="<?php p($act['id']); ?>" data-updated-at="<?php p($act['updatedAt'] ?? ''); ?>"><?php p($l->t('Done')); ?></button>
+										<?php else: ?>
+											<button type="button" class="crm-btn crm-btn--sm crm-btn--ghost" data-crm-undo-activity="<?php p($act['id']); ?>" data-updated-at="<?php p($act['updatedAt'] ?? ''); ?>"><?php p($l->t('Undo')); ?></button>
+										<?php endif; ?>
 									<?php endif; ?>
 								</div>
-								<?php else: ?>
-									<span class="crm-muted" aria-hidden="true">—</span>
-								<?php endif; ?>
 							</td>
 						</tr>
 					<?php endforeach; ?>

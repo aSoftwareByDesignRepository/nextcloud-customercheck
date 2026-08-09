@@ -61,8 +61,8 @@
 }
 
 #app-content.crm-app .crm-semantic-panel--success .form-toggle input[type="checkbox"]:checked + .toggle-slider {
-	background: var(--color-success);
-	border-color: var(--color-success);
+	background: var(--color-element-success, var(--color-success-text, var(--color-success)));
+	border-color: var(--color-element-success, var(--color-success-text, var(--color-success)));
 }
 
 #app-content.crm-app .crm-semantic-panel--success .form-toggle .toggle-slider::before {

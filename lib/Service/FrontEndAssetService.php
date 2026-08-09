@@ -27,6 +27,7 @@ final class FrontEndAssetService
 		Util::addTranslations(Application::APP_ID);
 		Util::addStyle(Application::APP_ID, 'app');
 		Util::addStyle(Application::APP_ID, 'navigation');
+		Util::addScript(Application::APP_ID, 'common/dialog-present');
 		Util::addScript(Application::APP_ID, 'common/components');
 		Util::addScript(Application::APP_ID, 'common/api');
 		Util::addScript(Application::APP_ID, 'common/shell-can');

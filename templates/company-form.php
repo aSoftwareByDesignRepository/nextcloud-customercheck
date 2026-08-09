@@ -84,7 +84,7 @@ include __DIR__ . '/common/page-start.php';
 								</select>
 								<p id="crm-company-pc-help" class="form-help"><?php p($l->t('Pick the ProjectCheck customer by name to load invoices and projects. Choose “Not linked” to unlink.')); ?></p>
 								<?php if ($mode === 'edit' && !empty($_['pcWriteAvailable'])): ?>
-									<button type="button" class="crm-btn crm-btn--secondary" id="crm-create-pc-customer" style="min-height:44px;margin-top:0.5rem">
+									<button type="button" class="crm-btn crm-btn--secondary crm-mt-2" id="crm-create-pc-customer">
 										<?php p($l->t('Create in ProjectCheck')); ?>
 									</button>
 								<?php endif; ?>
@@ -106,7 +106,7 @@ include __DIR__ . '/common/page-start.php';
 								</select>
 								<p id="crm-company-tc-help" class="form-help"><?php p($l->t('Pick the TicketCheck customer by name for open tickets on the 360 view. Choose “Not linked” to unlink.')); ?></p>
 								<?php if ($mode === 'edit' && !empty($_['tcWriteAvailable'])): ?>
-									<button type="button" class="crm-btn crm-btn--secondary" id="crm-create-tc-customer" style="min-height:44px;margin-top:0.5rem">
+									<button type="button" class="crm-btn crm-btn--secondary crm-mt-2" id="crm-create-tc-customer">
 										<?php p($l->t('Create in TicketCheck')); ?>
 									</button>
 								<?php endif; ?>

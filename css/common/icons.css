@@ -97,22 +97,6 @@ svg[class*='__glyph'],
 	height: 1.75rem;
 }
 
-/* Legacy .btn with IconCatalog (not only .crm-btn) */
-.btn .btn__icon,
-.btn__icon {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	flex-shrink: 0;
-}
-
-.btn .btn__icon-svg,
-.btn__icon .crm-icon,
-.btn__icon-svg {
-	width: var(--crm-icon-md);
-	height: var(--crm-icon-md);
-}
-
 /* Host wrapper created by js/common/datepicker.js */
 .crm-datepicker-host {
 	position: relative;

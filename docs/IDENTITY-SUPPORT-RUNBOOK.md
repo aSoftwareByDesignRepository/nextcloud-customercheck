@@ -14,7 +14,7 @@
 
 ## Diagnosis steps
 
-1. Open the CRM company 360 → section **Linked apps identity**.
+1. Open the CRM company 360 → section **Link apps (setup)** (zone 4).
 2. Read the badge: Linked / Not linked / Broken link / Unavailable (text, not colour alone).
 3. Admin KPI: `GET /apps/customercheck/api/v1/admin/identity-health` (app admin) → `pcUnlinked` / `pcBroken` counts.
 4. ProjectCheck customer page → **CustomerCheck** panel shows reverse deep link when CRM owns the soft link.

@@ -27,20 +27,21 @@ test.describe('Company detail jump nav', () => {
 
     const nav = page.locator('[data-crm-jump-nav="1"]');
     await expect(nav).toHaveClass(/crm-jump-nav--bar/);
-    await expect(nav.locator('.crm-jump-nav__label')).toHaveText(/On this page/i);
+    await expect(nav.locator('.crm-jump-nav__label')).toHaveText(/On this page|Auf dieser Seite/i);
     await expect(nav.locator('.crm-jump-nav__list').first()).toBeVisible();
     // Command Center section inventory — primary 5 + More.
-    await expect(nav.locator('.crm-jump-nav__link')).toHaveCount(14);
+    await expect(nav.locator('.crm-jump-nav__link')).toHaveCount(16);
 
-    // Mid-page target can sit under the sticky bar; bottom sections may only max-scroll.
-    const tasksLink = nav.locator('.crm-jump-nav__link[href="#crm-open-tasks"]');
-    await tasksLink.click();
-    await expect(tasksLink).toHaveAttribute('aria-current', 'location');
-    await expect(page).toHaveURL(/#crm-open-tasks$/);
+    // Mid-page primary (Deals) — always visible; sticky bar can offset the target.
+    const dealsLink = nav.locator('.crm-jump-nav__link[href="#crm-deals"]');
+    await expect(dealsLink).toBeVisible();
+    await dealsLink.click();
+    await expect(dealsLink).toHaveAttribute('aria-current', 'location');
+    await expect(page).toHaveURL(/#crm-deals$/);
 
     await page.waitForFunction(() => {
       const root = document.querySelector('#app-content');
-      const section = document.getElementById('crm-open-tasks');
+      const section = document.getElementById('crm-deals');
       if (!(root instanceof HTMLElement) || !(section instanceof HTMLElement)) {
         return false;
       }
@@ -50,7 +51,24 @@ test.describe('Company detail jump nav', () => {
       return root.scrollTop > 0 && ((offset >= -20 && offset < 220) || atMax);
     }, null, { timeout: 5000 });
 
+    // People primary + deep-link hash (user entry point for #crm-persons).
+    const peopleLink = nav.locator('.crm-jump-nav__link[href="#crm-persons"]');
+    await peopleLink.click();
+    await expect(peopleLink).toHaveAttribute('aria-current', 'location');
+    await expect(page).toHaveURL(/#crm-persons$/);
+    await expect(page.locator('#crm-persons')).toBeVisible();
+
+    // Tasks lives under More — open, then jump to bottom Timeline.
     const more = nav.locator('.crm-jump-nav__more');
+    await more.evaluate((el) => {
+      if (el instanceof HTMLDetailsElement) el.open = true;
+    });
+    const tasksLink = nav.locator('.crm-jump-nav__link[href="#crm-open-tasks"]');
+    await expect(tasksLink).toBeVisible();
+    await tasksLink.click({ force: true });
+    await expect(tasksLink).toHaveAttribute('aria-current', 'location');
+    await expect(page).toHaveURL(/#crm-open-tasks$/);
+
     await more.evaluate((el) => {
       if (el instanceof HTMLDetailsElement) el.open = true;
     });

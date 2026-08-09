@@ -45,7 +45,7 @@ test.describe('Simplified core UX journeys', () => {
     const jump = page.locator('[data-crm-jump-nav="1"]');
     await expect(jump.locator('.crm-jump-nav__list').first().locator('.crm-jump-nav__link')).toHaveCount(5);
     await expect(jump.locator('.crm-jump-nav__more')).toBeVisible();
-    await expect(jump.locator('.crm-jump-nav__link')).toHaveCount(14);
+    await expect(jump.locator('.crm-jump-nav__link')).toHaveCount(16);
 
     // New agreement keeps company context (EN or DE label).
     const newAg = page.locator('a', { hasText: /New agreement|Neue Vereinbarung/i }).first();

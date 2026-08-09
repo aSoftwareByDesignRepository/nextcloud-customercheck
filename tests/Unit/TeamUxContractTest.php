@@ -18,6 +18,9 @@ final class TeamUxContractTest extends TestCase
 		$this->assertStringContainsString('data-crm-persona-mount="team"', $html);
 		$this->assertStringContainsString('id="capacity"', $html);
 		$this->assertStringContainsString('data-crm-team-capacity', $html);
+		$this->assertStringContainsString('crm-card--collapsible', $html);
+		$this->assertStringContainsString('crm-team-capacity-shell', $html);
+		$this->assertStringNotContainsString('crm-advanced', $html);
 		$this->assertStringContainsString('Manager tools', $html);
 		$this->assertStringContainsString('Who needs help', $html);
 		$this->assertStringContainsString('On track = fine. Needs help = coach them.', $html);
@@ -31,6 +34,8 @@ final class TeamUxContractTest extends TestCase
 	{
 		$js = (string)file_get_contents(dirname(__DIR__, 2) . '/js/pages/persona.js');
 		$this->assertStringContainsString('crm-team-capacity__grid', $js);
+		$this->assertStringContainsString("querySelector('details.crm-team-capacity-shell')", $js);
+		$this->assertStringNotContainsString('#capacity details.crm-team-capacity-shell', $js);
 		$this->assertStringContainsString('Cover while away', $js);
 		$this->assertStringContainsString('Move work to someone else', $js);
 		$this->assertStringContainsString('Escalate for help', $js);

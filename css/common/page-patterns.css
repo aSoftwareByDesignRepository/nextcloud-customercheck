@@ -235,7 +235,7 @@
 #app-content.crm-app .crm-filter-field__control .form-input[aria-invalid='true'],
 #app-content.crm-app .crm-filter-field__control .form-select[aria-invalid='true'] {
 	border-color: var(--color-error, #e9322d);
-	outline-color: var(--color-error, #e9322d);
+	outline-color: var(--color-error-text, var(--color-error, #e9322d));
 }
 
 @media (max-width: 1200px) {
@@ -266,7 +266,7 @@
 	}
 
 	#app-content.crm-app .crm-filter-actions .crm-btn,
-	#app-content.crm-app .crm-filter-actions .btn {
+	#app-content.crm-app .crm-filter-actions .crm-btn {
 		flex: 1 1 auto;
 	}
 }
@@ -479,11 +479,11 @@
 	display: table-cell;
 }
 
-#app-content.crm-app .table td.crm-table-actions-col .btn,
-#app-content.crm-app .table td.actions-cell .btn,
-#app-content.crm-app .table .crm-table-actions .btn,
-#app-content.crm-app .grid-table td.actions-cell .btn,
-#app-content.crm-app .grid-table .crm-table-actions .btn {
+#app-content.crm-app .table td.crm-table-actions-col .crm-btn,
+#app-content.crm-app .table td.actions-cell .crm-btn,
+#app-content.crm-app .table .crm-table-actions .crm-btn,
+#app-content.crm-app .grid-table td.actions-cell .crm-btn,
+#app-content.crm-app .grid-table .crm-table-actions .crm-btn {
 	flex-shrink: 0;
 	white-space: nowrap;
 }
@@ -632,17 +632,17 @@
 		flex-direction: column;
 	}
 
-	#app-content.crm-app .table.crm-table--responsive tbody td.actions-cell .crm-table-actions .btn,
-	#app-content.crm-app .table.crm-table--responsive tbody td.actions-cell .btn,
-	#app-content.crm-app .table.crm-table--responsive tbody td.admin-ot-audit__actions .btn,
-	#app-content.crm-app .table.crm-table--responsive tbody td.admin-tariff-rules__row-actions .btn,
-	#app-content.crm-app .table.crm-table--responsive tbody td.layer-card__history-actions .btn {
+	#app-content.crm-app .table.crm-table--responsive tbody td.actions-cell .crm-table-actions .crm-btn,
+	#app-content.crm-app .table.crm-table--responsive tbody td.actions-cell .crm-btn,
+	#app-content.crm-app .table.crm-table--responsive tbody td.admin-ot-audit__actions .crm-btn,
+	#app-content.crm-app .table.crm-table--responsive tbody td.admin-tariff-rules__row-actions .crm-btn,
+	#app-content.crm-app .table.crm-table--responsive tbody td.layer-card__history-actions .crm-btn {
 		width: 100%;
 		justify-content: center;
 		min-height: 44px;
 	}
 
-	#app-content.crm-app .table.crm-table--responsive tbody td.actions-cell .btn-icon {
+	#app-content.crm-app .table.crm-table--responsive tbody td.actions-cell .crm-btn-icon {
 		width: 46px;
 		height: 46px;
 		min-width: 46px;

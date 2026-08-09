@@ -228,7 +228,9 @@
     }
     const title = (opts && opts.title) || t('Prepared message');
     const companyId = (opts && opts.companyId) || 0;
-    const openHref = (pack && (pack.mailAppUrl || pack.mailtoUrl)) || '#';
+    const openHref = (typeof C.safeExternalHref === 'function')
+      ? C.safeExternalHref((pack && (pack.mailAppUrl || pack.mailtoUrl)) || '#')
+      : '#';
     const dialogKey = makeIdempotencyKey();
     const dialogId = 'crm-prepared-mail-' + Date.now();
     /** @type {Array<{id:number,name:string}>} */
@@ -248,12 +250,12 @@
         '<span class="form-label">' + esc(t('Attachments (optional)')) + '</span>' +
         '<p class="crm-muted">' + esc(t('PDF, PNG, JPEG or plain text — max 5 files, 10 MiB each.')) + '</p>' +
         '<ul id="' + dialogId + '-attach-list" class="crm-list" role="list" aria-live="polite"></ul>' +
-        '<div class="crm-form-actions" style="justify-content:flex-start">' +
+        '<div class="crm-form-actions crm-form-actions--start">' +
         '<button type="button" class="crm-btn crm-btn--secondary" data-crm-attach-file>' + esc(t('Add file')) + '</button></div>' +
         '</div>' +
         '<div class="crm-form-actions">' +
-        '<a class="crm-btn crm-btn--primary" href="' + String(openHref).replace(/"/g, '&quot;') + '">' + t('Open mail') + '</a> ' +
-        '<button type="button" class="crm-btn crm-btn--secondary" data-crm-shared-send>' + t('Send from shared mailbox') + '</button></div>',
+        '<a class="crm-btn crm-btn--primary" href="' + esc(openHref) + '" rel="noopener noreferrer">' + esc(t('Open mail')) + '</a> ' +
+        '<button type="button" class="crm-btn crm-btn--secondary" data-crm-shared-send>' + esc(t('Send from shared mailbox')) + '</button></div>',
       size: 'md',
     });
 

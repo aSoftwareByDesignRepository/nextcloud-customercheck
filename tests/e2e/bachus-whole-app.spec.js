@@ -44,7 +44,15 @@ test.describe('Bachus whole-app effortless flows', () => {
     await page.waitForSelector('#crm-main-content', { timeout: 30000 });
     const moneyEmpty = page.locator('.crm-empty-state');
     if (await moneyEmpty.count()) {
-      await expect(moneyEmpty.getByRole('link', { name: /Open agreements|Vereinbarungen|Open companies|Unternehmen/i }).first()).toBeVisible();
+      await expect(moneyEmpty.getByRole('link', { name: /Open agreements|Vereinbarungen|Open companies|Unternehmen|Show all money|Alles Geld/i }).first()).toBeVisible();
+    }
+    await axeMain(page);
+
+    await page.goto('/apps/customercheck/money?state=overdue');
+    await page.waitForSelector('#crm-main-content', { timeout: 30000 });
+    const filteredEmpty = page.locator('.crm-empty-state').filter({ hasText: /Nothing in this group|Nichts in dieser Gruppe/i });
+    if (await filteredEmpty.count()) {
+      await expect(filteredEmpty.getByRole('link', { name: /Show all money|Alles Geld|Open agreements|Vereinbarungen/i }).first()).toBeVisible();
     }
     await axeMain(page);
 
@@ -66,8 +74,28 @@ test.describe('Bachus whole-app effortless flows', () => {
     await page.waitForSelector('#crm-import-csv', { timeout: 30000 });
     const ph = await page.locator('#crm-import-csv').getAttribute('placeholder');
     expect(ph || '').not.toMatch(/customerId,companyName/);
+    await expect(page.locator('.crm-import-tile').first()).toBeVisible();
+    await expect(page.locator('#crm-import-drop')).toBeVisible();
+    await expect(page.locator('#crm-import-file')).toBeAttached();
+
+    // Radio sits beside title (same row), not stacked above it.
+    const aligned = await page.locator('.crm-import-tile').first().evaluate((tile) => {
+      const radio = tile.querySelector('input[type="radio"]');
+      const title = tile.querySelector('.crm-import-tile__title');
+      if (!(radio instanceof HTMLElement) || !(title instanceof HTMLElement)) return false;
+      const r = radio.getBoundingClientRect();
+      const t = title.getBoundingClientRect();
+      const sameRow = Math.abs((r.top + r.height / 2) - (t.top + t.height / 2)) < 12;
+      const leftOfTitle = r.right <= t.left + 2;
+      const style = getComputedStyle(tile);
+      return sameRow && leftOfTitle && style.flexDirection === 'row';
+    });
+    expect(aligned).toBe(true);
+
     await expect(page.locator('#crm-import-accept-unambiguous')).toBeAttached();
-    await expect(page.locator('#crm-import-accept-unambiguous')).toContainText(/Import clear rows|Klare Zeilen|klaren Zeilen/i);
+    await expect(page.locator('#crm-import-accept-unambiguous')).toContainText(/Import ready|Bereite importieren|Übernehmen/i);
+    await expect(page.locator('#crm-import-scan')).toContainText(/Check my list|Liste prüfen|Vorschau/i);
+    await expect(page.locator('#crm-import-meta')).not.toContainText(/%s/);
     await axeMain(page);
 
     await page.goto('/apps/customercheck/team');
@@ -77,7 +105,7 @@ test.describe('Bachus whole-app effortless flows', () => {
       return mount && mount.getAttribute('aria-busy') !== 'true';
     }, null, { timeout: 30000 });
     await expect(page.getByText(/Open chase|Commit pipeline/i)).toHaveCount(0);
-    const shell = page.locator('#capacity details.crm-advanced, details.crm-team-capacity-shell').first();
+    const shell = page.locator('details.crm-team-capacity-shell#capacity, details.crm-team-capacity-shell').first();
     await expect(shell).toBeVisible();
     const needsHelp = await page.locator('[data-crm-persona-mount="team"]').getByText(/Needs help|Braucht Hilfe/i).count();
     if (needsHelp > 0) {
@@ -133,19 +161,30 @@ test.describe('Bachus whole-app effortless flows', () => {
     await expect(accounts.getByText(/^Covered$/i)).toHaveCount(0);
     await axeMain(page);
 
-    await page.goto('/apps/customercheck/settings');
-    await page.waitForSelector('#crm-main-content', { timeout: 30000 });
+    // Workspace settings are split (SETTINGS-PAGES-STANDARD): mailbox first, promises on /settings/circles.
+    await page.goto('/apps/customercheck/settings/mailbox');
+    await page.waitForSelector('#section-workspace-mailbox', { timeout: 30000 });
     await expect(page.getByText(/^Slug$/i)).toHaveCount(0);
     await expect(page.getByText(/Lead webhook|Website order webhook|Lead reply SLA/i)).toHaveCount(0);
     await expect(page.getByText(/First reply within|Erste Antwort/i).first()).toBeVisible();
-    await expect(page.getByRole('heading', { name: /Weekly promise check|Wöchentliche Zusagen/i })).toBeVisible();
-    const mailbox = page.locator('#section-workspace-mailbox');
-    const prefs = page.locator('#section-preferences, [id*="preferences"]').first();
-    if (await mailbox.count() && await prefs.count()) {
-      const mBox = await mailbox.boundingBox();
-      const pBox = await prefs.boundingBox();
-      if (mBox && pBox) expect(mBox.y).toBeLessThan(pBox.y);
-    }
+    await expect(page.locator('#section-workspace-mailbox.crm-mailbox-settings')).toBeVisible();
+    await expect(page.locator('#crm-ws-limits-card')).toBeVisible();
+    await expect(page.locator('#crm-ws-mailbox-card')).toBeVisible();
+    await expect(page.locator('#crm-mailbox-form.crm-form--stack')).toBeVisible();
+    await expect(page.locator('#crm-mailbox-form fieldset.crm-fieldset')).toHaveCount(4);
+    await expect(page.locator('#crm-mailbox-save')).toBeDisabled();
+    await expect(page.locator('#crm-mailbox-form')).toHaveAttribute('aria-busy', 'false', { timeout: 30000 });
+    const settingsNav = page.locator('#crm-settings-pages');
+    await expect(settingsNav.locator('a[href*="/settings/mailbox"]')).toBeVisible();
+    await expect(settingsNav.locator('a[href*="/settings/circles"]')).toBeVisible();
+    const hasPresent = await page.evaluate(() => !!(window.CustomerCheckMailboxSettingsPresent && typeof window.CustomerCheckMailboxSettingsPresent.buildMailboxListRows === 'function'));
+    expect(hasPresent).toBeTruthy();
+    await axeMain(page);
+
+    await page.goto('/apps/customercheck/settings/circles');
+    await page.waitForSelector('#section-circles-roll-call', { timeout: 30000 });
+    await expect(page.locator('#section-circles-heading')).toBeVisible();
+    await expect(page.locator('#section-circles-heading')).toContainText(/Weekly promise check|Wöchentliche Zusagen/i);
     await axeMain(page);
   });
 
@@ -173,5 +212,56 @@ test.describe('Bachus whole-app effortless flows', () => {
     await expect(page.locator('#crm-conflicts-lead')).toContainText(/Keep what’s saved|Gespeicherte|short reason|kurze Begründung|Resolve|Lösen/i);
     await expect(page.getByText(/at least 10 characters|mind\. 10/i)).toHaveCount(0);
     await axeMain(page);
+  });
+
+  test('List tables expose an obvious Open/Edit button on every data row', async ({ page }) => {
+    test.setTimeout(120000);
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await login(page, credsFromEnv('ADMIN'));
+
+    async function assertRowPrimaryWhenPresent(path, emptyOk) {
+      await page.goto(path, { waitUntil: 'domcontentloaded' });
+      await page.waitForSelector('#crm-main-content', { timeout: 30000 });
+      if (path.includes('/pipeline')) {
+        const tableView = page.locator('[data-crm-pipeline-view="table"]');
+        if (await tableView.count()) {
+          await tableView.click();
+          await expect(page.locator('#crm-pipeline-table')).toBeVisible({ timeout: 10000 });
+          await expect(page.locator('#crm-pipeline-table')).not.toHaveAttribute('hidden', '');
+        }
+      }
+      const dataRows = page.locator('table.table:visible tbody tr').filter({
+        has: page.locator('td.crm-table-actions-col, td.actions-cell, .crm-table-actions'),
+      });
+      const n = await dataRows.count();
+      if (n === 0) {
+        if (emptyOk) {
+          const emptyChrome = page.locator(
+            '#crm-main-content .crm-empty-state:visible, #crm-main-content .crm-callout--info:visible, #crm-pipeline-new-deal:visible, #crm-pipeline-empty-new:visible',
+          );
+          await expect(emptyChrome.first()).toBeVisible({ timeout: 10000 });
+          return;
+        }
+      }
+      for (let i = 0; i < Math.min(n, 5); i += 1) {
+        const row = dataRows.nth(i);
+        // Skip pure empty-state colspan rows (count is sync — avoid auto-wait traps).
+        const emptyCount = await row.locator('.crm-empty-state, .crm-callout').count();
+        if (emptyCount) continue;
+        const primary = row.locator('.crm-table-actions .crm-btn--primary').first();
+        await expect(primary, `missing primary CTA on ${path} row ${i}`).toBeVisible();
+        const box = await primary.boundingBox();
+        expect(box, `primary CTA not laid out on ${path}`).toBeTruthy();
+        expect(box.height).toBeGreaterThanOrEqual(36);
+      }
+      await axeMain(page);
+    }
+
+    await assertRowPrimaryWhenPresent('/apps/customercheck/companies', true);
+    await assertRowPrimaryWhenPresent('/apps/customercheck/agreements', true);
+    await assertRowPrimaryWhenPresent('/apps/customercheck/money', true);
+    await assertRowPrimaryWhenPresent('/apps/customercheck/activities', true);
+    await assertRowPrimaryWhenPresent('/apps/customercheck/pipeline', true);
+    await assertRowPrimaryWhenPresent('/apps/customercheck/today', true);
   });
 });

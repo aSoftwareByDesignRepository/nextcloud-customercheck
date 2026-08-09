@@ -25,10 +25,10 @@
     C.openDialog({
       id: id,
       title: t('Log hours'),
-      content: '<form id="' + id + '-form" class="crm-form">' +
-        '<div class="form-group"><label class="form-label">' + t('Date') + '</label><input class="crm-input form-input" name="entryDate" type="date" value="' + today + '" required /></div>' +
-        '<div class="form-group"><label class="form-label">' + t('Minutes') + '</label><input class="crm-input form-input" name="minutes" type="number" min="15" step="15" value="60" required /><p class="form-help">' + t('Steps of 15. Default is one hour.') + '</p></div>' +
-        '<div class="form-group"><label class="form-label">' + t('Topic') + '</label><input class="crm-input form-input" name="topic" required autofocus /></div>' +
+      content: '<form id="' + id + '-form" class="crm-form crm-form--stack">' +
+        '<div class="form-group"><label class="form-label" for="' + id + '-date">' + t('Date') + '</label><input class="crm-input form-input" id="' + id + '-date" name="entryDate" type="date" value="' + today + '" required /></div>' +
+        '<div class="form-group"><label class="form-label" for="' + id + '-minutes">' + t('Minutes') + '</label><input class="crm-input form-input" id="' + id + '-minutes" name="minutes" type="number" min="15" step="15" value="60" required /><p class="form-help">' + t('Steps of 15. Default is one hour.') + '</p></div>' +
+        '<div class="form-group"><label class="form-label" for="' + id + '-topic">' + t('Topic') + '</label><input class="crm-input form-input" id="' + id + '-topic" name="topic" required autofocus /></div>' +
         '<div class="crm-form-actions"><button type="submit" class="crm-btn crm-btn--primary">' + t('Save') + '</button> <button type="button" class="crm-btn crm-btn--secondary" data-cancel>' + t('Cancel') + '</button></div></form>',
     });
     const form = document.getElementById(id + '-form');
@@ -110,10 +110,9 @@
         await C.openDialog({
           id: 'crm-delivery-pack',
           title: t('Delivery pack'),
-          content: '<p><strong>' + (pack.subject || '') + '</strong></p><pre class="crm-pre">' +
-            String(pack.bodyText || '').replace(/[<>&]/g, (ch) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[ch])) +
-            '</pre><div class="crm-form-actions">' +
-            '<a class="crm-btn crm-btn--primary" href="' + (pack.mailAppUrl || pack.mailtoUrl || '#') + '">' + t('Open mail') + '</a></div>',
+          content: (typeof C.buildMailPackDialogHtml === 'function')
+            ? C.buildMailPackDialogHtml(pack, { t: t })
+            : ('<p><strong>' + (C._escapeHtml ? C._escapeHtml(pack.subject || '') : '') + '</strong></p>'),
           size: 'md',
         });
       } catch (e) {

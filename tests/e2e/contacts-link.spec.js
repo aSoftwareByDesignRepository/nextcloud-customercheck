@@ -32,17 +32,19 @@ test.describe('Contacts link (Command Center)', () => {
     await expect(page.locator('#crm-persons-table tbody tr').first()).toContainText(/Not linked|Nicht verknüpft/i);
 
     // Cockpit Log email is wired (AC communication actions).
-    await expect(page.locator('#crm-log-email-btn[data-crm-log-email]')).toBeVisible();
+    await expect(page.locator('#crm-log-email[data-crm-log-email]')).toBeVisible();
   });
 
   test('platform strip and contacts suggest degrade cleanly', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto('/apps/customercheck/companies');
-    const link = page.locator('#crm-main-content a[href*="/apps/customercheck/companies/"]').first();
-    if ((await link.count()) === 0) {
+    await expect(page.locator('#crm-main-content')).toBeVisible({ timeout: 30000 });
+    let openRow = page.locator('#crm-main-content table tbody tr .crm-table-actions a.crm-btn--primary').first();
+    if ((await openRow.count()) === 0) {
       test.skip(true, 'No company yet');
     }
-    await link.click();
-    await page.waitForURL(/\/companies\/\d+/, { timeout: 30000 });
+    await openRow.click();
+    await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
     await expect(page.locator('#crm-platform-links')).toBeAttached();
     await expect(page.locator('#crm-persons')).toBeVisible();
   });

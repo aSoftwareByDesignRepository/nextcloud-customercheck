@@ -16,20 +16,47 @@ async function createCompany(page, name) {
 
 test.describe('Command Center binary ACs', () => {
   test('timed warm path companies → 360 glance ≤10s (AC-CC-11)', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto('/apps/customercheck/companies');
     await expect(page.locator('#crm-main-content')).toBeVisible({ timeout: 30000 });
-    let link = page.locator('#crm-main-content a[href*="/apps/customercheck/companies/"]').first();
-    if ((await link.count()) === 0) {
+    let openRow = page.locator('#crm-main-content table tbody tr .crm-table-actions a.crm-btn--primary').first();
+    if ((await openRow.count()) === 0) {
       await createCompany(page, `Warm Path ${Date.now().toString(36)}`);
       await page.goto('/apps/customercheck/companies');
       await expect(page.locator('#crm-main-content')).toBeVisible({ timeout: 30000 });
-      link = page.locator('#crm-main-content a[href*="/apps/customercheck/companies/"]').first();
+      openRow = page.locator('#crm-main-content table tbody tr .crm-table-actions a.crm-btn--primary').first();
     }
     const t0 = Date.now();
-    await link.click();
-    await page.waitForURL(/\/companies\/\d+/, { timeout: 30000 });
+    await openRow.click();
+    await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
     await expect(page.locator('#crm-glance')).toBeVisible({ timeout: 10000 });
-    await expect(page.locator('#crm-glance-summary, .crm-glance-dl').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('#crm-glance-summary .crm-glance-dl.crm-stat-strip')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('#crm-glance-summary .crm-stat-tile')).toHaveCount(8, { timeout: 10000 });
+    await expect(page.locator('#crm-billing-body .crm-billing-strip .crm-stat-tile')).toHaveCount(3, { timeout: 10000 });
+    await expect(page.locator('#crm-glance-density-title')).toBeVisible();
+    const kpis = page.locator('#crm-glance .crm-glance-kpi');
+    await expect(kpis).toHaveCount(3);
+    for (let i = 0; i < 3; i += 1) {
+      const kpi = kpis.nth(i);
+      await expect(kpi.locator('.crm-glance-kpi__value')).toBeVisible();
+      await expect(kpi.locator('.crm-glance-kpi__cta')).toBeVisible();
+      const box = await kpi.boundingBox();
+      expect(box, 'KPI tile laid out').toBeTruthy();
+      expect(box.height).toBeGreaterThanOrEqual(44);
+    }
+    const unpaid = page.locator('#crm-glance .crm-glance-kpi').filter({ hasText: /Unpaid|Unbezahlt/i }).first();
+    await expect(unpaid).toBeVisible();
+    const uCls = (await unpaid.getAttribute('class')) || '';
+    const uVal = (await unpaid.locator('.crm-glance-kpi__value').innerText()).trim();
+    if (uVal === '0') {
+      expect(uCls).not.toContain('crm-glance-kpi--attention');
+    }
+    const axe = await new AxeBuilder({ page })
+      .include('#crm-glance')
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
+      .analyze();
+    const serious = axe.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
+    expect(serious, JSON.stringify(serious, null, 2)).toEqual([]);
     expect(Date.now() - t0).toBeLessThan(10000);
   });
 

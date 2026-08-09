@@ -103,16 +103,31 @@ test.describe('Bachus extreme simplicity journeys', () => {
     await login(page, credsFromEnv('ADMIN'));
 
     await page.goto('/apps/customercheck/settings#crm-review-sources');
+    await page.waitForURL(/\/settings\/review-sources/, { timeout: 30000 });
     await page.waitForSelector('#crm-review-sources', { timeout: 30000 });
     await expect(page.locator('#crm-review-sources .crm-card__title')).toBeVisible();
     await expect(page.locator('#crm-review-sources-form')).toBeVisible();
+    await expect(page.locator('#crm-ws-status')).toBeVisible();
+    await expect(page.locator('#crm-ws-error')).toBeAttached();
     await expect(page.locator('#crm-mailbox-form #crm-review-sources')).toHaveCount(0);
+    await expect(page.locator('#crm-review-file-folder-pick')).toBeVisible();
+    await expect(page.locator('#crm-review-file-folder')).toHaveAttribute('type', 'hidden');
+    await expect(page.locator('input#crm-review-file-folder[type="number"]')).toHaveCount(0);
+    await expect(page.getByText(/Never type a raw folder file id|Nie eine rohe Ordner-Datei-ID/i)).toBeVisible();
+    await expect(page.locator('#crm-review-file-folder-status')).toBeVisible();
+    await expect(page.locator('#crm-review-sources-form')).toHaveAttribute('aria-busy', 'false', { timeout: 30000 });
+    await expect(page.locator('#crm-review-sources-save')).toBeEnabled({ timeout: 30000 });
+    const hasPicker = await page.evaluate(() => !!(window.CustomerCheckFolderPicker && typeof window.CustomerCheckFolderPicker.pickFolder === 'function'));
+    expect(hasPicker).toBeTruthy();
 
     await page.goto('/apps/customercheck/agreements/new');
     await page.waitForSelector('#crm-agreement-form', { timeout: 30000 });
     await expect(page.locator('#crm-agreement-advanced')).not.toHaveAttribute('open', '');
     await expect(page.locator('#crm-ag-label')).toBeVisible();
-    await expect(page.locator('#crm-ag-amount')).toBeAttached();
+    await expect(page.locator('#crm-ag-amount')).toBeVisible();
+    await expect(page.locator('#crm-ag-until')).toBeVisible();
+    await expect(page.locator('#crm-ag-kind')).toBeAttached();
+    await expect(page.locator('.crm-ag-essentials')).toBeVisible();
 
     const results = await new AxeBuilder({ page })
       .include('#crm-main-content')

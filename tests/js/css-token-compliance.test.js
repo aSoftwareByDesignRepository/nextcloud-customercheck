@@ -127,9 +127,22 @@ describe('CSS design-token compliance (no hardcoded colors)', () => {
       '--crm-tint-info',
       '--crm-shadow-sm',
       '--crm-shadow-md',
+      '--crm-danger-fill',
+      '--crm-danger-on-fill',
+      '--crm-danger-ink',
     ]) {
       expect(bodyBlocks, `${token} must be defined inside body {}`).toContain(`${token}:`);
     }
+  });
+
+  it('touch targets and danger fill follow design-system §0.4 / §3.3', () => {
+    const tokens = stripComments(readFileSync(join(cssRoot, 'common', 'tokens.css'), 'utf8'));
+    expect(tokens).toContain('--crm-touch: 44px');
+    expect(tokens).toContain('--crm-touch-lg: 48px');
+    expect(tokens).toContain('--crm-danger-fill: var(--color-element-error');
+    const app = stripComments(readFileSync(join(cssRoot, 'app.css'), 'utf8'));
+    expect(app).toMatch(/\.crm-btn--danger[\s\S]*?background-color:\s*var\(--crm-danger-fill\)/);
+    expect(app).not.toMatch(/\.crm-btn--danger[\s\S]*?background-color:\s*var\(--color-error/);
   });
 
   it('legacy --space-* aliases map to design-system --crm-space-* (px grid)', () => {
@@ -161,5 +174,21 @@ describe('CSS design-token compliance (no hardcoded colors)', () => {
     ]) {
       expect(tokens, `tokens.css must consume ${ncVar}`).toContain(`var(${ncVar}`);
     }
+  });
+
+  it('legacy primary alias maps to --color-primary-element (accent + AA)', () => {
+    const colors = stripComments(readFileSync(join(cssRoot, 'common', 'colors.css'), 'utf8'));
+    expect(colors).toContain('--arbeitszeitcheck-color-primary: var(--color-primary-element)');
+    expect(colors).not.toMatch(/--arbeitszeitcheck-color-primary:\s*var\(--color-primary\)\s*;/);
+    expect(colors).toMatch(/--arbeitszeitcheck-color-success-light:[^;]*var\(--color-main-background\)/);
+    expect(colors).not.toMatch(/--arbeitszeitcheck-color-success-light:[^;]*transparent/);
+    expect(colors).toMatch(/--arbeitszeitcheck-color-button-danger:\s*var\(--crm-danger-fill/);
+    const a11y = stripComments(readFileSync(join(cssRoot, 'common', 'accessibility.css'), 'utf8'));
+    expect(a11y).toContain('@media (prefers-contrast: more)');
+    expect(a11y).not.toContain('@media (prefers-contrast: high)');
+    expect(a11y).toContain('body[data-theme-light-highcontrast]');
+    const responsive = stripComments(readFileSync(join(cssRoot, 'common', 'responsive.css'), 'utf8'));
+    expect(responsive).toContain('max-width: 100% !important');
+    expect(responsive).not.toContain('max-width: 100vw !important');
   });
 });

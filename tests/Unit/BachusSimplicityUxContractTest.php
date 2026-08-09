@@ -53,13 +53,31 @@ final class BachusSimplicityUxContractTest extends TestCase
 	{
 		$html = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/agreement-form.php');
 		$this->assertStringContainsString('crm-agreement-advanced', $html);
+		$this->assertStringContainsString('crm-ag-essentials', $html);
+		$this->assertStringContainsString('What matters', $html);
+		$this->assertStringContainsString('crm-agreement-end', $html);
+		$this->assertStringContainsString('Renew for one year', $html);
+		$this->assertStringNotContainsString("if (\$mode === 'edit'): ?> open", $html);
+		// Essentials before More: label + amount + until; type/product/invoice inside More.
 		$this->assertLessThan(
 			(int)strpos($html, 'crm-agreement-advanced'),
 			(int)strpos($html, 'crm-ag-label'),
 		);
-		$this->assertGreaterThan(
+		$this->assertLessThan(
 			(int)strpos($html, 'crm-agreement-advanced'),
 			(int)strpos($html, 'crm-ag-amount'),
+		);
+		$this->assertLessThan(
+			(int)strpos($html, 'crm-agreement-advanced'),
+			(int)strpos($html, 'crm-ag-until'),
+		);
+		$this->assertGreaterThan(
+			(int)strpos($html, 'crm-agreement-advanced'),
+			(int)strpos($html, 'crm-ag-kind'),
+		);
+		$this->assertGreaterThan(
+			(int)strpos($html, 'crm-agreement-advanced'),
+			(int)strpos($html, 'crm-ag-invoice-status'),
 		);
 	}
 
@@ -81,5 +99,26 @@ final class BachusSimplicityUxContractTest extends TestCase
 		$help = (string)file_get_contents(dirname(__DIR__, 2) . '/lib/Service/PageHelpCatalog.php');
 		$this->assertStringContainsString("'review' =>", $help);
 		$this->assertStringContainsString("'conflicts' =>", $help);
+	}
+
+	public function testImportUsesSourceTilesAndPlainPrimaryCta(): void
+	{
+		$tpl = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/import.php');
+		$this->assertStringContainsString('crm-import-tile', $tpl);
+		$this->assertStringContainsString('Where should we look?', $tpl);
+		$this->assertStringContainsString('Check my list', $tpl);
+		$this->assertStringContainsString('Import ready', $tpl);
+		$this->assertStringContainsString('crm-import-stats', $tpl);
+		$this->assertStringContainsString('id="crm-import-file"', $tpl);
+		$this->assertStringContainsString('crm-import-drop', $tpl);
+		$this->assertStringContainsString('accept=".csv,.json,.txt', $tpl);
+		$this->assertStringNotContainsString('Import clear rows', $tpl);
+		$js = (string)file_get_contents(dirname(__DIR__, 2) . '/js/pages/import.js');
+		$this->assertStringContainsString('Looking for matches', $js);
+		$this->assertStringContainsString('runScan', $js);
+		$this->assertStringContainsString('readImportFile', $js);
+		$this->assertStringNotContainsString('%s rows · %s ready · %s need a choice · %s skip', $js);
+		$help = (string)file_get_contents(dirname(__DIR__, 2) . '/lib/Service/PageHelpCatalog.php');
+		$this->assertStringContainsString('nothing is saved until you say yes', $help);
 	}
 }

@@ -8,8 +8,10 @@
 #app-content.crm-app .crm-callout--info:not(.crm-semantic-panel),
 .crm-nc-admin-settings .crm-callout--info,
 .modal-backdrop .crm-callout--info:not(.crm-semantic-panel),
+dialog.crm-native-dialog .crm-callout--info:not(.crm-semantic-panel),
 #app-content.crm-app .inline-notice--info,
 .modal-backdrop .inline-notice--info,
+dialog.crm-native-dialog .inline-notice--info,
 .toast--info {
 	border-color: var(--color-primary-element, #00679e);
 	border-left-width: 5px;
@@ -20,11 +22,14 @@
 #app-content.crm-app .crm-callout--warning:not(.crm-semantic-panel),
 .crm-nc-admin-settings .crm-callout--warning,
 .modal-backdrop .crm-callout--warning:not(.crm-semantic-panel),
+dialog.crm-native-dialog .crm-callout--warning:not(.crm-semantic-panel),
 #app-content.crm-app .inline-notice--warning,
 .modal-backdrop .inline-notice--warning,
+dialog.crm-native-dialog .inline-notice--warning,
 .toast--warning,
 #app-content.crm-app .alert--warning,
-.modal-backdrop .alert--warning {
+.modal-backdrop .alert--warning,
+dialog.crm-native-dialog .alert--warning {
 	border-color: var(--color-warning-text, var(--color-warning, #a37200));
 	border-left-width: 5px;
 	border-left-color: var(--color-warning-text, var(--color-warning, #a37200));
@@ -34,9 +39,11 @@
 #app-content.crm-app .crm-callout--success:not(.crm-semantic-panel),
 .crm-nc-admin-settings .crm-callout--success,
 .modal-backdrop .crm-callout--success:not(.crm-semantic-panel),
+dialog.crm-native-dialog .crm-callout--success:not(.crm-semantic-panel),
 .toast--success,
 #app-content.crm-app .alert--success,
-.modal-backdrop .alert--success {
+.modal-backdrop .alert--success,
+dialog.crm-native-dialog .alert--success {
 	border-color: var(--color-success-text, var(--color-success, #2d7b46));
 	border-left-width: 5px;
 	border-left-color: var(--color-success-text, var(--color-success, #2d7b46));
@@ -48,10 +55,13 @@
 .crm-nc-admin-settings .crm-callout--danger,
 .crm-nc-admin-settings .crm-callout--error,
 .modal-backdrop .crm-callout--danger:not(.crm-semantic-panel),
+dialog.crm-native-dialog .crm-callout--danger:not(.crm-semantic-panel),
 .modal-backdrop .crm-callout--error:not(.crm-semantic-panel),
+dialog.crm-native-dialog .crm-callout--error:not(.crm-semantic-panel),
 .toast--error,
 #app-content.crm-app .alert--error,
-.modal-backdrop .alert--error {
+.modal-backdrop .alert--error,
+dialog.crm-native-dialog .alert--error {
 	border-color: var(--color-error-text, var(--color-error, #db0606));
 	border-left-width: 5px;
 	border-left-color: var(--color-error-text, var(--color-error, #db0606));
@@ -59,7 +69,8 @@
 }
 
 #app-content.crm-app .crm-callout--neutral:not(.crm-semantic-panel),
-.modal-backdrop .crm-callout--neutral:not(.crm-semantic-panel) {
+.modal-backdrop .crm-callout--neutral:not(.crm-semantic-panel),
+dialog.crm-native-dialog .crm-callout--neutral:not(.crm-semantic-panel) {
 	border-color: var(--color-border);
 	border-left-width: 2px;
 	background: color-mix(in srgb, var(--color-main-text) 5%, var(--color-main-background));
@@ -71,11 +82,14 @@
 .crm-notif-icon-well,
 #app-content.crm-app .crm-callout__icon,
 .modal-backdrop .crm-callout__icon,
+dialog.crm-native-dialog .crm-callout__icon,
 #app-content.crm-app .alert-icon,
 .modal-backdrop .alert-icon,
+dialog.crm-native-dialog .alert-icon,
 .toast-icon,
 #app-content.crm-app .inline-notice__icon,
 .modal-backdrop .inline-notice__icon,
+dialog.crm-native-dialog .inline-notice__icon,
 .crm-status-icon-well {
 	flex-shrink: 0;
 	display: inline-flex;
@@ -99,8 +113,11 @@
 #app-content.crm-app .crm-callout__icon .crm-callout__icon-svg,
 #app-content.crm-app .crm-callout__icon-svg,
 .modal-backdrop .crm-callout__icon .crm-icon,
+dialog.crm-native-dialog .crm-callout__icon .crm-icon,
 .modal-backdrop .crm-callout__icon .crm-callout__icon-svg,
+dialog.crm-native-dialog .crm-callout__icon .crm-callout__icon-svg,
 .modal-backdrop .crm-callout__icon-svg,
+dialog.crm-native-dialog .crm-callout__icon-svg,
 .alert-icon .crm-icon,
 .alert-icon svg,
 .toast-icon .crm-icon,
@@ -109,7 +126,8 @@
 #app-content.crm-app .inline-notice__icon .crm-icon,
 #app-content.crm-app .inline-notice__icon .inline-notice__glyph,
 #app-content.crm-app .inline-notice__icon svg,
-.modal-backdrop .inline-notice__icon svg {
+.modal-backdrop .inline-notice__icon svg,
+dialog.crm-native-dialog .inline-notice__icon svg {
 	width: var(--crm-icon-lg, 1.375rem);
 	height: var(--crm-icon-lg, 1.375rem);
 	min-width: var(--crm-icon-lg, 1.375rem);
@@ -138,10 +156,13 @@
 #app-content.crm-app .crm-semantic-panel--info .crm-callout__icon,
 .crm-nc-admin-settings .crm-callout--info .crm-callout__icon,
 .modal-backdrop .crm-callout--info .crm-callout__icon,
+dialog.crm-native-dialog .crm-callout--info .crm-callout__icon,
 #app-content.crm-app .alert--info .alert-icon,
 .modal-backdrop .alert--info .alert-icon,
+dialog.crm-native-dialog .alert--info .alert-icon,
 #app-content.crm-app .inline-notice--info .inline-notice__icon,
 .modal-backdrop .inline-notice--info .inline-notice__icon,
+dialog.crm-native-dialog .inline-notice--info .inline-notice__icon,
 .toast--info .toast-icon {
 	background: var(--crm-tint-info);
 	border-color: var(--crm-notif-fg-info);
@@ -154,10 +175,13 @@
 #app-content.crm-app .crm-semantic-panel--warning .crm-callout__icon,
 .crm-nc-admin-settings .crm-callout--warning .crm-callout__icon,
 .modal-backdrop .crm-callout--warning .crm-callout__icon,
+dialog.crm-native-dialog .crm-callout--warning .crm-callout__icon,
 #app-content.crm-app .alert--warning .alert-icon,
 .modal-backdrop .alert--warning .alert-icon,
+dialog.crm-native-dialog .alert--warning .alert-icon,
 #app-content.crm-app .inline-notice--warning .inline-notice__icon,
 .modal-backdrop .inline-notice--warning .inline-notice__icon,
+dialog.crm-native-dialog .inline-notice--warning .inline-notice__icon,
 .toast--warning .toast-icon {
 	background: var(--crm-tint-warning);
 	border-color: var(--crm-notif-fg-warning);
@@ -169,8 +193,10 @@
 .crm-callout.crm-callout--success > .crm-notif-icon-well,
 #app-content.crm-app .crm-semantic-panel--success .crm-callout__icon,
 .modal-backdrop .crm-callout--success .crm-callout__icon,
+dialog.crm-native-dialog .crm-callout--success .crm-callout__icon,
 #app-content.crm-app .alert--success .alert-icon,
 .modal-backdrop .alert--success .alert-icon,
+dialog.crm-native-dialog .alert--success .alert-icon,
 .toast--success .toast-icon {
 	background: var(--crm-tint-success);
 	border-color: var(--crm-notif-fg-success);
@@ -186,9 +212,12 @@
 .crm-nc-admin-settings .crm-callout--danger .crm-callout__icon,
 .crm-nc-admin-settings .crm-callout--error .crm-callout__icon,
 .modal-backdrop .crm-callout--danger .crm-callout__icon,
+dialog.crm-native-dialog .crm-callout--danger .crm-callout__icon,
 .modal-backdrop .crm-callout--error .crm-callout__icon,
+dialog.crm-native-dialog .crm-callout--error .crm-callout__icon,
 #app-content.crm-app .alert--error .alert-icon,
 .modal-backdrop .alert--error .alert-icon,
+dialog.crm-native-dialog .alert--error .alert-icon,
 .toast--error .toast-icon {
 	background: var(--crm-tint-danger);
 	border-color: var(--crm-notif-fg-danger);
@@ -198,7 +227,8 @@
 .crm-notif-icon-well--neutral,
 .crm-callout.crm-callout--neutral > .crm-callout__icon,
 .crm-callout.crm-callout--neutral > .crm-notif-icon-well,
-.modal-backdrop .crm-callout--neutral .crm-callout__icon {
+.modal-backdrop .crm-callout--neutral .crm-callout__icon,
+dialog.crm-native-dialog .crm-callout--neutral .crm-callout__icon {
 	background: color-mix(in srgb, var(--color-main-text) 8%, var(--color-main-background));
 	border-color: var(--color-border-maxcontrast, var(--color-border));
 	color: var(--color-main-text);
@@ -213,21 +243,27 @@
 /* Body copy: main text only (AA); hints stay maxcontrast */
 #app-content.crm-app .crm-callout__title,
 .modal-backdrop .crm-callout__title,
+dialog.crm-native-dialog .crm-callout__title,
 #app-content.crm-app .crm-callout__text,
 .modal-backdrop .crm-callout__text,
+dialog.crm-native-dialog .crm-callout__text,
 #app-content.crm-app .alert-message,
 .modal-backdrop .alert-message,
+dialog.crm-native-dialog .alert-message,
 .toast-title,
 .toast-message,
 #app-content.crm-app .inline-notice__title,
 .modal-backdrop .inline-notice__title,
+dialog.crm-native-dialog .inline-notice__title,
 #app-content.crm-app .inline-notice__text,
-.modal-backdrop .inline-notice__text {
+.modal-backdrop .inline-notice__text,
+dialog.crm-native-dialog .inline-notice__text {
 	color: var(--color-main-text);
 }
 
 #app-content.crm-app .crm-callout__hint,
-.modal-backdrop .crm-callout__hint {
+.modal-backdrop .crm-callout__hint,
+dialog.crm-native-dialog .crm-callout__hint {
 	color: var(--color-text-maxcontrast, var(--color-main-text));
 }
 
@@ -235,21 +271,27 @@
 @media (max-width: 720px) {
 	#app-content.crm-app .crm-callout,
 	.modal-backdrop .crm-callout,
+dialog.crm-native-dialog .crm-callout,
 	#app-content.crm-app .alert,
 	.modal-backdrop .alert,
+dialog.crm-native-dialog .alert,
 	#app-content.crm-app .inline-notice,
 	.modal-backdrop .inline-notice,
+dialog.crm-native-dialog .inline-notice,
 	.toast {
 		flex-wrap: wrap;
 	}
 
 	#app-content.crm-app .crm-callout__icon,
 	.modal-backdrop .crm-callout__icon,
+dialog.crm-native-dialog .crm-callout__icon,
 	.toast-icon,
 	#app-content.crm-app .alert-icon,
 	.modal-backdrop .alert-icon,
+dialog.crm-native-dialog .alert-icon,
 	#app-content.crm-app .inline-notice__icon,
-	.modal-backdrop .inline-notice__icon {
+	.modal-backdrop .inline-notice__icon,
+dialog.crm-native-dialog .inline-notice__icon {
 		margin-bottom: var(--crm-space-1, 0.25rem);
 	}
 }
@@ -257,17 +299,21 @@
 @media (prefers-contrast: more) {
 	#app-content.crm-app .crm-callout:not(.crm-semantic-panel),
 	.modal-backdrop .crm-callout:not(.crm-semantic-panel),
+dialog.crm-native-dialog .crm-callout:not(.crm-semantic-panel),
 	.toast,
 	#app-content.crm-app .alert,
-	.modal-backdrop .alert {
+	.modal-backdrop .alert,
+dialog.crm-native-dialog .alert {
 		border-width: 3px;
 	}
 
 	#app-content.crm-app .crm-callout__icon,
 	.modal-backdrop .crm-callout__icon,
+dialog.crm-native-dialog .crm-callout__icon,
 	.toast-icon,
 	#app-content.crm-app .alert-icon,
-	.modal-backdrop .alert-icon {
+	.modal-backdrop .alert-icon,
+dialog.crm-native-dialog .alert-icon {
 		border-width: 3px;
 	}
 
@@ -281,7 +327,8 @@
 
 /* ── Legacy inline-notice (backward compat) ───────────────── */
 #app-content.crm-app .inline-notice-section,
-.modal-backdrop .inline-notice-section {
+.modal-backdrop .inline-notice-section,
+dialog.crm-native-dialog .inline-notice-section {
 	padding: 0;
 	background: transparent;
 	border: 0;
@@ -290,7 +337,8 @@
 }
 
 #app-content.crm-app .inline-notice,
-.modal-backdrop .inline-notice {
+.modal-backdrop .inline-notice,
+dialog.crm-native-dialog .inline-notice {
 	display: flex;
 	flex-direction: row;
 	flex-wrap: wrap;
@@ -305,7 +353,8 @@
 }
 
 #app-content.crm-app .inline-notice__content,
-.modal-backdrop .inline-notice__content {
+.modal-backdrop .inline-notice__content,
+dialog.crm-native-dialog .inline-notice__content {
 	flex: 1 1 12rem;
 	min-width: 0;
 	display: flex;
@@ -314,7 +363,8 @@
 }
 
 #app-content.crm-app .inline-notice__title,
-.modal-backdrop .inline-notice__title {
+.modal-backdrop .inline-notice__title,
+dialog.crm-native-dialog .inline-notice__title {
 	margin: 0;
 	font-size: var(--crm-fs-lg, 1.125rem);
 	font-weight: 600;
@@ -323,7 +373,8 @@
 }
 
 #app-content.crm-app .inline-notice__text,
-.modal-backdrop .inline-notice__text {
+.modal-backdrop .inline-notice__text,
+dialog.crm-native-dialog .inline-notice__text {
 	margin: 0;
 	font-size: var(--crm-fs-md, 1rem);
 	line-height: var(--crm-line-base, 1.45);
@@ -332,7 +383,8 @@
 }
 
 #app-content.crm-app .inline-notice__actions,
-.modal-backdrop .inline-notice__actions {
+.modal-backdrop .inline-notice__actions,
+dialog.crm-native-dialog .inline-notice__actions {
 	flex-shrink: 0;
 	display: flex;
 	flex-wrap: wrap;
@@ -341,28 +393,34 @@
 }
 
 #app-content.crm-app .inline-notice__actions .crm-btn,
-#app-content.crm-app .inline-notice__actions .btn,
+#app-content.crm-app .inline-notice__actions .crm-btn,
 .modal-backdrop .inline-notice__actions .crm-btn,
-.modal-backdrop .inline-notice__actions .btn {
+dialog.crm-native-dialog .inline-notice__actions .crm-btn,
+.modal-backdrop .inline-notice__actions .crm-btn,
+dialog.crm-native-dialog .inline-notice__actions .crm-btn {
 	min-height: 44px;
 	white-space: nowrap;
 }
 
 @media (max-width: 42rem) {
 	#app-content.crm-app .inline-notice,
-	.modal-backdrop .inline-notice {
+	.modal-backdrop .inline-notice,
+dialog.crm-native-dialog .inline-notice {
 		flex-direction: column;
 	}
 
 	#app-content.crm-app .inline-notice__actions,
-	.modal-backdrop .inline-notice__actions {
+	.modal-backdrop .inline-notice__actions,
+dialog.crm-native-dialog .inline-notice__actions {
 		width: 100%;
 	}
 
 	#app-content.crm-app .inline-notice__actions .crm-btn,
-	#app-content.crm-app .inline-notice__actions .btn,
+	#app-content.crm-app .inline-notice__actions .crm-btn,
 	.modal-backdrop .inline-notice__actions .crm-btn,
-	.modal-backdrop .inline-notice__actions .btn {
+dialog.crm-native-dialog .inline-notice__actions .crm-btn,
+	.modal-backdrop .inline-notice__actions .crm-btn,
+dialog.crm-native-dialog .inline-notice__actions .crm-btn {
 		flex: 1 1 auto;
 		justify-content: center;
 	}
@@ -495,11 +553,14 @@
 @media (forced-colors: active) {
 	#app-content.crm-app .crm-callout,
 	.modal-backdrop .crm-callout,
+dialog.crm-native-dialog .crm-callout,
 	#app-content.crm-app .alert,
 	.modal-backdrop .alert,
+dialog.crm-native-dialog .alert,
 	.toast,
 	#app-content.crm-app .inline-notice,
-	.modal-backdrop .inline-notice {
+	.modal-backdrop .inline-notice,
+dialog.crm-native-dialog .inline-notice {
 		border: 2px solid CanvasText;
 		background: Canvas;
 		color: CanvasText;
@@ -507,11 +568,14 @@
 
 	#app-content.crm-app .crm-callout__icon,
 	.modal-backdrop .crm-callout__icon,
+dialog.crm-native-dialog .crm-callout__icon,
 	.toast-icon,
 	#app-content.crm-app .alert-icon,
 	.modal-backdrop .alert-icon,
+dialog.crm-native-dialog .alert-icon,
 	#app-content.crm-app .inline-notice__icon,
-	.modal-backdrop .inline-notice__icon {
+	.modal-backdrop .inline-notice__icon,
+dialog.crm-native-dialog .inline-notice__icon {
 		border: 2px solid CanvasText;
 		background: Canvas;
 		color: CanvasText;

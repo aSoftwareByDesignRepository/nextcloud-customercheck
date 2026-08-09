@@ -136,9 +136,6 @@
           if (Number.isFinite(pcId) && pcId > 0) {
             const a = document.createElement('a');
             a.className = 'crm-btn crm-btn--secondary';
-            a.style.minHeight = '44px';
-            a.style.display = 'inline-flex';
-            a.style.alignItems = 'center';
             a.href = OC.generateUrl('/apps/projectcheck/customers/' + pcId);
             a.textContent = openPc;
             renameAlert.appendChild(a);
@@ -159,8 +156,6 @@
           }
         } else if (C && typeof C.alertDialog === 'function') {
           await C.alertDialog({ title: t('ProjectCheck name not updated'), message: msg, variant: 'warning' });
-        } else {
-          window.alert(msg);
         }
       }
       window.location.href = companyUrl;
@@ -238,9 +233,7 @@
           selectSiblingOption(opts.selectId, existingId, t('Existing customer'));
           const linkBtn = document.createElement('button');
           linkBtn.type = 'button';
-          linkBtn.className = 'crm-btn crm-btn--primary';
-          linkBtn.style.minHeight = '44px';
-          linkBtn.style.marginTop = '0.5rem';
+          linkBtn.className = 'crm-btn crm-btn--primary crm-mt-2';
           linkBtn.textContent = t('Link existing customer');
           linkBtn.addEventListener('click', () => {
             const payload = {};

@@ -31,7 +31,7 @@ $lastLabel = (string)($mailSummary['lastContactLabel'] ?? '');
 			<?php if ($mailHeadline !== ''): ?>
 				<p class="crm-card__lead"><?php p($mailHeadline); ?></p>
 			<?php else: ?>
-				<p class="crm-card__lead"><?php p($l->t('Full Mail threads and the CRM email log — open when you need them.')); ?></p>
+				<p class="crm-card__lead"><?php p($l->t('Full Mail threads and the logged messages — open when you need them.')); ?></p>
 			<?php endif; ?>
 		</div>
 		<?php if (!empty($_['canWrite'])): ?>
@@ -104,6 +104,7 @@ $lastLabel = (string)($mailSummary['lastContactLabel'] ?? '');
 								<th><?php p($l->t('With')); ?></th>
 								<th><?php p($l->t('Direction')); ?></th>
 								<th><?php p($l->t('Subject')); ?></th>
+								<th scope="col" class="crm-table-actions-col"><?php p($l->t('Action')); ?></th>
 							</tr>
 						</thead>
 						<tbody>
@@ -118,11 +119,21 @@ $lastLabel = (string)($mailSummary['lastContactLabel'] ?? '');
 								</td>
 								<td data-label="<?php p($l->t('Direction')); ?>"><span class="crm-badge"><?php p((string)($row['directionLabel'] ?? $row['direction'] ?? '')); ?></span></td>
 								<td data-label="<?php p($l->t('Subject')); ?>">
-									<?php if (!empty($row['deepLink'])): ?>
-										<a href="<?php p((string)$row['deepLink']); ?>" target="_blank" rel="noopener noreferrer"><?php p((string)($row['subject'] ?? '')); ?></a>
-									<?php else: ?>
-										<?php p((string)($row['subject'] ?? '')); ?>
-									<?php endif; ?>
+									<?php p((string)($row['subject'] ?? '')); ?>
+								</td>
+								<td data-label="<?php p($l->t('Action')); ?>" class="actions-cell crm-table-actions-col">
+									<div class="crm-table-actions">
+										<?php if (!empty($row['deepLink'])): ?>
+											<?php
+											$crmRowOpenHref = (string)$row['deepLink'];
+											$crmRowOpenLabel = $l->t('Open in Mail');
+											$crmRowOpenExternal = true;
+											include __DIR__ . '/crm-row-open.php';
+											?>
+										<?php else: ?>
+											<span class="crm-muted" aria-hidden="true">—</span>
+										<?php endif; ?>
+									</div>
 								</td>
 							</tr>
 						<?php endforeach; ?>
@@ -133,11 +144,16 @@ $lastLabel = (string)($mailSummary['lastContactLabel'] ?? '');
 		<?php endif; ?>
 
 		<div class="crm-emails__log">
-			<h3 class="crm-emails__subheading" id="crm-emails-log"><?php p($l->t('CRM email log')); ?></h3>
+			<h3 class="crm-emails__subheading" id="crm-emails-log"><?php p($l->t('Logged messages')); ?></h3>
 			<?php if ($mailTouches === []): ?>
 				<div class="crm-empty-state" role="status">
 					<h4 class="crm-empty-state__title"><?php p($l->t('Nothing logged for this company yet')); ?></h4>
-					<p class="crm-empty-state__text"><?php p($l->t('Tap Log email after an important call-follow-up or reply. Or use a CRM compose button (renewal quote, delivery pack, Partner mail) — that also adds a row here.')); ?></p>
+					<p class="crm-empty-state__text"><?php p($l->t('Tap Log email under Talk after an important reply or call follow-up.')); ?></p>
+					<?php if (!empty($_['canWrite'])): ?>
+					<div class="crm-empty-state__actions">
+						<button type="button" class="crm-btn crm-btn--primary" data-crm-trigger="crm-log-email"><?php p($l->t('Log email')); ?></button>
+					</div>
+					<?php endif; ?>
 				</div>
 			<?php else: ?>
 			<div class="table-container crm-table--responsive">

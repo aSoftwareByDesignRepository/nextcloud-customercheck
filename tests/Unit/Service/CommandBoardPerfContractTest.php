@@ -41,7 +41,7 @@ final class CommandBoardPerfContractTest extends TestCase
 		$this->assertStringContainsString("'cta' => \$owner === '' ? 'claim' : 'open'", $board);
 		$today = (string)file_get_contents(dirname(__DIR__, 3) . '/templates/today.php');
 		$this->assertStringContainsString("data-crm-claim-deal", $today);
-		$this->assertStringContainsString("'claim' => \$l->t('Claim')", $today);
+		$this->assertStringContainsString("'claim' => \$l->t('I\\'ll take it')", $today);
 	}
 
 	public function testMyAccountsDoesNotCallForCompanyPerRow(): void

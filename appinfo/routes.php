@@ -36,7 +36,15 @@ return [
 		['name' => 'page#activities', 'url' => '/activities', 'verb' => 'GET'],
 		['name' => 'page#import', 'url' => '/import', 'verb' => 'GET'],
 		['name' => 'page#settings', 'url' => '/settings', 'verb' => 'GET'],
+		// Keep the requirement literal (route files load without the app autoloader).
+		// tests/Unit/Controller/WorkspaceSettingsPagesContractTest pins it to WorkspaceSettingsSectionCatalog::routeRequirement().
+		['name' => 'page#settingsSection', 'url' => '/settings/{section}', 'verb' => 'GET',
+			'requirements' => ['section' => 'mailbox|preferences|review-sources|circles|integrations']],
 		['name' => 'page#appSettings', 'url' => '/app-settings', 'verb' => 'GET'],
+		// Keep the requirement literal (route files load without the app autoloader).
+		// tests/Unit/Controller/AppSettingsPagesContractTest pins it to AppSettingsSectionCatalog::routeRequirement().
+		['name' => 'page#appSettingsSection', 'url' => '/app-settings/{section}', 'verb' => 'GET',
+			'requirements' => ['section' => 'access|jobs|tokens|license|product-codes']],
 		['name' => 'page#supportUs', 'url' => '/support-us', 'verb' => 'GET'],
 
 		// ── Companies API ───────────────────────────────────────────────

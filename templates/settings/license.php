@@ -61,7 +61,7 @@ $seatAssigned = (int)($license['seats']['assigned'] ?? 0);
 					<label for="crm-license-key" class="form-label"><?php p($l->t('Paste license key')); ?></label>
 					<textarea id="crm-license-key" name="key" class="form-input crm-input crm-license-key" rows="3"
 						autocomplete="off" spellcheck="false"
-						placeholder="CUC2.…"
+						placeholder="<?php p($l->t('CUC2.…')); ?>"
 						aria-describedby="crm-license-key-help"></textarea>
 					<p id="crm-license-key-help" class="form-help"><?php p($l->t('Copy the whole key from the delivery email, including the CUC2 prefix. Whitespace from the email client is fine.')); ?></p>
 					<p id="crm-license-error" class="form-error" role="alert" hidden></p>

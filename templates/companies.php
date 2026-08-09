@@ -75,6 +75,7 @@ include __DIR__ . '/common/page-start.php';
 						<th scope="col"><?php p($l->t('Next expiry')); ?></th>
 						<th scope="col"><?php p($l->t('Money')); ?></th>
 						<th scope="col"><?php p($l->t('Callbacks')); ?></th>
+						<th scope="col" class="crm-table-actions-col"><?php p($l->t('Action')); ?></th>
 					</tr></thead>
 					<tbody>
 					<?php
@@ -121,10 +122,19 @@ include __DIR__ . '/common/page-start.php';
 							<td data-label="<?php p($l->t('Next expiry')); ?>"><?php p($h['nextExpiry'] ?? '—'); ?></td>
 							<td data-label="<?php p($l->t('Money')); ?>"><span class="crm-badge crm-badge--<?php p($moneyBadge); ?>"><?php p($moneyLabel); ?></span></td>
 							<td data-label="<?php p($l->t('Callbacks')); ?>"><?php p((string)(int)($h['openCallbacks'] ?? 0)); ?></td>
+							<td data-label="<?php p($l->t('Action')); ?>" class="actions-cell crm-table-actions-col">
+								<div class="crm-table-actions">
+									<?php
+									$crmRowOpenHref = $urlGenerator->linkToRoute('customercheck.page.companyDetail', ['id' => (int)$c->getId()]);
+									$crmRowOpenLabel = $l->t('Open');
+									include __DIR__ . '/common/crm-row-open.php';
+									?>
+								</div>
+							</td>
 						</tr>
 					<?php endforeach; ?>
 					<?php if (($_['companies'] ?? []) === []): ?>
-						<tr><td class="crm-table-empty" colspan="7">
+						<tr><td class="crm-table-empty" colspan="8">
 							<div class="crm-empty-state" role="status">
 								<h3 class="crm-empty-state__title"><?php p($l->t('No companies yet')); ?></h3>
 								<p class="crm-empty-state__text"><?php p($l->t('Add a company or import a list. ProjectCheck and InvoiceCheck are optional — CustomerCheck works alone.')); ?></p>

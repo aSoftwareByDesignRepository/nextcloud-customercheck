@@ -10,6 +10,7 @@
 			</div>
 		</header>
 		<div class="crm-card__body">
+			<?php include __DIR__ . '/../parts/workspace-boot-status.php'; ?>
 			<div id="crm-circles-roll-call" class="crm-skeleton" aria-busy="true" aria-live="polite">
 				<p><?php p($l->t('Loading…')); ?></p>
 			</div>
