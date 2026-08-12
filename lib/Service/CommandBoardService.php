@@ -42,6 +42,7 @@ class CommandBoardService
 		private readonly DisplayLabelService $labels,
 		private readonly ?ReviewService $review = null,
 		private readonly ?EditConflictService $editConflicts = null,
+		private readonly ?DealChecklistService $dealChecklists = null,
 	) {
 	}
 
@@ -161,6 +162,40 @@ class CommandBoardService
 					'promiseId' => $p['id'],
 				], $this->promises->dueSoon($workspaceId, $today, 7)),
 			];
+
+			if ($this->dealChecklists !== null) {
+				$mineOwners = $this->oooCover->mineOwnerIds($workspaceId, $userId, $today);
+				$clItems = $this->dealChecklists->openAssignedForToday($workspaceId, $mineOwners, 50);
+				$sections[] = [
+					'id' => 'my_deal_tasks',
+					'title' => $this->l10n->t('My deal tasks'),
+					'items' => array_map(function (array $row) use ($userId): array {
+						$owner = (string)($row['assigneeUserId'] ?? '');
+						$covering = $owner !== '' && $owner !== $userId;
+						$dealTitle = trim((string)($row['dealTitle'] ?? ''));
+						$why = (string)($row['label'] ?? '');
+						if ($dealTitle !== '') {
+							$why = $dealTitle . ' — ' . $why;
+						}
+						return [
+							'kind' => 'deal_checklist',
+							'kindLabel' => (string)($row['kindLabel'] ?? $this->l10n->t('Deal checklist')),
+							'companyId' => $row['companyId'] ?? null,
+							'companyName' => (string)($row['companyName'] ?? ''),
+							'why' => $why,
+							'label' => (string)($row['label'] ?? ''),
+							'dueDate' => $row['dueDate'] ?? null,
+							'cta' => 'done',
+							'dealId' => $row['dealId'] ?? null,
+							'checklistItemId' => $row['checklistItemId'] ?? null,
+							'updatedAt' => $row['updatedAt'] ?? null,
+							'covering' => $covering,
+							'coveringPrimary' => $covering ? $owner : null,
+							'coveringBadge' => $covering ? $this->l10n->t('Covering') : null,
+						];
+					}, $clItems),
+				];
+			}
 
 			$planItems = [];
 			try {

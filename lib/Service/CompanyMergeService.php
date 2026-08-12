@@ -194,7 +194,7 @@ class CompanyMergeService
 	/**
 	 * Re-home promises / plans / escalations / commitments onto the keeper.
 	 *
-	 * @return array{promises: int, accountPlans: int, escalations: int, commitments: int}
+	 * @return array{promises: int, accountPlans: int, escalations: int, commitments: int, checklistItems: int}
 	 */
 	private function reassignPersonaLedgers(int $fromCompanyId, int $toCompanyId, int $toWorkspaceId): array
 	{
@@ -203,6 +203,7 @@ class CompanyMergeService
 			'accountPlans' => 0,
 			'escalations' => 0,
 			'commitments' => 0,
+			'checklistItems' => 0,
 		];
 		if ($fromCompanyId === $toCompanyId) {
 			return $out;
@@ -250,6 +251,19 @@ class CompanyMergeService
 				$qb->set('workspace_id', $qb->createNamedParameter($toWorkspaceId, IQueryBuilder::PARAM_INT));
 			}
 			$out['commitments'] = $qb->executeStatement();
+		}
+
+		// Deal checklist handoffs follow the company (and book) — never leave orphans
+		// on the archived source with a stale workspace_id (Argus MF ACL).
+		if ($this->db->tableExists('crm_deal_cl_item')) {
+			$qb = $this->db->getQueryBuilder();
+			$qb->update('crm_deal_cl_item')
+				->set('company_id', $qb->createNamedParameter($toCompanyId, IQueryBuilder::PARAM_INT))
+				->where($qb->expr()->eq('company_id', $qb->createNamedParameter($fromCompanyId, IQueryBuilder::PARAM_INT)));
+			if ($toWorkspaceId > 0) {
+				$qb->set('workspace_id', $qb->createNamedParameter($toWorkspaceId, IQueryBuilder::PARAM_INT));
+			}
+			$out['checklistItems'] = $qb->executeStatement();
 		}
 
 		return $out;

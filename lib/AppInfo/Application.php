@@ -400,6 +400,10 @@ class Application extends App implements IBootstrap
 			$c->get(FacadeProbeService::class),
 			$c->get(\OCA\CustomerCheck\Service\ReviewService::class),
 			$c->get(\OCA\CustomerCheck\Service\EditConflictService::class),
+			$c->get(\OCA\CustomerCheck\Service\DealChecklistService::class),
+			$c->get(\OCA\CustomerCheck\Service\OooCoverService::class),
+			$c->get(\OCA\CustomerCheck\Service\PersonService::class),
+			$c->get(\OCA\CustomerCheck\Service\DealService::class),
 		));
 		$context->registerService(UserDeletedListener::class, fn ($c) => new UserDeletedListener(
 			$c->get(\OCA\CustomerCheck\Db\MobileSeatMapper::class),

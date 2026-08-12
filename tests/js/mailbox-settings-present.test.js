@@ -3,9 +3,11 @@
  */
 import { describe, expect, it } from 'vitest';
 import {
+  buildFolderPickerOptions,
   buildMailboxListRows,
   mailboxStatusLabel,
   mailboxStatusTone,
+  readCheckedFolderPaths,
 } from '../../js/utils/mailbox-settings-present.js';
 
 const t = (msg, args) => (args && args.length ? msg.replace('%s', args[0]) : msg);
@@ -19,6 +21,41 @@ describe('mailboxStatusTone / mailboxStatusLabel', () => {
     expect(mailboxStatusLabel('ok', t)).toBe('Connected');
     expect(mailboxStatusLabel('error', t)).toBe('Connection error');
     expect(mailboxStatusLabel('weird', t)).toBe('Unknown');
+  });
+});
+
+describe('buildFolderPickerOptions / readCheckedFolderPaths', () => {
+  it('merges remote options and keeps selected paths checked', () => {
+    const opts = buildFolderPickerOptions(['INBOX', 'Sent', 'Archive'], ['Sent'], 20);
+    expect(opts.map((o) => o.path)).toEqual(['INBOX', 'Sent', 'Archive']);
+    expect(opts.find((o) => o.path === 'Sent')?.checked).toBe(true);
+    expect(opts.find((o) => o.path === 'INBOX')?.checked).toBe(false);
+  });
+
+  it('defaults to INBOX when nothing selected', () => {
+    const opts = buildFolderPickerOptions(['INBOX', 'Drafts'], [], 20);
+    expect(opts.find((o) => o.path === 'INBOX')?.checked).toBe(true);
+  });
+
+  it('keeps selected folders that are missing from remote', () => {
+    const opts = buildFolderPickerOptions(['INBOX'], ['INBOX', 'Custom'], 20);
+    expect(opts.map((o) => o.path)).toEqual(['INBOX', 'Custom']);
+    expect(opts.every((o) => o.checked)).toBe(true);
+  });
+
+  it('reads checked folder paths from a checkbox host', () => {
+    const root = {
+      querySelectorAll(sel) {
+        expect(sel).toContain('checkbox');
+        return [
+          { value: 'INBOX' },
+          { value: ' Sent ' },
+          { value: '' },
+        ];
+      },
+    };
+    expect(readCheckedFolderPaths(root)).toEqual(['INBOX', 'Sent']);
+    expect(readCheckedFolderPaths(null)).toEqual([]);
   });
 });
 

@@ -28,7 +28,11 @@ class RateLimitService
 	) {
 	}
 
-	public function allow(string $bucket, int $limit, int $windowSeconds): bool
+	/**
+	 * @param bool $charge When true (default), consume one token. When false, only check whether
+	 *                     a further charge would still be within the limit (no write).
+	 */
+	public function allow(string $bucket, int $limit, int $windowSeconds, bool $charge = true): bool
 	{
 		$limit = max(1, $limit);
 		$windowSeconds = max(1, $windowSeconds);
@@ -59,6 +63,11 @@ class RateLimitService
 				$windowStart = $now;
 				$count = 0;
 			}
+
+			if (!$charge) {
+				return $count < $limit;
+			}
+
 			$count++;
 			$this->config->setAppValue(Application::APP_ID, $key, json_encode([
 				'start' => $windowStart,

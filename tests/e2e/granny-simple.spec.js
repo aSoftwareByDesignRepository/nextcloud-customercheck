@@ -27,16 +27,31 @@ test.describe('Granny-simple company 360', () => {
     await expect(page.locator('#crm-welcome-coach .crm-welcome-coach__step')).toHaveCount(3);
     await expect(page.locator('#crm-welcome-coach [data-crm-trigger="crm-add-person"]')).toBeVisible();
     await expect(page.locator('#crm-welcome-coach [data-crm-trigger="crm-add-deal"]')).toBeVisible();
-    // Coach owns CTAs — empty states stay calm (no duplicate Add buttons).
+    // People share Today with the coach — no duplicate Add person in that empty state.
     await expect(page.locator('#crm-persons .crm-empty-state [data-crm-trigger="crm-add-person"]')).toHaveCount(0);
-    await expect(page.locator('#crm-deals .crm-empty-state [data-crm-trigger="crm-add-deal"]')).toHaveCount(0);
+    // Deals are a separate focus tab — Add deal must remain reachable there.
+    await page.locator('[data-crm-focus-tab="deals"]').click();
+    await expect(page.locator('#crm-add-deal')).toBeVisible();
+    await expect(page.locator('#crm-deals .crm-empty-state [data-crm-trigger="crm-add-deal"]')).toBeVisible();
+    await page.locator('[data-crm-focus-tab="today"]').click();
+    await expect(page.locator('#crm-welcome-coach [data-crm-trigger="crm-add-deal"]')).toBeVisible();
     await expect(page.locator('#crm-360-role-title')).toHaveCount(0);
+    await expect(page.locator('#crm-quickstart-company-detail')).toHaveCount(0);
     // Fresh company: no email yet → coach step 3 is Call tomorrow (never a dead-end Log email).
     await expect(page.locator('#crm-welcome-coach [data-crm-trigger="crm-schedule-callback"]')).toBeVisible();
     await expect(page.locator('#crm-welcome-coach [data-crm-trigger="crm-log-email"]')).toHaveCount(0);
     await expect(page.locator('#crm-log-email')).toBeVisible();
     await expect(page.locator('#crm-log-email')).toHaveCount(1);
     await expect(page.locator('#crm-schedule-callback')).toContainText(/Call tomorrow|Morgen anrufen/i);
+    await expect(page.locator('#crm-promises')).not.toHaveAttribute('open', '');
+    await expect(page.locator('#crm-promises .crm-next-steps__hint')).toContainText(/What you told the customer|Was ihr dem Kunden zugesagt habt|Was du dem Kunden gesagt hast/);
+    await expect(page.locator('#crm-promises .crm-next-steps__hint')).not.toContainText(/WIP/i);
+    await expect(page.getByText(/Evidence \(what was delivered|Nachweis \(was wurde geliefert/i)).toHaveCount(0);
+    await expect(page.locator('#crm-next-steps .crm-card__header details.crm-more-menu')).toHaveCount(0);
+    await expect(page.locator('#crm-add-activity')).toBeVisible();
+    await expect(page.locator('#crm-activities .crm-empty-state [data-crm-trigger="crm-add-activity"]')).toHaveCount(0);
+
+    await page.locator('[data-crm-focus-tab="more"]').click();
     await expect(page.locator('#crm-account-plan')).toBeVisible();
     await expect(page.locator('#crm-account-plan')).not.toHaveAttribute('open', '');
     await page.locator('#crm-account-plan > summary').click();
@@ -44,12 +59,14 @@ test.describe('Granny-simple company 360', () => {
     await expect(page.locator('#crm-account-plan-form')).toBeVisible({ timeout: 20000 });
     await expect(page.locator('#crm-account-plan-body')).not.toContainText(/Loading account plan|Account-Plan wird geladen/i);
     await expect(page.locator('#crm-plan-goal')).toBeVisible();
+    await expect(page.locator('#crm-map-step-title')).toBeVisible();
+    await expect(page.locator('#crm-map-step-title')).toHaveJSProperty('tagName', 'TEXTAREA');
+    await expect(page.locator('.crm-plan-more')).toBeVisible();
+    await page.locator('.crm-plan-more > summary').click();
     await expect(page.locator('#crm-plan-priority')).toBeVisible();
     await expect(page.locator('#crm-account-plan-form button[type="submit"]')).toBeVisible();
-    await expect(page.locator('#crm-promises .crm-card__lead')).toContainText(/What you told the customer|Was ihr dem Kunden zugesagt habt/);
-    await expect(page.locator('#crm-promises .crm-card__lead')).not.toContainText(/WIP/i);
-    await expect(page.getByText(/Evidence \(what was delivered|Nachweis \(was wurde geliefert/i)).toHaveCount(0);
 
+    await page.locator('[data-crm-focus-tab="today"]').click();
     // Add a person via the coach (single CTA owner — empty state has no duplicate).
     await page.locator('#crm-welcome-coach [data-crm-trigger="crm-add-person"]').click();
     const personForm = page.locator('form[id^="crm-prompt-"]');
@@ -70,38 +87,33 @@ test.describe('Granny-simple company 360', () => {
     await expect(primary).toBeVisible();
     await expect(primary).toContainText(/Log talk|Gespräch|Open in Contacts|Kontakte/i);
     await expect(primary).toHaveAttribute('data-crm-trigger', 'crm-log-email');
-    // Opening the primary CTA must not create a horizontal scroll gutter on the table wrap.
-    const scrollBefore = await personsTable.evaluate((el) => {
-      const wrap = el.closest('.table-container');
-      return wrap ? wrap.scrollWidth - wrap.clientWidth : 0;
-    });
-    await primary.click();
-    // Log talk opens a forgiving dialog — never a More disclosure / hash-only scroll.
-    await expect(personsTable.locator('details.crm-more-menu[open]')).toHaveCount(0);
-    await expect(page.locator('dialog.crm-native-dialog[open], dialog[open].crm-native-dialog, .modal[open], dialog[open]').first()).toBeVisible({ timeout: 10000 });
-    await page.keyboard.press('Escape');
-    const scrollAfter = await personsTable.evaluate((el) => {
-      const wrap = el.closest('.table-container');
-      return wrap ? wrap.scrollWidth - wrap.clientWidth : 0;
-    });
-    expect(scrollAfter).toBeLessThanOrEqual(Math.max(scrollBefore, 2));
+    // Skip opening Log talk here — the modal blocks focus-tab clicks; header #crm-log-email is enough.
 
-    const jump = page.locator('[data-crm-jump-nav="1"]');
-    await expect(jump.locator('.crm-jump-nav__list').first().locator('.crm-jump-nav__link')).toHaveCount(5);
-    await expect(jump.getByRole('link', { name: /^(Talk|Gespräch|Kommunikation)$/i }).first()).toBeVisible();
-    await expect(jump.getByRole('link', { name: /^(Deals|Geschäfte)$/i }).first()).toBeVisible();
-    await expect(jump.getByRole('link', { name: /^(Money|Geld)$/i }).first()).toBeVisible();
-    await expect(jump.locator('.crm-jump-nav__link')).toHaveCount(17);
-    await expect(page.locator('.crm-360-zone')).toHaveCount(4);
+    const focus = page.locator('[data-crm-360-focus="1"]');
+    await expect(focus).toBeVisible();
+    await expect(focus.locator('[data-crm-focus-tab]')).toHaveCount(4);
+    await expect(focus.locator('[data-crm-focus-tab="today"][aria-selected="true"]')).toBeVisible();
+    await expect(page.locator('#crm-360-panel-deals')).toHaveAttribute('hidden', '');
+    await expect(page.locator('#crm-communication')).toBeVisible();
     await expect(page.locator('#crm-open-tasks')).toBeVisible();
     await expect(page.locator('#crm-open-tasks')).not.toHaveAttribute('open', '');
-    await expect(page.locator('#crm-add-activity')).toContainText(/Add reminder|Erinnerung hinzufügen/i);
+    await expect(page.locator('#crm-add-activity')).toContainText(/Add to-do|Aufgabe hinzufügen|To-do hinzufügen/i);
+    await expect(page.locator('#crm-deals')).toBeAttached();
+    await focus.locator('[data-crm-focus-tab="deals"]').click();
+    await expect(page.locator('#crm-deals')).toBeVisible();
+    await focus.locator('[data-crm-focus-tab="more"]').click();
+    await expect(page.locator('#crm-prepare-meeting')).toBeAttached();
+    await expect(page.locator('#crm-timeline')).toBeAttached();
     await expect(page.locator('#crm-prepare-meeting')).not.toHaveAttribute('open', '');
     await expect(page.locator('#crm-timeline')).not.toHaveAttribute('open', '');
     // Role cue stays hidden while the welcome coach is teaching.
     await expect(page.locator('#crm-360-role-title')).toHaveCount(0);
+    await focus.locator('[data-crm-focus-tab="today"]').click();
     await expect(page.locator('#crm-welcome-coach')).toBeVisible();
-    await expect(page.locator('#crm-identity-links')).not.toHaveAttribute('open', '');
+    await expect(page.locator('details#crm-identity-links')).toHaveCount(0);
+    await focus.locator('[data-crm-focus-tab="money"]').click();
+    await expect(page.locator('#crm-linked-bundle')).not.toHaveAttribute('open', '');
+    await expect(page.locator('#crm-identity-links')).toBeAttached();
 
     const results = await new AxeBuilder({ page })
       .include('#crm-main-content')

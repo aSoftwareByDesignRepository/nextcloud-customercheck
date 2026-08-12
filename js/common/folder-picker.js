@@ -15,7 +15,20 @@
   const PICKER_MIME_FILTER = ['*', 'httpd/unix-directory'];
   const PICKER_SAFETY_MS = 10 * 60 * 1000;
 
-  const t = (msg, args) => (window.t ? window.t('customercheck', msg, args || []) : msg);
+  const t = (msg, args) => {
+    const list = Array.isArray(args) ? args : [];
+    let out = window.t ? window.t('customercheck', msg, list) : msg;
+    // Nextcloud t() sometimes leaves %s / %1$s — fill locally (same as settings.js).
+    if (list.length && typeof out === 'string' && out.indexOf('%') !== -1) {
+      let i = 0;
+      out = out.replace(/%(?:\d+\$)?s/g, function () {
+        const v = list[i];
+        i += 1;
+        return v == null ? '' : String(v);
+      });
+    }
+    return out;
+  };
 
   function isPickerCancelled(reason) {
     if (!reason) return false;

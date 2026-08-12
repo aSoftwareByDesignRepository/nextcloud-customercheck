@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace OCA\CustomerCheck\Controller;
 
+use OCA\CustomerCheck\Db\EmailTouchMapper;
 use OCA\CustomerCheck\Service\AccessControlService;
 use OCA\CustomerCheck\Service\CompanyService;
 use OCA\CustomerCheck\Service\ContactsSuggestService;
+use OCA\CustomerCheck\Service\MailboxService;
 use OCA\CustomerCheck\Service\PersonService;
+use OCA\CustomerCheck\Service\ReviewService;
 use OCA\CustomerCheck\Service\WorkspaceAccessService;
 use OCA\CustomerCheck\Support\OptimisticLock;
 use OCP\AppFramework\Controller;
@@ -32,6 +35,9 @@ class PersonApiController extends Controller
 		private readonly CompanyService $companies,
 		private readonly PersonService $persons,
 		private readonly ContactsSuggestService $contactsSuggest,
+		private readonly MailboxService $mailbox,
+		private readonly ReviewService $review,
+		private readonly EmailTouchMapper $emailTouches,
 	) {
 		parent::__construct($appName, $request);
 	}
@@ -80,11 +86,37 @@ class PersonApiController extends Controller
 	{
 		try {
 			$person = $this->persons->get($id);
-			$ctx = $this->requireCompanyCapability((int)$person->getCompanyId(), 'write');
+			$companyId = (int)$person->getCompanyId();
+			$ctx = $this->requireCompanyCapability($companyId, 'write');
 			$body = $this->jsonBody();
+			$returnMail = !empty($body['returnMailToReview']);
+			$email = trim((string)($person->getEmail() ?? ''));
+			$workspaceId = (int)($ctx['workspaceId'] ?? 0);
+			if ($workspaceId <= 0) {
+				$company = $this->companies->get($companyId);
+				$workspaceId = (int)($company->getWorkspaceId() ?? 0);
+			}
+
+			$mailReturned = 0;
+			// Delete first (optimistic lock) so a conflict cannot leave mail unmatched while the person remains.
 			$this->persons->delete($id, $ctx['uid'], $this->updatedAtPrecondition($body));
 
-			return $this->ok(['deleted' => true]);
+			if ($returnMail) {
+				$this->emailTouches->clearPersonId($id);
+				if ($email !== '' && $workspaceId > 0) {
+					$mailIds = $this->mailbox->unmatchByCompanyAndFrom($workspaceId, $companyId, $email);
+					if ($mailIds !== []) {
+						$this->review->returnSharedMailMessagesToReview($workspaceId, $mailIds);
+						$mailReturned = count($mailIds);
+					}
+				}
+			}
+
+			return $this->ok([
+				'deleted' => true,
+				'contactsKept' => true,
+				'mailReturnedToReview' => $mailReturned,
+			]);
 		} catch (\Throwable $e) {
 			return $this->fromThrowable($e);
 		}

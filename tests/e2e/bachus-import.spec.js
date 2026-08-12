@@ -4,8 +4,8 @@ import AxeBuilder from '@axe-core/playwright';
 import { login, credsFromEnv } from './helpers/auth.js';
 
 /**
- * Bachus Import journey — paste → preview stats → import ready → companies CTA.
- * Proves broken-%s meta is gone, tiles work, and axe stays clean.
+ * Bachus Import journey — paste → preview → one green import → companies CTA.
+ * Auto-scan after file, no Include column for ready-only lists, axe clean.
  */
 test.describe('Bachus Import effortless journey', () => {
   test.skip(!process.env.NC_ADMIN_USER, 'Requires NC_ADMIN_USER / NC_ADMIN_PASS');
@@ -25,31 +25,38 @@ test.describe('Bachus Import effortless journey', () => {
     await page.goto('/apps/customercheck/import');
     await page.waitForSelector('#crm-import-root', { timeout: 30000 });
 
-    await expect(page.locator('#crm-import-source-title')).toContainText(/Where should we look|Wo sollen wir|schauen/i);
+    await expect(page.locator('#crm-import-source-title')).toContainText(/Add your list|Liste hinzufügen|Ajoute|Añade|Voeg|Dodaj|Lägg|Tilføj|Legg/i);
     await expect(page.locator('.crm-import-tile').first()).toBeVisible();
     await expect(page.locator('#crm-import-drop')).toBeVisible();
     await expect(page.locator('#crm-import-file')).toBeAttached();
     await expect(page.locator('#crm-import-review')).toBeHidden();
+    await expect(page.locator('nav.crm-breadcrumb')).not.toContainText(/Semmelbrösel/i);
     await expect(page.getByText(/%s rows/i)).toHaveCount(0);
 
     const suffix = Date.now().toString(36);
     const company = `Bachus Import ${suffix}`;
+    await page.locator('#crm-import-paste-details').evaluate((el) => { el.open = true; });
     await page.locator('#crm-import-csv').fill(company);
     await page.locator('#crm-import-scan').click();
 
     await expect(page.locator('#crm-import-review')).toBeVisible({ timeout: 30000 });
+    await expect(page.locator('#crm-import-root')).toHaveAttribute('data-crm-import-phase', 'review');
     await expect(page.locator('#crm-import-stats')).toBeVisible();
     await expect(page.locator('#crm-import-stat-ready')).not.toHaveText('0');
     await expect(page.locator('#crm-import-meta')).not.toContainText(/%s/);
+    await expect(page.locator('#crm-import-meta')).toContainText(/ready|bereit|prêt|lista|klaar|gotow|klar/i);
     await expect(page.locator('#crm-import-table')).toContainText(company);
+    await expect(page.locator('#crm-import-table')).toHaveAttribute('data-crm-show-include', '0');
     await expect(page.locator('#crm-import-accept-unambiguous')).toBeEnabled();
-    await expect(page.locator('#crm-import-accept-unambiguous')).toContainText(/Import|Übernehmen|importieren/i);
+    await expect(page.locator('#crm-import-accept-unambiguous')).toContainText(/Import|importieren|Importer|Importar|Importeren|Importuj/i);
+    await expect(page.locator('#crm-import-change-list')).toBeVisible();
 
     await axeMain(page);
 
     await page.locator('#crm-import-accept-unambiguous').click();
     await expect(page.locator('#crm-import-summary')).toBeVisible({ timeout: 30000 });
-    await expect(page.locator('#crm-import-summary-body')).toContainText(/Added|Hinzugefügt|Linked|Verknüpft|Open companies|Unternehmen/i);
+    await expect(page.locator('#crm-import-root')).toHaveAttribute('data-crm-import-phase', 'done');
+    await expect(page.locator('#crm-import-summary-body')).toContainText(/Added|Hinzugefügt|Linked|Verknüpft|Open companies|Unternehmen|empresa|entreprise|azienda|bedrijf|firm/i);
     await expect(page.locator('#crm-import-summary-body a.crm-btn--primary')).toBeVisible();
     await axeMain(page);
   });
@@ -58,7 +65,8 @@ test.describe('Bachus Import effortless journey', () => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await login(page, credsFromEnv('ADMIN'));
     await page.goto('/apps/customercheck/import');
-    await page.waitForSelector('#crm-import-csv', { timeout: 30000 });
+    await page.waitForSelector('#crm-import-paste-details', { timeout: 30000 });
+    await page.locator('#crm-import-paste-details').evaluate((el) => { el.open = true; });
 
     const suffix = Date.now().toString(36);
     const company = `Mail Json ${suffix}`;
@@ -88,7 +96,8 @@ test.describe('Bachus Import effortless journey', () => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await login(page, credsFromEnv('ADMIN'));
     await page.goto('/apps/customercheck/import');
-    await page.waitForSelector('#crm-import-csv', { timeout: 30000 });
+    await page.waitForSelector('#crm-import-paste-details', { timeout: 30000 });
+    await page.locator('#crm-import-paste-details').evaluate((el) => { el.open = true; });
 
     const suffix = Date.now().toString(36);
     const company = `Sales Log ${suffix}`;
@@ -106,18 +115,19 @@ test.describe('Bachus Import effortless journey', () => {
     await axeMain(page);
   });
 
-  test('narrow viewport keeps source tiles and actions usable', async ({ page }) => {
+  test('narrow viewport keeps drop zone and actions usable', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await login(page, credsFromEnv('ADMIN'));
     await page.goto('/apps/customercheck/import');
-    await page.waitForSelector('#crm-import-csv', { timeout: 30000 });
+    await page.waitForSelector('#crm-import-drop', { timeout: 30000 });
 
-    const tile = page.locator('.crm-import-tile').first();
-    await expect(tile).toBeVisible();
-    const box = await tile.boundingBox();
+    const drop = page.locator('#crm-import-drop');
+    await expect(drop).toBeVisible();
+    const box = await drop.boundingBox();
     expect(box).toBeTruthy();
     expect(box.height).toBeGreaterThanOrEqual(44);
 
+    await page.locator('#crm-import-paste-details').evaluate((el) => { el.open = true; });
     const scan = page.locator('#crm-import-scan');
     await expect(scan).toBeVisible();
     const scanBox = await scan.boundingBox();
@@ -128,6 +138,22 @@ test.describe('Bachus Import effortless journey', () => {
     await scan.click();
     await expect(page.locator('#crm-import-review')).toBeVisible({ timeout: 30000 });
     await expect(page.locator('#crm-import-accept-unambiguous')).toBeVisible();
+    await axeMain(page);
+  });
+
+  test('Change list returns to source phase', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await login(page, credsFromEnv('ADMIN'));
+    await page.goto('/apps/customercheck/import');
+    await page.waitForSelector('#crm-import-paste-details', { timeout: 30000 });
+    await page.locator('#crm-import-paste-details').evaluate((el) => { el.open = true; });
+    await page.locator('#crm-import-csv').fill(`Change List ${Date.now().toString(36)}`);
+    await page.locator('#crm-import-scan').click();
+    await expect(page.locator('#crm-import-review')).toBeVisible({ timeout: 30000 });
+    await page.locator('#crm-import-change-list').click();
+    await expect(page.locator('#crm-import-root')).toHaveAttribute('data-crm-import-phase', 'source');
+    await expect(page.locator('#crm-import-source-body')).toBeVisible();
+    await expect(page.locator('#crm-import-review')).toBeHidden();
     await axeMain(page);
   });
 });

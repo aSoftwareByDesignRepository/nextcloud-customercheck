@@ -3,11 +3,12 @@
  */
 import { describe, expect, it } from 'vitest';
 import {
+  buildBillingHonesty,
   buildBillingSummaryTiles,
   safeInternalHref,
 } from '../../js/utils/company360-present.js';
 
-const t = (msg) => msg;
+const t = (msg, args) => (args && args.length ? msg.replace('%s', args[0]) : msg);
 const billingStateLabel = (state) => {
   if (state === 'ok') return 'Paid up';
   if (state === 'critical') return 'Overdue';
@@ -52,6 +53,22 @@ describe('buildBillingSummaryTiles', () => {
     expect(tiles[2].tone).toBe('warning');
   });
 
+  it('adds license tile when licenses exist', () => {
+    const tiles = buildBillingSummaryTiles(
+      {
+        state: 'attention',
+        overdueCount: 0,
+        openCount: 1,
+        licenses: { total: 2, unpaid: 1 },
+      },
+      { t, billingStateLabel, billingTone },
+    );
+    expect(tiles).toHaveLength(4);
+    expect(tiles[3].key).toBe('licenses');
+    expect(tiles[3].value).toBe('1');
+    expect(tiles[3].tone).toBe('warning');
+  });
+
   it('marks zero overdue/open as calm and survives null billing', () => {
     const tiles = buildBillingSummaryTiles(
       { state: 'ok', overdueCount: 0, openCount: 0 },
@@ -62,5 +79,42 @@ describe('buildBillingSummaryTiles', () => {
     expect(tiles[2].tone).toBe('neutral');
     expect(tiles[2].meta).toBe('Nothing open');
     expect(buildBillingSummaryTiles(null, { t, billingStateLabel, billingTone })[0].value).toBe('Unknown');
+  });
+});
+
+describe('buildBillingHonesty', () => {
+  it('explains license mode and unset invoice status', () => {
+    expect(
+      buildBillingHonesty(
+        {
+          sourceMode: 'licenses',
+          sources: { invoiceCheckAvailable: false, projectCheckAvailable: false, licenses: true },
+          licenses: { total: 1, unpaid: 1, none: 0 },
+        },
+        t,
+      ).text,
+    ).toMatch(/license payment status/i);
+
+    expect(
+      buildBillingHonesty(
+        {
+          sourceMode: 'none',
+          sources: { invoiceCheckAvailable: false, projectCheckAvailable: false, licenses: true },
+          licenses: { total: 2, unpaid: 0, none: 2 },
+        },
+        t,
+      ).tone,
+    ).toBe('warning');
+
+    expect(
+      buildBillingHonesty(
+        {
+          sourceMode: 'invoicecheck',
+          sources: { invoiceCheckAvailable: true, invoiceCheckLinked: true },
+          licenses: { total: 0 },
+        },
+        t,
+      ).text,
+    ).toMatch(/InvoiceCheck/i);
   });
 });

@@ -230,6 +230,9 @@ final class Constants
 	/** Max bulk reassign rows (§13.5). */
 	public const BULK_REASSIGN_MAX = 200;
 
+	/** Max Review inbox items removable in one discard-bulk request. */
+	public const REVIEW_DISCARD_BULK_MAX = 100;
+
 	/** Max open escalations per workspace (§13.3). */
 	public const ESCALATION_MAX_OPEN = 50;
 
@@ -238,6 +241,11 @@ final class Constants
 	public const MAILBOX_MAX_FOLDERS = 20;
 	public const MAILBOX_SYNC_CAP = 500;
 	public const MAIL_PREVIEW_MAX_BYTES = 51200;
+	/** On-demand IMAP body preview rate limits (DoS / mailbox lockout protection). */
+	public const MAIL_PREVIEW_USER_LIMIT = 30;
+	public const MAIL_PREVIEW_USER_WINDOW = 3600;
+	public const MAIL_PREVIEW_WS_LIMIT = 120;
+	public const MAIL_PREVIEW_WS_WINDOW = 3600;
 	/** Shared-mailbox index retention floor + purge batch (§5.10 / §18.9). */
 	public const MAIL_RETENTION_DAYS_MIN = 30;
 	public const MAIL_PURGE_BATCH = 500;
@@ -313,6 +321,8 @@ final class Constants
 	public const NOTIFY_KEY_GENERATED = 'crm_key_generated';
 	/** Companion P2 — open activity due today / overdue (exactly-once ledger). */
 	public const NOTIFY_ACTIVITY_DUE = 'crm_activity_due';
+	/** Deal checklist item assigned to a colleague. */
+	public const NOTIFY_DEAL_CHECKLIST = 'crm_deal_checklist';
 	/** Parallel edit conflict opened — notify both actors (GNQ §6). */
 	public const NOTIFY_EDIT_CONFLICT = 'crm_edit_conflict';
 
@@ -325,6 +335,7 @@ final class Constants
 		self::NOTIFY_INVOICE_PAID,
 		self::NOTIFY_KEY_GENERATED,
 		self::NOTIFY_ACTIVITY_DUE,
+		self::NOTIFY_DEAL_CHECKLIST,
 		self::NOTIFY_EDIT_CONFLICT,
 	];
 

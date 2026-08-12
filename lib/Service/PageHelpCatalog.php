@@ -21,11 +21,24 @@ final class PageHelpCatalog
 	}
 
 	/**
+	 * Help leads cover every Quick start page plus company-detail (Welcome Coach
+	 * owns tips there — still needs a short page lead).
+	 *
 	 * @return list<string>
 	 */
 	public static function requiredPageIds(): array
 	{
-		return PageQuickStartCatalog::requiredPageIds();
+		$ids = PageQuickStartCatalog::requiredPageIds();
+		if (!in_array('company-detail', $ids, true)) {
+			$insertAt = array_search('companies', $ids, true);
+			if ($insertAt === false) {
+				$ids[] = 'company-detail';
+			} else {
+				array_splice($ids, $insertAt + 1, 0, ['company-detail']);
+			}
+		}
+
+		return $ids;
 	}
 
 	public function forPage(string $pageId): ?string
@@ -64,7 +77,7 @@ final class PageHelpCatalog
 			'agreement-form' => $l->t('One agreement always belongs to one company. Dates and amounts update Money automatically.'),
 			'money' => $l->t('Overdue, unpaid, paid and unknown invoice states.'),
 			'activities' => $l->t('Calls, emails, meetings, and to-dos — open items also show on Today.'),
-			'import' => $l->t('Drop a CSV or JSON from mail, or paste it. We preview first — nothing is saved until you say yes.'),
+			'import' => $l->t('Drop a CSV or JSON file, or paste names. We show a preview first — nothing is saved yet.'),
 			'settings' => $l->t('Team members, shared mailbox, and your preferences.'),
 			'app-settings' => $l->t('Access, reminders, intake URLs, and seats for the whole Nextcloud — admins only.'),
 			'support-us' => $l->t('Optional support for the project. The web app stays free under AGPL either way.'),

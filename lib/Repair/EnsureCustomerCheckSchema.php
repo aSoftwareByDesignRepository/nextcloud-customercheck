@@ -54,6 +54,10 @@ final class EnsureCustomerCheckSchema implements IRepairStep
 		'crm_edit_conflict',
 		'crm_entity_rev',
 		'crm_value_map',
+		'crm_cl_tmpl',
+		'crm_cl_tmpl_item',
+		'crm_deal_cl_item',
+		'crm_deal_cl_file',
 	];
 
 	public function __construct(

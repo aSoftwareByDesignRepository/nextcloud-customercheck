@@ -78,6 +78,62 @@ final class ActivityDueReminderServiceTest extends TestCase
 		self::assertSame(['scanned' => 1, 'sent' => 0, 'skipped' => 1], $result);
 	}
 
+	public function testRunSkipsWithoutClaimWhenWorkspaceMissing(): void
+	{
+		$activity = new Activity();
+		$activity->setId(12);
+		$activity->setCompanyId(3);
+		$activity->setTitle('Call back');
+		$activity->setDueDate(new \DateTime('2026-07-26'));
+
+		$company = new Company();
+		$company->setId(3);
+		$company->setName('Orphan Co');
+		$company->setWorkspaceId(0);
+
+		$this->activities->method('findOpenDueUpTo')->with(
+			$this->anything(),
+			200,
+			null,
+			true,
+		)->willReturn([$activity]);
+		$this->ledger->method('exists')->willReturn(false);
+		$this->ledger->expects($this->never())->method('insert');
+		$this->companies->method('findById')->with(3)->willReturn($company);
+		$this->notifications->expects($this->never())->method('notifyWorkspaceUsers');
+		$this->notifications->expects($this->never())->method('notifyCrmUsers');
+
+		$result = $this->service()->run();
+		self::assertSame(0, $result['sent']);
+		self::assertSame(1, $result['skipped']);
+	}
+
+	public function testRunReleasesLedgerWhenNoRecipients(): void
+	{
+		$activity = new Activity();
+		$activity->setId(12);
+		$activity->setCompanyId(3);
+		$activity->setTitle('Call back');
+		$activity->setDueDate(new \DateTime('2026-07-25'));
+
+		$company = new Company();
+		$company->setId(3);
+		$company->setName('Müller GmbH');
+		$company->setWorkspaceId(9);
+
+		$this->activities->method('findOpenDueUpTo')->willReturn([$activity]);
+		$this->ledger->method('exists')->willReturn(false);
+		$this->ledger->expects($this->once())->method('insert')->with($this->isInstanceOf(ActivityDueLog::class));
+		$this->ledger->expects($this->once())->method('delete')->with($this->isInstanceOf(ActivityDueLog::class));
+		$this->companies->method('findById')->with(3)->willReturn($company);
+		$this->notifications->expects($this->once())->method('notifyWorkspaceUsers')->willReturn(0);
+		$this->notifications->expects($this->never())->method('notifyCrmUsers');
+
+		$result = $this->service()->run();
+		self::assertSame(0, $result['sent']);
+		self::assertSame(1, $result['skipped']);
+	}
+
 	public function testRunInsertsLedgerThenNotifies(): void
 	{
 		$activity = new Activity();
@@ -105,7 +161,7 @@ final class ActivityDueReminderServiceTest extends TestCase
 					&& ($p['companyName'] ?? '') === 'Müller GmbH'
 					&& ($p['title'] ?? '') === 'Call back';
 			}),
-		);
+		)->willReturn(1);
 		$this->notifications->expects($this->never())->method('notifyCrmUsers');
 
 		$result = $this->service()->run();

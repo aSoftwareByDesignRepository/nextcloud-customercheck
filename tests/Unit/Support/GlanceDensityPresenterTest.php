@@ -122,4 +122,46 @@ final class GlanceDensityPresenterTest extends TestCase
 		$this->assertSame(GlanceDensityPresenter::TONE_ATTENTION, $tiles[2]['tone']);
 		$this->assertStringContainsString('2 waiting', $tiles[2]['hint']);
 	}
+
+	public function testOpenProjectsRaiseAttentionTone(): void
+	{
+		$tiles = GlanceDensityPresenter::tiles([
+			'openProjects' => 4,
+			'projectcheck' => true,
+			'invoicecheck' => true,
+			'ticketcheck' => true,
+			'unpaidInvoices' => 0,
+			'openTickets' => 0,
+			'waitingTickets' => 0,
+			'projectsHref' => '#crm-projects',
+		], $this->l10n());
+		$this->assertSame(GlanceDensityPresenter::TONE_ATTENTION, $tiles[0]['tone']);
+		$this->assertTrue(GlanceDensityPresenter::needsAttention($tiles));
+		$this->assertStringContainsString('4 open', $tiles[0]['hint']);
+	}
+
+	public function testNeedsAttentionFalseWhenAllCalm(): void
+	{
+		$tiles = GlanceDensityPresenter::tiles([
+			'openProjects' => 0,
+			'unpaidInvoices' => 0,
+			'openTickets' => 0,
+			'waitingTickets' => 0,
+			'projectcheck' => true,
+			'invoicecheck' => true,
+			'ticketcheck' => true,
+		], $this->l10n());
+		$this->assertFalse(GlanceDensityPresenter::needsAttention($tiles));
+	}
+
+	public function testNeedsAttentionTrueWhenOffline(): void
+	{
+		$tiles = GlanceDensityPresenter::tiles([
+			'projectcheck' => false,
+			'invoicecheck' => true,
+			'ticketcheck' => true,
+			'unpaidInvoices' => 0,
+		], $this->l10n());
+		$this->assertTrue(GlanceDensityPresenter::needsAttention($tiles));
+	}
 }

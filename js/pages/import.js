@@ -2,7 +2,20 @@
   'use strict';
   const C = window.CustomerCheckComponents || window.CrmComponents;
   const Api = window.CustomerCheckApi;
-  const t = (msg, args) => (window.t ? window.t('customercheck', msg, args || []) : msg);
+  const t = (msg, args) => {
+    const list = Array.isArray(args) ? args : [];
+    let out = window.t ? window.t('customercheck', msg, list) : msg;
+    // Nextcloud t() sometimes leaves %s / %1$s — fill locally (same as settings.js).
+    if (list.length && typeof out === 'string' && out.indexOf('%') !== -1) {
+      let i = 0;
+      out = out.replace(/%(?:\d+\$)?s/g, function () {
+        const v = list[i];
+        i += 1;
+        return v == null ? '' : String(v);
+      });
+    }
+    return out;
+  };
   if (C && C.init) { C.init(); }
 
   let lastScan = null;
@@ -11,16 +24,41 @@
   const root = document.getElementById('crm-import-root');
   const csvWrap = document.getElementById('crm-import-csv-wrap');
   const linkDefaultWrap = document.getElementById('crm-import-link-default');
+  const sourceBody = document.getElementById('crm-import-source-body');
+  const sourceCollapsed = document.getElementById('crm-import-source-collapsed');
+  const changeListBtn = document.getElementById('crm-import-change-list');
   const scanBtn = document.getElementById('crm-import-scan');
   const acceptBtn = document.getElementById('crm-import-accept-unambiguous');
   const applyBtn = document.getElementById('crm-import-apply');
   const sourceStatus = document.getElementById('crm-import-source-status');
+  const pasteDetails = document.getElementById('crm-import-paste-details');
   const selected = () => (document.querySelector('input[name="crm-import-source"]:checked') || {}).value || 'csv';
 
   function escapeHtml(s) {
     return String(s || '').replace(/[<>&"']/g, (ch) => ({
       '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;',
     }[ch]));
+  }
+
+  function setPhase(phase) {
+    if (!root) return;
+    root.setAttribute('data-crm-import-phase', phase);
+    if (sourceBody) sourceBody.hidden = phase !== 'source';
+    if (changeListBtn) changeListBtn.hidden = phase === 'source';
+    if (sourceCollapsed) {
+      if (phase === 'source') {
+        sourceCollapsed.hidden = true;
+        sourceCollapsed.textContent = '';
+      } else {
+        const src = selected();
+        const label = src === 'csv'
+          ? t('File or paste')
+          : (src === 'projectcheck' ? 'ProjectCheck'
+            : (src === 'ticketcheck' ? 'TicketCheck' : t('License sales')));
+        sourceCollapsed.hidden = false;
+        sourceCollapsed.textContent = fillOne('List ready from: %s', label);
+      }
+    }
   }
 
   function setBusy(busy, message) {
@@ -30,6 +68,9 @@
     if (scanBtn) {
       scanBtn.disabled = !!busy;
     }
+    if (acceptBtn && busy) {
+      acceptBtn.disabled = true;
+    }
     if (sourceStatus) {
       sourceStatus.textContent = message || '';
     }
@@ -37,7 +78,7 @@
 
   function syncSourceUi() {
     const src = selected();
-    csvWrap.hidden = src !== 'csv';
+    if (csvWrap) csvWrap.hidden = src !== 'csv';
     if (linkDefaultWrap) {
       linkDefaultWrap.hidden = src !== 'projectcheck';
     }
@@ -49,15 +90,31 @@
   document.querySelectorAll('input[name="crm-import-source"]').forEach((r) => {
     r.addEventListener('change', () => {
       syncSourceUi();
+      setPhase('source');
       const src = selected();
       if (src !== 'csv') {
         runScan({ auto: true });
       } else if (sourceStatus) {
-        sourceStatus.textContent = t('Add a CSV or JSON file, or paste it, then tap Check my list.');
+        sourceStatus.textContent = t('Drop a file, or open Paste instead.');
       }
     });
   });
   syncSourceUi();
+  setPhase('source');
+
+  if (changeListBtn) {
+    changeListBtn.addEventListener('click', () => {
+      setPhase('source');
+      const review = document.getElementById('crm-import-review');
+      const summary = document.getElementById('crm-import-summary');
+      if (review) review.hidden = true;
+      if (summary) summary.hidden = true;
+      if (pasteDetails && selected() === 'csv') {
+        // keep paste open if they already used it
+      }
+      if (sourceStatus) sourceStatus.textContent = '';
+    });
+  }
 
   function linkSiblingPreference() {
     if (selected() !== 'projectcheck') {
@@ -146,12 +203,12 @@
     const text = await file.text();
     if (pasteArea) {
       pasteArea.value = text;
-      pasteArea.focus();
     }
     setFileLabel(name);
     if (sourceStatus) {
-      sourceStatus.textContent = t('File loaded — tap Check my list when ready.');
+      sourceStatus.textContent = t('File loaded — checking…');
     }
+    await runScan({ auto: true });
   }
 
   if (fileInput) {
@@ -202,7 +259,7 @@
     if (acceptBtn) {
       acceptBtn.disabled = ready < 1;
       if (ready < 1) {
-        acceptBtn.textContent = t('Import ready');
+        acceptBtn.textContent = t('Import now');
       } else if (ready === 1) {
         acceptBtn.textContent = t('Import 1 ready company');
       } else {
@@ -217,6 +274,17 @@
     }
   }
 
+  function setIncludeColumnVisible(show) {
+    const table = document.getElementById('crm-import-table');
+    if (table) {
+      table.setAttribute('data-crm-show-include', show ? '1' : '0');
+    }
+    const heading = document.getElementById('crm-import-include-heading');
+    if (heading) {
+      heading.hidden = !show;
+    }
+  }
+
   function renderProposals(scan) {
     lastScan = scan;
     const review = document.getElementById('crm-import-review');
@@ -227,6 +295,7 @@
     const stats = document.getElementById('crm-import-stats');
     review.hidden = false;
     document.getElementById('crm-import-summary').hidden = true;
+    setPhase('review');
 
     const m = scan.meta || {};
     const ready = (m.create || 0) + (m.link || 0);
@@ -237,15 +306,26 @@
     document.getElementById('crm-import-stat-ready').textContent = String(ready);
     document.getElementById('crm-import-stat-choice').textContent = String(needs);
     document.getElementById('crm-import-stat-skip').textContent = String(skip);
+    const choiceWrap = document.getElementById('crm-import-stat-choice-wrap');
+    const skipWrap = document.getElementById('crm-import-stat-skip-wrap');
+    if (choiceWrap) choiceWrap.hidden = needs < 1;
+    if (skipWrap) skipWrap.hidden = skip < 1;
     if (stats) stats.hidden = total < 1;
+
+    // Include column only when the user must choose (ambiguous matches).
+    setIncludeColumnVisible(needs > 0);
 
     if (meta) {
       if (total < 1) {
         meta.textContent = t('Nothing matched yet.');
       } else if (ready > 0 && needs === 0) {
-        meta.textContent = t('Everything below looks clear — import when you are ready.');
-      } else if (needs > 0) {
+        meta.textContent = ready === 1
+          ? t('1 company is ready. Tap the green button to add it.')
+          : fillOne('%s companies are ready. Tap the green button to add them.', ready);
+      } else if (needs > 0 && ready > 0) {
         meta.textContent = t('Some names need a quick pick. Ready rows can still import now.');
+      } else if (needs > 0) {
+        meta.textContent = t('Pick a match for each name, then import.');
       } else {
         meta.textContent = t('Nothing ready to import yet.');
       }
@@ -256,14 +336,17 @@
     tbody.innerHTML = '';
     if (scan.errors && scan.errors.length) {
       errBox.hidden = false;
-      errBox.textContent = scan.errors.map((e) => {
+      const items = scan.errors.map((e) => {
         const lineBit = e.line != null ? (t('Line') + ' ' + String(e.line)) : t('Row');
-        const colBit = e.column ? ' (' + e.column + ')' : '';
-        const reason = humanErrorReason(e.reason);
-        return lineBit + colBit + ': ' + reason;
-      }).join('; ');
+        const colBit = e.column ? ' · ' + e.column : '';
+        return '<li>' + escapeHtml(lineBit + colBit + ': ' + humanErrorReason(e.reason)) + '</li>';
+      }).join('');
+      errBox.innerHTML =
+        '<p class="crm-import-errors-lead">' + escapeHtml(t('Please fix these rows:')) + '</p>' +
+        '<ul class="crm-import-errors-list">' + items + '</ul>';
     } else {
       errBox.hidden = true;
+      errBox.textContent = '';
     }
 
     if (empty) {
@@ -310,7 +393,7 @@
       tr.innerHTML =
         '<td><strong class="crm-import-company">' + escapeHtml(company) + '</strong></td>' +
         '<td>' + decisionHtml + '</td>' +
-        '<td data-label="' + escapeHtml(t('Include')) + '" class="actions-cell crm-table-actions-col">' +
+        '<td data-label="' + escapeHtml(t('Include')) + '" class="actions-cell crm-table-actions-col crm-import-include-cell">' +
         '<div class="crm-table-actions">' +
         '<label class="crm-import-include' + (includeDisabled ? ' crm-import-include--disabled' : '') + '">' +
         '<input type="checkbox" class="crm-sr-only" data-include-index="' + p.index + '" ' +
@@ -353,6 +436,9 @@
             message: t('Drop a CSV/JSON file from mail, or paste the contents, then try again.'),
             variant: 'warning',
           });
+          if (pasteDetails && !pasteDetails.open) {
+            pasteDetails.open = true;
+          }
         }
         return;
       }
@@ -374,6 +460,7 @@
     } catch (e) {
       if (mySeq !== scanSeq) return;
       setBusy(false, '');
+      setPhase('source');
       await C.alertDialog({
         title: t('Could not check the list'),
         message: (e.payload && e.payload.message) || e.message,
@@ -382,7 +469,9 @@
     }
   }
 
-  scanBtn.addEventListener('click', () => runScan({ auto: false }));
+  if (scanBtn) {
+    scanBtn.addEventListener('click', () => runScan({ auto: false }));
+  }
 
   async function applySelected(mode) {
     if (!lastScan) return;
@@ -431,7 +520,10 @@
       const summary = res.data;
       const box = document.getElementById('crm-import-summary');
       const body = document.getElementById('crm-import-summary-body');
+      const review = document.getElementById('crm-import-review');
+      if (review) review.hidden = true;
       box.hidden = false;
+      setPhase('done');
       const companiesUrl = (window.OC && OC.generateUrl)
         ? OC.generateUrl('/apps/customercheck/companies')
         : '/apps/customercheck/companies';
@@ -440,12 +532,17 @@
       const skipped = Number(summary.skipped) || 0;
       const agreements = Number(summary.agreements) || 0;
       const parts = [];
-      if (created) parts.push(fillOne('Added %s new', created));
-      if (linked) parts.push(fillOne('Linked %s existing', linked));
-      if (agreements) parts.push(fillOne('Updated %s agreements', agreements));
-      if (skipped) parts.push(fillOne('Skipped %s', skipped));
+      if (created === 1) parts.push(t('Added 1 new company'));
+      else if (created > 1) parts.push(fillOne('Added %s new companies', created));
+      if (linked === 1) parts.push(t('Linked 1 existing company'));
+      else if (linked > 1) parts.push(fillOne('Linked %s existing companies', linked));
+      if (agreements === 1) parts.push(t('Updated 1 agreement'));
+      else if (agreements > 1) parts.push(fillOne('Updated %s agreements', agreements));
+      if (skipped === 1) parts.push(t('Skipped 1 row'));
+      else if (skipped > 1) parts.push(fillOne('Skipped %s rows', skipped));
+      const lead = parts.join(' · ') || t('Nothing changed.');
       body.innerHTML =
-        '<p class="crm-import-summary-lead">' + escapeHtml(parts.join(' · ') || t('Nothing changed.')) + '</p>' +
+        '<p class="crm-import-summary-lead">' + escapeHtml(lead) + '</p>' +
         (summary.errors && summary.errors.length
           ? '<div class="crm-callout crm-callout--warning" role="status"><p>' +
             escapeHtml(fillOne('%s row error(s).', summary.errors.length)) +
@@ -471,21 +568,25 @@
     }
   }
 
-  acceptBtn.addEventListener('click', async () => {
-    if (!lastScan) return;
-    document.querySelectorAll('[data-include-index]').forEach((cb) => {
-      const idx = parseInt(cb.getAttribute('data-include-index'), 10);
-      const p = lastScan.proposals.find((x) => x.index === idx);
-      if (p && (p.action === 'create' || p.action === 'link')) {
-        cb.checked = true;
-      } else if (p) {
-        cb.checked = false;
-      }
+  if (acceptBtn) {
+    acceptBtn.addEventListener('click', async () => {
+      if (!lastScan) return;
+      document.querySelectorAll('[data-include-index]').forEach((cb) => {
+        const idx = parseInt(cb.getAttribute('data-include-index'), 10);
+        const p = lastScan.proposals.find((x) => x.index === idx);
+        if (p && (p.action === 'create' || p.action === 'link')) {
+          cb.checked = true;
+        } else if (p) {
+          cb.checked = false;
+        }
+      });
+      await applySelected('ready-only');
     });
-    await applySelected('ready-only');
-  });
+  }
 
-  applyBtn.addEventListener('click', async () => {
-    await applySelected('selected');
-  });
+  if (applyBtn) {
+    applyBtn.addEventListener('click', async () => {
+      await applySelected('selected');
+    });
+  }
 })();

@@ -55,9 +55,12 @@ class TodayService
 		/** @var array<int, string> $companyNames */
 		$companyNames = [];
 
-		foreach ($this->agreementMapper->findRenewalCandidates(2000, 0, $wsFilter) as $agreement) {
+		// Windowed, soonest-first — never starve near expiries behind low ids.
+		$floor = DateMath::addDays($today, -14);
+		$horizon = DateMath::addDays($today, 60);
+		foreach ($this->agreementMapper->findTodayRenewalCandidates($floor, $horizon, 2000, $wsFilter) as $agreement) {
 			$days = $this->statusService->daysUntilExpiry($agreement->getValidUntil(), $today);
-			if ($days === null || $days > 60) {
+			if ($days === null || $days > 60 || $days < -14) {
 				continue;
 			}
 			$companyId = (int)$agreement->getCompanyId();

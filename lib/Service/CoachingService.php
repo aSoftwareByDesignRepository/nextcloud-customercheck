@@ -27,6 +27,7 @@ class CoachingService
 		private readonly IL10N $l10n,
 		private readonly \OCP\IUserManager $userManager,
 		private readonly ILockingProvider $locking,
+		private readonly ?NotificationService $notifications = null,
 	) {
 	}
 
@@ -47,6 +48,7 @@ class CoachingService
 		$promisesDue = $this->promises->dueSoon($workspaceId, $today, 0);
 		$oooActive = $this->oooCover->listActive($workspaceId, $today);
 		$missedByOwner = $this->missedCommitmentsByOwner($workspaceId, $today);
+		$checklistOverdueByOwner = $this->overdueChecklistCountsByOwner($workspaceId, $today);
 		// Coverage gaps are display-only on Team (not StuckLogic). Compute once per
 		// owned company — never N× myAccounts (each scans the whole workspace).
 		$coverageGapsByOwner = $this->coverageGapCountsByOwner($workspaceId);
@@ -83,11 +85,13 @@ class CoachingService
 				}
 			}
 			$commitmentMissed = (int)($missedByOwner[$uid] ?? 0);
+			$checklistOverdue = (int)($checklistOverdueByOwner[$uid] ?? 0);
 			$signals = [
 				'chaseCount' => count($chase),
 				'promiseOverdue' => $promiseOverdue,
 				'planStalled' => $planStalled,
 				'commitmentMissed' => $commitmentMissed,
+				'checklistOverdue' => $checklistOverdue,
 			];
 			$ooo = $this->oooRowForUser($oooActive, $uid);
 			$stuck = StuckLogic::isStuck($signals);
@@ -105,7 +109,8 @@ class CoachingService
 				'chase' => count($chase),
 				'quote14' => $quoteOld,
 				'coverageGaps' => $coverageGaps,
-				'overdueWork' => $promiseOverdue,
+				'overdueWork' => $promiseOverdue + $checklistOverdue,
+				'checklistOverdue' => $checklistOverdue,
 				'commitCents' => $commitCents,
 				'forecastDisclaimer' => $this->l10n->t('Planning labels — not expected cash.'),
 				'ooo' => $ooo,
@@ -230,6 +235,7 @@ class CoachingService
 		$companyIds = array_values(array_map('intval', $data['companyIds'] ?? []));
 		$promiseIds = array_values(array_map('intval', $data['promiseIds'] ?? []));
 		$commitmentIds = array_values(array_map('intval', $data['commitmentIds'] ?? []));
+		$checklistIds = array_values(array_map('intval', $data['checklistItemIds'] ?? $data['checklistIds'] ?? []));
 		$types = array_values(array_filter(array_map('strval', $data['entityTypes'] ?? [])));
 
 		if ($types !== []) {
@@ -245,14 +251,22 @@ class CoachingService
 			if (in_array('commitments', $types, true) || in_array('commitment', $types, true)) {
 				$commitmentIds = array_values(array_unique(array_merge($commitmentIds, $this->idsOwnedBy($workspaceId, 'crm_commit', 'owner_user_id', $from, false, null, ['suggested', 'committed', 'missed']))));
 			}
+			if (in_array('checklist_items', $types, true) || in_array('checklist', $types, true) || in_array('deal_checklist', $types, true)) {
+				if ($this->db->tableExists('crm_deal_cl_item')) {
+					$checklistIds = array_values(array_unique(array_merge($checklistIds, $this->idsOwnedBy($workspaceId, 'crm_deal_cl_item', 'assignee_user_id', $from, false, 'open'))));
+				}
+			}
 		}
 
 		$scopedDealIds = $this->filterDealIdsInWorkspace($workspaceId, $dealIds, $from);
 		$scopedCompanyIds = $this->filterOwnedRowsInWorkspace($workspaceId, 'crm_company', 'account_owner_user_id', $companyIds, $from);
 		$scopedPromiseIds = $this->filterOwnedRowsInWorkspace($workspaceId, 'crm_cust_prm', 'owner_user_id', $promiseIds, $from);
 		$scopedCommitmentIds = $this->filterOwnedRowsInWorkspace($workspaceId, 'crm_commit', 'owner_user_id', $commitmentIds, $from);
+		$scopedChecklistIds = $this->db->tableExists('crm_deal_cl_item')
+			? $this->filterOwnedRowsInWorkspace($workspaceId, 'crm_deal_cl_item', 'assignee_user_id', $checklistIds, $from)
+			: [];
 		// Recompute total after ACL filter so cross-WS junk cannot pad the count.
-		$total = count($scopedDealIds) + count($scopedCompanyIds) + count($scopedPromiseIds) + count($scopedCommitmentIds);
+		$total = count($scopedDealIds) + count($scopedCompanyIds) + count($scopedPromiseIds) + count($scopedCommitmentIds) + count($scopedChecklistIds);
 		if ($total === 0 || $total > Constants::BULK_REASSIGN_MAX) {
 			throw ValidationException::field(Constants::ERR_BULK_TOO_LARGE, 'bulk', $this->l10n->t('Select 1–200 items to reassign.'));
 		}
@@ -298,7 +312,17 @@ class CoachingService
 					->andWhere($qb->expr()->eq('owner_user_id', $qb->createNamedParameter($from)))
 					->executeStatement();
 			}
-			$affected = $dealAffected + $companyAffected + $promiseAffected + $commitmentAffected;
+			$checklistAffected = 0;
+			foreach ($scopedChecklistIds as $id) {
+				$qb = $this->db->getQueryBuilder();
+				$checklistAffected += $qb->update('crm_deal_cl_item')
+					->set('assignee_user_id', $qb->createNamedParameter($to))
+					->where($qb->expr()->eq('id', $qb->createNamedParameter($id)))
+					->andWhere($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId)))
+					->andWhere($qb->expr()->eq('assignee_user_id', $qb->createNamedParameter($from)))
+					->executeStatement();
+			}
+			$affected = $dealAffected + $companyAffected + $promiseAffected + $commitmentAffected + $checklistAffected;
 			// Concurrent claim/edit between filter and UPDATE must not report fake success.
 			if ($affected !== $total) {
 				$this->db->rollBack();
@@ -315,6 +339,8 @@ class CoachingService
 			}
 			throw $e;
 		}
+		$this->notifyChecklistBulkReassign($workspaceId, $scopedChecklistIds, $to, $actor);
+
 		return [
 			'reassigned' => $affected,
 			'fromUserId' => $from,
@@ -325,6 +351,7 @@ class CoachingService
 				'accounts' => $companyAffected,
 				'promises' => $promiseAffected,
 				'commitments' => $commitmentAffected,
+				'checklistItems' => $checklistAffected,
 			],
 		];
 	}
@@ -510,6 +537,95 @@ class CoachingService
 		$r->closeCursor();
 
 		return $out;
+	}
+
+	/**
+	 * Open deal-checklist items past due, counted by assignee (Team stuck — US-DC-03).
+	 *
+	 * @return array<string, int>
+	 */
+	private function overdueChecklistCountsByOwner(int $workspaceId, \DateTimeInterface $today): array
+	{
+		if (!$this->db->tableExists('crm_deal_cl_item')) {
+			return [];
+		}
+		$todayYmd = $today->format('Y-m-d');
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('assignee_user_id')
+			->selectAlias($qb->func()->count('*'), 'cnt')
+			->from('crm_deal_cl_item')
+			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId)))
+			->andWhere($qb->expr()->eq('status', $qb->createNamedParameter('open')))
+			->andWhere($qb->expr()->isNotNull('assignee_user_id'))
+			->andWhere($qb->expr()->isNotNull('due_on'))
+			->andWhere($qb->expr()->lt('due_on', $qb->createNamedParameter($todayYmd)))
+			->groupBy('assignee_user_id');
+		$r = $qb->executeQuery();
+		$out = [];
+		while ($row = $r->fetch()) {
+			$uid = trim((string)($row['assignee_user_id'] ?? ''));
+			if ($uid === '') {
+				continue;
+			}
+			$out[$uid] = (int)$row['cnt'];
+		}
+		$r->closeCursor();
+
+		return $out;
+	}
+
+	/**
+	 * After bulk checklist reassign — wake the new assignee once per item (AC US-DC-03).
+	 *
+	 * @param list<int> $itemIds
+	 */
+	private function notifyChecklistBulkReassign(int $workspaceId, array $itemIds, string $toUserId, string $actor): void
+	{
+		if ($this->notifications === null || $itemIds === [] || $toUserId === '' || $toUserId === $actor) {
+			return;
+		}
+		if (!$this->db->tableExists('crm_deal_cl_item')) {
+			return;
+		}
+		$qb = $this->db->getQueryBuilder();
+		$params = [];
+		foreach ($itemIds as $i => $id) {
+			$params[] = $qb->createNamedParameter((int)$id, null, 'nid' . $i);
+		}
+		$qb->select('i.id')
+			->selectAlias('i.title', 'item_title')
+			->selectAlias('i.company_id', 'company_id')
+			->selectAlias('i.deal_id', 'deal_id')
+			->selectAlias('i.due_on', 'due_on')
+			->selectAlias('d.title', 'deal_title')
+			->selectAlias('c.name', 'company_name')
+			->from('crm_deal_cl_item', 'i')
+			->leftJoin('i', 'crm_deal', 'd', $qb->expr()->eq('i.deal_id', 'd.id'))
+			->leftJoin('i', 'crm_company', 'c', $qb->expr()->eq('i.company_id', 'c.id'))
+			->where($qb->expr()->eq('i.workspace_id', $qb->createNamedParameter($workspaceId)))
+			->andWhere($qb->expr()->eq('i.assignee_user_id', $qb->createNamedParameter($toUserId)))
+			->andWhere($qb->expr()->in('i.id', $params));
+		$r = $qb->executeQuery();
+		while ($row = $r->fetch()) {
+			$itemId = (int)$row['id'];
+			$this->notifications->notifyUser(
+				$toUserId,
+				Constants::NOTIFY_DEAL_CHECKLIST,
+				'deal_checklist_item',
+				(string)$itemId,
+				[
+					'workspaceId' => $workspaceId,
+					'companyId' => (int)$row['company_id'],
+					'companyName' => (string)($row['company_name'] ?? ''),
+					'dealId' => (int)$row['deal_id'],
+					'dealTitle' => (string)($row['deal_title'] ?? ''),
+					'checklistItemId' => $itemId,
+					'title' => (string)($row['item_title'] ?? ''),
+					'dueOn' => $row['due_on'] !== null ? (string)$row['due_on'] : null,
+				],
+			);
+		}
+		$r->closeCursor();
 	}
 
 	private function countMissedCommitments(int $workspaceId, string $userId, \DateTimeInterface $today): int

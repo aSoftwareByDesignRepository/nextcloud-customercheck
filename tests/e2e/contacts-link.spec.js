@@ -30,9 +30,17 @@ test.describe('Contacts link (Command Center)', () => {
     await expect(page.locator('#crm-persons-table thead')).toContainText(/Address book|Adressbuch/i);
     await expect(page.locator('#crm-persons-table tbody tr').first()).toContainText(/No touch yet|Noch kein Kontakt/i);
     await expect(page.locator('#crm-persons-table tbody tr').first()).toContainText(/Not linked|Nicht verknüpft/i);
+    await expect(page.locator('#crm-persons-table [data-crm-remove-person]').first()).toBeVisible();
 
     // Cockpit Log email is wired (AC communication actions).
     await expect(page.locator('#crm-log-email[data-crm-log-email]')).toBeVisible();
+
+    await page.locator('#crm-persons-table [data-crm-remove-person]').first().click();
+    const confirm = page.locator('dialog[open][role="alertdialog"]');
+    await expect(confirm).toBeVisible({ timeout: 10000 });
+    await confirm.locator('.confirm-dialog__confirm').click();
+    await page.waitForLoadState('networkidle');
+    await expect(page.locator('#crm-persons')).toContainText(/No contacts yet|Noch keine Kontakte/i);
   });
 
   test('platform strip and contacts suggest degrade cleanly', async ({ page }) => {

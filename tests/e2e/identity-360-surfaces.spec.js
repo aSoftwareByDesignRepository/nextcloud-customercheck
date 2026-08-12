@@ -38,12 +38,18 @@ test.describe('CUC identity 360 surfaces', () => {
     await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 60000 });
 
     const identity = page.locator('#crm-identity-links');
-    await expect(identity).toBeVisible({ timeout: 30000 });
-    await expect(identity.locator('#crm-identity-links-title')).toBeVisible();
+    const bundle = page.locator('#crm-linked-bundle');
+    await expect(bundle).toBeVisible({ timeout: 30000 });
+    // Cold path: open the Linked apps host that wraps identity CTAs.
+    await bundle.locator('> summary').click();
+    await expect(bundle).toHaveAttribute('open', '');
+    await expect(identity).toBeVisible();
+    await expect(page.locator('details#crm-identity-links')).toHaveCount(0);
 
-    const statusText = await identity.locator('.crm-identity-row__status').first().innerText();
+    const statusText = await identity.locator('.crm-identity-row__head').first().innerText();
     expect(/Linked|Not linked|Broken|Unavailable|Verknüpft|Nicht verknüpft/i.test(statusText)).toBeTruthy();
-
+    await expect(identity.locator('.crm-identity-row__app', { hasText: /ProjectCheck/i })).toBeVisible();
+    await expect(identity.getByText(/Nicht mit ProjectCheck verknüpft|Not linked to ProjectCheck/i)).toHaveCount(0);
     const createPc = identity.locator('[data-crm-identity-create="pc"]');
     const linkPc = identity.locator('[data-crm-identity-link="pc"]');
     const primary = (await createPc.count()) ? createPc.first() : ((await linkPc.count()) ? linkPc.first() : null);
@@ -61,7 +67,7 @@ test.describe('CUC identity 360 surfaces', () => {
     }
 
     const axe = await new AxeBuilder({ page })
-      .include('#crm-identity-links')
+      .include('#crm-linked-bundle')
       .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
       .analyze();
     const serious = axe.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');

@@ -62,6 +62,23 @@ class EmailTouchMapper extends QBMapper
 		return $qb->executeStatement();
 	}
 
+	/**
+	 * Detach logged email touches from a CRM person (person row may be removed).
+	 * Does not delete the touch rows or any mailbox message.
+	 */
+	public function clearPersonId(int $personId): int
+	{
+		if ($personId <= 0) {
+			return 0;
+		}
+		$qb = $this->db->getQueryBuilder();
+		$qb->update($this->getTableName())
+			->set('person_id', $qb->createNamedParameter(null, IQueryBuilder::PARAM_NULL))
+			->where($qb->expr()->eq('person_id', $qb->createNamedParameter($personId, IQueryBuilder::PARAM_INT)));
+
+		return $qb->executeStatement();
+	}
+
 	/** Move email touches during company merge. */
 	public function reassignCompany(int $fromCompanyId, int $toCompanyId): int
 	{

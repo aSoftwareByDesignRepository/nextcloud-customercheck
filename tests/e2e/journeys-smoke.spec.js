@@ -39,6 +39,9 @@ test.describe('CustomerCheck journeys smoke', () => {
     await expect(page.locator('#crm-invoices')).toHaveCount(1);
     await expect(page.locator('#crm-projects')).toHaveCount(1);
     await expect(page.locator('#crm-linked-bundle')).toBeVisible();
+    await page.locator('#crm-linked-bundle > summary').click();
+    await expect(page.locator('#crm-linked-bundle .crm-linked-status__row')).toHaveCount(3);
+    await expect(page.locator('#crm-linked-bundle .crm-card--nested')).toHaveCount(0);
   });
 
   test('pipeline exposes table/board toggle and filter panel', async ({ page }) => {
@@ -100,11 +103,10 @@ test.describe('CustomerCheck journeys smoke', () => {
     await expect(page.locator('#crm-company-gdpr-export')).toBeAttached({ timeout: 10000 });
     // Relocated into the page header actions strip (must not stay in the hidden source).
     await expect(page.locator('#crm-page-actions #crm-company-gdpr-export')).toBeVisible({ timeout: 10000 });
-    const jumpNav = page.locator('[data-crm-jump-nav="1"]');
-    await expect(jumpNav).toBeVisible();
-    await expect(jumpNav).toHaveClass(/crm-jump-nav--bar/);
-    await jumpNav.locator('.crm-jump-nav__more-summary').click({ force: true });
-    await expect(jumpNav.locator('.crm-jump-nav__link[href="#crm-tickets"]')).toBeVisible();
+    const focus = page.locator('[data-crm-360-focus="1"]');
+    await expect(focus).toBeVisible();
+    await expect(focus.locator('[data-crm-focus-tab]')).toHaveCount(4);
+    await focus.locator('[data-crm-focus-tab="money"]').click();
     await expect(page.locator('#crm-tickets')).toHaveCount(1);
   });
 

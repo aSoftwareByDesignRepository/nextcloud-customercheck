@@ -393,17 +393,25 @@
 	table-layout: auto;
 }
 
-/* Desktop: fill available width; scroll horizontally only when columns need more space */
+/* Desktop: fill available width; scroll horizontally only when columns need more space.
+   Review boards embed full assign forms — never force max-content (breaks tablets). */
 @media (min-width: 769px) {
-	#app-content.crm-app .table-container .table:not(.crm-table--matrix),
-	#app-content.crm-app .table-container .grid-table:not(.crm-table--matrix),
+	#app-content.crm-app .table-container .table:not(.crm-table--matrix):not(.crm-table--review-board):not(.crm-review-table),
+	#app-content.crm-app .table-container .grid-table:not(.crm-table--matrix):not(.crm-table--review-board):not(.crm-review-table),
 	#app-content.crm-app .table-container .arbeitszeitcheck-table:not(.crm-table--matrix),
-	#app-content.crm-app .table-responsive .table:not(.crm-table--matrix),
-	#app-content.crm-app .table-responsive .grid-table:not(.crm-table--matrix),
-	#app-content.crm-app .crm-table-wrap .table:not(.crm-table--matrix),
-	#app-content.crm-app .crm-table-wrap .grid-table:not(.crm-table--matrix) {
+	#app-content.crm-app .table-responsive .table:not(.crm-table--matrix):not(.crm-table--review-board):not(.crm-review-table),
+	#app-content.crm-app .table-responsive .grid-table:not(.crm-table--matrix):not(.crm-table--review-board):not(.crm-review-table),
+	#app-content.crm-app .crm-table-wrap .table:not(.crm-table--matrix):not(.crm-table--review-board):not(.crm-review-table),
+	#app-content.crm-app .crm-table-wrap .grid-table:not(.crm-table--matrix):not(.crm-table--review-board):not(.crm-review-table) {
 		width: 100%;
 		min-width: max-content;
+	}
+
+	#app-content.crm-app .table.crm-table--review-board,
+	#app-content.crm-app .table.crm-table--review-board td.crm-table-actions-col--wide,
+	#app-content.crm-app .table.crm-review-table {
+		min-width: 0;
+		white-space: normal;
 	}
 }
 
@@ -618,22 +626,28 @@
 	#app-content.crm-app .table.crm-table--responsive tbody td.description-cell,
 	#app-content.crm-app .table.crm-table--responsive tbody td.reason-cell,
 	#app-content.crm-app .table.crm-table--responsive tbody td.actions-cell,
+	#app-content.crm-app .table.crm-table--responsive tbody td.crm-table-actions-col,
 	#app-content.crm-app .table.crm-table--responsive tbody td.admin-ot-audit__actions,
 	#app-content.crm-app .table.crm-table--responsive tbody td.admin-tariff-rules__row-actions,
 	#app-content.crm-app .table.crm-table--responsive tbody td.layer-card__history-actions {
 		flex-direction: column;
 		align-items: stretch;
 		text-align: left;
+		white-space: normal;
+		min-width: 0;
 	}
 
-	#app-content.crm-app .table.crm-table--responsive tbody td.actions-cell .crm-table-actions {
+	#app-content.crm-app .table.crm-table--responsive tbody td.actions-cell .crm-table-actions,
+	#app-content.crm-app .table.crm-table--responsive tbody td.crm-table-actions-col .crm-table-actions {
 		width: 100%;
 		justify-content: stretch;
 		flex-direction: column;
+		align-items: stretch;
 	}
 
 	#app-content.crm-app .table.crm-table--responsive tbody td.actions-cell .crm-table-actions .crm-btn,
 	#app-content.crm-app .table.crm-table--responsive tbody td.actions-cell .crm-btn,
+	#app-content.crm-app .table.crm-table--responsive tbody td.crm-table-actions-col .crm-btn,
 	#app-content.crm-app .table.crm-table--responsive tbody td.admin-ot-audit__actions .crm-btn,
 	#app-content.crm-app .table.crm-table--responsive tbody td.admin-tariff-rules__row-actions .crm-btn,
 	#app-content.crm-app .table.crm-table--responsive tbody td.layer-card__history-actions .crm-btn {
@@ -658,6 +672,143 @@
 
 	#app-content.crm-app .table.crm-table--responsive tbody td[colspan]::before {
 		content: none;
+	}
+
+	#app-content.crm-app .table.crm-table--responsive tbody td.crm-table-select-col {
+		justify-content: flex-start;
+		align-items: center;
+	}
+
+	#app-content.crm-app .table.crm-table--responsive tbody td.crm-table-select-col::before {
+		content: none;
+	}
+
+	/* Review assign forms: full-width stack, 44px targets, no sideways scroll */
+	#app-content.crm-app .table.crm-table--responsive tbody td.crm-table-actions-col--wide .crm-review-primary,
+	#app-content.crm-app .table.crm-table--responsive tbody td.crm-table-actions-col--wide .crm-form {
+		min-width: 0;
+		width: 100%;
+		max-width: 100%;
+	}
+
+	#app-content.crm-app .table.crm-table--responsive tbody td.crm-table-actions-col--wide .crm-review-primary__actions,
+	#app-content.crm-app .table.crm-table--responsive tbody td.crm-table-actions-col--wide .crm-inline-actions {
+		flex-direction: column;
+		align-items: stretch;
+		width: 100%;
+	}
+
+	#app-content.crm-app .table.crm-table--responsive tbody td.crm-table-actions-col--wide .form-input,
+	#app-content.crm-app .table.crm-table--responsive tbody td.crm-table-actions-col--wide .form-select,
+	#app-content.crm-app .table.crm-table--responsive tbody td.crm-table-actions-col--wide .user-picker {
+		width: 100%;
+		max-width: 100%;
+		box-sizing: border-box;
+	}
+}
+
+/* Tablet: Review boards still card-stack (forms never fit 3-col tables) */
+@media (min-width: 769px) and (max-width: 1100px) {
+	#app-content.crm-app .table-container:has(.crm-table--review-board) {
+		overflow-x: visible;
+	}
+
+	#app-content.crm-app .table.crm-table--review-board,
+	#app-content.crm-app .table.crm-table--review-board tbody,
+	#app-content.crm-app .table.crm-table--review-board tr,
+	#app-content.crm-app .table.crm-table--review-board td {
+		display: block;
+		width: 100%;
+	}
+
+	#app-content.crm-app .table.crm-table--review-board {
+		min-width: 0;
+		border-collapse: collapse;
+	}
+
+	#app-content.crm-app .table.crm-table--review-board thead {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		padding: 0;
+		margin: -1px;
+		overflow: hidden;
+		clip-path: inset(50%);
+		white-space: nowrap;
+		border: 0;
+	}
+
+	#app-content.crm-app .table.crm-table--review-board tbody tr {
+		margin-bottom: var(--crm-space-4, 1rem);
+		padding: var(--crm-space-3, 0.75rem) var(--crm-space-4, 1rem);
+		border: 1px solid var(--crm-border, var(--color-border));
+		border-radius: var(--crm-radius-sm, 8px);
+		background: var(--crm-bg-card, var(--color-main-background));
+	}
+
+	#app-content.crm-app .table.crm-table--review-board tbody tr:last-child {
+		margin-bottom: 0;
+	}
+
+	#app-content.crm-app .table.crm-table--review-board tbody td {
+		display: flex;
+		justify-content: space-between;
+		align-items: baseline;
+		gap: var(--crm-space-4, 1rem);
+		padding: var(--crm-space-2, 0.5rem) 0;
+		border-bottom: 1px solid var(--crm-border, var(--color-border));
+		text-align: right;
+		max-width: none;
+		overflow: visible;
+		white-space: normal;
+		text-overflow: clip;
+		min-width: 0;
+	}
+
+	#app-content.crm-app .table.crm-table--review-board tbody td:last-child {
+		border-bottom: none;
+		padding-bottom: 0;
+	}
+
+	#app-content.crm-app .table.crm-table--review-board tbody td::before {
+		content: attr(data-label);
+		flex: 0 0 auto;
+		text-align: left;
+		font-weight: 600;
+		color: var(--crm-muted, var(--color-text-maxcontrast));
+	}
+
+	#app-content.crm-app .table.crm-table--review-board tbody td.actions-cell,
+	#app-content.crm-app .table.crm-table--review-board tbody td.crm-table-actions-col {
+		flex-direction: column;
+		align-items: stretch;
+		text-align: left;
+	}
+
+	#app-content.crm-app .table.crm-table--review-board tbody td.crm-table-actions-col .crm-table-actions {
+		width: 100%;
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	#app-content.crm-app .table.crm-table--review-board tbody td.crm-table-actions-col .crm-btn {
+		width: 100%;
+		justify-content: center;
+		min-height: 44px;
+	}
+
+	#app-content.crm-app .table.crm-table--review-board tbody td.crm-table-actions-col--wide .crm-review-primary,
+	#app-content.crm-app .table.crm-table--review-board tbody td.crm-table-actions-col--wide .crm-form {
+		min-width: 0;
+		width: 100%;
+		max-width: 100%;
+	}
+
+	#app-content.crm-app .table.crm-table--review-board tbody td.crm-table-actions-col--wide .crm-review-primary__actions,
+	#app-content.crm-app .table.crm-table--review-board tbody td.crm-table-actions-col--wide .crm-inline-actions {
+		flex-direction: column;
+		align-items: stretch;
+		width: 100%;
 	}
 }
 

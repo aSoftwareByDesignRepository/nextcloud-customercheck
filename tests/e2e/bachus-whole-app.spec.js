@@ -71,6 +71,8 @@ test.describe('Bachus whole-app effortless flows', () => {
     await login(page, credsFromEnv('ADMIN'));
 
     await page.goto('/apps/customercheck/import');
+    await page.waitForSelector('#crm-import-paste-details', { timeout: 30000 });
+    await page.locator('#crm-import-paste-details').evaluate((el) => { el.open = true; });
     await page.waitForSelector('#crm-import-csv', { timeout: 30000 });
     const ph = await page.locator('#crm-import-csv').getAttribute('placeholder');
     expect(ph || '').not.toMatch(/customerId,companyName/);
@@ -93,9 +95,10 @@ test.describe('Bachus whole-app effortless flows', () => {
     expect(aligned).toBe(true);
 
     await expect(page.locator('#crm-import-accept-unambiguous')).toBeAttached();
-    await expect(page.locator('#crm-import-accept-unambiguous')).toContainText(/Import ready|Bereite importieren|Übernehmen/i);
-    await expect(page.locator('#crm-import-scan')).toContainText(/Check my list|Liste prüfen|Vorschau/i);
+    await expect(page.locator('#crm-import-accept-unambiguous')).toContainText(/Import now|Jetzt importieren|Importar|Importer|Importeren|Importuj|Importa/i);
+    await expect(page.locator('#crm-import-scan')).toContainText(/Check my list|Liste prüfen|Vorschau|prüfen/i);
     await expect(page.locator('#crm-import-meta')).not.toContainText(/%s/);
+    await expect(page.locator('nav.crm-breadcrumb')).not.toContainText(/Semmelbrösel/i);
     await axeMain(page);
 
     await page.goto('/apps/customercheck/team');
@@ -171,7 +174,7 @@ test.describe('Bachus whole-app effortless flows', () => {
     await expect(page.locator('#crm-ws-limits-card')).toBeVisible();
     await expect(page.locator('#crm-ws-mailbox-card')).toBeVisible();
     await expect(page.locator('#crm-mailbox-form.crm-form--stack')).toBeVisible();
-    await expect(page.locator('#crm-mailbox-form fieldset.crm-fieldset')).toHaveCount(4);
+    await expect(page.locator('#crm-mailbox-form fieldset.crm-fieldset')).toHaveCount(1);
     await expect(page.locator('#crm-mailbox-save')).toBeDisabled();
     await expect(page.locator('#crm-mailbox-form')).toHaveAttribute('aria-busy', 'false', { timeout: 30000 });
     const settingsNav = page.locator('#crm-settings-pages');

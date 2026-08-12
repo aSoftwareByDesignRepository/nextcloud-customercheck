@@ -18,6 +18,8 @@ final class ContactsPeopleRosterContractTest extends TestCase
 		$this->assertStringContainsString('data-crm-person-last-touch', $html);
 		$this->assertStringContainsString("\$l->t('Open in Contacts')", $html);
 		$this->assertStringContainsString('data-crm-unlink-contacts', $html);
+		$this->assertStringContainsString('data-crm-remove-person', $html);
+		$this->assertStringContainsString("\$l->t('Remove')", $html);
 		$this->assertStringContainsString('contactsUid', $html);
 		$this->assertStringContainsString('data-crm-buying-role', $html);
 		$this->assertStringContainsString("\$l->t('Last touch')", $html);
@@ -40,6 +42,11 @@ final class ContactsPeopleRosterContractTest extends TestCase
 		$this->assertStringContainsString('contactsUid', $js);
 		$this->assertStringContainsString('payload.contactsUid', $js);
 		$this->assertStringContainsString('data-crm-unlink-contacts', $js);
+		$this->assertStringContainsString('data-crm-remove-person', $js);
+		$this->assertStringContainsString("Api.del('/persons/'", $js);
+		$this->assertStringContainsString('returnMailToReview', $js);
+		$this->assertStringContainsString('optionalCheckbox', $js);
+		$this->assertStringContainsString("t('Remove this person?')", $js);
 		$this->assertStringContainsString("'/persons/'", $js);
 	}
 

@@ -18,9 +18,11 @@ const pages = [
   '/apps/customercheck/review',
   '/apps/customercheck/conflicts',
   '/apps/customercheck/settings',
+  '/apps/customercheck/settings/mailbox',
   '/apps/customercheck/strategy',
   '/apps/customercheck/import',
   '/apps/customercheck/app-settings',
+  '/apps/customercheck/app-settings/jobs',
   '/apps/customercheck/support-us',
   '/apps/customercheck/agreements/new',
 ];

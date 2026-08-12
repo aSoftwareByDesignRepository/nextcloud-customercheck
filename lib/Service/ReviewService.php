@@ -11,6 +11,7 @@ use OCA\CustomerCheck\Exception\ConflictException;
 use OCA\CustomerCheck\Exception\NotFoundException;
 use OCA\CustomerCheck\Exception\ValidationException;
 use OCA\CustomerCheck\Support\OptimisticLock;
+use OCA\CustomerCheck\Support\MimeHeader;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\IDBConnection;
@@ -37,7 +38,77 @@ class ReviewService
 		private readonly WorkspaceService $workspaces,
 		private readonly ?TimelineService $timeline = null,
 		private readonly ?PersonService $persons = null,
+		private readonly ?MailboxSyncService $mailboxSync = null,
 	) {
+	}
+
+	/**
+	 * After unmatching shared mail from a company, bring those messages back into
+	 * Review as open items (reopen terminal rows or enqueue via sync). Never deletes IMAP.
+	 *
+	 * @param list<int> $mailMsgIds
+	 * @return int number of review rows opened / ensured
+	 */
+	public function returnSharedMailMessagesToReview(int $workspaceId, array $mailMsgIds): int
+	{
+		$ids = [];
+		foreach ($mailMsgIds as $raw) {
+			$id = (int)$raw;
+			if ($id > 0) {
+				$ids[$id] = $id;
+			}
+		}
+		$ids = array_values($ids);
+		if ($workspaceId <= 0 || $ids === [] || !$this->db->tableExists('crm_review_item')) {
+			return 0;
+		}
+
+		$now = $this->timeFactory->getDateTime()->format('Y-m-d H:i:s');
+		foreach ($ids as $mailId) {
+			$fp = $this->fingerprint('shared_mail', $workspaceId, (string)$mailId);
+			$existing = $this->findByFingerprintRow($workspaceId, 'shared_mail', $fp);
+			if ($existing !== null) {
+				$status = (string)($existing['status'] ?? '');
+				if (in_array($status, self::TERMINAL, true) || $status === 'snoozed' || $status === 'follow_up') {
+					$qb = $this->db->getQueryBuilder();
+					$qb->update('crm_review_item')
+						->set('status', $qb->createNamedParameter('open'))
+						->set('company_id', $qb->createNamedParameter(null, IQueryBuilder::PARAM_NULL))
+						->set('deal_id', $qb->createNamedParameter(null, IQueryBuilder::PARAM_NULL))
+						->set('overhead', $qb->createNamedParameter(0, IQueryBuilder::PARAM_INT))
+						->set('assigned_by', $qb->createNamedParameter(null, IQueryBuilder::PARAM_NULL))
+						->set('assigned_at', $qb->createNamedParameter(null, IQueryBuilder::PARAM_NULL))
+						->set('resolution_note', $qb->createNamedParameter(null, IQueryBuilder::PARAM_NULL))
+						->set('snooze_until', $qb->createNamedParameter(null, IQueryBuilder::PARAM_NULL))
+						->set('updated_at', $qb->createNamedParameter($now))
+						->where($qb->expr()->eq('id', $qb->createNamedParameter((int)$existing['id'], IQueryBuilder::PARAM_INT)))
+						->andWhere($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, IQueryBuilder::PARAM_INT)))
+						->executeStatement();
+				}
+				continue;
+			}
+			// No review row yet — syncSharedMail will create from open unmatched.
+		}
+
+		$this->syncSharedMail($workspaceId);
+
+		return count($ids);
+	}
+
+	/** @return ?array<string, mixed> */
+	private function findByFingerprintRow(int $workspaceId, string $kind, string $fp): ?array
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('*')->from('crm_review_item')
+			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, IQueryBuilder::PARAM_INT)))
+			->andWhere($qb->expr()->eq('source_kind', $qb->createNamedParameter($kind)))
+			->andWhere($qb->expr()->eq('source_fingerprint', $qb->createNamedParameter($fp)))
+			->setMaxResults(1);
+		$r = $qb->executeQuery();
+		$row = $r->fetch();
+		$r->closeCursor();
+
+		return $row === false ? null : $row;
 	}
 
 	/**
@@ -64,7 +135,7 @@ class ReviewService
 				'workspace_id' => $workspaceId,
 				'source_kind' => 'shared_mail',
 				'source_fingerprint' => $fp,
-				'source_ref' => ['mailMsgId' => $msgId],
+				'source_ref' => ['mailMsgId' => $msgId, 'from' => $email],
 				'subject' => (string)($msg['subject'] ?? ''),
 				'snippet' => $email,
 				'status' => 'open',
@@ -106,14 +177,21 @@ class ReviewService
 			$qb->andWhere($qb->expr()->eq('source_kind', $qb->createNamedParameter($kind)));
 		}
 		$q = trim($q);
-		if ($q !== '') {
+		$dateOnlyQuery = $q !== '' && (
+			(bool)preg_match('/^\d{4}-\d{2}(-\d{2})?(?:[ T]\d{1,2}:\d{2}(?::\d{2})?)?$/', $q)
+			|| (bool)preg_match('/^\d{1,2}\.\d{1,2}(?:\.\d{2,4})?(?:\s+\d{1,2}:\d{2})?$/', $q)
+		);
+		if ($q !== '' && !$dateOnlyQuery) {
 			$like = '%' . $this->db->escapeLikeParameter($q) . '%';
 			$qb->andWhere($qb->expr()->orX(
 				$qb->expr()->iLike('subject', $qb->createNamedParameter($like)),
 				$qb->expr()->iLike('snippet', $qb->createNamedParameter($like)),
 			));
 		}
-		$qb->orderBy('updated_at', 'DESC')->setMaxResults($limit);
+		// Date-only queries filter in PHP after enrichSentAt — pull a wider window so
+		// LIMIT-by-updated_at does not hide matching sent dates outside the first page.
+		$fetchLimit = $dateOnlyQuery ? max($limit, min(500, $limit * 5)) : $limit;
+		$qb->orderBy('updated_at', 'DESC')->setMaxResults($fetchLimit);
 		$r = $qb->executeQuery();
 		$catalog = $this->suggestionCatalog($workspaceId, $includeArchived);
 		$out = [];
@@ -122,7 +200,141 @@ class ReviewService
 		}
 		$r->closeCursor();
 
+		$out = $this->enrichSentAt($workspaceId, $out);
+		if ($dateOnlyQuery) {
+			$out = array_values(array_filter(
+				$out,
+				fn (array $item): bool => $this->reviewItemMatchesDateQuery($item, $q),
+			));
+		}
+		// Stable Sent ordering for API consumers / client default sort (sentAt || createdAt).
+		usort($out, static function (array $a, array $b): int {
+			$ak = (string)($a['sentAt'] ?? $a['createdAt'] ?? '');
+			$bk = (string)($b['sentAt'] ?? $b['createdAt'] ?? '');
+			$cmp = strcmp($bk, $ak);
+			if ($cmp !== 0) {
+				return $cmp;
+			}
+
+			return ((int)($b['id'] ?? 0)) <=> ((int)($a['id'] ?? 0));
+		});
+		if (count($out) > $limit) {
+			$out = array_slice($out, 0, $limit);
+		}
+
 		return $out;
+	}
+
+	/**
+	 * Match Review rows by sent/created timestamp fragments (ISO or D.M.YYYY).
+	 *
+	 * @param array<string, mixed> $item
+	 */
+	private function reviewItemMatchesDateQuery(array $item, string $q): bool
+	{
+		$q = trim($q);
+		if ($q === '') {
+			return true;
+		}
+		$candidates = [];
+		foreach (['sentAt', 'createdAt', 'updatedAt'] as $key) {
+			$raw = $item[$key] ?? null;
+			if (is_string($raw) && $raw !== '') {
+				$candidates[] = $raw;
+			}
+		}
+		$normQ = strtolower(str_replace(['.', '/', 'T'], ['-', '-', ' '], $q));
+		$normQ = preg_replace('/\s+/', ' ', $normQ) ?? $normQ;
+		// German D.M.YYYY → try zero-padded ISO compare pieces
+		if (preg_match('/^(\d{1,2})-(\d{1,2})(?:-(\d{2,4}))?(?:\s+(\d{1,2}:\d{2}(?::\d{2})?))?$/', $normQ, $m)) {
+			$day = str_pad($m[1], 2, '0', STR_PAD_LEFT);
+			$month = str_pad($m[2], 2, '0', STR_PAD_LEFT);
+			$year = isset($m[3]) && $m[3] !== '' ? $m[3] : '';
+			if (strlen($year) === 2) {
+				$year = '20' . $year;
+			}
+			$time = isset($m[4]) ? $m[4] : '';
+			$needles = array_filter([
+				$year !== '' ? ($year . '-' . $month . '-' . $day) : ($month . '-' . $day),
+				$time !== '' ? $time : null,
+			]);
+		} else {
+			$needles = [$normQ];
+		}
+		foreach ($candidates as $raw) {
+			$hay = strtolower(str_replace('T', ' ', $raw));
+			foreach ($needles as $needle) {
+				if ($needle !== '' && str_contains($hay, $needle)) {
+					return true;
+				}
+			}
+			// Also allow original query form (e.g. 12.08.2026) against formatted display-ish
+			if (str_contains($hay, strtolower($q))) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Attach mailbox sentAt (and searchable whenLabel) for shared_mail Review rows.
+	 *
+	 * @param list<array<string, mixed>> $items
+	 * @return list<array<string, mixed>>
+	 */
+	private function enrichSentAt(int $workspaceId, array $items): array
+	{
+		if ($items === [] || !$this->db->tableExists('crm_mail_msg')) {
+			return $items;
+		}
+		$mailIds = [];
+		foreach ($items as $item) {
+			if (($item['sourceKind'] ?? '') !== 'shared_mail') {
+				continue;
+			}
+			$ref = is_array($item['sourceRef'] ?? null) ? $item['sourceRef'] : [];
+			$mid = (int)($ref['mailMsgId'] ?? 0);
+			if ($mid > 0) {
+				$mailIds[$mid] = $mid;
+			}
+		}
+		if ($mailIds === []) {
+			return $items;
+		}
+		$map = [];
+		foreach (array_chunk(array_values($mailIds), 100) as $chunk) {
+			$qb = $this->db->getQueryBuilder();
+			$params = [];
+			foreach ($chunk as $mid) {
+				$params[] = $qb->createNamedParameter($mid, IQueryBuilder::PARAM_INT);
+			}
+			$qb->select('id', 'sent_at')
+				->from('crm_mail_msg')
+				->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, IQueryBuilder::PARAM_INT)))
+				->andWhere($qb->expr()->in('id', $params));
+			$r = $qb->executeQuery();
+			while ($row = $r->fetch()) {
+				$sent = $row['sent_at'] ?? null;
+				if ($sent instanceof \DateTimeInterface) {
+					$sent = $sent->format('Y-m-d H:i:s');
+				}
+				$map[(int)$row['id']] = is_string($sent) && trim($sent) !== '' ? $sent : null;
+			}
+			$r->closeCursor();
+		}
+		foreach ($items as $i => $item) {
+			if (($item['sourceKind'] ?? '') !== 'shared_mail') {
+				continue;
+			}
+			$ref = is_array($item['sourceRef'] ?? null) ? $item['sourceRef'] : [];
+			$mid = (int)($ref['mailMsgId'] ?? 0);
+			if ($mid > 0 && array_key_exists($mid, $map) && $map[$mid] !== null) {
+				$items[$i]['sentAt'] = $map[$mid];
+			}
+		}
+
+		return $items;
 	}
 
 	/**
@@ -245,7 +457,7 @@ class ReviewService
 		$this->requireOpenable($workspaceId, $id);
 		$now = $this->timeFactory->getDateTime()->format('Y-m-d H:i:s');
 		$qb = $this->db->getQueryBuilder();
-		$qb->update('crm_review_item')
+		$affected = $qb->update('crm_review_item')
 			->set('status', $qb->createNamedParameter('no_relation'))
 			->set('resolution_note', $qb->createNamedParameter(mb_substr(trim($note), 0, 500)))
 			->set('assigned_by', $qb->createNamedParameter($actor))
@@ -253,9 +465,167 @@ class ReviewService
 			->set('updated_at', $qb->createNamedParameter($now))
 			->where($qb->expr()->eq('id', $qb->createNamedParameter($id, IQueryBuilder::PARAM_INT)))
 			->andWhere($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, IQueryBuilder::PARAM_INT)))
+			->andWhere($qb->expr()->notIn('status', $qb->createNamedParameter(self::TERMINAL, IQueryBuilder::PARAM_STR_ARRAY)))
 			->executeStatement();
+		if ($affected < 1) {
+			throw ValidationException::field(Constants::ERR_ALREADY_TERMINAL, 'status', $this->l10n->t('This review item is already closed.'));
+		}
 
 		return $this->serialize($this->requireRow($workspaceId, $id));
+	}
+
+	/**
+	 * Remove junk / unwanted items from Review.
+	 * Closes as no_relation (180-day fingerprint suppress). For shared mail,
+	 * deletes the message on the IMAP host first, then marks the CRM copy
+	 * remote_deleted so unmatched sync / reopen cannot resurrect it.
+	 *
+	 * @return array<string, mixed>
+	 */
+	public function discard(int $workspaceId, int $id, string $actor): array
+	{
+		$row = $this->requireOpenable($workspaceId, $id);
+		$mailId = 0;
+		$deletedRemote = false;
+		if ((string)$row['source_kind'] === 'shared_mail') {
+			$ref = json_decode((string)$row['source_ref'], true);
+			$mailId = (int)($ref['mailMsgId'] ?? 0);
+			if ($mailId > 0) {
+				if ($this->mailboxSync === null) {
+					throw new ValidationException(
+						Constants::ERR_VALIDATION,
+						$this->l10n->t('Shared-mailbox delete is unavailable. Try again or ask an admin.'),
+					);
+				}
+				// IMAP before CRM close — fail closed so spam is not only hidden in Review.
+				$this->mailboxSync->deleteIndexedMessage($workspaceId, $mailId);
+				$deletedRemote = true;
+			}
+		}
+
+		$this->db->beginTransaction();
+		try {
+			$now = $this->timeFactory->getDateTime()->format('Y-m-d H:i:s');
+			$note = $deletedRemote
+				? $this->l10n->t('Deleted from shared mailbox')
+				: $this->l10n->t('Removed from Review');
+			$qb = $this->db->getQueryBuilder();
+			$affected = $qb->update('crm_review_item')
+				->set('status', $qb->createNamedParameter('no_relation'))
+				->set('resolution_note', $qb->createNamedParameter(mb_substr($note, 0, 500)))
+				->set('assigned_by', $qb->createNamedParameter($actor))
+				->set('assigned_at', $qb->createNamedParameter($now))
+				->set('updated_at', $qb->createNamedParameter($now))
+				->where($qb->expr()->eq('id', $qb->createNamedParameter($id, IQueryBuilder::PARAM_INT)))
+				->andWhere($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, IQueryBuilder::PARAM_INT)))
+				->andWhere($qb->expr()->notIn('status', $qb->createNamedParameter(self::TERMINAL, IQueryBuilder::PARAM_STR_ARRAY)))
+				->executeStatement();
+			if ($affected < 1) {
+				throw new ConflictException(
+					$this->l10n->t('Someone else changed this review item. Reload and try again.'),
+				);
+			}
+			if ($mailId > 0) {
+				if ($deletedRemote) {
+					$this->mailbox->markRemoteDeleted($workspaceId, $mailId);
+				} else {
+					$this->mailbox->discardUnmatchedMessage($workspaceId, $mailId);
+				}
+			}
+			$this->db->commit();
+		} catch (\Throwable $e) {
+			if ($this->db->inTransaction()) {
+				$this->db->rollBack();
+			}
+			// IMAP already succeeded — never leave CRM triage open for a gone message.
+			if ($deletedRemote && $mailId > 0) {
+				try {
+					$this->mailbox->markRemoteDeleted($workspaceId, $mailId);
+				} catch (\Throwable) {
+					// Best-effort compensate; original failure is the user-facing error.
+				}
+			}
+			throw $e;
+		}
+
+		return $this->serialize($this->requireRow($workspaceId, $id));
+	}
+
+	/**
+	 * Normalize client-supplied Review item ids for discard-bulk.
+	 * Positive integers only; deduped; order preserved by first occurrence.
+	 *
+	 * @param list<mixed> $ids
+	 * @return list<int>
+	 */
+	public static function normalizeDiscardBulkIds(array $ids): array
+	{
+		$out = [];
+		foreach ($ids as $raw) {
+			if (is_bool($raw) || is_array($raw) || is_object($raw) || $raw === null) {
+				continue;
+			}
+			if (is_string($raw)) {
+				$raw = trim($raw);
+				if ($raw === '' || !preg_match('/^\d+$/', $raw)) {
+					continue;
+				}
+			}
+			if (!is_int($raw) && !is_float($raw) && !is_string($raw)) {
+				continue;
+			}
+			$id = (int)$raw;
+			if ($id > 0 && !isset($out[$id])) {
+				$out[$id] = $id;
+			}
+		}
+
+		return array_values($out);
+	}
+
+	/**
+	 * Remove many Review items (junk / unwanted). Each id uses {@see discard}.
+	 * Already-closed or unknown ids are skipped (workspace-scoped; no cross-ws leak).
+	 *
+	 * @param list<mixed> $ids
+	 * @return array{discarded: int, skipped: int, ids: list<int>}
+	 */
+	public function discardBulk(int $workspaceId, array $ids, string $actor): array
+	{
+		$normalized = self::normalizeDiscardBulkIds($ids);
+		if ($normalized === []) {
+			throw ValidationException::field(
+				Constants::ERR_VALIDATION,
+				'ids',
+				$this->l10n->t('Select at least one item to remove.'),
+			);
+		}
+		if (count($normalized) > Constants::REVIEW_DISCARD_BULK_MAX) {
+			throw ValidationException::field(
+				Constants::ERR_BULK_TOO_LARGE,
+				'ids',
+				$this->l10n->t('Select 1–%s items to remove.', [(string)Constants::REVIEW_DISCARD_BULK_MAX]),
+			);
+		}
+
+		$discarded = 0;
+		$skipped = 0;
+		$done = [];
+		foreach ($normalized as $id) {
+			try {
+				$this->discard($workspaceId, $id, $actor);
+				$discarded++;
+				$done[] = $id;
+			} catch (ValidationException | NotFoundException | ConflictException) {
+				$skipped++;
+			}
+		}
+
+		return [
+			'discarded' => $discarded,
+			'skipped' => $skipped,
+			'ids' => $done,
+		];
 	}
 
 	/**
@@ -296,6 +666,18 @@ class ReviewService
 				$this->l10n->t('Only closed review items can be reopened.'),
 			);
 		}
+		$mailId = 0;
+		if ((string)$row['source_kind'] === 'shared_mail') {
+			$ref = json_decode((string)$row['source_ref'], true);
+			$mailId = (int)($ref['mailMsgId'] ?? 0);
+			if ($mailId > 0 && $this->mailbox->isRemoteDeleted($workspaceId, $mailId)) {
+				throw ValidationException::field(
+					Constants::ERR_VALIDATION,
+					'status',
+					$this->l10n->t('This message was deleted from the shared mailbox and cannot be reopened.'),
+				);
+			}
+		}
 		$now = $this->timeFactory->getDateTime()->format('Y-m-d H:i:s');
 		$qb = $this->db->getQueryBuilder();
 		$affected = $qb->update('crm_review_item')
@@ -316,6 +698,10 @@ class ReviewService
 			throw new ConflictException(
 				$this->l10n->t('Someone else changed this review item. Reload and try again.'),
 			);
+		}
+
+		if ($mailId > 0) {
+			$this->mailbox->restoreDiscardedMessage($workspaceId, $mailId);
 		}
 
 		$fresh = $this->requireRow($workspaceId, $id);
@@ -542,8 +928,8 @@ class ReviewService
 			'source_kind' => $ins->createNamedParameter((string)$data['source_kind']),
 			'source_fingerprint' => $ins->createNamedParameter((string)$data['source_fingerprint']),
 			'source_ref' => $ins->createNamedParameter(json_encode($data['source_ref'], JSON_THROW_ON_ERROR)),
-			'subject' => $ins->createNamedParameter(mb_substr((string)($data['subject'] ?? ''), 0, 512)),
-			'snippet' => $ins->createNamedParameter(mb_substr((string)($data['snippet'] ?? ''), 0, 2000)),
+			'subject' => $ins->createNamedParameter(mb_substr(MimeHeader::decode((string)($data['subject'] ?? '')), 0, 512)),
+			'snippet' => $ins->createNamedParameter(mb_substr(MimeHeader::decode((string)($data['snippet'] ?? '')), 0, 2000)),
 			'status' => $ins->createNamedParameter((string)($data['status'] ?? 'open')),
 			'overhead' => $ins->createNamedParameter(0, IQueryBuilder::PARAM_INT),
 			'suggestion_json' => $sugParam,
@@ -663,8 +1049,8 @@ class ReviewService
 			'id' => (int)$row['id'],
 			'workspaceId' => (int)$row['workspace_id'],
 			'sourceKind' => (string)$row['source_kind'],
-			'subject' => (string)($row['subject'] ?? ''),
-			'snippet' => (string)($row['snippet'] ?? ''),
+			'subject' => MimeHeader::decode((string)($row['subject'] ?? '')),
+			'snippet' => MimeHeader::decode((string)($row['snippet'] ?? '')),
 			'status' => (string)$row['status'],
 			'snoozeUntil' => $row['snooze_until'] ?? null,
 			'companyId' => isset($row['company_id']) && $row['company_id'] !== null ? (int)$row['company_id'] : null,
@@ -675,8 +1061,22 @@ class ReviewService
 			'assignedBy' => $row['assigned_by'] ?? null,
 			'assignedAt' => $row['assigned_at'] ?? null,
 			'resolutionNote' => $row['resolution_note'] ?? null,
-			'updatedAt' => $row['updated_at'] ?? null,
+			'createdAt' => $this->normalizeTimestamp($row['created_at'] ?? null),
+			'sentAt' => null,
+			'updatedAt' => $this->normalizeTimestamp($row['updated_at'] ?? null),
 		];
+	}
+
+	private function normalizeTimestamp(mixed $value): ?string
+	{
+		if ($value instanceof \DateTimeInterface) {
+			return $value->format('Y-m-d H:i:s');
+		}
+		if (is_string($value) && trim($value) !== '') {
+			return trim($value);
+		}
+
+		return null;
 	}
 
 	/**

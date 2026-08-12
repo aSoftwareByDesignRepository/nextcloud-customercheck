@@ -9,6 +9,7 @@ use OCP\IL10N;
 /**
  * Granny-safe “At a glance” sibling KPI tiles.
  * Never paint unpaid/warning when the count is zero; never pretend a missing app is live.
+ * Open work (projects / unpaid / tickets) always uses attention so progressive disclosure expands.
  */
 final class GlanceDensityPresenter
 {
@@ -67,7 +68,7 @@ final class GlanceDensityPresenter
 						? $l->t('%s open in ProjectCheck', [(string)$openProjects])
 						: $l->t('Nothing open · ProjectCheck'))
 					: $l->t('App not installed — link under Identity'),
-				$pc ? self::TONE_CALM : self::TONE_OFFLINE,
+				!$pc ? self::TONE_OFFLINE : ($openProjects > 0 ? self::TONE_ATTENTION : self::TONE_CALM),
 				$pc,
 				$pc ? $l->t('Open') : $l->t('Link'),
 				$l
@@ -105,6 +106,22 @@ final class GlanceDensityPresenter
 				$l
 			),
 		];
+	}
+
+	/**
+	 * Expand the density block when any tile needs eyes (open work or missing app).
+	 *
+	 * @param list<array{tone?:string}> $tiles
+	 */
+	public static function needsAttention(array $tiles): bool
+	{
+		foreach ($tiles as $tile) {
+			$tone = (string)($tile['tone'] ?? self::TONE_CALM);
+			if ($tone === self::TONE_ATTENTION || $tone === self::TONE_OFFLINE) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/**

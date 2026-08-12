@@ -20,6 +20,9 @@ use OCP\IURLGenerator;
  *
  * Per workspace, deep-link to Brief (not raw count spam), ≤1500 chars,
  * up to 3 workspaces per user notification, exactly-once per (week_key, workspace).
+ *
+ * Claim only after eligible recipients exist; release the claim if delivery
+ * cannot run (mirrors ReminderScheduler — never silent “sent” with no notify).
  */
 class WeeklyDigestService
 {
@@ -79,6 +82,8 @@ class WeeklyDigestService
 
 		/** @var array<string, list<array{workspaceId:int,name:string,url:string,snippet:string}>> $byUser */
 		$byUser = [];
+		/** @var list<DigestLog> $claimed */
+		$claimed = [];
 
 		foreach ($this->workspaces->listAll() as $ws) {
 			if ($ws->isArchived()) {
@@ -90,26 +95,39 @@ class WeeklyDigestService
 				continue;
 			}
 
-			$brief = $this->brief->build($wsId, $now);
-			$snippet = $this->buildSnippet($ws->getName(), $brief, $weekKey);
-			$briefUrl = $this->url->linkToRouteAbsolute('customercheck.page.brief', ['workspaceId' => $wsId]);
-
-			if (!$this->claimWeek($weekKey, $wsId, [
-				'wipUsed' => $brief['wipUsed'] ?? 0,
-				'wipLimit' => $brief['wipLimit'] ?? 5,
-				'url' => $briefUrl,
-			], $now)) {
-				continue;
-			}
-
-			$sent++;
-			$wsIds[] = $wsId;
+			$recipients = [];
 			foreach ($this->workspaces->listMembers($wsId) as $m) {
 				$role = (string)$m->getRole();
 				if (!in_array($role, ['manager', 'member'], true)) {
 					continue;
 				}
-				$uid = (string)$m->getUserId();
+				$uid = trim((string)$m->getUserId());
+				if ($uid !== '') {
+					$recipients[] = $uid;
+				}
+			}
+			// Never claim a unique week slot when nobody would be notified.
+			if ($recipients === []) {
+				continue;
+			}
+
+			$brief = $this->brief->build($wsId, $now);
+			$snippet = $this->buildSnippet($ws->getName(), $brief, $weekKey);
+			$briefUrl = $this->url->linkToRouteAbsolute('customercheck.page.brief', ['workspaceId' => $wsId]);
+
+			$claim = $this->claimWeek($weekKey, $wsId, [
+				'wipUsed' => $brief['wipUsed'] ?? 0,
+				'wipLimit' => $brief['wipLimit'] ?? 5,
+				'url' => $briefUrl,
+			], $now);
+			if ($claim === null) {
+				continue;
+			}
+			$claimed[] = $claim;
+
+			$sent++;
+			$wsIds[] = $wsId;
+			foreach ($recipients as $uid) {
 				$byUser[$uid][] = [
 					'workspaceId' => $wsId,
 					'name' => (string)$ws->getName(),
@@ -119,28 +137,45 @@ class WeeklyDigestService
 			}
 		}
 
-		foreach ($byUser as $uid => $entries) {
-			$slice = array_slice($entries, 0, 3);
-			$body = '';
-			foreach ($slice as $e) {
-				$line = $e['name'] . ': ' . $e['url'] . "\n" . $e['snippet'] . "\n";
-				if (strlen($body) + strlen($line) > 1500) {
-					break;
-				}
-				$body .= $line;
+		if ($byUser === []) {
+			foreach ($claimed as $row) {
+				$this->releaseClaim($row);
 			}
-			$this->notificationService->notifyUser(
-				$uid,
-				Constants::NOTIFY_DIGEST,
-				'digest_brief',
-				$weekKey . ':' . $uid,
-				[
-					'weekKey' => $weekKey,
-					'body' => $body,
-					'workspaceCount' => count($slice),
-					'openBrief' => true,
-				],
-			);
+
+			return ['sent' => 0, 'weekKey' => $weekKey, 'workspaces' => []];
+		}
+
+		try {
+			foreach ($byUser as $uid => $entries) {
+				$slice = array_slice($entries, 0, 3);
+				$body = '';
+				foreach ($slice as $e) {
+					$line = $e['name'] . ': ' . $e['url'] . "\n" . $e['snippet'] . "\n";
+					if (strlen($body) + strlen($line) > 1500) {
+						break;
+					}
+					$body .= $line;
+				}
+				$this->notificationService->notifyUser(
+					$uid,
+					Constants::NOTIFY_DIGEST,
+					'digest_brief',
+					$weekKey . ':' . $uid,
+					[
+						'weekKey' => $weekKey,
+						'body' => $body,
+						'workspaceCount' => count($slice),
+						'openBrief' => true,
+					],
+				);
+			}
+		} catch (\Throwable $e) {
+			// Catastrophic failure before/during fan-out — release so the week can retry.
+			// Partial per-user notify failures are absorbed inside NotificationService.
+			foreach ($claimed as $row) {
+				$this->releaseClaim($row);
+			}
+			throw $e;
 		}
 
 		return ['sent' => $sent, 'weekKey' => $weekKey, 'workspaces' => $wsIds];
@@ -153,7 +188,8 @@ class WeeklyDigestService
 	 */
 	public function collectCounts(\DateTimeInterface $now, ?int $workspaceId = null): array
 	{
-		$today = $this->todayService->build($now);
+		$wsFilter = ($workspaceId !== null && $workspaceId > 0) ? $workspaceId : null;
+		$today = $this->todayService->build($now, $wsFilter);
 		$renewals = 0;
 		$overdue = 0;
 		foreach ($today['items'] as $item) {
@@ -198,8 +234,10 @@ class WeeklyDigestService
 		);
 	}
 
-	/** @param array<string, mixed> $payload */
-	private function claimWeek(string $weekKey, int $workspaceId, array $payload, \DateTimeInterface $now): bool
+	/**
+	 * @param array<string, mixed> $payload
+	 */
+	private function claimWeek(string $weekKey, int $workspaceId, array $payload, \DateTimeInterface $now): ?DigestLog
 	{
 		$row = new DigestLog();
 		$row->setWeekKey($weekKey);
@@ -207,13 +245,21 @@ class WeeklyDigestService
 		$row->setSentAt($now instanceof \DateTime ? $now : new \DateTime($now->format('c')));
 		$row->setPayloadJson(json_encode($payload, JSON_THROW_ON_ERROR));
 		try {
-			$this->digestLogMapper->insert($row);
-			return true;
+			return $this->digestLogMapper->insert($row);
 		} catch (DbException $e) {
 			if ($e->getReason() === DbException::REASON_UNIQUE_CONSTRAINT_VIOLATION) {
-				return false;
+				return null;
 			}
 			throw $e;
+		}
+	}
+
+	private function releaseClaim(DigestLog $row): void
+	{
+		try {
+			$this->digestLogMapper->delete($row);
+		} catch (\Throwable) {
+			// Best-effort — next unique insert may still block; log not available here.
 		}
 	}
 }

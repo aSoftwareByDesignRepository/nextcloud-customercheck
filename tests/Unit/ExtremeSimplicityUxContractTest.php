@@ -58,8 +58,12 @@ final class ExtremeSimplicityUxContractTest extends TestCase
 		$this->assertStringNotContainsString('not internal weekly WIP', $detail);
 		$js = (string)file_get_contents(dirname(__DIR__, 2) . '/js/pages/company-detail.js');
 		$this->assertStringContainsString("t('Call tomorrow')", $js);
-		$this->assertStringContainsString("t('No next steps yet.')", $js);
+		$this->assertStringContainsString("t('No moves yet — add one below.')", $js);
+		$this->assertStringContainsString("t('What should happen next?')", $js);
+		$this->assertStringContainsString('crm-map-step-title" name="title" rows="3"', $js);
+		$this->assertStringContainsString("t('Add move')", $js);
 		$this->assertStringNotContainsString("t('No MAP steps yet.')", $js);
+		$this->assertStringNotContainsString('type="text" required maxlength="255"', $js);
 		$this->assertStringContainsString("t('High')", $js);
 		$this->assertStringNotContainsString("promptFields(t('Schedule callback')", $js);
 	}
@@ -101,7 +105,7 @@ final class ExtremeSimplicityUxContractTest extends TestCase
 		$this->assertStringContainsString('id="crm-log-email"', $detail);
 		$this->assertStringNotContainsString('id="crm-log-email"', $emails);
 		$this->assertStringContainsString('crm-card--collapsible', $detail);
-		$this->assertStringContainsString('next steps for this account', $detail);
+		$this->assertStringContainsString('Where this customer should go', $detail);
 		$this->assertStringNotContainsString('MAP steps', $detail);
 		$this->assertStringContainsString('crm-persons-table', $detail);
 		$this->assertStringNotContainsString("\$l->t('Phone')); ?></th>", $detail);
@@ -113,8 +117,7 @@ final class ExtremeSimplicityUxContractTest extends TestCase
 		$this->assertStringContainsString("\$l->t('Log talk')", $detail);
 		$this->assertStringContainsString('data-crm-trigger="crm-log-email"', $detail);
 		$this->assertStringContainsString('$showWelcomeCoach', $detail);
-		$this->assertStringContainsString('$showRoleCue', $detail);
-		$this->assertStringContainsString('!$showWelcomeCoach', $detail);
+		$this->assertStringContainsString('data-crm-360-focus="1"', $detail);
 		$personsStart = strpos($detail, 'id="crm-persons-table"');
 		$personsEnd = strpos($detail, 'id="crm-deals"', (int)$personsStart);
 		$personsChunk = substr($detail, (int)$personsStart, (int)$personsEnd - (int)$personsStart);
@@ -154,7 +157,7 @@ final class ExtremeSimplicityUxContractTest extends TestCase
 		$this->assertStringContainsString('data-crm-trigger="crm-add-person"', $detail);
 		$this->assertStringContainsString('data-crm-trigger="crm-add-deal"', $detail);
 		$this->assertStringContainsString('data-crm-trigger="crm-log-email"', $detail);
-		$this->assertStringContainsString('data-crm-trigger="crm-add-activity"', $detail);
+		$this->assertStringContainsString('id="crm-add-activity"', $detail);
 		$this->assertStringContainsString('data-crm-trigger="crm-link-folder"', $detail);
 		$this->assertStringContainsString('A deal is a quote or opportunity', $detail);
 		$this->assertStringContainsString('Loading overview…', $detail);
@@ -220,7 +223,8 @@ final class ExtremeSimplicityUxContractTest extends TestCase
 		$this->assertStringContainsString("evidence: t('Done')", $js);
 		$this->assertStringNotContainsString("Evidence (what was delivered?)", $js);
 		$this->assertStringNotContainsString("promptFields(t('Mark promise done')", $js);
-		$this->assertStringContainsString('crm-promises-empty-add', $js);
+		$detail = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/company-detail.php');
+		$this->assertStringContainsString('id="crm-add-promise"', $detail);
 	}
 
 	public function testPersonaBootOffersTryAgainOnFailure(): void
@@ -267,7 +271,7 @@ final class ExtremeSimplicityUxContractTest extends TestCase
 		$this->assertStringContainsString('Follow-ups, renewals, invoices, promises', $qs);
 		$this->assertStringNotContainsString('Chase, renewals', $qs);
 		$import = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/import.php');
-		$this->assertStringContainsString('Import ready', $import);
+		$this->assertStringContainsString('Import now', $import);
 		$this->assertStringContainsString('crm-import-tile', $import);
 		$this->assertStringContainsString('crm-import-stats', $import);
 		$this->assertStringNotContainsString('customerId,companyName', $import);
@@ -299,7 +303,8 @@ final class ExtremeSimplicityUxContractTest extends TestCase
 	{
 		$html = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/company-detail.php');
 		$this->assertStringContainsString('crm-linked-bundle', $html);
-		$this->assertStringContainsString('Linked apps', $html);
+		$this->assertStringContainsString('crm-linked-status', $html);
+		$this->assertStringContainsString('One ProjectCheck or TicketCheck link unlocks', $html);
 		$this->assertStringContainsString('Email & log hours', $html);
 		$this->assertStringContainsString('data-crm-partner-session', $html);
 		foreach (['id="crm-tickets"', 'id="crm-invoices"', 'id="crm-projects"', 'id="crm-timeline"'] as $needle) {

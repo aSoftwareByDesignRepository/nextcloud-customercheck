@@ -733,6 +733,9 @@ const CustomerCheckComponents = {
       alertOnly = false,
       requireCheckbox = false,
       checkboxLabel = (window.t ? window.t('customercheck', 'I understand this action cannot be undone') : 'I understand this action cannot be undone'),
+      optionalCheckbox = false,
+      optionalCheckboxLabel = '',
+      optionalCheckboxChecked = false,
       requireReason = false,
       reasonLabel = (window.t ? window.t('customercheck', 'Reason (required)') : 'Reason (required)'),
       requireTypedConfirm = false,
@@ -781,6 +784,13 @@ const CustomerCheckComponents = {
           <label class="crm-choice confirm-dialog__checkbox-row" for="${dialogId}-ack">
             <input type="checkbox" id="${dialogId}-ack" class="confirm-dialog__ack">
             <span>${this._escapeHtml(checkboxLabel)}</span>
+          </label>`;
+      }
+      if (optionalCheckbox && optionalCheckboxLabel) {
+        extraFields += `
+          <label class="crm-choice confirm-dialog__checkbox-row" for="${dialogId}-optional">
+            <input type="checkbox" id="${dialogId}-optional" class="confirm-dialog__optional"${optionalCheckboxChecked ? ' checked' : ''}>
+            <span>${this._escapeHtml(optionalCheckboxLabel)}</span>
           </label>`;
       }
       if (requireReason) {
@@ -838,6 +848,7 @@ const CustomerCheckComponents = {
       const previouslyFocused = document.activeElement;
       const confirmBtn = dialog.querySelector('.confirm-dialog__confirm');
       const ackBox = dialog.querySelector('.confirm-dialog__ack');
+      const optionalBox = dialog.querySelector('.confirm-dialog__optional');
       const reasonField = dialog.querySelector('.confirm-dialog__reason');
       const typedField = dialog.querySelector('.confirm-dialog__typed');
 
@@ -892,6 +903,7 @@ const CustomerCheckComponents = {
         cleanup(alertOnly ? true : {
           confirmed: true,
           reason: reasonField ? reasonField.value.trim() : '',
+          optionalChecked: !!(optionalBox && optionalBox.checked),
         });
       });
       const cancelBtn = dialog.querySelector('.confirm-dialog__cancel');

@@ -81,6 +81,17 @@ trait ApiControllerTrait
 		if ($e instanceof AccessDeniedException || $e instanceof AppAccessDeniedException) {
 			return $this->fail(Constants::ERR_ACCESS_DENIED, $e->getMessage() !== '' ? $e->getMessage() : 'Access denied', [], Http::STATUS_FORBIDDEN);
 		}
+		// Never leak internals to the client; always log for ops (DI / SQL / race bugs).
+		try {
+			if (class_exists(\OC::class) && isset(\OC::$server)) {
+				\OC::$server->get(\Psr\Log\LoggerInterface::class)->error(
+					'CustomerCheck API unexpected error: ' . $e->getMessage(),
+					['app' => 'customercheck', 'exception' => $e],
+				);
+			}
+		} catch (\Throwable) {
+			// Logging must never mask the client response.
+		}
 		return $this->fail('SERVER_ERROR', 'Unexpected error', [], Http::STATUS_INTERNAL_SERVER_ERROR);
 	}
 }

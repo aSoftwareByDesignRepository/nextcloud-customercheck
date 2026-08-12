@@ -8,16 +8,16 @@ use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use OCA\CustomerCheck\Db\Activity;
 use OCA\CustomerCheck\Db\MobileIdempotencyMapper;
 use OCA\CustomerCheck\Exception\ValidationException;
+use OCA\CustomerCheck\Support\DbTransaction;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\IDBConnection;
 use OCP\IL10N;
 
 /**
- * Companion P2 — optional Idempotency-Key for POST /api/mobile/v1/activities.
+ * Companion — optional Idempotency-Key for mobile POSTs.
  *
- * Replay of a lost 201 must return the same activity (AC12). Concurrent creates
- * with the same key are resolved via the unique (uid, idem_key) index inside a
- * transaction so a loser never leaves an orphan CRM row.
+ * Keys are client-namespaced (e.g. company:…, person:…, deal:…, activity:…).
+ * The ledger column `activity_id` stores the created resource id for any kind.
  */
 class MobileIdempotencyService
 {
@@ -70,43 +70,82 @@ class MobileIdempotencyService
 	 */
 	public function createActivity(string $uid, array $body, ?string $rawKey): Activity
 	{
+		return $this->once(
+			$uid,
+			$rawKey,
+			fn (): Activity => $this->activities->create($body, $uid),
+			static fn (Activity $a): int => (int)$a->getId(),
+			fn (int $id): Activity => $this->activities->get($id),
+		);
+	}
+
+	/**
+	 * Peek ledger for a prior create (no write). Used to skip expensive side-effects
+	 * (e.g. Files upload) before entering once().
+	 */
+	public function findResourceId(string $uid, ?string $rawKey): ?int
+	{
 		$key = $this->normaliseKey($rawKey);
 		if ($key === null) {
-			return $this->activities->create($body, $uid);
+			return null;
+		}
+
+		return $this->mapper->findActivityId($uid, $key);
+	}
+
+	/**
+	 * Run a create at most once per (uid, idempotency key).
+	 *
+	 * Nested services MUST use DbTransaction (not raw begin/commit) so they do not
+	 * end this unit of work. Side-effects that must not fire before the ledger
+	 * commits (push notify) must be deferred by the factory and flushed by the
+	 * caller after once() returns successfully.
+	 *
+	 * @template T
+	 * @param callable(): T $factory
+	 * @param callable(T): int $idOf
+	 * @param callable(int): T $load
+	 * @return T
+	 */
+	public function once(string $uid, ?string $rawKey, callable $factory, callable $idOf, callable $load): mixed
+	{
+		$key = $this->normaliseKey($rawKey);
+		if ($key === null) {
+			return $factory();
 		}
 
 		$existingId = $this->mapper->findActivityId($uid, $key);
 		if ($existingId !== null) {
-			return $this->activities->get($existingId);
+			return $load($existingId);
 		}
 
-		$this->db->beginTransaction();
+		// Own the ledger TX; nested services must use DbTransaction (not raw begin)
+		// so they do not commit/rollback this unit of work (person create / sequences).
+		$ownsTxn = DbTransaction::begin($this->db);
 		try {
 			$raced = $this->mapper->findActivityId($uid, $key);
 			if ($raced !== null) {
-				$this->db->commit();
+				DbTransaction::commit($this->db, $ownsTxn);
 
-				return $this->activities->get($raced);
+				return $load($raced);
 			}
 
-			$activity = $this->activities->create($body, $uid);
+			$created = $factory();
 			$this->mapper->insert(
 				$uid,
 				$key,
-				(int)$activity->getId(),
+				$idOf($created),
 				$this->timeFactory->getTime(),
 			);
-			$this->db->commit();
+			DbTransaction::commit($this->db, $ownsTxn);
 
-			return $activity;
+			return $created;
 		} catch (\Throwable $e) {
-			if ($this->db->inTransaction()) {
-				$this->db->rollBack();
-			}
+			DbTransaction::rollBack($this->db, $ownsTxn);
 			if ($this->isUniqueConstraintViolation($e)) {
 				$winner = $this->mapper->findActivityId($uid, $key);
 				if ($winner !== null) {
-					return $this->activities->get($winner);
+					return $load($winner);
 				}
 			}
 			throw $e;

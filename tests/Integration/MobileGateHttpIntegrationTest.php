@@ -12,13 +12,16 @@ use OCA\CustomerCheck\Db\MobileSeatMapper;
 use OCA\CustomerCheck\Service\AccessControlService;
 use OCA\CustomerCheck\Service\ActivityService;
 use OCA\CustomerCheck\Service\AgreementService;
+use OCA\CustomerCheck\Service\CompanyDocumentsService;
 use OCA\CustomerCheck\Service\CompanyService;
+use OCA\CustomerCheck\Service\DealChecklistService;
 use OCA\CustomerCheck\Service\DealService;
 use OCA\CustomerCheck\Service\LicenseService;
 use OCA\CustomerCheck\Service\MobileApiService;
 use OCA\CustomerCheck\Service\MobileGateService;
 use OCA\CustomerCheck\Service\MobileIdempotencyService;
 use OCA\CustomerCheck\Service\MobilePushService;
+use OCA\CustomerCheck\Service\PersonService;
 use OCA\CustomerCheck\Service\WorkspaceAccessService;
 use OCA\CustomerCheck\Service\WorkspaceService;
 use OCA\CustomerCheck\Tests\Support\Cuc2TestSigning;
@@ -432,10 +435,73 @@ final class MobileGateHttpIntegrationTest extends TestCase
 		$response = $this->controller(
 			['companyId' => (int)$company->getId(), 'type' => 'todo', 'title' => 'CSRF probe'],
 			authorization: '',
+			csrfOk: false,
 		)->createActivity($wsId);
 
 		self::assertSame(403, $response->getStatus());
 		self::assertSame(Constants::ERR_ACCESS_DENIED, $response->getData()['error']);
+	}
+
+	public function testMutationJunkBearerWithSessionCookieDoesNotBypassCsrf(): void
+	{
+		$this->applyLicense(5);
+		$this->assignSeat($this->uid);
+		$this->loginAs($this->uid);
+		$company = $this->createCompany();
+		$wsId = $this->workspaceIdForCompany($company);
+
+		$response = $this->controller(
+			['companyId' => (int)$company->getId(), 'type' => 'todo', 'title' => 'Bearer CSRF'],
+			authorization: 'Bearer x',
+			csrfOk: false,
+		)->createActivity($wsId);
+
+		self::assertSame(403, $response->getStatus());
+		self::assertSame(Constants::ERR_ACCESS_DENIED, $response->getData()['error']);
+	}
+
+	public function testMutationJunkBasicWithSessionCookieDoesNotBypassCsrf(): void
+	{
+		$this->applyLicense(5);
+		$this->assignSeat($this->uid);
+		$this->loginAs($this->uid);
+		$company = $this->createCompany();
+		$wsId = $this->workspaceIdForCompany($company);
+
+		$response = $this->controller(
+			['companyId' => (int)$company->getId(), 'type' => 'todo', 'title' => 'Basic CSRF'],
+			authorization: 'Basic ' . base64_encode('not-a-real-user:wrong-password'),
+			csrfOk: false,
+		)->createActivity($wsId);
+
+		self::assertSame(403, $response->getStatus());
+		self::assertSame(Constants::ERR_ACCESS_DENIED, $response->getData()['error']);
+	}
+
+	public function testMobileCompanyUpdateRejectsFilesFolderMassAssignment(): void
+	{
+		$this->applyLicense(5);
+		$this->assignSeat($this->uid);
+		$this->loginAs($this->uid);
+		$company = $this->createCompany();
+		$wsId = $this->workspaceIdForCompany($company);
+		$beforeId = $company->getFilesFolderId();
+		$detail = $this->controller()->companyDetail($wsId, (int)$company->getId());
+		self::assertSame(200, $detail->getStatus());
+		$updatedAt = (string)($detail->getData()['data']['updatedAt'] ?? '');
+		self::assertNotSame('', $updatedAt);
+
+		$response = $this->controller([
+			'name' => (string)$company->getName(),
+			'filesFolderId' => 999999001,
+			'filesFolderPath' => '/smuggled/path',
+			'updatedAt' => $updatedAt,
+		])->updateCompany($wsId, (int)$company->getId());
+
+		self::assertSame(200, $response->getStatus());
+		$fresh = \OC::$server->get(CompanyService::class)->get((int)$company->getId());
+		self::assertSame($beforeId, $fresh->getFilesFolderId());
+		self::assertNotSame('/smuggled/path', (string)($fresh->getFilesFolderPath() ?? ''));
 	}
 
 	public function testMobileUserCannotSeeOrUpdateAnotherUsersActivity(): void
@@ -597,6 +663,143 @@ final class MobileGateHttpIntegrationTest extends TestCase
 		self::assertSame('competitor', $lost->getData()['data']['lostReasonCode'] ?? null);
 	}
 
+	/**
+	 * CUC-COMPANION-ROAD-1 §10 Integration — mobile HTTP:
+	 * create company → person → deal → apply template → assign → Done.
+	 */
+	public function testRoadAuthoringCompanyPersonDealChecklistAssignDone(): void
+	{
+		$db = \OC::$server->get(IDBConnection::class);
+		if (!$db->tableExists('crm_cl_tmpl') || !$db->tableExists('crm_deal_cl_item')) {
+			$this->markTestSkipped('Deal checklist tables not installed');
+		}
+
+		$this->applyLicense(5);
+		$this->assignSeat($this->uid);
+		$this->assignSeat($this->peer);
+		$this->loginAs($this->uid);
+
+		$wsId = $this->isolatedWorkspaceId();
+		$this->ensureMember($wsId, $this->uid, 'member');
+		$this->ensureMember($wsId, $this->peer, 'member');
+
+		$key = 'road-co-' . $this->suffix;
+		$createCompany = $this->controller(
+			['name' => 'Road Co ' . $this->suffix, 'status' => 'lead'],
+			extraHeaders: ['Idempotency-Key' => $key],
+		)->createCompany($wsId);
+		self::assertSame(201, $createCompany->getStatus());
+		$companyPayload = $createCompany->getData()['data'];
+		$companyId = (int)$companyPayload['id'];
+		self::assertGreaterThan(0, $companyId);
+
+		$replay = $this->controller(
+			['name' => 'Road Co DUPLICATE ' . $this->suffix, 'status' => 'active'],
+			extraHeaders: ['Idempotency-Key' => $key],
+		)->createCompany($wsId);
+		self::assertSame(201, $replay->getStatus());
+		self::assertSame($companyId, (int)$replay->getData()['data']['id']);
+
+		$createPerson = $this->controller(
+			['name' => 'Road Buyer', 'email' => 'buyer-' . $this->suffix . '@example.com'],
+			extraHeaders: ['Idempotency-Key' => 'road-person-' . $this->suffix],
+		)->createPerson($wsId, $companyId);
+		self::assertSame(201, $createPerson->getStatus());
+		self::assertSame('Road Buyer', $createPerson->getData()['data']['name']);
+
+		$createDeal = $this->controller(
+			['title' => '2× AP + install', 'products' => 'AP + install'],
+			extraHeaders: ['Idempotency-Key' => 'road-deal-' . $this->suffix],
+		)->createDeal($wsId, $companyId);
+		self::assertSame(201, $createDeal->getStatus());
+		$dealId = (int)$createDeal->getData()['data']['id'];
+		self::assertGreaterThan(0, $dealId);
+
+		$tmpl = \OC::$server->get(DealChecklistService::class)->createTemplate(
+			$wsId,
+			['name' => 'Road tmpl ' . $this->suffix, 'steps' => ['Send invoice', 'Ship goods']],
+			$this->admin,
+		);
+		$templateId = (int)$tmpl['id'];
+
+		$apply = $this->controller(
+			['templateId' => $templateId, 'mode' => 'append'],
+			extraHeaders: ['Idempotency-Key' => 'road-apply-' . $this->suffix],
+		)->applyChecklistTemplate($wsId, $dealId);
+		self::assertSame(201, $apply->getStatus());
+		$items = $apply->getData()['data'];
+		self::assertIsArray($items);
+		self::assertGreaterThanOrEqual(2, count($items));
+		$open = null;
+		foreach ($items as $row) {
+			if (($row['status'] ?? '') === 'open') {
+				$open = $row;
+				break;
+			}
+		}
+		self::assertNotNull($open);
+		$itemId = (int)$open['id'];
+		$updatedAt = (string)($open['updatedAt'] ?? '');
+
+		$assign = $this->controller([
+			'assigneeUserId' => $this->peer,
+			'updatedAt' => $updatedAt,
+		])->updateChecklistItem($wsId, $itemId);
+		self::assertSame(200, $assign->getStatus());
+		self::assertSame($this->peer, $assign->getData()['data']['assigneeUserId'] ?? null);
+		$updatedAt = (string)($assign->getData()['data']['updatedAt'] ?? $updatedAt);
+
+		// MH-05: due date update (same optimistic lock path as assign).
+		$due = $this->controller([
+			'dueOn' => '2099-08-15',
+			'updatedAt' => $updatedAt,
+		])->updateChecklistItem($wsId, $itemId);
+		self::assertSame(200, $due->getStatus());
+		self::assertSame('2099-08-15', $due->getData()['data']['dueOn'] ?? null);
+		$updatedAt = (string)($due->getData()['data']['updatedAt'] ?? $updatedAt);
+
+		$done = $this->controller([
+			'evidenceNote' => 'Done',
+			'updatedAt' => $updatedAt,
+		])->doneChecklistItem($wsId, $itemId);
+		self::assertSame(200, $done->getStatus());
+		self::assertSame('done', $done->getData()['data']['status']);
+
+		// Closed item must reject assign (US-06 AC-3).
+		$closedAssign = $this->controller([
+			'assigneeUserId' => $this->uid,
+			'updatedAt' => (string)($done->getData()['data']['updatedAt'] ?? $updatedAt),
+		])->updateChecklistItem($wsId, $itemId);
+		self::assertSame(422, $closedAssign->getStatus());
+
+		// Cross-WS IDOR: foreign book must not mutate this company (404).
+		$foreign = $this->insertLegacyForeignWorkspace('mg-fx-' . $this->suffix, 'Foreign ' . $this->suffix);
+		$foreignId = (int)$foreign->getId();
+		$this->ensureMember($foreignId, $this->uid, 'member');
+		$idor = $this->controller(
+			['name' => 'Leak'],
+			extraHeaders: ['Idempotency-Key' => 'road-idor-' . $this->suffix],
+		)->createPerson($foreignId, $companyId);
+		self::assertSame(404, $idor->getStatus());
+		$this->deleteWorkspaceCascade($foreignId);
+	}
+
+	public function testRoadAuthoringViewerCannotCreateCompany(): void
+	{
+		$this->applyLicense(5);
+		$this->assignSeat($this->uid);
+		$this->loginAs($this->uid);
+		$wsId = $this->isolatedWorkspaceId();
+		$this->ensureMember($wsId, $this->uid, 'viewer');
+
+		$response = $this->controller(
+			['name' => 'Viewer blocked ' . $this->suffix],
+			extraHeaders: ['Idempotency-Key' => 'road-viewer-' . $this->suffix],
+		)->createCompany($wsId);
+		self::assertSame(422, $response->getStatus());
+		self::assertSame('VALIDATION', $response->getData()['error']);
+	}
+
 	public function testAgreementsExpiryWindowFilter(): void
 	{
 		$this->applyLicense(5);
@@ -650,6 +853,7 @@ final class MobileGateHttpIntegrationTest extends TestCase
 		array $params = [],
 		string $authorization = 'Basic dGVzdDp0ZXN0',
 		array $extraHeaders = [],
+		bool $csrfOk = true,
 	): MobileController {
 		$request = $this->createMock(IRequest::class);
 		$request->method('getParams')->willReturn($params);
@@ -670,7 +874,9 @@ final class MobileGateHttpIntegrationTest extends TestCase
 				return '';
 			},
 		);
-		$request->method('passesCSRFCheck')->willReturn(false);
+		// Session-authenticated integration calls use CSRF-ok by default (browser path).
+		// CSRF / fake-Bearer probes set $csrfOk false.
+		$request->method('passesCSRFCheck')->willReturn($csrfOk);
 
 		return new MobileController(
 			Application::APP_ID,
@@ -681,12 +887,17 @@ final class MobileGateHttpIntegrationTest extends TestCase
 			\OC::$server->get(MobileGateService::class),
 			\OC::$server->get(MobileApiService::class),
 			\OC::$server->get(CompanyService::class),
+			\OC::$server->get(PersonService::class),
 			\OC::$server->get(ActivityService::class),
 			\OC::$server->get(DealService::class),
 			\OC::$server->get(AgreementService::class),
 			\OC::$server->get(MobileIdempotencyService::class),
 			\OC::$server->get(MobilePushService::class),
+			\OC::$server->get(CompanyDocumentsService::class),
+			\OC::$server->get(WorkspaceService::class),
+			\OC::$server->get(IUserManager::class),
 			\OC::$server->get(IAppManager::class),
+			\OC::$server->get(DealChecklistService::class),
 		);
 	}
 

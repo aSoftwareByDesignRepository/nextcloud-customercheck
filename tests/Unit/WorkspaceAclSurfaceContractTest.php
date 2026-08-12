@@ -88,9 +88,14 @@ final class WorkspaceAclSurfaceContractTest extends TestCase
 		$this->assertStringContainsString('function requireCompanyCapability', $trait);
 		$this->assertStringContainsString("assertLoadedCompanyInWorkspace(\$company, \$capability)", $trait);
 
-		foreach (['PersonApiController', 'DealApiController', 'AgreementApiController', 'ActivityApiController', 'HoursApiController'] as $ctrl) {
+		foreach (['PersonApiController', 'DealApiController', 'AgreementApiController', 'ActivityApiController', 'HoursApiController', 'DealChecklistApiController'] as $ctrl) {
 			$src = (string)file_get_contents($this->root . '/lib/Controller/' . $ctrl . '.php');
 			$this->assertStringContainsString('requireCompanyCapability', $src, $ctrl . ' must gate writes on company workspace');
+			$this->assertMatchesRegularExpression(
+				'/private readonly CompanyService \$companies/',
+				$src,
+				$ctrl . ' must inject CompanyService (WorkspaceScopedTrait company gates)',
+			);
 			// Create/update must not pair company-read with last-used write.
 			$this->assertStringNotContainsString(
 				"requireCompanyInResolvedWorkspace(\$id);\n\t\t\t\$ctx = \$this->requireWorkspaceCapability('write')",
@@ -112,6 +117,10 @@ final class WorkspaceAclSurfaceContractTest extends TestCase
 		$src = (string)file_get_contents($this->root . '/js/common/api.js');
 		$this->assertStringContainsString('function withWorkspace', $src);
 		$this->assertStringContainsString('fetch(BASE + withWorkspace(path)', $src);
+		$this->assertStringContainsString('function looksLikeHtml', $src);
+		$this->assertStringContainsString('function humanMessageFromBody', $src);
+		$this->assertStringContainsString('Server temporarily unavailable (HTTP 503)', $src);
+		$this->assertStringNotContainsString("message: text }", $src);
 	}
 
 	public function testInvoicePaidNeverFansOutInstanceWide(): void
@@ -143,6 +152,9 @@ final class WorkspaceAclSurfaceContractTest extends TestCase
 		$notify = $this->extractMethod($src, 'notifyOne');
 		$this->assertStringContainsString('notifyWorkspaceUsers', $notify);
 		$this->assertStringNotContainsString('notifyCrmUsers', $notify);
+		$this->assertStringContainsString('workspaceId <= 0', $notify);
+		$this->assertStringContainsString("return 'skipped'", $notify);
+		$this->assertStringContainsString('releaseClaim', $notify);
 	}
 
 	public function testAgreementFormsScopeCompaniesAndAcl(): void
@@ -249,6 +261,7 @@ final class WorkspaceAclSurfaceContractTest extends TestCase
 		$this->assertStringContainsString('lockRow($id)', $move);
 		$this->assertStringContainsString("update('crm_cust_prm')", $move);
 		$this->assertStringContainsString("update('crm_acct_plan')", $move);
+		$this->assertStringContainsString("update('crm_deal_cl_item')", $move);
 		$this->assertStringContainsString("set('workspace_id'", $move);
 		$merge = (string)file_get_contents($this->root . '/lib/Service/CompanyMergeService.php');
 		$this->assertStringContainsString('reassignPersonaLedgers', $merge);
@@ -258,6 +271,7 @@ final class WorkspaceAclSurfaceContractTest extends TestCase
 		$reassign = $this->extractMethod($merge, 'reassignPersonaLedgers');
 		$this->assertStringContainsString("update('crm_cust_prm')", $reassign);
 		$this->assertStringContainsString("update('crm_acct_plan')", $reassign);
+		$this->assertStringContainsString("update('crm_deal_cl_item')", $reassign);
 		$this->assertStringContainsString("set('workspace_id'", $reassign);
 		$mail = $this->extractMethod($merge, 'reassignSharedMail');
 		$this->assertStringContainsString("update('crm_mail_msg')", $mail);
@@ -437,9 +451,12 @@ final class WorkspaceAclSurfaceContractTest extends TestCase
 	{
 		$src = (string)file_get_contents($this->root . '/lib/Service/PersonService.php');
 		$delete = $this->extractMethod($src, 'delete');
-		$this->assertStringContainsString('beginTransaction', $delete);
+		$this->assertStringContainsString('DbTransaction::begin', $delete);
 		$this->assertStringContainsString('lockRow($companyId)', $delete);
 		$this->assertStringContainsString('assertFresh($person->getUpdatedAt()', $delete);
+		$persist = $this->extractMethod($src, 'persistWithPrimaryInvariant');
+		$this->assertStringContainsString('DbTransaction::begin', $persist);
+		$this->assertStringNotContainsString("\$this->db->beginTransaction();", $persist);
 	}
 
 	public function testAccountPlanUpsertSerialisesCreates(): void

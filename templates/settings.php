@@ -35,6 +35,7 @@ include __DIR__ . '/common/page-start.php';
 	$crmSettingsSectionFiles = [
 		'mailbox' => 'workspace-mailbox.php',
 		'preferences' => 'preferences.php',
+		'checklists' => 'workspace-checklists.php',
 		'review-sources' => 'workspace-review-sources.php',
 		'circles' => 'circles-roll-call.php',
 		'integrations' => 'integrations.php',

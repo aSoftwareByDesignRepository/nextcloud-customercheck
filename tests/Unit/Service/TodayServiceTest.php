@@ -80,7 +80,7 @@ final class TodayServiceTest extends TestCase
 		$activity->setDueDate(new \DateTime('2026-07-25'));
 
 		$agreements = $this->createMock(AgreementMapper::class);
-		$agreements->method('findRenewalCandidates')->willReturn([$agreement]);
+		$agreements->method('findTodayRenewalCandidates')->willReturn([$agreement]);
 		$activities = $this->createMock(ActivityMapper::class);
 		$activities->method('findOpenDueUpTo')->willReturn([$activity]);
 		$companies = $this->createMock(CompanyMapper::class);
@@ -119,7 +119,7 @@ final class TodayServiceTest extends TestCase
 		$agreement->setValidUntil(new \DateTime('2026-08-01'));
 
 		$agreements = $this->createMock(AgreementMapper::class);
-		$agreements->method('findRenewalCandidates')->willReturn([$agreement]);
+		$agreements->method('findTodayRenewalCandidates')->willReturn([$agreement]);
 		$activities = $this->createMock(ActivityMapper::class);
 		$activities->method('findOpenDueUpTo')->willReturn([]);
 		$companies = $this->createMock(CompanyMapper::class);
@@ -155,7 +155,7 @@ final class TodayServiceTest extends TestCase
 		$deal->setStageChangedAt(new \DateTime('2026-06-01'));
 
 		$agreements = $this->createMock(AgreementMapper::class);
-		$agreements->method('findRenewalCandidates')->willReturn([]);
+		$agreements->method('findTodayRenewalCandidates')->willReturn([]);
 		$activities = $this->createMock(ActivityMapper::class);
 		$activities->method('findOpenDueUpTo')->willReturn([]);
 		$companies = $this->createMock(CompanyMapper::class);
@@ -229,7 +229,7 @@ final class TodayServiceTest extends TestCase
 		$activitySameDay->setDueDate(new \DateTime('2026-07-25')); // due today → urgency 40
 
 		$agreements = $this->createMock(AgreementMapper::class);
-		$agreements->method('findRenewalCandidates')->willReturn([$later, $soon]);
+		$agreements->method('findTodayRenewalCandidates')->willReturn([$later, $soon]);
 		$activities = $this->createMock(ActivityMapper::class);
 		$activities->method('findOpenDueUpTo')->willReturn([$activitySameDay, $activityLate]);
 		$companies = $this->createMock(CompanyMapper::class);

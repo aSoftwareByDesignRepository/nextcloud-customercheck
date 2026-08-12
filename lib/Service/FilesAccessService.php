@@ -8,6 +8,7 @@ use OCA\CustomerCheck\Constants;
 use OCA\CustomerCheck\Exception\ValidationException;
 use OCP\Files\File;
 use OCP\Files\FileInfo;
+use OCP\Files\Folder;
 use OCP\Files\IRootFolder;
 use OCP\IL10N;
 
@@ -24,6 +25,22 @@ class FilesAccessService
 		private readonly IRootFolder $rootFolder,
 		private readonly IL10N $l10n,
 	) {
+	}
+
+	/**
+	 * True when the actor can read the file id (non-folder). Never throws for missing/denied.
+	 */
+	public function isReadableFile(string $userId, int $fileId): bool
+	{
+		try {
+			$this->resolveReadableFile($userId, $fileId);
+
+			return true;
+		} catch (ValidationException) {
+			return false;
+		} catch (\Throwable) {
+			return false;
+		}
 	}
 
 	/**
@@ -91,6 +108,53 @@ class FilesAccessService
 		}
 
 		return $node;
+	}
+
+	/**
+	 * Resolve a readable file that lives under a company folder (path-prefix tenancy).
+	 * Prevents linking arbitrary personal/shared files onto a deal checklist.
+	 *
+	 * @throws ValidationException
+	 */
+	public function assertFileUnderFolder(string $userId, int $fileId, int $folderId): File
+	{
+		$file = $this->resolveReadableFile($userId, $fileId);
+		$userId = trim($userId);
+		if ($folderId <= 0) {
+			throw new ValidationException(
+				Constants::ERR_FILES_NOT_FOUND,
+				$this->l10n->t('Link a company folder in Files before attaching evidence.'),
+			);
+		}
+
+		try {
+			$userFolder = $this->rootFolder->getUserFolder($userId);
+			$nodes = $userFolder->getById($folderId);
+		} catch (\Throwable) {
+			throw new ValidationException(
+				Constants::ERR_FILES_PERMISSION_DENIED,
+				$this->l10n->t('Could not access your Files.'),
+			);
+		}
+		$folder = $nodes[0] ?? null;
+		if (!$folder instanceof Folder) {
+			throw new ValidationException(
+				Constants::ERR_FILES_NOT_FOUND,
+				$this->l10n->t('That company folder is gone or you cannot open it.'),
+			);
+		}
+
+		$folderPath = rtrim($folder->getPath(), '/');
+		$filePath = $file->getPath();
+		if ($filePath !== $folderPath && !str_starts_with($filePath, $folderPath . '/')) {
+			throw ValidationException::field(
+				Constants::ERR_VALIDATION,
+				'fileId',
+				$this->l10n->t('Pick a file from this company’s folder.'),
+			);
+		}
+
+		return $file;
 	}
 
 	/**

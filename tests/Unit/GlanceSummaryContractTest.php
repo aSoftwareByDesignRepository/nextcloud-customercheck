@@ -16,7 +16,7 @@ final class GlanceSummaryContractTest extends TestCase
 	{
 		$controller = (string)file_get_contents(dirname(__DIR__, 2) . '/lib/Controller/PageController.php');
 		$this->assertStringContainsString(
-			"registerFrontEndAssets('pages/company-detail', null, ['common/identity-links'], ['common/jump-nav', 'common/folder-picker', 'common/glance-summary', 'common/company360-present', 'pages/persona'])",
+			"registerFrontEndAssets('pages/company-detail', null, ['common/identity-links'], ['common/company360-focus', 'common/folder-picker', 'common/glance-summary', 'common/company360-present', 'common/deal-checklist-ux', 'pages/persona'])",
 			$controller,
 		);
 	}
@@ -85,8 +85,11 @@ final class GlanceSummaryContractTest extends TestCase
 	public function testDensityTemplateStillBansStatStripOnSiblingKpis(): void
 	{
 		$tpl = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/company-detail.php');
+		$list = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/common/crm-glance-density-list.php');
 		$this->assertStringNotContainsString('crm-stat-strip', $tpl);
-		$this->assertStringContainsString('crm-glance-kpi', $tpl);
+		$this->assertStringNotContainsString('crm-stat-strip', $list);
+		$this->assertStringContainsString('crm-glance-density-list.php', $tpl);
+		$this->assertStringContainsString('crm-glance-kpi', $list);
 		$this->assertStringContainsString('id="crm-glance-summary"', $tpl);
 	}
 }

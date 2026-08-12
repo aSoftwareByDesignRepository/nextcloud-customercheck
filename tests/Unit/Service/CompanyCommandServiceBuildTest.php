@@ -6,6 +6,7 @@ namespace OCA\CustomerCheck\Tests\Unit\Service;
 
 use OCA\CustomerCheck\Db\Activity;
 use OCA\CustomerCheck\Db\ActivityMapper;
+use OCA\CustomerCheck\Db\Agreement;
 use OCA\CustomerCheck\Db\AgreementMapper;
 use OCA\CustomerCheck\Db\Company;
 use OCA\CustomerCheck\Db\EmailTouchMapper;
@@ -37,6 +38,8 @@ final class CompanyCommandServiceBuildTest extends TestCase
 		Company $company,
 		array $openActivities = [],
 		?BillingIntegrityService $billing = null,
+		array $agreements = [],
+		?FacadeProbeService $facadesOverride = null,
 	): CompanyCommandService {
 		$companies = $this->createMock(CompanyService::class);
 		$companies->method('get')->willReturn($company);
@@ -44,8 +47,8 @@ final class CompanyCommandServiceBuildTest extends TestCase
 		$persons = $this->createMock(PersonService::class);
 		$persons->method('listForCompany')->willReturn([]);
 
-		$agreements = $this->createMock(AgreementMapper::class);
-		$agreements->method('findByCompany')->willReturn([]);
+		$agreementMapper = $this->createMock(AgreementMapper::class);
+		$agreementMapper->method('findByCompany')->willReturn($agreements);
 
 		$activities = $this->createMock(ActivityMapper::class);
 		$activities->method('findOpenByCompany')->willReturn($openActivities);
@@ -55,16 +58,20 @@ final class CompanyCommandServiceBuildTest extends TestCase
 		$touches = $this->createMock(EmailTouchMapper::class);
 		$touches->method('findByCompany')->willReturn([]);
 
-		$facades = $this->createMock(FacadeProbeService::class);
-		$facades->method('capabilityMatrix')->willReturn([
-			'projectcheck' => false,
-			'invoicecheck' => false,
-			'ticketcheck' => false,
-			'mail' => false,
-		]);
-		$facades->method('projectcheckAvailable')->willReturn(false);
-		$facades->method('invoicecheckAvailable')->willReturn(false);
-		$facades->method('ticketcheckAvailable')->willReturn(false);
+		if ($facadesOverride !== null) {
+			$facades = $facadesOverride;
+		} else {
+			$facades = $this->createMock(FacadeProbeService::class);
+			$facades->method('capabilityMatrix')->willReturn([
+				'projectcheck' => false,
+				'invoicecheck' => false,
+				'ticketcheck' => false,
+				'mail' => false,
+			]);
+			$facades->method('projectcheckAvailable')->willReturn(false);
+			$facades->method('invoicecheckAvailable')->willReturn(false);
+			$facades->method('ticketcheckAvailable')->willReturn(false);
+		}
 
 		$billingSvc = $billing ?? new BillingIntegrityService();
 		$priority = new NextActionPriority();
@@ -99,7 +106,7 @@ final class CompanyCommandServiceBuildTest extends TestCase
 		return new CompanyCommandService(
 			$companies,
 			$persons,
-			$agreements,
+			$agreementMapper,
 			$activities,
 			$touches,
 			$facades,
@@ -135,6 +142,82 @@ final class CompanyCommandServiceBuildTest extends TestCase
 		self::assertSame('none', $dto['nextAction']['kind']);
 		self::assertSame('unknown', $dto['billing']['state']);
 		self::assertSame(0, $dto['counts']['openCallbacks']);
+		self::assertSame('none', $dto['billing']['sourceMode']);
+		self::assertFalse($dto['billing']['sources']['invoiceCheckAvailable']);
+		self::assertSame(0, $dto['billing']['licenses']['total']);
+	}
+
+	public function testBuildBillingUsesLicenseInvoiceStatusWhenInvoiceCheckOff(): void
+	{
+		$company = new Company();
+		$company->setId(5);
+		$company->setName('Acme');
+		$company->setSlug('acme');
+		$company->setStatus('active');
+
+		$overdue = new Agreement();
+		$overdue->setId(11);
+		$overdue->setCompanyId(5);
+		$overdue->setStatus('active');
+		$overdue->setInvoiceStatus('overdue');
+
+		$sent = new Agreement();
+		$sent->setId(12);
+		$sent->setCompanyId(5);
+		$sent->setStatus('active');
+		$sent->setInvoiceStatus('sent');
+
+		$cancelled = new Agreement();
+		$cancelled->setId(13);
+		$cancelled->setCompanyId(5);
+		$cancelled->setStatus('cancelled');
+		$cancelled->setInvoiceStatus('overdue');
+
+		$dto = $this->makeService($company, [], null, [$overdue, $sent, $cancelled])->build(5, 'admin');
+		self::assertSame('critical', $dto['billing']['state']);
+		self::assertSame(1, $dto['billing']['overdueCount']);
+		self::assertSame(1, $dto['billing']['openCount']);
+		self::assertSame('licenses', $dto['billing']['sourceMode']);
+		self::assertSame(2, $dto['billing']['licenses']['total']);
+		self::assertSame(2, $dto['billing']['licenses']['unpaid']);
+		self::assertTrue($dto['billing']['sources']['licenses']);
+		self::assertFalse($dto['billing']['sources']['invoiceCheckAvailable']);
+	}
+
+	public function testBuildBillingFallsBackToLicensesWhenInvoiceCheckEmpty(): void
+	{
+		$company = new Company();
+		$company->setId(5);
+		$company->setName('Acme');
+		$company->setSlug('acme');
+		$company->setStatus('active');
+		$company->setPcCustomerId(77);
+
+		$sent = new Agreement();
+		$sent->setId(12);
+		$sent->setCompanyId(5);
+		$sent->setStatus('active');
+		$sent->setInvoiceStatus('sent');
+
+		$facades = $this->createMock(FacadeProbeService::class);
+		$facades->method('capabilityMatrix')->willReturn([
+			'projectcheck' => true,
+			'invoicecheck' => true,
+			'ticketcheck' => false,
+			'mail' => false,
+		]);
+		$facades->method('projectcheckAvailable')->willReturn(true);
+		$facades->method('invoicecheckAvailable')->willReturn(true);
+		$facades->method('ticketcheckAvailable')->willReturn(false);
+		$facades->method('listInvoicesForPcCustomer')->willReturn([]);
+		$facades->method('listProjectsForCustomer')->willReturn([]);
+
+		$dto = $this->makeService($company, [], null, [$sent], $facades)->build(5, 'admin');
+		self::assertSame('attention', $dto['billing']['state']);
+		self::assertSame(0, $dto['billing']['overdueCount']);
+		self::assertSame(1, $dto['billing']['openCount']);
+		self::assertSame('licenses_fallback', $dto['billing']['sourceMode']);
+		self::assertTrue($dto['billing']['sources']['invoiceCheckLinked']);
 	}
 
 	public function testBuildCountsOpenCallbacksViaFlag(): void

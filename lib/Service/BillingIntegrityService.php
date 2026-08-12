@@ -7,7 +7,8 @@ namespace OCA\CustomerCheck\Service;
 /**
  * Billing integrity heuristic — COMMAND-CENTER-SPEC §7.2.
  *
- * Never claims GoBD/tax truth. Pure state machine over facade counts.
+ * Never claims GoBD/tax truth. Pure state machine over facade counts and
+ * local license invoice statuses (CRM-owned when InvoiceCheck is absent).
  */
 class BillingIntegrityService
 {
@@ -19,6 +20,7 @@ class BillingIntegrityService
 	 *   uninvoicedProjects?: int|null,
 	 *   pcLinked?: bool,
 	 *   icLinked?: bool,
+	 *   licenseLinked?: bool,
 	 *   billableKnown?: bool,
 	 *   uninvoicedKnown?: bool
 	 * } $signals
@@ -34,7 +36,8 @@ class BillingIntegrityService
 	{
 		$pcLinked = !empty($signals['pcLinked']);
 		$icLinked = !empty($signals['icLinked']);
-		if (!$pcLinked && !$icLinked) {
+		$licenseLinked = !empty($signals['licenseLinked']);
+		if (!$pcLinked && !$icLinked && !$licenseLinked) {
 			return [
 				'state' => 'unknown',
 				'overdueCount' => 0,
@@ -95,5 +98,81 @@ class BillingIntegrityService
 		}
 
 		return 'ignore';
+	}
+
+	/**
+	 * Classify CRM license / agreement invoiceStatus (Constants::INVOICE_STATUSES).
+	 *
+	 * @return 'overdue'|'open'|'paid'|'ignore'
+	 */
+	public function classifyAgreementInvoiceStatus(string $status): string
+	{
+		$normalized = mb_strtolower(trim($status));
+		return match ($normalized) {
+			'overdue' => 'overdue',
+			'sent' => 'open',
+			'paid' => 'paid',
+			default => 'ignore',
+		};
+	}
+
+	/**
+	 * Merge InvoiceCheck counts with local license counts without inventing IC truth.
+	 *
+	 * Rules:
+	 * - IC linked and reports any open/overdue → trust IC for the headline counts.
+	 * - IC linked but empty, while licenses have unpaid → fall back to licenses.
+	 * - IC absent → licenses only.
+	 *
+	 * @return array{overdueCount: int, openCount: int, sourceMode: 'invoicecheck'|'licenses'|'licenses_fallback'|'none'}
+	 */
+	public function mergeInvoiceCounts(
+		bool $icLinked,
+		int $icOverdue,
+		int $icOpen,
+		int $licenseOverdue,
+		int $licenseOpen,
+	): array {
+		$icOverdue = max(0, $icOverdue);
+		$icOpen = max(0, $icOpen);
+		$licenseOverdue = max(0, $licenseOverdue);
+		$licenseOpen = max(0, $licenseOpen);
+
+		if ($icLinked) {
+			if ($icOverdue > 0 || $icOpen > 0) {
+				return [
+					'overdueCount' => $icOverdue,
+					'openCount' => $icOpen,
+					'sourceMode' => 'invoicecheck',
+				];
+			}
+			if ($licenseOverdue > 0 || $licenseOpen > 0) {
+				return [
+					'overdueCount' => $licenseOverdue,
+					'openCount' => $licenseOpen,
+					'sourceMode' => 'licenses_fallback',
+				];
+			}
+
+			return [
+				'overdueCount' => 0,
+				'openCount' => 0,
+				'sourceMode' => 'invoicecheck',
+			];
+		}
+
+		if ($licenseOverdue > 0 || $licenseOpen > 0) {
+			return [
+				'overdueCount' => $licenseOverdue,
+				'openCount' => $licenseOpen,
+				'sourceMode' => 'licenses',
+			];
+		}
+
+		return [
+			'overdueCount' => 0,
+			'openCount' => 0,
+			'sourceMode' => 'none',
+		];
 	}
 }

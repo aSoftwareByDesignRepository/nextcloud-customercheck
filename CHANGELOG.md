@@ -5,6 +5,116 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.6.66 - 2026-08-12
+
+### Security (Aristoteles audit — mail + checklist)
+
+- Block private/local IMAP hosts on **Test connection**, live-probe sync, and SMTP send (SSRF)
+- Sync loads mailbox by `id` **and** `workspace_id` (cross-workspace IDOR closed)
+- AAAA + IPv6 literal checks in `isBlockedMailHost`; harden IMAP folder allowlist (`"\`{}` / controls)
+- Folder paths validated on save and skipped when unsafe during sync
+- Indexed IMAP delete shares the `crm_mbox_*` lock with sync/preview (ZEUS NG-01 — no dual sessions)
+- Review discard: after successful IMAP delete, always `markRemoteDeleted` even if CRM close conflicts
+- Manager reopen refuses `remote_deleted` messages (no zombie triage for mail gone on the host)
+- Person remove: delete first (optimistic lock), then optional return of matched shared mail to Review
+- Deal checklist `linkFile` requires the file under the **company folder** (not any readable NC file)
+- Lost-deal cancel withdraws assign notifications and stamps `updated_at`
+- Idempotent Done (already-done → soft success) for companion retries
+- `MailPreviewText` strips inline HTML tags (not only full documents)
+- GDPR company erase withdraws deal-checklist assign notifications **after** successful commit
+- Checklist `completeItem` / empty `applyTemplate` never `rollBack` after a successful commit (post-commit serialize outside try)
+
+### UX / a11y (Company 360 focus)
+
+- Tab labels: **Bills & files** / **Plan & links**; `role="tablist"` without nested landmark
+- Noscript + `@media (scripting: none)` reveal all panels if JS never runs
+- Quieter hash race via microtask token (no dropped deep-links)
+- Replace-template copy matches hard-delete of open tasks
+- Review / Talk mail boards use table rows (`.crm-review-row`) — dead card/feed CSS removed
+- Linked-apps glance KPIs as auto-fit stat tiles (calm accordion / attention expanded)
+- Review list widens date-query fetch and sorts by sentAt; Talk feed matches Review board patterns
+
+## 1.6.57 - 2026-08-12
+
+### Architecture (Company 360 focus — Zeus audit remediation)
+
+- Structural SECTION_TAB_MAP equality gate between classic bootstrap and Vitest core (kills silent key drift)
+- `Number.isFinite` parity in scroll math (no coercing global `isFinite`)
+- Fail-open paths latch `data-crm-focus-ready` + `data-crm-focus-degraded` to prevent re-init stacking
+- Mutation set extended for map drift / isFinite / degraded latch
+
+## 1.6.56 - 2026-08-12
+
+### Reliability (Company 360 focus — Aristoteles)
+
+- Focus tabs are a classic IIFE (no dynamic ESM `import`) so Nextcloud `Util::addScript` never leaves panels stuck hidden
+- Document-level hash capture so glance KPI links outside the tab root still switch panels
+- DOM-based tab resolution for `#crm-identity-links` (Money cold-merge vs More manage)
+- Fail-open reveal + jump generation guard against init/race failures; numeric companyId sessionStorage keying
+- Mutation gauntlet: `tests/Mutation/run-company360-focus-mutations.php`
+
+## 1.6.55 - 2026-08-12
+
+### UX (Company 360 focus — Bachus / Pipedrive-style)
+
+- Replaced long scroll + 15-chip jump nav with four focus tabs: **Today**, **Deals**, **Money**, **More**
+- First paint shows only Today (talk, people, to-do) — deals, money, and setup/history stay one tap away
+- Removed redundant “How to use this page” callout; hash deep links still open the right tab and section
+- Compact “At a glance” lead copy
+
+## 1.6.52 - 2026-08-12
+
+### UX (Link apps — Bachus)
+
+- Cold company: one **Link apps** card (identity CTAs + status roster) — no twin “Linked apps” empty + “Link apps (setup)”
+- Per-app rows: app name + badge only (no duplicate “Not linked to …” prose); MaintenanceCheck under More apps
+
+## 1.6.51 - 2026-08-12
+
+### UX (Account plan — Bachus)
+
+- Plain-language lead: where this customer should go; goal first
+- Priority / owner / review under one details block
+- Plan moves use a large textarea + checklist with Done (no tiny single-line “New next step”)
+- Clear hint: plan moves ≠ day-to-day To-dos
+
+## 1.6.50 - 2026-08-12
+
+### UX (Linked apps — Bachus)
+
+- Empty projects / tickets / invoices no longer paint three nested empty cards inside “Linked apps”
+- One setup empty state + a three-row status roster (Not installed / Needs fix / Linked · none open / Not linked); jump-nav IDs preserved
+- When any sibling list has data, full peer cards render without the collapsed wrapper
+
+## 1.6.45 - 2026-08-11
+
+
+### UX (Import — Bachus)
+
+- Import is one obvious path: drop file → auto-preview → one green Import button → Done
+- Paste lives under “Paste instead”; source collapses after preview (“Change list” to go back)
+- Include column only when a name needs a pick; ready-only lists hide it
+- Clear status copy (no “Semmelbrösel”, no “Bereite importieren”); success says what was added
+- Narrow viewport: import table region is keyboard-focusable; axe WCAG serious/critical clean
+
+### Translations (mother-tongue pass)
+
+- Rewrote **da / de / es / fr / it / nb / nl / pl / sv** (and regional variants) so UI copy reads like a native speaker wrote it — informal address, plain language, no Argos leftovers
+- Style + gate: `l10n/NATIVE-STYLE.md`, `scripts/check-l10n-native-quality.php`; Argos `build-family-l10n.py` refuses to overwrite unless `--force-argos`
+
+### Reliability (notifications & Today)
+
+- Activity-due and renewal reminders claim the ledger only when a workspace can be notified; empty membership releases the claim for retry
+- Activity-due chunk query skips already-ledged (activity, due) pairs so older claims cannot starve the queue
+- Weekly digest claims only when recipients exist; releases claims if delivery cannot run
+- Today renewals use a soonest-first window (−14…+60 days) instead of id-ordered candidates
+
+### Mailbox / UX
+
+- Saved mailbox folders round-trip on edit (API returns paths; form restores them); omitting `folders` on update no longer wipes sync folders
+- Mailbox list formats last-sync with locale date/time; Edit has an accessible label
+- Date-only display anchors at noon so user timezones cannot shift the calendar day
+
 ## 1.6.44 - 2026-08-09
 
 ### UX (Bachus — Company 360 radical simplicity)

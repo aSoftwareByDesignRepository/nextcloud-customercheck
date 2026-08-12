@@ -2,6 +2,7 @@
 /** @var array $_ */
 /** @var \OCP\IL10N $l */
 $settings = is_array($_['settings'] ?? null) ? $_['settings'] : [];
+$serverTz = (string)(($_['clientHints']['timezone'] ?? null) ?: (date_default_timezone_get() ?: 'UTC'));
 ?>
 <section class="crm-card" id="section-jobs" aria-labelledby="section-jobs-heading">
 		<header class="crm-card__header">
@@ -11,7 +12,7 @@ $settings = is_array($_['settings'] ?? null) ? $_['settings'] : [];
 			</div>
 		</header>
 		<div class="crm-card__body">
-			<form id="crm-settings-jobs-form" class="crm-form">
+			<form id="crm-settings-jobs-form" class="crm-form crm-form--stack">
 				<label class="crm-switch">
 					<input type="checkbox" name="cadence_enabled" value="1" <?php echo !empty($settings['cadence_enabled']) ? 'checked' : ''; ?>>
 					<span><?php p($l->t('Renewal reminder cadence (60/30/7/0/+7)')); ?></span>
@@ -19,11 +20,13 @@ $settings = is_array($_['settings'] ?? null) ? $_['settings'] : [];
 				<div class="form-group">
 					<label for="crm-reminder-hour" class="form-label"><?php p($l->t('Reminder hour')); ?></label>
 					<input type="number" id="crm-reminder-hour" name="reminder_hour" class="form-input crm-input" min="0" max="23" value="<?php p((int)($settings['reminder_hour'] ?? 5)); ?>">
+					<p class="form-help"><?php p($l->t('Hour on the server clock (%s). Callbacks and due activities use the same hour.', [$serverTz])); ?></p>
 				</div>
 				<label class="crm-switch">
 					<input type="checkbox" name="digest_enabled" value="1" <?php echo !empty($settings['digest_enabled']) ? 'checked' : ''; ?>>
 					<span><?php p($l->t('Weekly digest notification')); ?></span>
 				</label>
+				<p class="form-help"><?php p($l->t('App-wide switch. Each team can still opt out under Team & mailbox → Enable weekly digest.')); ?></p>
 				<div class="form-group">
 					<label for="crm-digest-weekday" class="form-label"><?php p($l->t('Digest weekday')); ?></label>
 					<select id="crm-digest-weekday" name="digest_weekday" class="form-select crm-input">
@@ -41,6 +44,7 @@ $settings = is_array($_['settings'] ?? null) ? $_['settings'] : [];
 				<div class="form-group">
 					<label for="crm-digest-hour" class="form-label"><?php p($l->t('Digest hour')); ?></label>
 					<input type="number" id="crm-digest-hour" name="digest_hour" class="form-input crm-input" min="0" max="23" value="<?php p((int)($settings['digest_hour'] ?? 7)); ?>">
+					<p class="form-help"><?php p($l->t('Hour on the server clock (%s).', [$serverTz])); ?></p>
 				</div>
 				<div class="form-group">
 					<label for="crm-stale-days" class="form-label"><?php p($l->t('Stale deal days')); ?></label>

@@ -40,6 +40,7 @@ class DealService
 		private readonly AgreementMapper $agreementMapper,
 		private readonly ?EditConflictService $editConflicts = null,
 		private readonly ?EntityRevisionService $entityRevisions = null,
+		private readonly ?NotificationService $notifications = null,
 	) {
 	}
 
@@ -374,6 +375,10 @@ class DealService
 		}
 
 		if ($stageFired !== null) {
+			if ($stageFired === 'lost') {
+				// Same as changeStage — conflict resolve must not leave open handoffs alive (AC-F-07).
+				$this->cancelOpenDealChecklistItems((int)$stored->getId());
+			}
 			$fired = $this->stageSequences->fireForStage($stored, $stageFired, $actor);
 			$this->timelineService->append((int)$stored->getCompanyId(), 'deal.stage', $actor, [
 				'dealId' => (int)$stored->getId(),
@@ -628,6 +633,10 @@ class DealService
 		}
 
 		$deal = $this->get($id);
+		if ($stage === 'lost') {
+			// Raw QB avoids circular DI with DealChecklistService → CompanyService → …
+			$this->cancelOpenDealChecklistItems($id);
+		}
 		$fired = $this->stageSequences->fireForStage($deal, $stage, $actor);
 		$this->timelineService->append((int)$deal->getCompanyId(), 'deal.stage', $actor, [
 			'dealId' => (int)$deal->getId(),
@@ -648,6 +657,41 @@ class DealService
 		);
 		$days = (int)$raw;
 		return $days > 0 ? $days : 14;
+	}
+
+	/** Cancel open checklist items when a deal is marked lost (CUC-DEAL-CHECKLIST-1). */
+	private function cancelOpenDealChecklistItems(int $dealId): void
+	{
+		if (!$this->db->tableExists('crm_deal_cl_item')) {
+			return;
+		}
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('id')
+			->from('crm_deal_cl_item')
+			->where($qb->expr()->eq('deal_id', $qb->createNamedParameter($dealId)))
+			->andWhere($qb->expr()->eq('status', $qb->createNamedParameter('open')));
+		$r = $qb->executeQuery();
+		$ids = [];
+		while (($row = $r->fetch()) !== false) {
+			$ids[] = (int)$row['id'];
+		}
+		$r->closeCursor();
+		if ($ids === []) {
+			return;
+		}
+		$now = $this->timeFactory->getDateTime()->format('Y-m-d H:i:s');
+		$u = $this->db->getQueryBuilder();
+		$u->update('crm_deal_cl_item')
+			->set('status', $u->createNamedParameter('cancelled'))
+			->set('updated_at', $u->createNamedParameter($now))
+			->where($u->expr()->eq('deal_id', $u->createNamedParameter($dealId)))
+			->andWhere($u->expr()->eq('status', $u->createNamedParameter('open')))
+			->executeStatement();
+		if ($this->notifications !== null) {
+			foreach ($ids as $id) {
+				$this->notifications->withdraw('deal_checklist_item', (string)$id);
+			}
+		}
 	}
 
 	public function isStale(Deal $deal, ?\DateTimeInterface $now = null): bool

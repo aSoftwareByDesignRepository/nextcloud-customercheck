@@ -67,12 +67,15 @@ final class PageHelpCatalogTest extends TestCase
 		}
 	}
 
-	public function testRequiredPagesMatchQuickStartCatalog(): void
+	public function testRequiredPagesAreSupersetOfQuickStart(): void
 	{
-		$this->assertSame(
-			PageQuickStartCatalog::requiredPageIds(),
-			PageHelpCatalog::requiredPageIds(),
-		);
+		$help = PageHelpCatalog::requiredPageIds();
+		$quick = PageQuickStartCatalog::requiredPageIds();
+		foreach ($quick as $pageId) {
+			$this->assertContains($pageId, $help, 'help must cover every quickstart page');
+		}
+		$this->assertContains('company-detail', $help);
+		$this->assertNotContains('company-detail', $quick);
 	}
 
 	public function testTeamHelpExplainsGreenAmberLegend(): void

@@ -235,6 +235,92 @@ class CompanyDocumentsService
 	}
 
 	/**
+	 * Upload bytes into the company's Files folder (actor ACL). Creates the folder if missing.
+	 *
+	 * @return array{fileId: int, name: string}
+	 * @throws ValidationException
+	 * @throws \OCA\CustomerCheck\Exception\ConflictException
+	 */
+	public function uploadIntoCompanyFolder(int $companyId, string $userId, string $fileName, string $binary): array
+	{
+		$company = $this->companies->get($companyId);
+		$folderId = $company->getFilesFolderId();
+		if ($folderId === null || (int)$folderId <= 0) {
+			$created = $this->createFolder(
+				$companyId,
+				$userId,
+				null,
+				OptimisticLock::format($company->getUpdatedAt()),
+			);
+			$folderId = (int)$created['fileId'];
+		}
+		$folder = $this->resolveFolder($userId, (int)$folderId);
+
+		$safe = basename(str_replace("\0", '', trim($fileName)));
+		$safe = str_replace(['/', '\\'], '-', $safe);
+		if ($safe === '' || $safe === '.' || $safe === '..') {
+			$safe = 'upload.bin';
+		}
+		$safe = mb_substr($safe, 0, 200);
+		$target = $safe;
+		$n = 0;
+		while ($folder->nodeExists($target)) {
+			$n++;
+			$dot = strrpos($safe, '.');
+			if ($dot === false) {
+				$target = $safe . '-' . $n;
+			} else {
+				$target = substr($safe, 0, $dot) . '-' . $n . substr($safe, $dot);
+			}
+			if ($n > 50) {
+				$target = 'upload-' . time() . '-' . bin2hex(random_bytes(4)) . '.bin';
+				break;
+			}
+		}
+
+		try {
+			$file = $folder->newFile($target);
+			$file->putContent($binary);
+		} catch (NotPermittedException) {
+			throw new ValidationException(
+				Constants::ERR_FILES_PERMISSION_DENIED,
+				$this->l10n->t('You do not have permission to upload into that folder.'),
+			);
+		} catch (\Throwable) {
+			throw new ValidationException(
+				Constants::ERR_FILES_PERMISSION_DENIED,
+				$this->l10n->t('Could not upload the file.'),
+			);
+		}
+
+		return [
+			'fileId' => (int)$file->getId(),
+			'name' => (string)$file->getName(),
+		];
+	}
+
+	/**
+	 * Best-effort cleanup when a companion upload is not linked (idempotency race / link failure).
+	 * Never throws — caller already has a more important error or replay payload.
+	 */
+	public function tryDeleteUploadedFile(string $userId, int $fileId): void
+	{
+		if ($fileId < 1 || $userId === '') {
+			return;
+		}
+		try {
+			$userFolder = $this->rootFolder->getUserFolder($userId);
+			$nodes = $userFolder->getById($fileId);
+			$node = $nodes[0] ?? null;
+			if ($node !== null && !($node instanceof Folder)) {
+				$node->delete();
+			}
+		} catch (\Throwable) {
+			// Orphan may linger in company folder — preferred over failing the client replay.
+		}
+	}
+
+	/**
 	 * @return array{items: list<array{fileId:int,name:string,isFolder:bool,size:int,mtime:int}>, broken: bool, folderUrl: ?string, path: ?string}
 	 */
 	public function listChildren(int $companyId, string $userId, bool $clearBrokenLink = true): array

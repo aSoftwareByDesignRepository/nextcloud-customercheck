@@ -287,6 +287,8 @@ final class PersonaOsLogicTest extends TestCase
 	{
 		$this->assertTrue(StuckLogic::isStuck(['chaseCount' => 1]));
 		$this->assertFalse(StuckLogic::isStuck([]));
+		$this->assertTrue(StuckLogic::isStuck(['checklistOverdue' => 1]));
+		$this->assertSame(3, StuckLogic::stuckScore(['checklistOverdue' => 2, 'promiseOverdue' => 1]));
 		$this->assertTrue(StuckLogic::shouldAutoResolve(false));
 		$this->assertFalse(StuckLogic::shouldAutoResolve(true));
 	}

@@ -6,63 +6,54 @@ namespace OCA\CustomerCheck\Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
 
-/** Bachus: company 360 is four granny zones + role cue, not a random inventory. */
+/** Bachus: company 360 is four focus tabs, not a long scroll with zone labels. */
 final class Company360ZonesContractTest extends TestCase
 {
-	public function testFourZonesAndRoleCueExist(): void
+	public function testFourFocusPanelsExist(): void
 	{
 		$html = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/company-detail.php');
-		foreach (['data-crm-zone="now"', 'data-crm-zone="sell"', 'data-crm-zone="money"', 'data-crm-zone="later"'] as $z) {
-			$this->assertStringContainsString($z, $html);
+		foreach (['today', 'deals', 'money', 'more'] as $panel) {
+			$this->assertStringContainsString('data-crm-focus-panel="' . $panel . '"', $html);
 		}
-		$this->assertStringContainsString('How to use this page', $html);
-		$this->assertStringContainsString('Buttons to add or change stay hidden', $html);
-		$this->assertStringContainsString('Work top to bottom: talk → people → deals → money.', $html);
-		$this->assertStringNotContainsString('Look-only role', $html);
-		$this->assertStringNotContainsString('You can edit. Work top to bottom', $html);
-		$this->assertStringContainsString('1 · Talk & people', $html);
-		$this->assertStringContainsString('2 · Sell & keep', $html);
-		$this->assertStringContainsString('3 · Money & files', $html);
-		$this->assertStringContainsString('4 · Setup & history', $html);
+		$this->assertStringNotContainsString('data-crm-zone="now"', $html);
+		$this->assertStringNotContainsString('2 · Sell & keep', $html);
+		$this->assertStringNotContainsString('How to use this page', $html);
 	}
 
-	public function testJumpPrimariesMatchWorkOrder(): void
+	public function testFocusTabLabelsInTemplate(): void
 	{
 		$html = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/company-detail.php');
-		$start = strpos($html, '$jumpNavItems');
-		$end = strpos($html, 'crm-jump-nav.php', (int)$start);
-		$chunk = substr($html, (int)$start, (int)$end - (int)$start);
-		foreach (["'#crm-glance'", "'#crm-communication'", "'#crm-persons'", "'#crm-deals'", "'#crm-billing'"] as $href) {
-			$this->assertStringContainsString($href, $chunk);
-			$this->assertStringContainsString("'primary' => true", $chunk);
-		}
-		$this->assertLessThan(strpos($chunk, "'#crm-communication'"), strpos($chunk, "'#crm-glance'"));
-		$this->assertLessThan(strpos($chunk, "'#crm-persons'"), strpos($chunk, "'#crm-communication'"));
-		$this->assertLessThan(strpos($chunk, "'#crm-deals'"), strpos($chunk, "'#crm-persons'"));
-		$this->assertLessThan(strpos($chunk, "'#crm-billing'"), strpos($chunk, "'#crm-deals'"));
+		$this->assertStringContainsString("\$l->t('Today')", $html);
+		$this->assertStringContainsString("\$l->t('Deals')", $html);
+		$this->assertStringContainsString("\$l->t('Bills & files')", $html);
+		$this->assertStringContainsString("\$l->t('Plan & links')", $html);
 	}
 
 	public function testIdentitySetupIsCollapsedDetails(): void
 	{
 		$html = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/company-detail.php');
 		$this->assertStringContainsString('id="crm-identity-links"', $html);
-		$this->assertStringContainsString('crm-card--collapsible" id="crm-identity-links"', $html);
-		$this->assertStringContainsString('Link apps (setup)', $html);
+		$this->assertStringContainsString('$identityMergedIntoBundle', $html);
 		$this->assertStringContainsString('$identityForceOpen', $html);
+		$this->assertStringContainsString('crm-identity-rows.php', $html);
+		$this->assertStringContainsString('One ProjectCheck or TicketCheck link unlocks', $html);
+		$this->assertStringNotContainsString('Link apps (setup)', $html);
 	}
 
 	public function testDomOrderPutsWorkBeforeSetup(): void
 	{
 		$html = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/company-detail.php');
 		$persons = strpos($html, 'id="crm-persons"');
+		$nextSteps = strpos($html, 'id="crm-next-steps"');
 		$deals = strpos($html, 'id="crm-deals"');
 		$billing = strpos($html, 'id="crm-billing"');
 		$identity = strpos($html, 'id="crm-identity-links"');
 		$plan = strpos($html, 'id="crm-account-plan"');
 		$this->assertNotFalse($persons);
-		$this->assertGreaterThan($persons, $deals);
+		$this->assertGreaterThan($persons, $nextSteps);
+		$this->assertGreaterThan($nextSteps, $deals);
 		$this->assertGreaterThan($deals, $billing);
-		$this->assertGreaterThan($billing, $plan);
-		$this->assertGreaterThan($plan, $identity);
+		$this->assertGreaterThan($billing, $identity);
+		$this->assertGreaterThan($identity, $plan);
 	}
 }

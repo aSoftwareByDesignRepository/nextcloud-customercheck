@@ -11,6 +11,7 @@ use OCA\CustomerCheck\Db\ActivityDueLog;
 use OCA\CustomerCheck\Db\ActivityDueLogMapper;
 use OCA\CustomerCheck\Db\ActivityMapper;
 use OCA\CustomerCheck\Db\CompanyMapper;
+use OCA\CustomerCheck\Support\DateMath;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\DB\Exception as DbException;
 use OCP\IConfig;
@@ -20,7 +21,9 @@ use Psr\Log\LoggerInterface;
  * Companion P2 — notify + push for open activities due today or overdue.
  *
  * Exactly-once: insert ledger row before dispatch; unique index absorbs races;
- * roll back the ledger row if dispatch throws so the next run retries.
+ * roll back the ledger row if dispatch throws / is skipped so the next run retries.
+ * Chunk query excludes already-ledged (activity, due) pairs so older claims cannot
+ * starve the rest of the due queue forever.
  */
 class ActivityDueReminderService
 {
@@ -59,7 +62,7 @@ class ActivityDueReminderService
 	{
 		$today = $this->timeFactory->getDateTime();
 		$todayYmd = $today->format('Y-m-d');
-		$due = $this->activities->findOpenDueUpTo($today, self::CHUNK);
+		$due = $this->activities->findOpenDueUpTo($today, self::CHUNK, null, true);
 		$sent = 0;
 		$skipped = 0;
 
@@ -95,6 +98,22 @@ class ActivityDueReminderService
 			return 'skipped';
 		}
 
+		$companyId = (int)$activity->getCompanyId();
+		$companyName = '';
+		$workspaceId = 0;
+		try {
+			$company = $this->companies->findById($companyId);
+			$companyName = (string)$company->getName();
+			$workspaceId = (int)($company->getWorkspaceId() ?? 0);
+		} catch (\Throwable) {
+			// Company missing — fail closed below.
+		}
+
+		// Never claim the unique ledger slot when we cannot fan out safely.
+		if ($workspaceId <= 0) {
+			return 'skipped';
+		}
+
 		$row = new ActivityDueLog();
 		$row->setActivityId($activityId);
 		$row->setDueDateSnap($due);
@@ -113,22 +132,7 @@ class ActivityDueReminderService
 		}
 
 		try {
-			$companyId = (int)$activity->getCompanyId();
-			$companyName = '';
-			$workspaceId = 0;
-			try {
-				$company = $this->companies->findById($companyId);
-				$companyName = (string)$company->getName();
-				$workspaceId = (int)($company->getWorkspaceId() ?? 0);
-			} catch (\Throwable) {
-				// Still notify with activity title alone.
-			}
-
-			$dueDay = new \DateTimeImmutable($dueYmd);
-			$todayDay = new \DateTimeImmutable($todayYmd);
-			$daysLate = $dueDay < $todayDay
-				? (int)$dueDay->diff($todayDay)->days
-				: 0;
+			$daysLate = max(0, DateMath::daysBetween($due, new \DateTimeImmutable($todayYmd)));
 
 			$params = [
 				'companyId' => $companyId,
@@ -139,25 +143,24 @@ class ActivityDueReminderService
 				'daysLate' => $daysLate,
 				'overdue' => $daysLate > 0 ? 1 : 0,
 			];
-			if ($workspaceId > 0) {
-				$this->notifications->notifyWorkspaceUsers(
-					$workspaceId,
-					Constants::NOTIFY_ACTIVITY_DUE,
-					'activity',
-					(string)$activityId,
-					$params,
-				);
+			$delivered = $this->notifications->notifyWorkspaceUsers(
+				$workspaceId,
+				Constants::NOTIFY_ACTIVITY_DUE,
+				'activity',
+				(string)$activityId,
+				$params,
+			);
+			if ($delivered === 0) {
+				// Empty membership — release so a later tick retries when members join.
+				$this->releaseClaim($row, $activityId, $dueYmd);
+
+				return 'skipped';
 			}
-			// No workspace → fail closed (never fan out company names instance-wide).
 
 			return 'sent';
 		} catch (\Throwable $e) {
-			// Allow retry on the next job tick.
-			try {
-				$this->ledger->delete($row);
-			} catch (\Throwable) {
-				$this->ledger->deleteByActivity($activityId);
-			}
+			// Allow retry on the next job tick — snap-scoped only (never wipe older dues).
+			$this->releaseClaim($row, $activityId, $dueYmd);
 			$this->logger->warning('CustomerCheck activity-due notify failed', [
 				'app' => Application::APP_ID,
 				'activityId' => $activityId,
@@ -165,6 +168,15 @@ class ActivityDueReminderService
 			]);
 
 			return 'failed';
+		}
+	}
+
+	private function releaseClaim(ActivityDueLog $row, int $activityId, string $dueYmd): void
+	{
+		try {
+			$this->ledger->delete($row);
+		} catch (\Throwable) {
+			$this->ledger->deleteByActivityAndDue($activityId, $dueYmd);
 		}
 	}
 }

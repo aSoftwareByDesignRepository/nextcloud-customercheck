@@ -242,6 +242,8 @@ final class DisplayLabelService
 			'reminder.sent' => $this->l10n->t('Renewal reminder sent'),
 			'reminder.skipped' => $this->l10n->t('Renewal reminder skipped'),
 			'deal.stage' => $this->l10n->t('Deal stage changed'),
+			'deal_checklist.assigned' => $this->l10n->t('Checklist task assigned'),
+			'deal_checklist.done' => $this->l10n->t('Checklist task done'),
 			'hours.logged' => $this->l10n->t('Hours logged'),
 			'import.linked' => $this->l10n->t('Import linked'),
 			'email.logged' => $this->l10n->t('Email logged'),
@@ -287,6 +289,9 @@ final class DisplayLabelService
 
 	/**
 	 * Locale-aware calendar date for Y-m-d (or parseable) strings shown in tables.
+	 *
+	 * Date-only values are anchored at noon so user-timezone formatting cannot
+	 * shift the calendar day backward (midnight UTC → previous evening locally).
 	 */
 	public function formatDate(?string $ymd): string
 	{
@@ -295,7 +300,11 @@ final class DisplayLabelService
 			return '—';
 		}
 		try {
-			$dt = new \DateTimeImmutable($raw);
+			if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $raw) === 1) {
+				$dt = new \DateTimeImmutable($raw . 'T12:00:00');
+			} else {
+				$dt = new \DateTimeImmutable($raw);
+			}
 		} catch (\Exception) {
 			return $raw;
 		}

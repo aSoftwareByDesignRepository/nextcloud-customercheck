@@ -19,6 +19,7 @@ final class WorkspaceSettingsSectionCatalog
 	public const SECTIONS = [
 		'mailbox',
 		'preferences',
+		'checklists',
 		'review-sources',
 		'circles',
 		'integrations',
@@ -38,6 +39,9 @@ final class WorkspaceSettingsSectionCatalog
 		'section-preferences' => 'preferences',
 		'section-preferences-heading' => 'preferences',
 		'crm-settings-me-form' => 'preferences',
+		'section-checklists' => 'checklists',
+		'section-checklists-heading' => 'checklists',
+		'crm-checklist-templates' => 'checklists',
 		'crm-review-sources' => 'review-sources',
 		'crm-review-sources-title' => 'review-sources',
 		'section-circles-roll-call' => 'circles',
@@ -61,7 +65,7 @@ final class WorkspaceSettingsSectionCatalog
 	{
 		return match ($section) {
 			'preferences', 'integrations' => true,
-			'mailbox', 'review-sources', 'circles' => $canManageWorkspace,
+			'mailbox', 'checklists', 'review-sources', 'circles' => $canManageWorkspace,
 			default => false,
 		};
 	}
@@ -80,6 +84,7 @@ final class WorkspaceSettingsSectionCatalog
 		return match ($section) {
 			'mailbox' => $l->t('Team & mailbox'),
 			'preferences' => $l->t('Your preferences'),
+			'checklists' => $l->t('Checklist templates'),
 			'review-sources' => $l->t('Review inbox sources'),
 			'circles' => $l->t('Weekly promise check'),
 			'integrations' => $l->t('Integrations'),
@@ -92,6 +97,7 @@ final class WorkspaceSettingsSectionCatalog
 		return match ($section) {
 			'mailbox' => $l->t('Mailbox'),
 			'preferences' => $l->t('Preferences'),
+			'checklists' => $l->t('Checklists'),
 			'review-sources' => $l->t('Review sources'),
 			'circles' => $l->t('Promises'),
 			'integrations' => $l->t('Integrations'),
@@ -104,6 +110,7 @@ final class WorkspaceSettingsSectionCatalog
 		return match ($section) {
 			'mailbox' => $l->t('Members, shared mailbox, and weekly limits for your team.'),
 			'preferences' => $l->t('How deals look for you.'),
+			'checklists' => $l->t('Reusable step lists for any deal — licenses, services, hardware, mixed carts. Make once, use on every order.'),
 			'review-sources' => $l->t('Which inboxes and folders feed Review.'),
 			'circles' => $l->t('Who owes a weekly promise check.'),
 			'integrations' => $l->t('Linked Check apps and how they show on companies.'),

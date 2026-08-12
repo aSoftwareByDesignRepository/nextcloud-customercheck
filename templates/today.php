@@ -66,7 +66,8 @@ $renderTodayTable = static function (array $items, bool $allowDone) use ($l, $ur
 			<tbody>
 			<?php foreach ($items as $item):
 				$activityId = (int)($item['activityId'] ?? 0);
-				$cta = (string)($item['cta'] ?? ($activityId > 0 ? 'done' : 'open'));
+				$checklistItemId = (int)($item['checklistItemId'] ?? 0);
+				$cta = (string)($item['cta'] ?? ($activityId > 0 || $checklistItemId > 0 ? 'done' : 'open'));
 				$why = trim((string)($item['why'] ?? $item['label'] ?? ''));
 				$companyName = trim((string)($item['companyName'] ?? ''));
 				$companyId = (int)($item['companyId'] ?? 0);
@@ -108,21 +109,42 @@ $renderTodayTable = static function (array $items, bool $allowDone) use ($l, $ur
 						$crmCompanyLinkLabel = $companyName !== '' ? $companyName : ($companyId > 0 ? $l->t('Company') : '—');
 						include __DIR__ . '/common/crm-company-link.php';
 					?></td>
-					<td data-label="<?php p($l->t('Due')); ?>" class="crm-today-due"><?php p($due !== '' ? $due : '—'); ?></td>
+					<td data-label="<?php p($l->t('Due')); ?>" class="crm-today-due"><?php
+						if ($due !== '' && $dueRaw !== '') {
+							?><time datetime="<?php p($dueRaw); ?>"><?php p($due); ?></time><?php
+						} else {
+							p('—');
+						}
+					?></td>
 					<td data-label="<?php p($l->t('Action')); ?>" class="crm-table-actions-col">
 						<div class="crm-table-actions">
 							<?php if ($activityId > 0 && $allowDone): ?>
 								<button type="button"
 									class="crm-btn crm-btn--sm crm-btn--primary"
 									data-crm-complete-activity="<?php p($activityId); ?>"
-									data-updated-at="<?php p($item['updatedAt'] ?? ''); ?>">
+									data-updated-at="<?php p($item['updatedAt'] ?? ''); ?>"
+									aria-label="<?php p($l->t('Mark done: %1$s (%2$s)', [$item['label'] ?? '', $companyName !== '' ? $companyName : $l->t('Company')])); ?>">
 									<?php p($l->t('Done')); ?>
 								</button>
+							<?php elseif ($checklistItemId > 0 && $allowDone): ?>
+								<button type="button"
+									class="crm-btn crm-btn--sm crm-btn--primary"
+									data-crm-complete-checklist="<?php p($checklistItemId); ?>"
+									data-updated-at="<?php p($item['updatedAt'] ?? ''); ?>"
+									aria-label="<?php p($l->t('Mark done: %1$s (%2$s)', [$item['label'] ?? '', $companyName !== '' ? $companyName : $l->t('Company')])); ?>">
+									<?php p($l->t('Done')); ?>
+								</button>
+								<?php if ($openHref !== ''): ?>
+									<a class="crm-btn crm-btn--sm crm-btn--ghost" href="<?php p($openHref); ?>">
+										<?php p($l->t('Open')); ?>
+									</a>
+								<?php endif; ?>
 							<?php elseif ($cta === 'claim' && $allowDone && (int)($item['dealId'] ?? 0) > 0): ?>
 								<button type="button"
 									class="crm-btn crm-btn--sm crm-btn--primary"
 									data-crm-claim-deal="<?php p((int)$item['dealId']); ?>"
 									data-updated-at="<?php p($item['updatedAt'] ?? ''); ?>"
+									aria-label="<?php p($l->t('Claim: %1$s (%2$s)', [$item['label'] ?? '', $companyName !== '' ? $companyName : $l->t('Company')])); ?>"
 									<?php if ($openHref !== ''): ?>data-open-href="<?php p($openHref); ?>"<?php endif; ?>>
 									<?php p($ctaLabel('claim')); ?>
 								</button>

@@ -11,6 +11,11 @@
 		if (typeof OC !== 'undefined' && OC.requestToken) {
 			return OC.requestToken;
 		}
+		const head = document.querySelector('head');
+		const fromHead = head ? head.getAttribute('data-requesttoken') : '';
+		if (fromHead) {
+			return fromHead;
+		}
 		const meta = document.querySelector('meta[name="requesttoken"]');
 		return meta ? meta.getAttribute('content') : '';
 	}
@@ -32,6 +37,35 @@
 			return path;
 		}
 		return path + (path.indexOf('?') >= 0 ? '&' : '?') + 'workspaceId=' + encodeURIComponent(String(ws));
+	}
+
+	function looksLikeHtml(text) {
+		const t = String(text || '').trim();
+		if (!t) return false;
+		return t.charAt(0) === '<' || /<\/?[a-z][\s\S]*>/i.test(t.slice(0, 200));
+	}
+
+	function humanMessageFromBody(text, status) {
+		const raw = String(text || '').trim();
+		if (!raw) {
+			return status ? ('HTTP ' + status) : 'Empty response';
+		}
+		if (looksLikeHtml(raw)) {
+			if (status === 503) {
+				return 'Server temporarily unavailable (HTTP 503). Wait a moment and try again — Apache may be busy (e.g. installing PHP extensions).';
+			}
+			if (status === 502 || status === 504) {
+				return 'Server gateway error (HTTP ' + status + '). Try again in a moment.';
+			}
+			if (status === 500) {
+				return 'Server error (HTTP 500). Check Nextcloud logs — the API returned an HTML error page instead of JSON.';
+			}
+			return 'Server returned an HTML error page instead of JSON' + (status ? ' (HTTP ' + status + ')' : '') + '.';
+		}
+		if (raw.length > 280) {
+			return raw.slice(0, 277) + '…';
+		}
+		return raw;
 	}
 
 	async function request(method, path, body, extraHeaders) {
@@ -58,13 +92,22 @@
 			try {
 				payload = JSON.parse(text);
 			} catch (e) {
-				payload = { success: false, error: 'PARSE_ERROR', message: text };
+				payload = {
+					success: false,
+					error: 'PARSE_ERROR',
+					message: humanMessageFromBody(text, response.status),
+				};
 			}
 		}
 		if (!response.ok) {
-			const err = new Error((payload && payload.message) || ('HTTP ' + response.status));
+			const msg = (payload && payload.message)
+				? humanMessageFromBody(payload.message, response.status)
+				: ('HTTP ' + response.status);
+			const err = new Error(msg);
 			err.status = response.status;
-			err.payload = payload;
+			err.payload = payload && typeof payload === 'object'
+				? Object.assign({}, payload, { message: msg })
+				: { success: false, error: 'HTTP_ERROR', message: msg };
 			throw err;
 		}
 		return payload;

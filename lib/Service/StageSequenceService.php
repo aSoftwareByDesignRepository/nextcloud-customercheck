@@ -11,6 +11,7 @@ use OCA\CustomerCheck\Db\Deal;
 use OCA\CustomerCheck\Db\SeqLog;
 use OCA\CustomerCheck\Db\SeqLogMapper;
 use OCA\CustomerCheck\Support\DateMath;
+use OCA\CustomerCheck\Support\DbTransaction;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\DB\Exception as DbException;
 use OCP\IDBConnection;
@@ -69,19 +70,19 @@ class StageSequenceService
 		}
 
 		$dealId = (int)$deal->getId();
-		$this->db->beginTransaction();
+		$ownsTxn = DbTransaction::begin($this->db);
 		try {
 			if (!$this->claimSequence($dealId, $sequenceId)) {
-				$this->db->commit();
+				DbTransaction::commit($this->db, $ownsTxn);
 				return [];
 			}
 
 			foreach ($this->stepsFor($sequenceId) as $step) {
 				$this->createActivity($deal, $sequenceId, $step['title'], $step['type'], $step['offsetDays'], $actor);
 			}
-			$this->db->commit();
+			DbTransaction::commit($this->db, $ownsTxn);
 		} catch (\Throwable $e) {
-			$this->db->rollBack();
+			DbTransaction::rollBack($this->db, $ownsTxn);
 			throw $e;
 		}
 

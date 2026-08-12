@@ -107,6 +107,8 @@ class AgreementMapper extends QBMapper
 	 * Agreements the renewal engine watches: they have a `valid_until` and are
 	 * not in a terminal status (§6.1). Chunked for the 10k-agreement budget (§15).
 	 *
+	 * Ordered by `id` so offset pagination stays stable across job ticks.
+	 *
 	 * @return Agreement[]
 	 */
 	public function findRenewalCandidates(int $limit = 500, int $offset = 0, ?int $workspaceId = null): array
@@ -128,6 +130,43 @@ class AgreementMapper extends QBMapper
 		$qb
 			->setMaxResults(max(1, min(5000, $limit)))
 			->setFirstResult(max(0, $offset));
+
+		return $this->findEntities($qb);
+	}
+
+	/**
+	 * Today urgency window: non-draft, non-terminal agreements whose end date
+	 * falls between `$floor` and `$horizon` (inclusive), soonest first.
+	 *
+	 * Unlike {@see findRenewalCandidates}, this is not id-paginated — it must
+	 * surface the soonest expiries even when older rows have lower ids.
+	 *
+	 * @return Agreement[]
+	 */
+	public function findTodayRenewalCandidates(
+		\DateTimeInterface $floor,
+		\DateTimeInterface $horizon,
+		int $limit = 2000,
+		?int $workspaceId = null,
+	): array {
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('*')
+			->from($this->getTableName())
+			->where($qb->expr()->isNotNull('valid_until'))
+			->andWhere($qb->expr()->notIn(
+				'status',
+				$qb->createNamedParameter(Constants::AGREEMENT_TERMINAL_STATUSES, IQueryBuilder::PARAM_STR_ARRAY)
+			))
+			->andWhere($qb->expr()->neq('status', $qb->createNamedParameter('draft')))
+			->andWhere($qb->expr()->gte('valid_until', $qb->createNamedParameter($floor->format('Y-m-d'))))
+			->andWhere($qb->expr()->lte('valid_until', $qb->createNamedParameter($horizon->format('Y-m-d'))))
+			->orderBy('valid_until', 'ASC')
+			->addOrderBy('id', 'ASC')
+			->setMaxResults(max(1, min(5000, $limit)));
+		$this->excludeArchivedCompanies($qb);
+		if ($workspaceId !== null && $workspaceId > 0) {
+			$this->restrictToWorkspace($qb, $workspaceId);
+		}
 
 		return $this->findEntities($qb);
 	}

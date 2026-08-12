@@ -37,6 +37,7 @@ class MobilePushService
 		Constants::NOTIFY_REMINDER,
 		Constants::NOTIFY_DIGEST,
 		Constants::NOTIFY_ACTIVITY_DUE,
+		Constants::NOTIFY_DEAL_CHECKLIST,
 	];
 
 	private const REQUEST_TIMEOUT = 10;
@@ -181,6 +182,14 @@ class MobilePushService
 		if ($workspaceId > 0) {
 			$data['workspaceId'] = $workspaceId;
 		}
+		$dealId = (int)($params['dealId'] ?? 0);
+		if ($dealId > 0) {
+			$data['dealId'] = $dealId;
+		}
+		$checklistItemId = (int)($params['checklistItemId'] ?? 0);
+		if ($checklistItemId > 0) {
+			$data['checklistItemId'] = $checklistItemId;
+		}
 
 		return $data;
 	}
@@ -209,6 +218,7 @@ class MobilePushService
 			Constants::NOTIFY_REMINDER => $l->t('Renewal reminder'),
 			Constants::NOTIFY_DIGEST => $l->t('CustomerCheck weekly digest'),
 			Constants::NOTIFY_ACTIVITY_DUE => $l->t('Activity due'),
+			Constants::NOTIFY_DEAL_CHECKLIST => $l->t('Deal checklist'),
 			default => $l->t('CustomerCheck'),
 		};
 	}
@@ -222,6 +232,7 @@ class MobilePushService
 		$label = trim((string)($p['label'] ?? ''));
 
 		$title = trim((string)($p['title'] ?? ''));
+		$dealTitle = trim((string)($p['dealTitle'] ?? ''));
 
 		return match ($subject) {
 			Constants::NOTIFY_REMINDER => $company !== ''
@@ -232,7 +243,16 @@ class MobilePushService
 				[(int)($p['renewals'] ?? 0), (int)($p['overdue'] ?? 0)],
 			),
 			Constants::NOTIFY_ACTIVITY_DUE => $this->activityDueBody($l, $company, $title, (int)($p['daysLate'] ?? 0)),
+			Constants::NOTIFY_DEAL_CHECKLIST => $this->dealChecklistBody($l, $company, $dealTitle, $title),
 			default => $l->t('Open CustomerCheck.'),
 		};
+	}
+
+	private function dealChecklistBody(IL10N $l, string $company, string $dealTitle, string $task): string
+	{
+		$what = $task !== '' ? $task : $l->t('Checklist task');
+		$where = $dealTitle !== '' ? $dealTitle : ($company !== '' ? $company : $l->t('a deal'));
+
+		return $l->t('%1$s on %2$s — open Today.', [$what, $where]);
 	}
 }

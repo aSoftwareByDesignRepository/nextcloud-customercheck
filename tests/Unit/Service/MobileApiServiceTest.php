@@ -132,6 +132,26 @@ final class MobileApiServiceTest extends TestCase
 		$this->assertSame(['type' => 'deal', 'id' => 77], $mapped['deepLink']);
 	}
 
+	public function testMapsDealChecklistItem(): void
+	{
+		$mapped = MobileApiService::mapTodayItem([
+			'kind' => 'deal_checklist',
+			'companyId' => 12,
+			'companyName' => 'ACME',
+			'checklistItemId' => 42,
+			'label' => 'Send invoice',
+			'dealTitle' => 'License kit',
+			'dueDate' => '2099-01-01',
+		]);
+
+		$this->assertSame('deal_checklist', $mapped['kind']);
+		$this->assertSame('warning', $mapped['urgency']);
+		$this->assertSame('dcl:42', $mapped['id']);
+		$this->assertSame('ACME — Send invoice', $mapped['title']);
+		$this->assertSame('License kit · 2099-01-01', $mapped['subtitle']);
+		$this->assertSame(['type' => 'deal_checklist', 'id' => 42], $mapped['deepLink']);
+	}
+
 	// ── normaliseActivityBody ───────────────────────────────────────────
 
 	public function testNormaliseMapsCompanionAliases(): void

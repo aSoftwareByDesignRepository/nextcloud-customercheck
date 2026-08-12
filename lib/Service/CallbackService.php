@@ -33,13 +33,15 @@ class CallbackService
 		$this->companies->get($companyId);
 
 		$dueRaw = trim((string)($input['dueDate'] ?? ''));
-		if ($dueRaw === '' || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $dueRaw)) {
+		$dueParsed = DateMath::parseStrictDate($dueRaw);
+		if ($dueParsed === null) {
 			throw ValidationException::field(
 				Constants::ERR_CALLBACK_DUE_REQUIRED,
 				'dueDate',
 				$this->l10n->t('Pick a due date for the callback.'),
 			);
 		}
+		$dueRaw = $dueParsed->format('Y-m-d');
 
 		$personId = isset($input['personId']) ? (int)$input['personId'] : 0;
 		$personName = null;

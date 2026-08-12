@@ -14,7 +14,8 @@ final class StuckLogic
 	 *   chaseCount?: int,
 	 *   promiseOverdue?: int,
 	 *   planStalled?: bool,
-	 *   commitmentMissed?: int
+	 *   commitmentMissed?: int,
+	 *   checklistOverdue?: int
 	 * } $signals
 	 */
 	public static function isStuck(array $signals): bool
@@ -22,7 +23,8 @@ final class StuckLogic
 		return (int)($signals['chaseCount'] ?? 0) > 0
 			|| (int)($signals['promiseOverdue'] ?? 0) > 0
 			|| !empty($signals['planStalled'])
-			|| (int)($signals['commitmentMissed'] ?? 0) > 0;
+			|| (int)($signals['commitmentMissed'] ?? 0) > 0
+			|| (int)($signals['checklistOverdue'] ?? 0) > 0;
 	}
 
 	/**
@@ -30,14 +32,16 @@ final class StuckLogic
 	 *   chaseCount?: int,
 	 *   promiseOverdue?: int,
 	 *   planStalled?: bool,
-	 *   commitmentMissed?: int
+	 *   commitmentMissed?: int,
+	 *   checklistOverdue?: int
 	 * } $signals
 	 */
 	public static function stuckScore(array $signals): int
 	{
 		$score = (int)($signals['chaseCount'] ?? 0)
 			+ (int)($signals['promiseOverdue'] ?? 0)
-			+ (int)($signals['commitmentMissed'] ?? 0);
+			+ (int)($signals['commitmentMissed'] ?? 0)
+			+ (int)($signals['checklistOverdue'] ?? 0);
 		if (!empty($signals['planStalled'])) {
 			$score++;
 		}

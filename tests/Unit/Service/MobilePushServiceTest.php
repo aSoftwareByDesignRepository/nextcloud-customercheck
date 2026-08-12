@@ -43,11 +43,12 @@ final class MobilePushServiceTest extends TestCase
 		);
 	}
 
-	public function testIsPushSubjectOnlyReminderDigestAndActivityDue(): void
+	public function testIsPushSubjectOnlyReminderDigestActivityDueAndDealChecklist(): void
 	{
 		self::assertTrue(MobilePushService::isPushSubject(Constants::NOTIFY_REMINDER));
 		self::assertTrue(MobilePushService::isPushSubject(Constants::NOTIFY_DIGEST));
 		self::assertTrue(MobilePushService::isPushSubject(Constants::NOTIFY_ACTIVITY_DUE));
+		self::assertTrue(MobilePushService::isPushSubject(Constants::NOTIFY_DEAL_CHECKLIST));
 		self::assertFalse(MobilePushService::isPushSubject(Constants::NOTIFY_LEAD));
 		self::assertFalse(MobilePushService::isPushSubject(Constants::NOTIFY_QUOTA80));
 	}
@@ -138,5 +139,20 @@ final class MobilePushServiceTest extends TestCase
 		]);
 		self::assertSame(7, $data['workspaceId']);
 		self::assertArrayNotHasKey('companyId', $data);
+	}
+
+	public function testPushDataCarriesDealChecklistIds(): void
+	{
+		$data = MobilePushService::pushData(Constants::NOTIFY_DEAL_CHECKLIST, [
+			'companyId' => 12,
+			'workspaceId' => 4,
+			'dealId' => 88,
+			'checklistItemId' => 42,
+		]);
+		self::assertSame(Constants::NOTIFY_DEAL_CHECKLIST, $data['type']);
+		self::assertSame(12, $data['companyId']);
+		self::assertSame(4, $data['workspaceId']);
+		self::assertSame(88, $data['dealId']);
+		self::assertSame(42, $data['checklistItemId']);
 	}
 }

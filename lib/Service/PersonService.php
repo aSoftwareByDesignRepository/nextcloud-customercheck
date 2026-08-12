@@ -272,7 +272,7 @@ class PersonService
 		$companyId = 0;
 		$name = '';
 
-		$this->db->beginTransaction();
+		$ownsTxn = DbTransaction::begin($this->db);
 		try {
 			$person = $this->get($id);
 			$companyId = (int)$person->getCompanyId();
@@ -285,9 +285,9 @@ class PersonService
 			$name = (string)$person->getName();
 
 			$this->personMapper->delete($person);
-			$this->db->commit();
+			DbTransaction::commit($this->db, $ownsTxn);
 		} catch (\Throwable $e) {
-			$this->db->rollBack();
+			DbTransaction::rollBack($this->db, $ownsTxn);
 			throw $e;
 		}
 
@@ -318,7 +318,8 @@ class PersonService
 	): Person {
 		$isInsert = $person->getId() === null;
 
-		$this->db->beginTransaction();
+		// Nested-safe: companion idempotency::once may already own a TX.
+		$ownsTxn = DbTransaction::begin($this->db);
 		try {
 			$this->companyService->lockRow($companyId);
 
@@ -339,9 +340,9 @@ class PersonService
 				$person = $this->personMapper->update($person);
 			}
 
-			$this->db->commit();
+			DbTransaction::commit($this->db, $ownsTxn);
 		} catch (\Throwable $e) {
-			$this->db->rollBack();
+			DbTransaction::rollBack($this->db, $ownsTxn);
 			throw $e;
 		}
 

@@ -18,6 +18,8 @@ $de = json_decode((string) file_get_contents($base . '/de.json'), true, 512, JSO
 /** @var array<string, true> Brand names, technical tokens, and bilingual allowlist. */
 $allowExact = [
 	'CustomerCheck' => true,
+	'MaintenanceCheck' => true,
+	'To-dos' => true,
 	'ProjectCheck' => true,
 	'TicketCheck' => true,
 	'InvoiceCheck' => true,
@@ -47,6 +49,7 @@ $allowExact = [
 	'Board' => true,
 	'Lead' => true,
 	'Partner' => true,
+	'Check Partner' => true,
 	'Auto' => true,
 	'App' => true,
 	'Circle' => true,
@@ -99,11 +102,26 @@ $bannedSubstrings = [
 	'Fortschrittlich',
 	'Armaturenbrett',
 	'Beladung',
+	'Workspace',
+	'Appweiter',
+	'Allowlist',
+	'Kundencheck noch heute',
+];
+
+/**
+ * Formal address must not appear in UI copy (Bachus / granny: consistent du).
+ * Allowlisted keys keep a correct feminine/neuter "Sie" (= it) or similar.
+ *
+ * @var array<string, true>
+ */
+$allowFormalSieKeys = [
+	'This marks the promise as cancelled. It will no longer appear as open.' => true,
 ];
 
 $failures = [];
 $bannedHits = [];
 $glossaryHits = [];
+$formalHits = [];
 
 foreach ($glossary as $key => $rule) {
 	$got = $de['translations'][$key] ?? null;
@@ -129,6 +147,11 @@ foreach ($de['translations'] as $key => $value) {
 		if (str_contains($value, $bad)) {
 			$bannedHits[] = [$key, $value, $bad];
 		}
+	}
+
+	if (!($allowFormalSieKeys[$key] ?? false)
+		&& preg_match('/\b(Sie|Ihnen|Ihr|Ihre|Ihren|Ihrem|Ihrer|Ihres)\b/u', $value) === 1) {
+		$formalHits[] = [$key, $value];
 	}
 
 	$enValue = $en['translations'][$key] ?? $key;
@@ -166,6 +189,13 @@ if ($bannedHits !== []) {
 		fwrite(STDERR, "  - contains \"{$bad}\": {$value}\n");
 	}
 }
+if ($formalHits !== []) {
+	$ok = false;
+	fwrite(STDERR, "Formal Sie-address still present (" . count($formalHits) . ") — use consistent du:\n");
+	foreach ($formalHits as [$key, $value]) {
+		fwrite(STDERR, "  - {$key}: {$value}\n");
+	}
+}
 if ($failures !== []) {
 	$ok = false;
 	fwrite(STDERR, "German translations still identical to English (" . count($failures) . "):\n");
@@ -179,5 +209,5 @@ if (!$ok) {
 	exit(1);
 }
 
-echo 'l10n DE quality OK (' . count($de['translations']) . " keys; glossary locked; no banned calques; no leftover English prose).\n";
+echo 'l10n DE quality OK (' . count($de['translations']) . " keys; glossary locked; no banned calques; consistent du; no leftover English prose).\n";
 exit(0);

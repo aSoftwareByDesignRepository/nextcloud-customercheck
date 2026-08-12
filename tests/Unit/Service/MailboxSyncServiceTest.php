@@ -8,6 +8,7 @@ use OCA\CustomerCheck\Constants;
 use OCA\CustomerCheck\Service\MailboxService;
 use OCA\CustomerCheck\Service\MailboxSyncService;
 use OCA\CustomerCheck\Service\NotificationService;
+use OCA\CustomerCheck\Service\RateLimitService;
 use OCA\CustomerCheck\Service\WorkspaceService;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\IDBConnection;
@@ -41,6 +42,8 @@ final class MailboxSyncServiceTest extends TestCase
 	private LoggerInterface $logger;
 	/** @var IL10N&MockObject */
 	private IL10N $l10n;
+	/** @var RateLimitService&MockObject */
+	private RateLimitService $rateLimit;
 
 	protected function setUp(): void
 	{
@@ -53,6 +56,8 @@ final class MailboxSyncServiceTest extends TestCase
 		$this->time = $this->createMock(ITimeFactory::class);
 		$this->logger = $this->createMock(LoggerInterface::class);
 		$this->l10n = $this->createMock(IL10N::class);
+		$this->rateLimit = $this->createMock(RateLimitService::class);
+		$this->rateLimit->method('allow')->willReturn(true);
 		$this->l10n->method('t')->willReturnCallback(static fn (string $s): string => $s);
 		$this->time->method('getDateTime')->willReturn(new \DateTime('2026-07-31 12:00:00'));
 	}
@@ -69,6 +74,7 @@ final class MailboxSyncServiceTest extends TestCase
 			$this->time,
 			$this->logger,
 			$this->l10n,
+			$this->rateLimit,
 		);
 	}
 
@@ -215,6 +221,55 @@ final class MailboxSyncServiceTest extends TestCase
 
 		$this->assertFalse($result['ok']);
 		$this->assertNotSame('', $result['message']);
+		$this->assertContains($result['reason'] ?? null, ['validation', 'extension']);
+	}
+
+	public function testTestConnectionNormalizesUsernameBeforeValidation(): void
+	{
+		$result = $this->service()->testConnection([
+			'imapHost' => '',
+			'username' => '  (m06367b4)  ',
+			'password' => 'x',
+		]);
+		$this->assertFalse($result['ok']);
+		$this->assertContains($result['reason'] ?? null, ['validation', 'extension']);
+		if (($result['reason'] ?? '') === 'validation') {
+			$this->assertStringContainsString('required', strtolower($result['message']));
+		}
+	}
+
+	public function testTestConnectionFallsBackToLiveProbeWhenImapMissing(): void
+	{
+		if (function_exists('imap_open')) {
+			$this->markTestSkipped('php-imap present — live-probe fallback not exercised');
+		}
+		$result = $this->service()->testConnection([
+			'imapHost' => 'w01d1cf3.kasserver.com',
+			'imapPort' => 993,
+			'username' => 'info@software-by-design.de (m06367b4)',
+			'password' => 'definitely-wrong-' . bin2hex(random_bytes(3)),
+		]);
+		$this->assertFalse($result['ok']);
+		$this->assertSame('live_probe', $result['via'] ?? null);
+		$this->assertNotSame('extension', $result['reason'] ?? 'extension');
+		$this->assertContains($result['reason'] ?? '', ['auth', 'network', 'unknown']);
+	}
+
+	public function testMailboxSpecBuilderUsesNovalidateFlag(): void
+	{
+		$src = (string)file_get_contents(dirname(__DIR__, 3) . '/lib/Service/MailboxSyncService.php');
+		$this->assertStringContainsString('ImapConnection::buildMailboxRoot', $src);
+		$this->assertStringContainsString('failedTestResult', $src);
+		$this->assertStringContainsString('loadMailboxSecret', $src);
+		$this->assertStringContainsString('testConnectionViaLiveProbe', $src);
+		$this->assertStringContainsString('doSyncViaLiveProbe', $src);
+		$this->assertStringContainsString('return $this->doSyncViaLiveProbe($mailboxId, $workspaceId, $row);', $src);
+		$this->assertStringContainsString('ImapLiveProbe::fetchRecentMessages', $src);
+		$this->assertStringContainsString('ImapLiveProbe::probeLogin', $src);
+		$controller = (string)file_get_contents(dirname(__DIR__, 3) . '/lib/Controller/PersonaApiController.php');
+		$this->assertStringContainsString("\$body['workspaceId'] = \$workspaceId;", $controller);
+		$this->assertStringContainsString('function syncMailbox', $controller);
+		$this->assertStringContainsString('private readonly IL10N $l10n', $controller);
 	}
 
 	public function testIngestBatchCapsAtMailboxSyncCap(): void

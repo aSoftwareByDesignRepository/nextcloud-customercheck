@@ -30,6 +30,8 @@ test.describe('Bachus company 360 effortless flows', () => {
     await expect(page.locator('#crm-welcome-coach [data-crm-trigger="crm-schedule-callback"]')).toBeVisible();
     await expect(page.locator('#crm-persons .crm-empty-state [data-crm-trigger="crm-add-person"]')).toHaveCount(0);
     await expect(page.locator('#crm-360-role-title')).toHaveCount(0);
+    // One coach only — no duplicate Schnellstart card above the welcome coach.
+    await expect(page.locator('#crm-quickstart-company-detail')).toHaveCount(0);
 
     // Coach CTA opens Add person (name required only).
     await page.locator('#crm-welcome-coach [data-crm-trigger="crm-add-person"]').click();
@@ -100,11 +102,13 @@ test.describe('Bachus company 360 effortless flows', () => {
     await form.locator('button[type="submit"]').click();
     await page.waitForLoadState('networkidle');
     await expect(page.locator('#crm-activities')).toBeVisible();
-    // Localized date should not be raw ISO-only in common locales (may still contain digits).
-    const dueCell = page.locator('#crm-activities table tbody tr').first().locator('td').nth(1);
-    await expect(dueCell).toBeVisible();
-    const dueText = (await dueCell.innerText()).trim();
+    const row = page.locator('#crm-activities .crm-todo-list__item').first();
+    await expect(row).toBeVisible();
+    await expect(row.locator('.crm-todo-list__meta')).toBeVisible();
+    const dueText = (await row.locator('.crm-todo-list__meta').innerText()).trim();
     expect(dueText === '' || dueText === '—').toBeFalsy();
+    await expect(row.locator('[data-crm-complete-activity]')).toBeVisible();
+    await expect(row.locator('details.crm-more-menu')).toHaveCount(0);
 
     const results = await new AxeBuilder({ page })
       .include('#crm-main-content')

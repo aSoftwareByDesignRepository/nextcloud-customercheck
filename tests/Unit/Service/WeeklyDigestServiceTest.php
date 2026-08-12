@@ -32,6 +32,7 @@ class WeeklyDigestServiceTest extends TestCase
 		int $unpaid = 0,
 		int $quota80 = 0,
 		array $workspaces = [],
+		?array $members = null,
 	): WeeklyDigestService {
 		$config = $this->createMock(IConfig::class);
 		$config->method('getAppValue')->willReturnCallback(
@@ -77,10 +78,14 @@ class WeeklyDigestServiceTest extends TestCase
 		$wsService = $this->createMock(WorkspaceService::class);
 		$wsService->method('listAll')->willReturn($workspaces);
 		$wsService->method('getSettings')->willReturn(['digestEnabled' => true, 'wipLimit' => 5]);
-		$member = new WorkspaceMember();
-		$member->setUserId('alex');
-		$member->setRole('manager');
-		$wsService->method('listMembers')->willReturn($workspaces === [] ? [] : [$member]);
+		if ($members !== null) {
+			$wsService->method('listMembers')->willReturn($members);
+		} else {
+			$member = new WorkspaceMember();
+			$member->setUserId('alex');
+			$member->setRole('manager');
+			$wsService->method('listMembers')->willReturn($workspaces === [] ? [] : [$member]);
+		}
 
 		$brief = $this->createMock(BriefService::class);
 		$brief->method('build')->willReturn([
@@ -157,6 +162,46 @@ class WeeklyDigestServiceTest extends TestCase
 		$result = $s->run(new \DateTimeImmutable('2026-07-20 07:00:00'));
 		$this->assertSame(1, $result['sent']);
 		$this->assertSame([1], $result['workspaces']);
+	}
+
+	public function testNoEligibleRecipientsNeverClaimsWeek(): void
+	{
+		$viewer = new WorkspaceMember();
+		$viewer->setUserId('viewer');
+		$viewer->setRole('viewer');
+		$s = $this->make(true, 1, 7, [], true, 0, 0, [$this->sampleWorkspace()], [$viewer]);
+		$result = $s->run(new \DateTimeImmutable('2026-07-20 07:00:00'));
+		$this->assertSame(0, $result['sent']);
+		$this->assertSame([], $result['workspaces']);
+	}
+
+	public function testCollectCountsPassesWorkspaceToToday(): void
+	{
+		$config = $this->createMock(IConfig::class);
+		$config->method('getAppValue')->willReturn('1');
+		$today = $this->createMock(TodayService::class);
+		$today->expects($this->once())->method('build')->with(
+			$this->isInstanceOf(\DateTimeInterface::class),
+			7,
+		)->willReturn(['items' => []]);
+		$money = $this->createMock(MoneyService::class);
+		$money->method('overview')->willReturn(['items' => [], 'meta' => ['total' => 0]]);
+		$quota = $this->createMock(QuotaService::class);
+		$quota->method('partnerQuotaOverview')->willReturn([]);
+		$svc = new WeeklyDigestService(
+			$this->createMock(DigestLogMapper::class),
+			$today,
+			$money,
+			$quota,
+			$this->createMock(NotificationService::class),
+			$this->createMock(WorkspaceService::class),
+			$this->createMock(BriefService::class),
+			$config,
+			$this->createMock(ITimeFactory::class),
+			$this->createMock(IURLGenerator::class),
+			$this->createMock(IL10N::class),
+		);
+		$svc->collectCounts(new \DateTimeImmutable('2026-07-20'), 7);
 	}
 
 	public function testCollectCountsIncludesUnpaidAndQuota(): void

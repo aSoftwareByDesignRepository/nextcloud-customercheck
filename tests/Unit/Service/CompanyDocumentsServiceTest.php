@@ -175,6 +175,53 @@ final class CompanyDocumentsServiceTest extends TestCase
 		$this->assertSame([], $this->svc->searchFolders('', 'ab'));
 	}
 
+	public function testUploadIntoCompanyFolderWritesNewFile(): void
+	{
+		$company = $this->companyFixture(9);
+		$company->setFilesFolderId(42);
+		$userFolder = $this->createMock(Folder::class);
+		$folder = $this->createMock(Folder::class);
+		$file = $this->createMock(File::class);
+		$userFolder->method('getId')->willReturn(1);
+		$userFolder->method('getById')->with(42)->willReturn([$folder]);
+		$folder->method('getId')->willReturn(42);
+		$folder->method('nodeExists')->with('invoice.pdf')->willReturn(false);
+		$folder->expects($this->once())->method('newFile')->with('invoice.pdf')->willReturn($file);
+		$file->expects($this->once())->method('putContent')->with('%PDF');
+		$file->method('getId')->willReturn(99);
+		$file->method('getName')->willReturn('invoice.pdf');
+
+		$this->root->method('getUserFolder')->with('alice')->willReturn($userFolder);
+		$this->companies->method('get')->with(9)->willReturn($company);
+
+		$out = $this->svc->uploadIntoCompanyFolder(9, 'alice', 'invoice.pdf', '%PDF');
+		$this->assertSame(99, $out['fileId']);
+		$this->assertSame('invoice.pdf', $out['name']);
+	}
+
+	public function testUploadIntoCompanyFolderRejectsPathSeparatorsInName(): void
+	{
+		$company = $this->companyFixture(9);
+		$company->setFilesFolderId(42);
+		$userFolder = $this->createMock(Folder::class);
+		$folder = $this->createMock(Folder::class);
+		$file = $this->createMock(File::class);
+		$userFolder->method('getId')->willReturn(1);
+		$userFolder->method('getById')->with(42)->willReturn([$folder]);
+		$folder->method('getId')->willReturn(42);
+		$folder->method('nodeExists')->willReturn(false);
+		$folder->expects($this->once())->method('newFile')->with('evil.txt')->willReturn($file);
+		$file->method('putContent');
+		$file->method('getId')->willReturn(7);
+		$file->method('getName')->willReturn('evil.txt');
+		$this->root->method('getUserFolder')->willReturn($userFolder);
+		$this->companies->method('get')->willReturn($company);
+
+		$out = $this->svc->uploadIntoCompanyFolder(9, 'alice', '../evil.txt', 'x');
+		$this->assertSame('evil.txt', $out['name']);
+		$this->assertSame(7, $out['fileId']);
+	}
+
 	private function companyFixture(int $id): Company
 	{
 		$c = new Company();

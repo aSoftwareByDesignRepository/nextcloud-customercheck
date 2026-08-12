@@ -41,15 +41,16 @@ test.describe('Simplified core UX journeys', () => {
     await more.locator('summary').click();
     await expect(page.locator('#crm-company-gdpr-erase')).toBeVisible();
 
-    // Jump bar: primary chips + More (Command Center section inventory).
-    const jump = page.locator('[data-crm-jump-nav="1"]');
-    await expect(jump.locator('.crm-jump-nav__list').first().locator('.crm-jump-nav__link')).toHaveCount(5);
-    await expect(jump.locator('.crm-jump-nav__more')).toBeVisible();
-    await expect(jump.locator('.crm-jump-nav__link')).toHaveCount(17);
+    // Focus tabs: one panel at a time (Pipedrive-style).
+    const focus = page.locator('[data-crm-360-focus="1"]');
+    await expect(focus.locator('[data-crm-focus-tab]')).toHaveCount(4);
+    await expect(focus.locator('[data-crm-focus-tab="today"][aria-selected="true"]')).toBeVisible();
 
-    // New agreement keeps company context (EN or DE label).
-    const newAg = page.locator('a', { hasText: /New agreement|Neue Vereinbarung/i }).first();
+    // New license keeps company context (EN or DE label) — lives on Deals tab.
+    await focus.locator('[data-crm-focus-tab="deals"]').click();
+    const newAg = page.locator('a', { hasText: /New license|Neue Lizenz/i }).first();
     await expect(newAg).toHaveAttribute('href', /companyId=\d+/);
+    await focus.locator('[data-crm-focus-tab="today"]').click();
 
     // Add person via coach (header Add person is hidden while coach owns the CTA).
     await page.locator('#crm-welcome-coach [data-crm-trigger="crm-add-person"]').click();

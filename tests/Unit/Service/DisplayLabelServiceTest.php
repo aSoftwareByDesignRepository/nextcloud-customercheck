@@ -204,9 +204,11 @@ final class DisplayLabelServiceTest extends TestCase
 		$this->assertSame('—', $this->labels->formatDate(null));
 		$this->assertSame('—', $this->labels->formatDate(''));
 		$this->assertSame('—', $this->labels->formatDate('—'));
-		$this->assertSame('2026-08-03 00:00', $this->labels->formatDate('2026-08-03'));
+		$this->assertSame('2026-08-03 12:00', $this->labels->formatDate('2026-08-03'));
 		$this->assertSame('not-a-date', $this->labels->formatDate('not-a-date'));
 		$this->assertSame('2026-08-03 14:30', $this->labels->formatDateTime('2026-08-03T14:30:00+00:00'));
 		$this->assertSame('—', $this->labels->formatDateTime(''));
+		// Date-only stays on the same calendar day even when formatted via datetime mock.
+		$this->assertStringStartsWith('2026-08-03', $this->labels->formatDate('2026-08-03'));
 	}
 }

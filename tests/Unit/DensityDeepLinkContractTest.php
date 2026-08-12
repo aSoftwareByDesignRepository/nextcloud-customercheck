@@ -12,9 +12,11 @@ final class DensityDeepLinkContractTest extends TestCase
 	public function testCompanyDetailTilesUseDensityHrefs(): void
 	{
 		$tpl = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/company-detail.php');
+		$list = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/common/crm-glance-density-list.php');
 		$this->assertStringContainsString('GlanceDensityPresenter::tiles', $tpl);
-		$this->assertStringContainsString('$tileHref', $tpl);
-		$this->assertStringContainsString('href="<?php p($tileHref); ?>"', $tpl);
+		$this->assertStringContainsString('crm-glance-density-list.php', $tpl);
+		$this->assertStringContainsString('$tileHref', $list);
+		$this->assertStringContainsString('href="<?php p($tileHref); ?>"', $list);
 	}
 
 	public function testPageControllerBuildsSiblingDeepLinks(): void

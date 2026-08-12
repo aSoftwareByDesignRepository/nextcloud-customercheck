@@ -9,7 +9,7 @@ import { login, credsFromEnv } from './helpers/auth.js';
 test.describe('Bachus extreme simplicity journeys', () => {
   test.skip(!process.env.NC_ADMIN_USER, 'Requires NC_ADMIN_USER / NC_ADMIN_PASS');
 
-  test('Review: single disclosure, kind chips, progressive More options', async ({ page }) => {
+  test('Review: single disclosure, kind chips, visible search toolbar', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await login(page, credsFromEnv('ADMIN'));
     await page.goto('/apps/customercheck/review');
@@ -24,6 +24,22 @@ test.describe('Bachus extreme simplicity journeys', () => {
     const chips = page.locator('[data-crm-persona-mount="review"] .crm-quick-filters button');
     await expect(chips.first()).toBeVisible();
     await expect(chips).toHaveCount(7);
+
+    // Search toolbar + Thunderbird list/reader (not a card dump of actions).
+    const toolbar = page.locator('[data-crm-persona-mount="review"] .crm-review-toolbar').first();
+    await expect(toolbar).toBeVisible();
+    await expect(page.locator('[data-crm-persona-mount="review"] details.crm-review-tools')).toHaveCount(0);
+    await expect(page.locator('#crm-review-q')).toBeVisible();
+    await expect(page.locator('#crm-review-include-archived')).toBeVisible();
+    await expect(page.locator('[data-crm-persona-mount="review"] .crm-review-board').first()).toBeVisible();
+    await expect(page.locator('[data-crm-persona-mount="review"] .crm-mail-thread, [data-crm-persona-mount="review"] .crm-review-table').first()).toBeVisible();
+    await expect(page.locator('[data-crm-review-sort]').first()).toBeVisible();
+    const openBtn = page.locator('[data-crm-review-open]').first();
+    if (await openBtn.count()) {
+      await expect(openBtn).toBeVisible();
+      await openBtn.click();
+      await expect(page.locator('[data-crm-review-reader] .crm-mail-reader__subject, [data-crm-review-reader] .crm-review-zone__label').first()).toBeVisible();
+    }
 
     // Kind chip filters without dead end (EN or DE labels).
     const sharedChip = chips.filter({ hasText: /Shared mail|Gemeinsame|Freigegebene|Shared/i }).first();
@@ -42,18 +58,40 @@ test.describe('Bachus extreme simplicity journeys', () => {
       }, null, { timeout: 30000 });
     }
 
-    const assignRow = page.locator('form.crm-review-assign').first();
+    const assignRow = page.locator('[data-crm-review-reader] form.crm-review-assign').first();
     if (await assignRow.count()) {
       await expect(assignRow.locator('.crm-review-primary')).toBeVisible();
-      await expect(assignRow.locator('button[type="submit"]')).toContainText(/Assign|Zuordnen/i);
+      await expect(page.locator('li.crm-review-row, tr.crm-review-row').first()).toBeVisible();
+      const autoPreview = page.locator('[data-crm-mail-preview][data-crm-mail-auto-open] [data-crm-mail-preview-toggle]').first();
+      if (await autoPreview.count()) {
+        await expect(autoPreview).toHaveAttribute('aria-expanded', 'true', { timeout: 20000 });
+      }
+      const quick = assignRow.locator('[data-crm-review-quick-assign]');
+      if (await quick.count()) {
+        await expect(quick).toBeVisible();
+        await expect(quick).toContainText(/Assign to|Zuordnen zu/i);
+        await expect(assignRow.locator('details.crm-review-pick-other')).not.toHaveAttribute('open', '');
+      } else {
+        const pick = assignRow.locator('.crm-review-pick-company');
+        await expect(pick).toBeVisible();
+        await expect(assignRow.locator('details.crm-review-pick-company')).toHaveCount(0);
+        await expect(assignRow.locator('button[type="submit"]')).toContainText(/Assign|Zuordnen/i);
+      }
       await expect(assignRow.locator('[data-crm-review-none]')).toBeVisible();
-      const more = assignRow.locator('details.crm-review-more, details.crm-advanced').first();
+      await expect(assignRow.locator('[data-crm-review-discard]')).toBeVisible();
+      const more = assignRow.locator('details.crm-review-more').first();
       await expect(more).toBeVisible();
       await expect(more).not.toHaveAttribute('open', '');
       await more.locator('summary').click();
       await expect(assignRow.locator('[data-crm-review-snooze="7d"]')).toBeVisible();
+      await expect(assignRow.locator('[data-crm-review-followup]')).toHaveCount(0);
     } else {
       await expect(page.locator('.crm-empty-state a[href*="settings"]')).toBeVisible();
+    }
+
+    const bulk = page.locator('[data-crm-review-bulk]');
+    if (await bulk.count()) {
+      await expect(bulk).toBeHidden();
     }
 
     const results = await new AxeBuilder({ page })
@@ -148,8 +186,10 @@ test.describe('Bachus extreme simplicity journeys', () => {
     await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
 
     await expect(page.locator('#crm-log-email')).toHaveCount(1);
+    // Emails roster lives under More (focus tabs) — open it before asserting.
+    await page.locator('[data-crm-focus-tab="more"]').click();
     const emails = page.locator('#crm-emails');
-    await expect(emails).toBeVisible();
+    await expect(emails).toBeVisible({ timeout: 15000 });
     const shell = emails.locator(':scope > details');
     await expect(shell).toHaveCount(1);
     await expect(shell).not.toHaveAttribute('open', '');

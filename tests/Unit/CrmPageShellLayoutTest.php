@@ -103,9 +103,17 @@ final class CrmPageShellLayoutTest extends TestCase
 		$this->assertStringContainsString('crm-emails-section.php', $html);
 		$emails = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/common/crm-emails-section.php');
 		$this->assertStringContainsString('id="crm-emails"', $emails);
-		$this->assertStringContainsString('crm-jump-nav.php', $html);
-		$this->assertStringContainsString("jumpNavLayout = 'bar'", $html);
-		$this->assertSame(1, substr_count($html, 'id="crm-tickets"'), 'Tickets section id must be unique');
+		$this->assertStringContainsString('crm-360-focus-tabs.php', $html);
+		$this->assertStringContainsString('data-crm-focus-panel="money"', $html);
+		// Empty vs data-bearing linked-apps branches are mutually exclusive at render time;
+		// each branch keeps section anchors (#crm-projects|#crm-tickets|#crm-invoices).
+		foreach (['crm-projects', 'crm-tickets', 'crm-invoices'] as $linkedId) {
+			$this->assertSame(
+				2,
+				substr_count($html, 'id="' . $linkedId . '"'),
+				$linkedId . ' must appear once in the collapsed roster and once in the peer-card branch',
+			);
+		}
 	}
 
 	public function testNavigationCssAlsoEnforcesShellFlex(): void

@@ -81,4 +81,19 @@ final class WelcomeCoachUxContractTest extends TestCase
 		$this->assertStringContainsString('id="crm-add-person"', (string)file_get_contents($this->root . '/templates/company-detail.php'));
 		$this->assertStringContainsString('id="crm-log-email"', (string)file_get_contents($this->root . '/templates/company-detail.php'));
 	}
+
+	public function testCompanyDetailQuickStartYieldsToWelcomeCoach(): void
+	{
+		$qs = (string)file_get_contents($this->root . '/lib/Service/PageQuickStartCatalog.php');
+		$this->assertStringNotContainsString("'company-detail' => [", $qs);
+		$this->assertStringContainsString('Welcome Coach owns next steps', $qs);
+		$this->assertNotContains(
+			'company-detail',
+			\OCA\CustomerCheck\Service\PageQuickStartCatalog::requiredPageIds(),
+		);
+		$this->assertContains(
+			'company-detail',
+			\OCA\CustomerCheck\Service\PageHelpCatalog::requiredPageIds(),
+		);
+	}
 }

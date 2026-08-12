@@ -49,6 +49,13 @@ class Notifier implements INotifier
 				[(string)($p['companyName'] ?? $l->t('company'))],
 			),
 			Constants::NOTIFY_ACTIVITY_DUE => $this->activityDueSubject($l, $company, (string)($p['title'] ?? ''), (int)($p['daysLate'] ?? 0)),
+			Constants::NOTIFY_DEAL_CHECKLIST => $l->t(
+				'Checklist: %1$s — %2$s',
+				[
+					(string)($p['title'] ?? $l->t('Task')),
+					$company !== '' ? $company : ((string)($p['dealTitle'] ?? $l->t('deal'))),
+				],
+			),
 			Constants::NOTIFY_EDIT_CONFLICT => $l->t(
 				'Parallel edits on %1$s #%2$d need a resolution with a reason.',
 				[(string)($p['entityType'] ?? $l->t('record')), (int)($p['entityId'] ?? 0)],
@@ -70,6 +77,8 @@ class Notifier implements INotifier
 			}
 			$link = $this->url->linkToRouteAbsolute('customercheck.page.conflicts', $params);
 		} elseif ($subject === Constants::NOTIFY_ACTIVITY_DUE && $activityId > 0) {
+			$link = $this->url->linkToRouteAbsolute('customercheck.page.today');
+		} elseif ($subject === Constants::NOTIFY_DEAL_CHECKLIST) {
 			$link = $this->url->linkToRouteAbsolute('customercheck.page.today');
 		} elseif ($companyId > 0) {
 			$link = $this->url->linkToRouteAbsolute('customercheck.page.companyDetail', ['id' => $companyId]);

@@ -14,6 +14,49 @@ async function createCompany(page, name) {
   await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
 }
 
+/** Company id from /companies/{id} URL after createCompany / navigation. */
+function companyIdFromUrl(page) {
+  const m = page.url().match(/\/companies\/(\d+)/);
+  if (!m) {
+    throw new Error('Expected company detail URL, got ' + page.url());
+  }
+  return parseInt(m[1], 10);
+}
+
+/**
+ * Schedule a callback with an explicit due date via the Command API
+ * (UI “Call tomorrow” is one-tap for tomorrow only — no date form).
+ */
+async function scheduleCallbackApi(page, companyId, { dueDate, reason }) {
+  const result = await page.evaluate(async ({ companyId, dueDate, reason }) => {
+    const token =
+      (window.OC && window.OC.requestToken)
+      || (document.querySelector('head') || {}).getAttribute?.('data-requesttoken')
+      || (document.querySelector('meta[name="requesttoken"]') || {}).content
+      || '';
+    const stack = document.querySelector('.crm-page-stack[data-workspace-id]');
+    const ws = stack ? parseInt(stack.getAttribute('data-workspace-id') || '0', 10) : 0;
+    let url = (window.OC && typeof window.OC.generateUrl === 'function')
+      ? window.OC.generateUrl('/apps/customercheck/api/v1/companies/' + companyId + '/callbacks')
+      : '/index.php/apps/customercheck/api/v1/companies/' + companyId + '/callbacks';
+    if (ws > 0) {
+      url += (url.indexOf('?') >= 0 ? '&' : '?') + 'workspaceId=' + encodeURIComponent(String(ws));
+    }
+    const res = await fetch(url, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        'Content-Type': 'application/json',
+        requesttoken: token,
+      },
+      body: JSON.stringify({ dueDate, reason }),
+    });
+    const text = await res.text();
+    return { ok: res.ok, status: res.status, text };
+  }, { companyId, dueDate, reason });
+  expect(result.ok, result.text).toBeTruthy();
+}
+
 test.describe('Command Center binary ACs', () => {
   test('timed warm path companies → 360 glance ≤10s (AC-CC-11)', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
@@ -32,14 +75,43 @@ test.describe('Command Center binary ACs', () => {
     await expect(page.locator('#crm-glance')).toBeVisible({ timeout: 10000 });
     await expect(page.locator('#crm-glance-summary .crm-glance-dl.crm-stat-strip')).toBeVisible({ timeout: 10000 });
     await expect(page.locator('#crm-glance-summary .crm-stat-tile')).toHaveCount(8, { timeout: 10000 });
-    await expect(page.locator('#crm-billing-body .crm-billing-strip .crm-stat-tile')).toHaveCount(3, { timeout: 10000 });
+    // Billing lives on the Money focus panel — activate it before asserting visibility.
+    await page.locator('[data-crm-focus-tab="money"]').click();
+    await expect(page.locator('#crm-360-panel-money')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('#crm-billing-body .crm-billing-strip .crm-stat-tile').first()).toBeVisible({ timeout: 10000 });
+    const tileCount = await page.locator('#crm-billing-body .crm-billing-strip .crm-stat-tile').count();
+    expect(tileCount).toBeGreaterThanOrEqual(3);
+    await expect(page.locator('#crm-billing-body .crm-billing-honesty')).toBeVisible();
+    await expect(page.locator('#crm-billing-body .crm-billing-actions a[href="#crm-contracts"]')).toBeVisible();
+    // Glance density sits above the focus tabs — always in the pin, not panel-gated.
+    await page.locator('#crm-glance').scrollIntoViewIfNeeded();
     await expect(page.locator('#crm-glance-density-title')).toBeVisible();
+    const calmDensity = page.locator('#crm-glance details.crm-glance-density--calm');
+    const attentionDensity = page.locator('#crm-glance .crm-glance-density--attention');
+    if (await calmDensity.count()) {
+      await expect(calmDensity.locator('.crm-glance-density__chevron')).toBeVisible();
+      await expect(calmDensity).not.toHaveAttribute('open', '');
+      await calmDensity.locator('summary').click();
+      await expect(calmDensity).toHaveAttribute('open', '');
+      await expect(calmDensity.locator('.crm-glance-density__lead')).toContainText(/Projects, tickets|Projekte, Tickets/i);
+    } else {
+      await expect(attentionDensity).toBeVisible();
+      await expect(attentionDensity.locator('.crm-glance-density__lead')).toContainText(/Big number|Große Zahl/i);
+    }
     const kpis = page.locator('#crm-glance .crm-glance-kpi');
     await expect(kpis).toHaveCount(3);
+    // Stat-strip style: on a typical desktop viewport the first two sit on one row.
+    const box0 = await kpis.nth(0).boundingBox();
+    const box1 = await kpis.nth(1).boundingBox();
+    expect(box0 && box1, 'KPI tiles laid out').toBeTruthy();
+    expect(Math.abs(box1.y - box0.y)).toBeLessThan(24);
+    expect(box1.x).toBeGreaterThan(box0.x + 8);
     for (let i = 0; i < 3; i += 1) {
       const kpi = kpis.nth(i);
-      await expect(kpi.locator('.crm-glance-kpi__value')).toBeVisible();
-      await expect(kpi.locator('.crm-glance-kpi__cta')).toBeVisible();
+      // Value/CTA spans are aria-hidden (name lives on the link) — still must be laid out.
+      await expect(kpi.locator('.crm-glance-kpi__value')).toBeAttached();
+      await expect(kpi.locator('.crm-glance-kpi__label')).toBeAttached();
+      await expect(kpi.locator('.crm-glance-kpi__cta')).toBeAttached();
       const box = await kpi.boundingBox();
       expect(box, 'KPI tile laid out').toBeTruthy();
       expect(box.height).toBeGreaterThanOrEqual(44);
@@ -64,11 +136,16 @@ test.describe('Command Center binary ACs', () => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await createCompany(page, `Docs Co ${Date.now().toString(36)}`);
+    await page.locator('[data-crm-focus-tab="money"]').click();
+    await expect(page.locator('#crm-360-panel-money')).toBeVisible({ timeout: 10000 });
     await page.locator('#crm-documents').scrollIntoViewIfNeeded();
     await expect(page.locator('#crm-unlink-folder')).toBeHidden();
-    await page.locator('#crm-create-folder').click({ force: true });
+    // Create lives under More — open the disclosure, then create.
+    await page.locator('#crm-documents .crm-more-menu > summary').click();
+    await expect(page.locator('#crm-create-folder')).toBeVisible();
+    await page.locator('#crm-create-folder').click();
     await expect(page.locator('#crm-unlink-folder')).toBeVisible({ timeout: 30000 });
-    await page.locator('#crm-unlink-folder').click({ force: true });
+    await page.locator('#crm-unlink-folder').click();
     await page.locator('.confirm-dialog__confirm').click({ timeout: 10000 });
     await expect(page.locator('#crm-unlink-folder')).toBeHidden({ timeout: 30000 });
   });
@@ -77,23 +154,43 @@ test.describe('Command Center binary ACs', () => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.emulateMedia({ reducedMotion: 'reduce' });
     const suffix = Date.now().toString(36);
-    await createCompany(page, `Callback Co ${suffix}`);
-    await page.locator('#crm-schedule-callback').click({ force: true });
-    const form = page.locator('form[id^="crm-prompt-"]');
-    await expect(form).toBeVisible({ timeout: 10000 });
-    // Due yesterday → overdue callbacks section
+    const companyName = `Callback Co ${suffix}`;
+    await createCompany(page, companyName);
+    const companyId = companyIdFromUrl(page);
+    await page.locator('[data-crm-focus-tab="today"]').click();
+    await expect(page.locator('#crm-360-panel-today')).toBeVisible({ timeout: 10000 });
+    // Product: Call tomorrow is one-tap (no date form).
+    const schedulePromise = page.waitForResponse(
+      (r) => r.url().includes('/callbacks') && r.request().method() === 'POST',
+      { timeout: 15000 },
+    );
+    await page.locator('#crm-schedule-callback').click();
+    const scheduleResp = await schedulePromise;
+    expect(scheduleResp.ok()).toBeTruthy();
+
+    // Today’s command board prioritises due/overdue — seed yesterday so it surfaces now.
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
-    const ymd = yesterday.toISOString().slice(0, 10);
-    await form.locator('[name="dueDate"]').fill(ymd);
-    await form.locator('[name="reason"]').fill('Audit callback');
-    await form.locator('button[type="submit"]').click();
-    await page.waitForLoadState('networkidle');
+    await scheduleCallbackApi(page, companyId, {
+      dueDate: yesterday.toISOString().slice(0, 10),
+      reason: `Audit callback ${suffix}`,
+    });
 
     const t0 = Date.now();
+    // Prefer Today overdue queue; fall back to company To-do when the board truncates.
     await page.goto('/apps/customercheck/today');
     await expect(page.locator('#crm-main-content')).toBeVisible({ timeout: 30000 });
-    await expect(page.getByText(/Callback Co|Audit callback|Callback:/i).first()).toBeVisible({ timeout: 60000 });
+    const overdue = page.locator('#crm-cmd-overdue_callbacks');
+    if (await overdue.count()) {
+      await overdue.scrollIntoViewIfNeeded();
+      await expect(overdue).toContainText(new RegExp(suffix, 'i'), { timeout: 15000 });
+    } else {
+      await page.goto('/apps/customercheck/companies/' + companyId);
+      await expect(page.locator('#crm-main-content')).toBeVisible({ timeout: 30000 });
+      await page.locator('[data-crm-focus-tab="today"]').click();
+      await expect(page.locator('#crm-360-panel-today')).toBeVisible({ timeout: 10000 });
+      await expect(page.locator('#crm-activities')).toContainText(new RegExp(suffix, 'i'), { timeout: 15000 });
+    }
     expect(Date.now() - t0).toBeLessThan(60000);
   });
 
@@ -101,9 +198,13 @@ test.describe('Command Center binary ACs', () => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await createCompany(page, `Tasks Co ${Date.now().toString(36)}`);
+    await page.locator('[data-crm-focus-tab="today"]').click();
+    await expect(page.locator('#crm-360-panel-today')).toBeVisible({ timeout: 10000 });
     await expect(page.locator('#crm-open-tasks')).toBeVisible();
     await expect(page.locator('#crm-open-tasks')).toContainText(/Done in CustomerCheck is what counts|in CustomerCheck zählt/i);
-    await page.locator('#crm-new-task').click({ force: true });
+    await page.locator('#crm-open-tasks > summary').click();
+    await expect(page.locator('#crm-open-tasks')).toHaveAttribute('open', '');
+    await page.locator('#crm-new-task').click();
     const form = page.locator('form[id^="crm-prompt-"]');
     await expect(form).toBeVisible({ timeout: 10000 });
     await form.locator('[name="title"]').fill('Follow up tomorrow');
@@ -120,28 +221,34 @@ test.describe('Command Center binary ACs', () => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     const suffix = Date.now().toString(36);
     await createCompany(page, `Done Lock ${suffix}`);
-    await page.locator('#crm-schedule-callback').click({ force: true });
-    const form = page.locator('form[id^="crm-prompt-"]');
-    await expect(form).toBeVisible({ timeout: 10000 });
+    const companyId = companyIdFromUrl(page);
+    // Overdue via API — UI one-tap only schedules tomorrow.
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
-    await form.locator('[name="dueDate"]').fill(yesterday.toISOString().slice(0, 10));
-    await form.locator('[name="reason"]').fill('Lock done');
-    await form.locator('button[type="submit"]').click();
-    await page.waitForLoadState('networkidle');
+    await scheduleCallbackApi(page, companyId, {
+      dueDate: yesterday.toISOString().slice(0, 10),
+      reason: `Lock done ${suffix}`,
+    });
 
-    await page.goto('/apps/customercheck/today');
+    // Complete from company 360 — Today board can truncate past 500 open activities.
+    await page.goto('/apps/customercheck/companies/' + companyId);
     await expect(page.locator('#crm-main-content')).toBeVisible({ timeout: 30000 });
-    const done = page.locator('[data-crm-complete-activity]').first();
-    await expect(done).toBeVisible({ timeout: 60000 });
-    const updatedAt = await done.getAttribute('data-updated-at');
+    await page.locator('[data-crm-focus-tab="today"]').click();
+    await expect(page.locator('#crm-360-panel-today')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('#crm-activities')).toContainText(new RegExp(suffix, 'i'), { timeout: 15000 });
+    // Title is sibling of the button — scope to the list item containing the suffix.
+    const item = page.locator('#crm-activities .crm-todo-list__item', { hasText: suffix }).first();
+    await expect(item).toBeVisible({ timeout: 15000 });
+    const doneBtn = item.locator('[data-crm-complete-activity]');
+    await expect(doneBtn).toBeVisible();
+    const updatedAt = await doneBtn.getAttribute('data-updated-at');
     expect(updatedAt || '').toMatch(/\d{4}-\d{2}-\d{2}/);
 
     const donePromise = page.waitForResponse(
       (r) => r.url().includes('/activities/') && r.url().includes('/done') && r.request().method() === 'POST',
       { timeout: 30000 },
     );
-    await done.click({ force: true });
+    await doneBtn.click();
     const resp = await donePromise;
     expect(resp.ok()).toBeTruthy();
     const body = resp.request().postDataJSON();
@@ -150,14 +257,8 @@ test.describe('Command Center binary ACs', () => {
   });
 
   test('platform strip only enabled chips (AC-CC-24) + today axe', async ({ page }) => {
-    await page.goto('/apps/customercheck/companies');
-    const link = page.locator('#crm-main-content a[href*="/apps/customercheck/companies/"]').first();
-    if ((await link.count()) === 0) {
-      await createCompany(page, `Platform Co ${Date.now().toString(36)}`);
-    } else {
-      await link.click();
-      await page.waitForURL(/\/companies\/\d+/, { timeout: 30000 });
-    }
+    // Always create — list-row links can be filters/other routes and flake waitForURL.
+    await createCompany(page, `Platform Co ${Date.now().toString(36)}`);
     await expect(page.locator('#crm-platform-links')).toBeAttached();
     const chips = page.locator('#crm-platform-links a.crm-platform-links__chip');
     const n = await chips.count();

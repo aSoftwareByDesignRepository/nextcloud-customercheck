@@ -41,4 +41,17 @@ class ActivityDueLogMapper extends QBMapper
 
 		return $qb->executeStatement();
 	}
+
+	/**
+	 * Release one (activity, due) claim only — never wipe older due snaps.
+	 */
+	public function deleteByActivityAndDue(int $activityId, string $dueDateYmd): int
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->delete($this->getTableName())
+			->where($qb->expr()->eq('activity_id', $qb->createNamedParameter($activityId, IQueryBuilder::PARAM_INT)))
+			->andWhere($qb->expr()->eq('due_date_snap', $qb->createNamedParameter($dueDateYmd)));
+
+		return $qb->executeStatement();
+	}
 }

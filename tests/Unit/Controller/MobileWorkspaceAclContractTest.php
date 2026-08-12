@@ -14,17 +14,21 @@ use OCA\CustomerCheck\Exception\NotFoundException;
 use OCA\CustomerCheck\Service\AccessControlService;
 use OCA\CustomerCheck\Service\ActivityService;
 use OCA\CustomerCheck\Service\AgreementService;
+use OCA\CustomerCheck\Service\CompanyDocumentsService;
 use OCA\CustomerCheck\Service\CompanyService;
 use OCA\CustomerCheck\Service\DealService;
 use OCA\CustomerCheck\Service\MobileApiService;
 use OCA\CustomerCheck\Service\MobileGateService;
 use OCA\CustomerCheck\Service\MobileIdempotencyService;
 use OCA\CustomerCheck\Service\MobilePushService;
+use OCA\CustomerCheck\Service\PersonService;
 use OCA\CustomerCheck\Service\WorkspaceAccessService;
+use OCA\CustomerCheck\Service\WorkspaceService;
 use OCP\App\IAppManager;
 use OCP\AppFramework\Http;
 use OCP\IRequest;
 use OCP\IUser;
+use OCP\IUserManager;
 use OCP\IUserSession;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
@@ -51,6 +55,8 @@ final class MobileWorkspaceAclContractTest extends TestCase
 	private MobileApiService $mobile;
 	/** @var CompanyService&MockObject */
 	private CompanyService $companies;
+	/** @var PersonService&MockObject */
+	private PersonService $persons;
 	/** @var ActivityService&MockObject */
 	private ActivityService $activities;
 	/** @var DealService&MockObject */
@@ -77,6 +83,7 @@ final class MobileWorkspaceAclContractTest extends TestCase
 		$this->gate = $this->createMock(MobileGateService::class);
 		$this->mobile = $this->createMock(MobileApiService::class);
 		$this->companies = $this->createMock(CompanyService::class);
+		$this->persons = $this->createMock(PersonService::class);
 		$this->activities = $this->createMock(ActivityService::class);
 		$this->deals = $this->createMock(DealService::class);
 		$this->agreements = $this->createMock(AgreementService::class);
@@ -99,7 +106,7 @@ final class MobileWorkspaceAclContractTest extends TestCase
 				return '';
 			},
 		);
-		$this->request->method('passesCSRFCheck')->willReturn(false);
+		$this->request->method('passesCSRFCheck')->willReturn(true);
 		$this->request->method('getParams')->willReturnCallback(fn (): array => $this->requestParams);
 	}
 
@@ -114,11 +121,15 @@ final class MobileWorkspaceAclContractTest extends TestCase
 			$this->gate,
 			$this->mobile,
 			$this->companies,
+			$this->persons,
 			$this->activities,
 			$this->deals,
 			$this->agreements,
 			$this->idempotency,
 			$this->push,
+			$this->createMock(CompanyDocumentsService::class),
+			$this->createMock(WorkspaceService::class),
+			$this->createMock(IUserManager::class),
 			$this->appManager,
 		);
 	}
@@ -175,7 +186,7 @@ final class MobileWorkspaceAclContractTest extends TestCase
 			->method('assertCompanyInWorkspace')
 			->with(7, 5)
 			->willThrowException(new NotFoundException('Company not found.'));
-		$this->mobile->expects($this->never())->method('companyLite');
+		$this->mobile->expects($this->never())->method('companyRoadDetail');
 
 		$response = $this->controller()->companyDetail(5, 10);
 
@@ -209,6 +220,28 @@ final class MobileWorkspaceAclContractTest extends TestCase
 
 		$this->assertSame(Http::STATUS_OK, $response->getStatus());
 		$this->assertTrue($response->getData()['success']);
+	}
+
+	public function testCreatePersonRejectsForeignCompanyBeforeIdempotency(): void
+	{
+		$this->allowWorkspace(5, 'write');
+		$this->requestParams = ['name' => 'Pat'];
+
+		$company = new Company();
+		$company->setId(42);
+		$company->setWorkspaceId(9);
+		$this->companies->method('get')->with(42)->willReturn($company);
+		$this->workspaceAccess->expects($this->once())
+			->method('assertCompanyInWorkspace')
+			->with(9, 5)
+			->willThrowException(new NotFoundException('Company not found.'));
+		$this->idempotency->expects($this->never())->method('once');
+		$this->persons->expects($this->never())->method('create');
+
+		$response = $this->controller()->createPerson(5, 42);
+
+		$this->assertSame(Http::STATUS_NOT_FOUND, $response->getStatus());
+		$this->assertSame(Constants::ERR_NOT_FOUND, $response->getData()['error']);
 	}
 
 	public function testCreateActivityRejectsForeignCompanyBeforeIdempotency(): void

@@ -8,6 +8,7 @@ use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use OCA\CustomerCheck\Constants;
 use OCA\CustomerCheck\Exception\NotFoundException;
 use OCA\CustomerCheck\Exception\ValidationException;
+use OCA\CustomerCheck\Support\ImapConnection;
 use OCA\CustomerCheck\Support\SharedMailboxSmtpClient;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\IDBConnection;
@@ -370,6 +371,14 @@ class MailSendService
 		// Fail closed: configured SMTP must AUTH. Never silent-IMailer spoof
 		// of the shared From when credentials are broken/rotated.
 		if ($smtpHost !== '') {
+			$smtpHost = ImapConnection::normalizeHost($smtpHost);
+			if (ImapConnection::isBlockedMailHost($smtpHost)) {
+				throw ValidationException::field(
+					Constants::ERR_VALIDATION,
+					'smtp',
+					$this->l10n->t('Use a public mail host — localhost and private network addresses are not allowed.'),
+				);
+			}
 			if ($secret === '') {
 				throw ValidationException::field(
 					Constants::ERR_VALIDATION,
@@ -381,9 +390,12 @@ class MailSendService
 			}
 			SharedMailboxSmtpClient::send([
 				'host' => $smtpHost,
-				'port' => (int)($box['smtp_port'] ?? 587),
-				'enc' => (string)($box['smtp_enc'] ?? 'tls'),
-				'username' => (string)($box['username'] ?? ''),
+				'port' => (int)($box['smtp_port'] ?? 465),
+				'enc' => ImapConnection::resolveSmtpEnc(
+					isset($box['smtp_enc']) ? (string)$box['smtp_enc'] : null,
+					(int)($box['smtp_port'] ?? 465),
+				),
+				'username' => ImapConnection::normalizeUsername((string)($box['username'] ?? '')),
 				'password' => $secret,
 				'from' => $from,
 				'fromName' => (string)$box['label'],

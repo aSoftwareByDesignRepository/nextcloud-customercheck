@@ -23,17 +23,21 @@ final class JumpNavContractTest extends TestCase
 		$this->assertStringContainsString('More sections', $src);
 	}
 
-	public function testCompanyDetailWiresBarLayoutAndAllAnchors(): void
+	public function testCompanyDetailUsesFocusTabsNotJumpNav(): void
 	{
 		$html = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/company-detail.php');
-		$this->assertStringContainsString('crm-jump-nav.php', $html);
-		$this->assertStringNotContainsString('<nav class="crm-jump-nav"', $html);
-		foreach (['#crm-glance', '#crm-communication', '#crm-account-plan', '#crm-persons', '#crm-promises', '#crm-contracts', '#crm-open-tasks', '#crm-activities', '#crm-billing', '#crm-invoices', '#crm-tickets', '#crm-deals', '#crm-projects', '#crm-documents', '#crm-identity-links', '#crm-prepare-meeting', '#crm-timeline'] as $href) {
-			$this->assertStringContainsString($href, $html);
+		$this->assertStringContainsString('crm-360-focus-tabs.php', $html);
+		$this->assertStringNotContainsString('crm-jump-nav.php', $html);
+		foreach (['crm-glance', 'crm-communication', 'crm-persons', 'crm-next-steps', 'crm-contracts', 'crm-billing', 'crm-deals', 'crm-projects', 'crm-documents', 'crm-identity-links', 'crm-prepare-meeting', 'crm-timeline', 'crm-account-plan', 'crm-tickets', 'crm-invoices'] as $id) {
+			$this->assertStringContainsString('id="' . $id . '"', $html);
 		}
 		$this->assertStringContainsString("\$l->t('Talk')", $html);
-		$this->assertStringContainsString('crm-360-zone', $html);
-		$this->assertStringContainsString('How to use this page', $html);
+		$this->assertStringContainsString("\$l->t('To-do')", $html);
+		$this->assertStringNotContainsString("'href' => '#crm-promises'", $html);
+		$this->assertStringNotContainsString("'href' => '#crm-activities'", $html);
+		$this->assertStringNotContainsString("'href' => '#crm-open-tasks'", $html);
+		$this->assertStringContainsString('crm-360-focus', $html);
+		$this->assertStringNotContainsString('How to use this page', $html);
 	}
 
 	public function testBarCssIsChipStripNotSidebarColumn(): void
@@ -46,16 +50,13 @@ final class JumpNavContractTest extends TestCase
 		$this->assertStringContainsString('forced-colors', $css);
 	}
 
-	public function testJumpNavScriptIsRegisteredForCompanyDetail(): void
+	public function testFocusScriptIsRegisteredForCompanyDetail(): void
 	{
 		$controller = (string)file_get_contents(dirname(__DIR__, 2) . '/lib/Controller/PageController.php');
-		$this->assertStringContainsString("registerFrontEndAssets('pages/company-detail', null, ['common/identity-links'], ['common/jump-nav', 'common/folder-picker', 'common/glance-summary', 'common/company360-present', 'pages/persona'])", $controller);
-		$js = (string)file_get_contents(dirname(__DIR__, 2) . '/js/common/jump-nav.js');
-		$this->assertStringContainsString('IntersectionObserver', $js);
-		$this->assertStringContainsString('aria-current', $js);
-		$this->assertStringContainsString('scrollTo', $js);
-		$this->assertStringContainsString('SCROLL_ROOT_SELECTOR', $js);
-		$this->assertStringContainsString("href^=\"#\"", $js);
+		$this->assertStringContainsString("registerFrontEndAssets('pages/company-detail', null, ['common/identity-links'], ['common/company360-focus', 'common/folder-picker', 'common/glance-summary', 'common/company360-present', 'common/deal-checklist-ux', 'pages/persona'])", $controller);
+		$js = (string)file_get_contents(dirname(__DIR__, 2) . '/js/common/company360-focus.js');
+		$this->assertStringContainsString('aria-selected', $js);
+		$this->assertStringContainsString('hashchange', $js);
 		$this->assertStringContainsString('preventDefault', $js);
 	}
 

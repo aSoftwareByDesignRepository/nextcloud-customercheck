@@ -15,7 +15,7 @@ $canManageWorkspace = !empty($_['canManageWorkspace']);
 	<?php include __DIR__ . '/../parts/workspace-boot-status.php'; ?>
 
 	<div id="crm-ws-current" class="crm-page-stack crm-mailbox-settings__stack" hidden>
-		<p id="crm-ws-current-label" class="crm-muted crm-mailbox-settings__current crm-sr-only" aria-hidden="true"></p>
+		<p id="crm-ws-current-label" class="crm-muted crm-mailbox-settings__current crm-sr-only"></p>
 
 		<section class="crm-card" id="crm-ws-limits-card" aria-labelledby="crm-ws-limits-title">
 			<header class="crm-card__header">
@@ -50,12 +50,15 @@ $canManageWorkspace = !empty($_['canManageWorkspace']);
 						<input type="checkbox" id="crm-ws-digest" name="digestEnabled" value="1">
 						<span><?php p($l->t('Enable weekly digest')); ?></span>
 					</label>
+					<p class="form-help"><?php
+						p($l->t('Sends a short “This week” note to managers and members. The app-wide schedule must also be on under Reminders & digest.'));
+					?></p>
 					<div class="form-group" id="crm-ws-ics-wrap" hidden>
 						<label class="form-label" for="crm-ws-ics-url"><?php p($l->t('Calendar feed for renewals')); ?></label>
 						<div class="crm-token-row">
 							<input id="crm-ws-ics-url" class="form-input crm-input" type="text" readonly value="">
-							<button type="button" class="crm-btn crm-btn--secondary" data-copy-target="crm-ws-ics-url"><?php p($l->t('Copy')); ?></button>
-							<button type="button" class="crm-btn crm-btn--danger" id="crm-ws-ics-rotate"><?php p($l->t('Rotate')); ?></button>
+							<button type="button" class="crm-btn crm-btn--secondary" data-copy-target="crm-ws-ics-url" aria-label="<?php p($l->t('Copy calendar feed URL')); ?>"><?php p($l->t('Copy')); ?></button>
+							<button type="button" class="crm-btn crm-btn--danger" id="crm-ws-ics-rotate" aria-label="<?php p($l->t('Rotate calendar feed URL')); ?>"><?php p($l->t('Rotate')); ?></button>
 						</div>
 						<p class="form-help"><?php p($l->t('Calendar feed for renewals and open due dates. Rotate if the link leaks.')); ?></p>
 					</div>
@@ -200,6 +203,9 @@ $canManageWorkspace = !empty($_['canManageWorkspace']);
 					<?php print_unescaped(IconCatalog::renderCalloutWell('alert-triangle', 'warning')); ?>
 					<p class="crm-callout__text"><?php p($l->t('Messages from a connected mailbox are shared with everyone on the team who can read mail. Do not connect a personal inbox.')); ?></p>
 				</div>
+				<div class="crm-callout" role="note">
+					<p class="crm-callout__text"><?php p($l->t('After sync: unmatched mail appears in Review (Shared mail). Matched mail appears on the company Talk feed. Send from a company or agreement — failed sends show under Review too.')); ?></p>
+				</div>
 
 				<div id="crm-mailbox-list" class="crm-mailbox-list-host" aria-live="polite"></div>
 				<div id="crm-mailbox-empty" class="crm-empty-state" role="status" hidden>
@@ -220,10 +226,12 @@ $canManageWorkspace = !empty($_['canManageWorkspace']);
 						<div class="form-group">
 							<label class="form-label" for="crm-mbox-email"><?php p($l->t('Email')); ?></label>
 							<input type="email" id="crm-mbox-email" name="email" class="form-input crm-input" required autocomplete="off">
+							<p class="form-help"><?php p($l->t('The shared team address, e.g. info@example.com.')); ?></p>
 						</div>
 						<div class="form-group">
 							<label class="form-label" for="crm-mbox-user"><?php p($l->t('Username')); ?></label>
 							<input type="text" id="crm-mbox-user" name="username" class="form-input crm-input" required autocomplete="off">
+							<p class="form-help"><?php p($l->t('Usually the full email address. Do not paste the account id in parentheses (e.g. m0...).')); ?></p>
 						</div>
 						<div class="form-group">
 							<label class="form-label" for="crm-mbox-pass"><?php p($l->t('Password')); ?></label>
@@ -232,35 +240,61 @@ $canManageWorkspace = !empty($_['canManageWorkspace']);
 						</div>
 					</fieldset>
 
-					<details class="crm-advanced" id="crm-mailbox-servers">
-						<summary class="crm-advanced__summary"><?php p($l->t('Server settings (IMAP / SMTP)')); ?></summary>
-						<p class="crm-muted"><?php p($l->t('Only change these if your mail host is not the usual one. Ports default to 993 and 587.')); ?></p>
+					<fieldset class="crm-fieldset" id="crm-mailbox-servers">
+						<legend class="crm-fieldset__legend"><?php p($l->t('Mail servers')); ?></legend>
+						<p class="crm-muted"><?php p($l->t('Copy these from your hoster manual setup sheet. IMAP receives mail; SMTP sends it.')); ?></p>
 						<div class="form-group">
 							<label class="form-label" for="crm-mbox-imap-host"><?php p($l->t('IMAP host')); ?></label>
 							<input type="text" id="crm-mbox-imap-host" name="imapHost" class="form-input crm-input" required autocomplete="off">
 						</div>
-						<div class="form-group">
-							<label class="form-label" for="crm-mbox-imap-port"><?php p($l->t('IMAP port')); ?></label>
-							<input type="number" id="crm-mbox-imap-port" name="imapPort" class="form-input crm-input" value="993" min="1" max="65535">
+						<div class="crm-form-row-2">
+							<div class="form-group">
+								<label class="form-label" for="crm-mbox-imap-port"><?php p($l->t('IMAP port')); ?></label>
+								<input type="number" id="crm-mbox-imap-port" name="imapPort" class="form-input crm-input" value="993" min="1" max="65535" required>
+							</div>
+							<div class="form-group">
+								<label class="form-label" for="crm-mbox-imap-enc"><?php p($l->t('IMAP encryption')); ?></label>
+								<select id="crm-mbox-imap-enc" name="imapEnc" class="form-select crm-input">
+									<option value="ssl" selected><?php p($l->t('SSL (port 993)')); ?></option>
+									<option value="tls"><?php p($l->t('STARTTLS (port 143)')); ?></option>
+									<option value="none"><?php p($l->t('None (not recommended)')); ?></option>
+								</select>
+							</div>
 						</div>
 						<div class="form-group">
 							<label class="form-label" for="crm-mbox-smtp-host"><?php p($l->t('SMTP host')); ?></label>
 							<input type="text" id="crm-mbox-smtp-host" name="smtpHost" class="form-input crm-input" required autocomplete="off">
 						</div>
-						<div class="form-group">
-							<label class="form-label" for="crm-mbox-smtp-port"><?php p($l->t('SMTP port')); ?></label>
-							<input type="number" id="crm-mbox-smtp-port" name="smtpPort" class="form-input crm-input" value="587" min="1" max="65535">
+						<div class="crm-form-row-2">
+							<div class="form-group">
+								<label class="form-label" for="crm-mbox-smtp-port"><?php p($l->t('SMTP port')); ?></label>
+								<input type="number" id="crm-mbox-smtp-port" name="smtpPort" class="form-input crm-input" value="465" min="1" max="65535" required>
+							</div>
+							<div class="form-group">
+								<label class="form-label" for="crm-mbox-smtp-enc"><?php p($l->t('SMTP encryption')); ?></label>
+								<select id="crm-mbox-smtp-enc" name="smtpEnc" class="form-select crm-input">
+									<option value="ssl" selected><?php p($l->t('SSL (port 465)')); ?></option>
+									<option value="tls"><?php p($l->t('STARTTLS (port 587)')); ?></option>
+									<option value="none"><?php p($l->t('None (not recommended)')); ?></option>
+								</select>
+							</div>
 						</div>
-					</details>
+						<p class="form-help"><?php p($l->t('Common defaults: IMAP 993 + SSL, SMTP 465 + SSL. Changing the port updates encryption automatically.')); ?></p>
+					</fieldset>
 
 					<div id="crm-mailbox-folders-wrap" class="form-group" hidden>
-						<label class="form-label" for="crm-mbox-folders"><?php p($l->t('Folders to sync')); ?></label>
-						<textarea id="crm-mbox-folders" name="folders" class="form-input crm-input" rows="4" placeholder="<?php p($l->t('One folder path per line, e.g. INBOX')); ?>"></textarea>
-						<p class="form-help"><?php p($l->t('Shown after a successful connection test. Enter folder paths the team should see.')); ?></p>
+						<span class="form-label" id="crm-mbox-folders-label"><?php p($l->t('Folders to sync')); ?></span>
+						<div id="crm-mbox-folder-picker" class="crm-folder-picker" role="group" aria-labelledby="crm-mbox-folders-label" aria-describedby="crm-mbox-folders-help">
+							<label class="crm-check">
+								<input type="checkbox" name="folders" value="INBOX" checked>
+								<span>INBOX</span>
+							</label>
+						</div>
+						<p id="crm-mbox-folders-help" class="form-help"><?php p($l->t('Shown after a successful connection test. Tick every folder the team should see. INBOX is on by default.')); ?></p>
 					</div>
 					<label class="crm-switch">
 						<input type="checkbox" id="crm-mbox-dsgvo" name="dsgvoAck" value="1" required>
-						<span><?php p($l->t('I confirm this is a shared team inbox — not a personal mailbox. Colleagues who can read mail may see these messages.')); ?></span>
+						<span><?php p($l->t('I confirm this is a shared team inbox — not a personal mailbox. Colleagues who can read mail may see these messages, including short plain-text previews cached in CustomerCheck until retention deletes them.')); ?></span>
 					</label>
 					<p id="crm-mailbox-error" class="form-error" role="alert" hidden></p>
 					<p id="crm-mailbox-test-status" class="form-help" role="status" aria-live="polite"></p>

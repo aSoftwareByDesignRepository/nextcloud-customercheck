@@ -34,10 +34,21 @@ final class TodayWorkspaceAclContractTest extends TestCase
 		$this->assertStringContainsString('companyInWorkspace(', $src);
 	}
 
+	public function testTodayServiceUsesWindowedRenewalQuery(): void
+	{
+		$today = (string)file_get_contents(dirname(__DIR__, 2) . '/lib/Service/TodayService.php');
+		$mapper = (string)file_get_contents(dirname(__DIR__, 2) . '/lib/Db/AgreementMapper.php');
+		$this->assertStringContainsString('findTodayRenewalCandidates($floor, $horizon, 2000, $wsFilter)', $today);
+		$this->assertStringContainsString('function findTodayRenewalCandidates', $mapper);
+		$this->assertStringContainsString("neq('status', \$qb->createNamedParameter('draft'))", $mapper);
+	}
+
 	public function testTodayTemplateNeverPrintsRawKind(): void
 	{
 		$html = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/today.php');
 		$this->assertStringContainsString('kindLabel', $html);
+		$this->assertStringContainsString('<time datetime=', $html);
+		$this->assertStringContainsString('aria-label=', $html);
 		$this->assertStringNotContainsString('<?php p($kind); ?>', $html);
 	}
 

@@ -48,6 +48,22 @@ final class MobileIdempotencyServiceTest extends TestCase
 		);
 	}
 
+	public function testFindResourceIdReturnsNullWithoutKey(): void
+	{
+		$this->mapper->expects($this->never())->method('findActivityId');
+		self::assertNull($this->service()->findResourceId('alice', null));
+		self::assertNull($this->service()->findResourceId('alice', '  '));
+	}
+
+	public function testFindResourceIdPeeksLedger(): void
+	{
+		$this->mapper->expects($this->once())
+			->method('findActivityId')
+			->with('alice', 'upload:abc')
+			->willReturn(101);
+		self::assertSame(101, $this->service()->findResourceId('alice', 'upload:abc'));
+	}
+
 	public function testNormaliseKeyRejectsOverlong(): void
 	{
 		$this->expectException(ValidationException::class);
@@ -109,7 +125,8 @@ final class MobileIdempotencyServiceTest extends TestCase
 		$winner->setId(11);
 		$this->mapper->method('findActivityId')
 			->willReturnOnConsecutiveCalls(null, null, 11);
-		$this->db->method('inTransaction')->willReturn(true);
+		$this->db->method('inTransaction')->willReturn(false);
+		$this->db->expects($this->once())->method('beginTransaction');
 		$this->db->expects($this->once())->method('rollBack');
 		$this->activities->method('create')->willReturnCallback(static function (): Activity {
 			$a = new Activity();
@@ -123,5 +140,45 @@ final class MobileIdempotencyServiceTest extends TestCase
 
 		$result = $this->service()->createActivity('alice', ['companyId' => 1], 'race-key');
 		self::assertSame(11, (int)$result->getId());
+	}
+
+	public function testOnceReplaysCompanyCreateWithoutSecondFactory(): void
+	{
+		$first = (object)['id' => 55];
+		$this->mapper->method('findActivityId')->with('alice', 'company:1')->willReturn(55);
+		$this->db->expects($this->never())->method('beginTransaction');
+		$calls = 0;
+		$result = $this->service()->once(
+			'alice',
+			'company:1',
+			static function () use (&$calls): object {
+				$calls++;
+				return (object)['id' => 1];
+			},
+			static fn (object $o): int => (int)$o->id,
+			static fn (int $id): object => (object)['id' => $id],
+		);
+		self::assertSame(55, (int)$result->id);
+		self::assertSame(0, $calls);
+	}
+
+	public function testOnceInsertsLedgerForFirstCompanyCreate(): void
+	{
+		$this->mapper->method('findActivityId')->willReturn(null);
+		$this->db->method('inTransaction')->willReturn(false);
+		$this->db->expects($this->once())->method('beginTransaction');
+		$this->db->expects($this->once())->method('commit');
+		$this->mapper->expects($this->once())
+			->method('insert')
+			->with('alice', 'company:new', 12, 1_700_000_000);
+
+		$result = $this->service()->once(
+			'alice',
+			'company:new',
+			static fn (): object => (object)['id' => 12],
+			static fn (object $o): int => (int)$o->id,
+			static fn (int $id): object => (object)['id' => $id],
+		);
+		self::assertSame(12, (int)$result->id);
 	}
 }

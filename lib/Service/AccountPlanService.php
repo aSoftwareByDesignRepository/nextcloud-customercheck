@@ -10,6 +10,7 @@ use OCA\CustomerCheck\Exception\ValidationException;
 use OCA\CustomerCheck\Support\OptimisticLock;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\DB\Exception as DbException;
+use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\IDBConnection;
 use OCP\IL10N;
 
@@ -229,7 +230,7 @@ class AccountPlanService
 	 */
 	public function addMapStep(int $planId, int $workspaceId, array $data): array
 	{
-		$title = trim((string)($data['title'] ?? ''));
+		$title = $this->normalizeMapStepTitle((string)($data['title'] ?? ''));
 		if ($title === '') {
 			throw ValidationException::field(Constants::ERR_VALIDATION, 'title', $this->l10n->t('Enter a next step title.'));
 		}
@@ -243,7 +244,65 @@ class AccountPlanService
 			'sort_order' => $ins->createNamedParameter((int)($data['sortOrder'] ?? 0)),
 			'created_at' => $ins->createNamedParameter($now),
 		])->executeStatement();
-		return ['id' => (int)$this->db->lastInsertId('crm_map_step'), 'title' => $title, 'status' => 'open'];
+		return [
+			'id' => (int)$this->db->lastInsertId('crm_map_step'),
+			'title' => $title,
+			'status' => 'open',
+			'statusLabel' => $this->labels->mapStepStatus('open'),
+		];
+	}
+
+	/**
+	 * Mark a plan move done (or reopen). Status is validated against the product enum.
+	 *
+	 * @return array<string, mixed>
+	 */
+	public function setMapStepStatus(int $companyId, int $stepId, int $workspaceId, string $status): array
+	{
+		$status = strtolower(trim($status));
+		if (!in_array($status, ['open', 'done', 'blocked', 'skipped'], true)) {
+			throw ValidationException::field(Constants::ERR_VALIDATION, 'status', $this->l10n->t('Unknown step status.'));
+		}
+		$plan = $this->forCompany($companyId);
+		if ($plan === null) {
+			throw ValidationException::field(Constants::ERR_NOT_FOUND, 'planId', $this->l10n->t('Account plan not found.'));
+		}
+		$this->requirePlan((int)$plan['id'], $workspaceId);
+		if (!$this->db->tableExists('crm_map_step')) {
+			throw ValidationException::field(Constants::ERR_NOT_FOUND, 'id', $this->l10n->t('Next step not found.'));
+		}
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('*')->from('crm_map_step')
+			->where($qb->expr()->eq('id', $qb->createNamedParameter($stepId)))
+			->andWhere($qb->expr()->eq('plan_id', $qb->createNamedParameter((int)$plan['id'])))
+			->setMaxResults(1);
+		$r = $qb->executeQuery();
+		$row = $r->fetch();
+		$r->closeCursor();
+		if ($row === false) {
+			throw ValidationException::field(Constants::ERR_NOT_FOUND, 'id', $this->l10n->t('Next step not found.'));
+		}
+		$upd = $this->db->getQueryBuilder();
+		$upd->update('crm_map_step')
+			->set('status', $upd->createNamedParameter($status))
+			->where($upd->expr()->eq('id', $upd->createNamedParameter($stepId)))
+			->andWhere($upd->expr()->eq('plan_id', $upd->createNamedParameter((int)$plan['id'])))
+			->executeStatement();
+		return [
+			'id' => $stepId,
+			'title' => (string)$row['title'],
+			'status' => $status,
+			'statusLabel' => $this->labels->mapStepStatus($status),
+		];
+	}
+
+	private function normalizeMapStepTitle(string $raw): string
+	{
+		$collapsed = preg_replace('/\s+/u', ' ', trim($raw)) ?? '';
+		if (mb_strlen($collapsed) > 255) {
+			$collapsed = mb_substr($collapsed, 0, 255);
+		}
+		return $collapsed;
 	}
 
 	/**
@@ -346,17 +405,16 @@ class AccountPlanService
 			->modify('+7 days')
 			->format('Y-m-d');
 		$qb = $this->db->getQueryBuilder();
-		$terminal = [];
-		foreach (Constants::AGREEMENT_TERMINAL_STATUSES as $i => $status) {
-			$terminal[] = $qb->createNamedParameter($status, null, 'term' . $i);
-		}
 		$qb->select($qb->createFunction('1'))
 			->from('crm_agreement')
 			->where($qb->expr()->eq('company_id', $qb->createNamedParameter($companyId)))
 			->andWhere($qb->expr()->isNotNull('valid_until'))
 			->andWhere($qb->expr()->gte('valid_until', $qb->createNamedParameter($todayYmd)))
 			->andWhere($qb->expr()->lte('valid_until', $qb->createNamedParameter($horizon)))
-			->andWhere($qb->expr()->notIn('status', $terminal))
+			->andWhere($qb->expr()->notIn(
+				'status',
+				$qb->createNamedParameter(Constants::AGREEMENT_TERMINAL_STATUSES, IQueryBuilder::PARAM_STR_ARRAY)
+			))
 			->setMaxResults(1);
 		$r = $qb->executeQuery();
 		$row = $r->fetch();

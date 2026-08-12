@@ -59,6 +59,7 @@ class CompanyService
 		private readonly ?EditConflictService $editConflicts = null,
 		private readonly ?EntityRevisionService $entityRevisions = null,
 		private readonly ?ValueMapService $valueMaps = null,
+		private readonly ?NotificationService $notifications = null,
 	) {
 	}
 
@@ -482,6 +483,16 @@ class CompanyService
 					->where($qb->expr()->eq('company_id', $qb->createNamedParameter($id, IQueryBuilder::PARAM_INT)))
 					->executeStatement();
 			}
+			// Deal checklist items denormalise workspace_id for Today/mobile — must follow
+			// the company or old-book members retain Done on a company that left (§3.3).
+			$checklistRestamped = 0;
+			if ($this->db->tableExists('crm_deal_cl_item')) {
+				$qb = $this->db->getQueryBuilder();
+				$checklistRestamped = $qb->update('crm_deal_cl_item')
+					->set('workspace_id', $qb->createNamedParameter($toWorkspaceId, IQueryBuilder::PARAM_INT))
+					->where($qb->expr()->eq('company_id', $qb->createNamedParameter($id, IQueryBuilder::PARAM_INT)))
+					->executeStatement();
+			}
 
 			$this->db->commit();
 		} catch (\Throwable $e) {
@@ -498,6 +509,7 @@ class CompanyService
 			'plansRestamped' => $plansRestamped,
 			'escalationsRestamped' => $escalationsRestamped,
 			'commitsRestamped' => $commitsRestamped,
+			'checklistItemsRestamped' => $checklistRestamped,
 		]);
 
 		return [
@@ -508,6 +520,9 @@ class CompanyService
 			'draftsDetached' => $draftsDetached,
 			'promisesRestamped' => $promisesRestamped,
 			'plansRestamped' => $plansRestamped,
+			'escalationsRestamped' => $escalationsRestamped,
+			'commitsRestamped' => $commitsRestamped,
+			'checklistItemsRestamped' => $checklistRestamped,
 		];
 	}
 
@@ -747,6 +762,7 @@ class CompanyService
 		$agreementsAnonymised = 0;
 		$hoursAnonymised = 0;
 		$eventsAnonymised = 0;
+		$checklistItemIds = [];
 		$persona = [
 			'promisesDeleted' => 0,
 			'plansDeleted' => 0,
@@ -819,7 +835,9 @@ class CompanyService
 			$this->companyMapper->update($company);
 
 			$personsDeleted = $this->personMapper->deleteByCompany($id);
-			// Lock order: company (above) → deals → agreements → activities/hours → events.
+			// Lock order: company (above) → checklist files/items → deals → …
+			// Raw QB avoids circular DI with DealChecklistService (needs CompanyService).
+			$checklistItemIds = $this->eraseDealChecklists($id);
 			$this->dealMapper->deleteByCompany($id);
 			$agreementsAnonymised = $this->agreementMapper->anonymiseByCompany($id);
 			$activitiesDeleted = $this->activityMapper->deleteByCompany($id);
@@ -833,6 +851,13 @@ class CompanyService
 		} catch (\Throwable $e) {
 			$this->db->rollBack();
 			throw $e;
+		}
+
+		// Notifications are not part of the DB unit of work — withdraw only after a successful erase.
+		if ($this->notifications !== null) {
+			foreach ($checklistItemIds as $checklistItemId) {
+				$this->notifications->withdraw('deal_checklist_item', (string)$checklistItemId);
+			}
 		}
 
 		// Written after the erase so it is the one event with a readable payload.
@@ -858,6 +883,43 @@ class CompanyService
 			'mapStepsDeleted' => $persona['mapStepsDeleted'],
 			'mailUnmatched' => $persona['mailUnmatched'],
 		];
+	}
+
+	/**
+	 * Hard-delete deal checklist rows for GDPR erase (CUC-DEAL-CHECKLIST-1).
+	 * Raw QB — DealChecklistService depends on this class.
+	 */
+	/**
+	 * Hard-delete deal checklist rows for a company (GDPR erase).
+	 *
+	 * @return list<int> deleted checklist item ids (for notification withdraw after commit)
+	 */
+	private function eraseDealChecklists(int $companyId): array
+	{
+		if (!$this->db->tableExists('crm_deal_cl_item')) {
+			return [];
+		}
+		$itemIds = [];
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('id')->from('crm_deal_cl_item')
+			->where($qb->expr()->eq('company_id', $qb->createNamedParameter($companyId)));
+		$result = $qb->executeQuery();
+		while ($row = $result->fetch()) {
+			$itemIds[] = (int)$row['id'];
+		}
+		$result->closeCursor();
+		if ($itemIds !== [] && $this->db->tableExists('crm_deal_cl_file')) {
+			$delFiles = $this->db->getQueryBuilder();
+			$delFiles->delete('crm_deal_cl_file')
+				->where($delFiles->expr()->in('item_id', $delFiles->createNamedParameter($itemIds, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_INT_ARRAY)))
+				->executeStatement();
+		}
+		$delItems = $this->db->getQueryBuilder();
+		$delItems->delete('crm_deal_cl_item')
+			->where($delItems->expr()->eq('company_id', $delItems->createNamedParameter($companyId)))
+			->executeStatement();
+
+		return $itemIds;
 	}
 
 	/**

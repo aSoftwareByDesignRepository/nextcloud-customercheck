@@ -15,7 +15,9 @@
         "l10n:js": "php scripts/rebuild-l10n-js.php",
         "l10n:variants": "php scripts/sync-l10n-variants.php && php scripts/rebuild-l10n-js.php",
         "test:mutation:l10n-de": "php tests/Mutation/run-l10n-de-quality-mutations.php",
-        "test:mutation:bachus": "php tests/Mutation/run-bachus-simplicity-mutations.php"
+        "test:mutation:bachus": "php tests/Mutation/run-bachus-simplicity-mutations.php",
+        "test:mutation:deal-checklist": "php tests/Mutation/run-deal-checklist-mutations.php",
+        "test:mutation:company360-focus": "php tests/Mutation/run-company360-focus-mutations.php"
     },
     "devDependencies": {
         "@axe-core/playwright": "^4.10.1",

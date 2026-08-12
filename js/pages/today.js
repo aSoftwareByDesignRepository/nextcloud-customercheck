@@ -42,6 +42,47 @@
     });
   });
 
+  document.querySelectorAll('[data-crm-complete-checklist]').forEach((btn) => {
+    btn.addEventListener('click', async (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      const id = btn.getAttribute('data-crm-complete-checklist');
+      if (!id || !Api) return;
+      const doneNote =
+        (window.CustomerCheckDealChecklistUx &&
+          window.CustomerCheckDealChecklistUx.DEFAULT_CHECKLIST_DONE_NOTE) ||
+        'Done';
+      btn.disabled = true;
+      try {
+        await Api.post('/deal-checklist-items/' + id + '/complete', {
+          evidenceNote: doneNote,
+          updatedAt: btn.getAttribute('data-updated-at') || null,
+        });
+        const live = document.getElementById('crm-live-region');
+        if (live) live.textContent = t('Checklist task marked done.');
+        const row = btn.closest('.crm-today-row, .crm-list__item');
+        if (row) {
+          row.classList.add('crm-today-row--done', 'crm-list__item--done');
+          const actions = row.querySelector('.crm-table-actions, .crm-list__today-actions');
+          if (actions) {
+            actions.innerHTML = '<span class="crm-badge crm-badge--success">' + t('Done') + '</span>';
+          }
+        } else {
+          location.reload();
+        }
+      } catch (e) {
+        btn.disabled = false;
+        if (C) {
+          await C.alertDialog({
+            title: t('Update failed'),
+            message: (e.payload && e.payload.message) || e.message,
+            variant: 'danger',
+          });
+        }
+      }
+    });
+  });
+
   document.querySelectorAll('[data-crm-claim-deal]').forEach((btn) => {
     btn.addEventListener('click', async (ev) => {
       ev.preventDefault();

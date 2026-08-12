@@ -2,7 +2,20 @@
   'use strict';
   const C = window.CustomerCheckComponents || window.CrmComponents;
   const Api = window.CustomerCheckApi;
-  const tr = (text, args) => (window.t ? window.t('customercheck', text, args || []) : text);
+  const tr = (text, args) => {
+    const list = Array.isArray(args) ? args : [];
+    let out = window.t ? window.t('customercheck', text, list) : text;
+    // Nextcloud t() sometimes leaves %s / %1$s when the locale catalog is stale — fill locally.
+    if (list.length && typeof out === 'string' && out.indexOf('%') !== -1) {
+      let i = 0;
+      out = out.replace(/%(?:\d+\$)?s/g, function () {
+        const v = list[i];
+        i += 1;
+        return v == null ? '' : String(v);
+      });
+    }
+    return out;
+  };
   if (C && C.init) { C.init(); }
 
   const LegacyWs = window.CustomerCheckWorkspaceSettingsLegacyRedirect;
@@ -865,27 +878,80 @@
   }
 
   function mailboxPayloadFromForm() {
-    const foldersRaw = (document.getElementById('crm-mbox-folders') || {}).value || '';
-    const folders = String(foldersRaw).split(/\n/).map((s) => s.trim()).filter(Boolean);
+    const Present = window.CustomerCheckMailboxSettingsPresent;
+    const picker = document.getElementById('crm-mbox-folder-picker');
+    const folders = Present && typeof Present.readCheckedFolderPaths === 'function'
+      ? Present.readCheckedFolderPaths(picker)
+      : Array.from((picker && picker.querySelectorAll('input[type="checkbox"][name="folders"]:checked')) || [])
+        .map((el) => String(el.value || '').trim())
+        .filter(Boolean);
     const idRaw = (document.getElementById('crm-mbox-id') || {}).value || '';
     const id = parseInt(String(idRaw), 10);
+    const usernameRaw = String((document.getElementById('crm-mbox-user') || {}).value || '');
+    // Strip provider account-id suffixes like " (m06367b4)" before send.
+    const username = usernameRaw.replace(/\s*\([mw]\d+[a-z0-9]*\)\s*$/i, '').trim();
     const payload = {
       label: (document.getElementById('crm-mbox-label') || {}).value || '',
       emailAddress: (document.getElementById('crm-mbox-email') || {}).value || '',
       email: (document.getElementById('crm-mbox-email') || {}).value || '',
-      imapHost: (document.getElementById('crm-mbox-imap-host') || {}).value || '',
+      imapHost: String((document.getElementById('crm-mbox-imap-host') || {}).value || '').trim(),
       imapPort: parseInt(String((document.getElementById('crm-mbox-imap-port') || {}).value || '993'), 10),
-      smtpHost: (document.getElementById('crm-mbox-smtp-host') || {}).value || '',
-      smtpPort: parseInt(String((document.getElementById('crm-mbox-smtp-port') || {}).value || '587'), 10),
-      username: (document.getElementById('crm-mbox-user') || {}).value || '',
+      imapEnc: (document.getElementById('crm-mbox-imap-enc') || {}).value || 'ssl',
+      smtpHost: String((document.getElementById('crm-mbox-smtp-host') || {}).value || '').trim(),
+      smtpPort: parseInt(String((document.getElementById('crm-mbox-smtp-port') || {}).value || '465'), 10),
+      smtpEnc: (document.getElementById('crm-mbox-smtp-enc') || {}).value || 'ssl',
+      username: username,
       password: (document.getElementById('crm-mbox-pass') || {}).value || '',
-      folders: folders,
+      folders: folders.length ? folders : ['INBOX'],
       dsgvoAck: !!(document.getElementById('crm-mbox-dsgvo') || {}).checked,
     };
     if (id > 0) {
       payload.id = id;
     }
     return payload;
+  }
+
+  function renderMailboxFolderPicker(remoteFolders, selectedFolders) {
+    const Present = window.CustomerCheckMailboxSettingsPresent;
+    const host = document.getElementById('crm-mbox-folder-picker');
+    if (!host) return;
+    const options = Present && typeof Present.buildFolderPickerOptions === 'function'
+      ? Present.buildFolderPickerOptions(remoteFolders, selectedFolders)
+      : [{ path: 'INBOX', checked: true }];
+    if (Present && typeof Present.renderFolderPicker === 'function') {
+      Present.renderFolderPicker(host, options);
+      return;
+    }
+    host.textContent = '';
+    options.forEach((opt) => {
+      const label = document.createElement('label');
+      label.className = 'crm-check';
+      const input = document.createElement('input');
+      input.type = 'checkbox';
+      input.name = 'folders';
+      input.value = opt.path;
+      input.checked = !!opt.checked;
+      const span = document.createElement('span');
+      span.textContent = opt.path;
+      label.appendChild(input);
+      label.appendChild(span);
+      host.appendChild(label);
+    });
+  }
+
+  function syncMailboxEncFromPorts() {
+    const imapPort = parseInt(String((document.getElementById('crm-mbox-imap-port') || {}).value || '993'), 10);
+    const smtpPort = parseInt(String((document.getElementById('crm-mbox-smtp-port') || {}).value || '465'), 10);
+    const imapEnc = document.getElementById('crm-mbox-imap-enc');
+    const smtpEnc = document.getElementById('crm-mbox-smtp-enc');
+    if (imapEnc) {
+      if (imapPort === 143) imapEnc.value = 'tls';
+      else if (imapPort === 993) imapEnc.value = 'ssl';
+    }
+    if (smtpEnc) {
+      if (smtpPort === 587) smtpEnc.value = 'tls';
+      else if (smtpPort === 465) smtpEnc.value = 'ssl';
+    }
   }
 
   function syncMailboxPasswordRequired() {
@@ -904,14 +970,14 @@
     const portImap = document.getElementById('crm-mbox-imap-port');
     const portSmtp = document.getElementById('crm-mbox-smtp-port');
     if (portImap) portImap.value = '993';
-    if (portSmtp) portSmtp.value = '587';
+    if (portSmtp) portSmtp.value = '465';
+    syncMailboxEncFromPorts();
     mailboxTestOk = false;
     const saveBtn = document.getElementById('crm-mailbox-save');
     if (saveBtn) saveBtn.disabled = true;
     const foldersWrapEl = document.getElementById('crm-mailbox-folders-wrap');
     if (foldersWrapEl) foldersWrapEl.hidden = true;
-    const folderField = document.getElementById('crm-mbox-folders');
-    if (folderField) folderField.value = '';
+    renderMailboxFolderPicker(['INBOX'], ['INBOX']);
     showInlineError(document.getElementById('crm-mailbox-error'), '');
     const statusEl = document.getElementById('crm-mailbox-test-status');
     if (statusEl) statusEl.textContent = '';
@@ -925,7 +991,12 @@
     syncMailboxPasswordRequired();
   }
 
-  function fillMailboxFormFromCache(id) {
+  /**
+   * Hydrate the form from mailboxCache after list refresh / Edit click.
+   * @param {number} id
+   * @param {{ statusMessage?: string, scrollForm?: boolean }=} opts
+   */
+  function fillMailboxFormFromCache(id, opts) {
     const box = mailboxCache.find((m) => parseInt(String(m.id || 0), 10) === id);
     const form = document.getElementById('crm-mailbox-form');
     if (!box || !form) return;
@@ -939,20 +1010,30 @@
     setVal('crm-mbox-imap-host', box.imapHost || '');
     setVal('crm-mbox-imap-port', box.imapPort || 993);
     setVal('crm-mbox-smtp-host', box.smtpHost || '');
-    setVal('crm-mbox-smtp-port', box.smtpPort || 587);
+    setVal('crm-mbox-smtp-port', box.smtpPort || 465);
     setVal('crm-mbox-user', box.username || '');
     setVal('crm-mbox-pass', '');
-    setVal('crm-mbox-folders', '');
+    const imapEncEl = document.getElementById('crm-mbox-imap-enc');
+    const smtpEncEl = document.getElementById('crm-mbox-smtp-enc');
+    if (imapEncEl) imapEncEl.value = box.imapEnc || 'ssl';
+    if (smtpEncEl) smtpEncEl.value = box.smtpEnc || 'ssl';
+    if (!box.imapEnc || !box.smtpEnc) syncMailboxEncFromPorts();
+    const folderList = Array.isArray(box.folders) ? box.folders.map((f) => String(f || '').trim()).filter(Boolean) : [];
+    renderMailboxFolderPicker(folderList.length ? folderList : ['INBOX'], folderList.length ? folderList : ['INBOX']);
     const dsgvo = document.getElementById('crm-mbox-dsgvo');
     if (dsgvo) dsgvo.checked = true;
     mailboxTestOk = false;
     const saveBtn = document.getElementById('crm-mailbox-save');
     if (saveBtn) saveBtn.disabled = true;
     const foldersWrapEl = document.getElementById('crm-mailbox-folders-wrap');
-    if (foldersWrapEl) foldersWrapEl.hidden = true;
+    if (foldersWrapEl) foldersWrapEl.hidden = folderList.length === 0;
     const statusEl = document.getElementById('crm-mailbox-test-status');
     if (statusEl) {
-      statusEl.textContent = tr('Editing saved mailbox — test again before save. Leave password blank to keep it.');
+      statusEl.classList.remove('form-error');
+      statusEl.classList.add('form-help');
+      statusEl.textContent = (opts && opts.statusMessage)
+        ? opts.statusMessage
+        : tr('Editing saved mailbox — test again before save. Leave password blank to keep it.');
     }
     const mode = document.getElementById('crm-mailbox-form-mode');
     if (mode) {
@@ -962,7 +1043,9 @@
     const resetBtn = document.getElementById('crm-mailbox-reset');
     if (resetBtn) resetBtn.hidden = false;
     syncMailboxPasswordRequired();
-    form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    if (!opts || opts.scrollForm !== false) {
+      form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
   }
 
   async function refreshMailboxes() {
@@ -989,7 +1072,7 @@
           lastError: m.lastError || '',
         })).filter((r) => r.id > 0);
       if (Present && typeof Present.renderMailboxList === 'function' && listHost) {
-        Present.renderMailboxList(listHost, rows, tr, fillMailboxFormFromCache);
+        Present.renderMailboxList(listHost, rows, tr, fillMailboxFormFromCache, syncMailboxNow, removeMailboxNow);
       } else if (listHost) {
         listHost.textContent = rows.length ? tr('%s mailbox(es) connected.', [String(rows.length)]) : '';
       }
@@ -1169,6 +1252,7 @@
       document.getElementById('section-workspace-mailbox')
       || document.getElementById('crm-review-sources-form')
       || document.getElementById('crm-circles-roll-call')
+      || document.getElementById('section-checklists')
     );
     if (!needsWorkspaceBoot) return;
     workspaceBootReady = false;
@@ -1191,6 +1275,9 @@
         }
         if (document.getElementById('crm-mailbox-form') || document.getElementById('crm-mailbox-list')) {
           await refreshMailboxes();
+        }
+        if (document.getElementById('section-checklists')) {
+          await loadChecklistTemplates();
         }
         workspaceBootReady = true;
         setReviewSourcesLocked(false);
@@ -1402,15 +1489,22 @@
     });
   }
 
-  function ensureMailboxServersVisible(payload) {
-    const details = document.getElementById('crm-mailbox-servers');
-    if (!details) return;
+  function focusMailboxServersIfIncomplete(payload) {
+    const host = document.getElementById('crm-mbox-imap-host');
+    const smtp = document.getElementById('crm-mbox-smtp-host');
     const imap = String((payload && payload.imapHost) || '').trim();
-    const smtp = String((payload && payload.smtpHost) || '').trim();
-    if (!imap || !smtp) {
-      details.open = true;
+    const smtpVal = String((payload && payload.smtpHost) || '').trim();
+    if (!imap && host) {
+      host.focus();
+      return;
     }
+    if (!smtpVal && smtp) smtp.focus();
   }
+
+  const imapPortEl = document.getElementById('crm-mbox-imap-port');
+  const smtpPortEl = document.getElementById('crm-mbox-smtp-port');
+  if (imapPortEl) imapPortEl.addEventListener('change', syncMailboxEncFromPorts);
+  if (smtpPortEl) smtpPortEl.addEventListener('change', syncMailboxEncFromPorts);
 
   if (mailboxTest && canManageWorkspace) {
     mailboxTest.addEventListener('click', async () => {
@@ -1419,24 +1513,27 @@
       mailboxTestOk = false;
       if (mailboxSave) mailboxSave.disabled = true;
       mailboxTest.disabled = true;
+      syncMailboxEncFromPorts();
       const payload = mailboxPayloadFromForm();
-      ensureMailboxServersVisible(payload);
+      focusMailboxServersIfIncomplete(payload);
       try {
         const res = await Api.post('/workspaces/' + currentWorkspaceId + '/mailboxes/test', payload);
         const data = res.data || {};
         if (mailboxTestStatus) {
           mailboxTestStatus.textContent = data.message || (data.ok ? tr('IMAP connection OK.') : tr('IMAP connection failed.'));
+          mailboxTestStatus.classList.toggle('form-error', !data.ok);
+          mailboxTestStatus.classList.toggle('form-help', !!data.ok);
         }
         if (data.ok) {
           mailboxTestOk = true;
           if (mailboxSave) mailboxSave.disabled = false;
           if (foldersWrap) foldersWrap.hidden = false;
-          const folderField = document.getElementById('crm-mbox-folders');
-          if (folderField && Array.isArray(data.folders) && data.folders.length && !folderField.value.trim()) {
-            folderField.value = data.folders.join('\n');
-          } else if (folderField && !folderField.value.trim()) {
-            folderField.value = 'INBOX';
-          }
+          const Present = window.CustomerCheckMailboxSettingsPresent;
+          const previous = Present && typeof Present.readCheckedFolderPaths === 'function'
+            ? Present.readCheckedFolderPaths(document.getElementById('crm-mbox-folder-picker'))
+            : [];
+          const remote = Array.isArray(data.folders) && data.folders.length ? data.folders : ['INBOX'];
+          renderMailboxFolderPicker(remote, previous.length ? previous : ['INBOX']);
         }
       } catch (e) {
         showInlineError(mailboxErr, (e.payload && e.payload.message) || e.message);
@@ -1464,10 +1561,31 @@
       if (mailboxSave) mailboxSave.disabled = true;
       if (mailboxTest) mailboxTest.disabled = true;
       try {
-        await Api.post('/workspaces/' + currentWorkspaceId + '/mailboxes', payload);
+        const res = await Api.post('/workspaces/' + currentWorkspaceId + '/mailboxes', payload);
+        const saved = (res && res.data) || res || {};
+        const savedId = parseInt(String(saved.id || payload.id || 0), 10) || 0;
+        const savedLabel = String(saved.label || payload.label || '').trim();
         if (C && C.announce) C.announce(tr('Mailbox saved'));
-        resetMailboxForm();
+        // Keep fields visible: wipe-after-save looked like data loss even though the API persisted.
         await refreshMailboxes();
+        const savedStatus = savedLabel
+          ? tr('Saved. Your mailbox is listed above: %s. Change something only after you test the connection again.', [savedLabel])
+          : tr('Saved. Your mailbox is listed above. Change something only after you test the connection again.');
+        if (savedId > 0) {
+          fillMailboxFormFromCache(savedId, { statusMessage: savedStatus, scrollForm: false });
+          highlightSavedMailbox(savedId);
+          const listHost = document.getElementById('crm-mailbox-list');
+          if (listHost && typeof listHost.scrollIntoView === 'function') {
+            listHost.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+          // Pull headers now so Review / Talk update without waiting for the 15-minute job.
+          await syncMailboxNow(savedId, null);
+        } else if (mailboxTestStatus) {
+          // Fallback: keep the typed form (do not blank) if the API omitted id.
+          mailboxTestStatus.classList.remove('form-error');
+          mailboxTestStatus.classList.add('form-help');
+          mailboxTestStatus.textContent = savedStatus;
+        }
       } catch (e) {
         showInlineError(mailboxErr, (e.payload && e.payload.message) || e.message);
         if (mailboxSave) mailboxSave.disabled = !mailboxTestOk;
@@ -1475,6 +1593,77 @@
         if (mailboxTest) mailboxTest.disabled = false;
       }
     });
+  }
+
+  function highlightSavedMailbox(id) {
+    const listHost = document.getElementById('crm-mailbox-list');
+    if (!listHost) return;
+    listHost.querySelectorAll('.crm-mailbox-list__item--just-saved').forEach((el) => {
+      el.classList.remove('crm-mailbox-list__item--just-saved');
+    });
+    const item = listHost.querySelector('.crm-mailbox-list__item[data-mailbox-id="' + String(id) + '"]');
+    if (!item) return;
+    item.classList.add('crm-mailbox-list__item--just-saved');
+    if (typeof item.focus === 'function') {
+      if (!item.hasAttribute('tabindex')) item.setAttribute('tabindex', '-1');
+      try { item.focus({ preventScroll: true }); } catch (e) { item.focus(); }
+    }
+  }
+
+  async function syncMailboxNow(id, btn) {
+    if (!currentWorkspaceId || !canManageWorkspace) return;
+    const mailboxId = parseInt(String(id || 0), 10) || 0;
+    if (mailboxId <= 0) return;
+    if (btn) btn.disabled = true;
+    showInlineError(mailboxErr, '');
+    try {
+      const res = await Api.post('/workspaces/' + currentWorkspaceId + '/mailboxes/' + mailboxId + '/sync', {});
+      const data = (res && res.data) || res || {};
+      const msg = data.message || tr('Sync finished.');
+      if (mailboxTestStatus) {
+        mailboxTestStatus.classList.toggle('form-error', data.status && data.status !== 'ok' && data.status !== 'locked');
+        mailboxTestStatus.classList.toggle('form-help', !data.status || data.status === 'ok' || data.status === 'locked');
+        mailboxTestStatus.textContent = msg;
+      }
+      if (C && C.announce) C.announce(msg);
+      await refreshMailboxes();
+      highlightSavedMailbox(mailboxId);
+    } catch (e) {
+      showInlineError(mailboxErr, (e.payload && e.payload.message) || e.message || tr('Sync failed.'));
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  async function removeMailboxNow(id, label, btn) {
+    if (!currentWorkspaceId || !canManageWorkspace) return;
+    const mailboxId = parseInt(String(id || 0), 10) || 0;
+    if (mailboxId <= 0) return;
+    const name = String(label || ('#' + mailboxId)).trim() || ('#' + mailboxId);
+    const ok = C && typeof C.confirmDialog === 'function'
+      ? await C.confirmDialog({
+        title: tr('Remove this mailbox?'),
+        message: tr('Removes “%s” from CustomerCheck (indexed mail, open Review items, and failed sends for it). The real inbox on your mail host is not deleted.', [name]),
+        confirmLabel: tr('Remove'),
+        cancelLabel: tr('Cancel'),
+        variant: 'danger',
+      })
+      : null;
+    if (!ok || !ok.confirmed) return;
+    if (btn) btn.disabled = true;
+    showInlineError(mailboxErr, '');
+    try {
+      await Api.post('/workspaces/' + currentWorkspaceId + '/mailboxes/' + mailboxId + '/remove', {});
+      if (C && C.announce) C.announce(tr('Mailbox removed'));
+      const editingId = parseInt(String((document.getElementById('crm-mbox-id') || {}).value || '0'), 10) || 0;
+      if (editingId === mailboxId) {
+        resetMailboxForm();
+      }
+      await refreshMailboxes();
+    } catch (e) {
+      showInlineError(mailboxErr, (e.payload && e.payload.message) || e.message || tr('Could not remove mailbox.'));
+      if (btn) btn.disabled = false;
+    }
   }
 
   async function loadValueMaps() {
@@ -1698,6 +1887,201 @@
   }
 
   bootWorkspaceSection();
+
+  function showClTmplError(msg) {
+    const el = document.getElementById('crm-cl-tmpl-error');
+    if (!el) return;
+    if (!msg) {
+      el.hidden = true;
+      el.textContent = '';
+      return;
+    }
+    el.hidden = false;
+    el.textContent = String(msg);
+  }
+
+  function showClTmplStatus(msg) {
+    const el = document.getElementById('crm-cl-tmpl-status');
+    if (el) el.textContent = msg || '';
+  }
+
+  async function openTemplateEditor(opts) {
+    const existing = opts && opts.template ? opts.template : null;
+    const isEdit = !!(existing && existing.canEdit);
+    const id = 'crm-cl-tmpl-form-' + Date.now();
+    const stepLines = existing && Array.isArray(existing.steps)
+      ? existing.steps.map((s) => (s && s.titleEn) || (s && s.title) || '').filter(Boolean).join('\n')
+      : '';
+    const nameVal = existing ? String(existing.nameEn || existing.name || '') : '';
+    const html =
+      '<form id="' + id + '" class="crm-form crm-form--stack">' +
+      '<div class="form-group"><label class="form-label" for="' + id + '-name">' + escapeHtml(tr('Template name')) + '</label>' +
+      '<input class="crm-input form-input" id="' + id + '-name" name="name" required maxlength="120" value="' + escapeHtml(nameVal) + '" />' +
+      '<p class="form-help">' + escapeHtml(tr('Example: Onboarding for new customers')) + '</p></div>' +
+      '<div class="form-group"><label class="form-label" for="' + id + '-steps">' + escapeHtml(tr('Steps (one per line)')) + '</label>' +
+      '<textarea class="crm-input form-input" id="' + id + '-steps" name="steps" rows="8" required maxlength="1400">' +
+      escapeHtml(stepLines) + '</textarea>' +
+      '<p class="form-help">' + escapeHtml(tr('Up to 8 steps. Keep each line short.')) + '</p></div>' +
+      '<p class="crm-form-inline-error crm-callout crm-callout--danger" role="alert" hidden></p>' +
+      '<div class="crm-form-actions">' +
+      '<button type="submit" class="crm-btn crm-btn--primary">' + escapeHtml(tr('Save template')) + '</button> ' +
+      '<button type="button" class="crm-btn crm-btn--secondary" data-cancel>' + escapeHtml(tr('Cancel')) + '</button>' +
+      '</div></form>';
+
+    return new Promise((resolve) => {
+      C.openDialog({
+        id: id + '-dlg',
+        title: isEdit ? tr('Edit template') : tr('New template'),
+        content: html,
+        size: 'md',
+      });
+      const form = document.getElementById(id);
+      const errEl = form.querySelector('.crm-form-inline-error');
+      const close = () => C.closeModal(document.getElementById(id + '-dlg'));
+      form.querySelector('[data-cancel]').addEventListener('click', () => {
+        close();
+        resolve(null);
+      });
+      form.addEventListener('submit', (ev) => {
+        ev.preventDefault();
+        const name = String((document.getElementById(id + '-name') || {}).value || '').trim();
+        const stepsRaw = String((document.getElementById(id + '-steps') || {}).value || '');
+        const steps = stepsRaw.split(/\r\n|\r|\n/).map((s) => s.trim()).filter(Boolean);
+        if (!name) {
+          errEl.hidden = false;
+          errEl.textContent = tr('Enter a template name.');
+          return;
+        }
+        if (!steps.length) {
+          errEl.hidden = false;
+          errEl.textContent = tr('Add at least one step.');
+          return;
+        }
+        if (steps.length > 8) {
+          errEl.hidden = false;
+          errEl.textContent = tr('Keep templates to 8 steps or fewer.');
+          return;
+        }
+        close();
+        resolve({ name: name, steps: steps });
+      });
+    });
+  }
+
+  async function loadChecklistTemplates() {
+    const list = document.getElementById('crm-checklist-templates');
+    const empty = document.getElementById('crm-cl-tmpl-empty');
+    if (!list || !canManageWorkspace || !currentWorkspaceId) return;
+    showClTmplError('');
+    showClTmplStatus(tr('Loading templates…'));
+    try {
+      const res = await Api.get('/checklist-templates/manage');
+      const rows = Array.isArray(res.data) ? res.data : [];
+      list.innerHTML = '';
+      rows.forEach((tm) => {
+        const li = document.createElement('li');
+        li.className = 'crm-checklist-tmpl-list__item';
+        const isSystem = !!tm.isSystem;
+        const stepTitles = (Array.isArray(tm.steps) ? tm.steps : []).map((s) => s.title || '').filter(Boolean);
+        const badge = isSystem
+          ? '<span class="crm-badge">' + escapeHtml(tr('Built-in')) + '</span>'
+          : (tm.isEnabled === false
+            ? '<span class="crm-badge crm-badge--warning">' + escapeHtml(tr('Off')) + '</span>'
+            : '<span class="crm-badge">' + escapeHtml(tr('Yours')) + '</span>');
+        li.innerHTML =
+          '<div class="crm-checklist-tmpl-list__main">' +
+          '<strong>' + escapeHtml(String(tm.name || '')) + '</strong> ' + badge +
+          '<p class="crm-muted">' + escapeHtml(stepTitles.join(' · ') || tr('No steps')) + '</p>' +
+          '</div>' +
+          '<div class="crm-checklist-tmpl-list__actions crm-table-actions"></div>';
+        const actions = li.querySelector('.crm-checklist-tmpl-list__actions');
+        const cloneBtn = document.createElement('button');
+        cloneBtn.type = 'button';
+        cloneBtn.className = 'crm-btn crm-btn--sm crm-btn--secondary';
+        cloneBtn.textContent = tr('Copy');
+        cloneBtn.setAttribute('aria-label', tr('Copy template') + ' ' + String(tm.name || ''));
+        cloneBtn.addEventListener('click', async () => {
+          try {
+            await Api.post('/checklist-templates/' + tm.id + '/clone', {});
+            showClTmplStatus(tr('Template copied. You can edit your copy.'));
+            await loadChecklistTemplates();
+          } catch (e) {
+            showClTmplError((e.payload && e.payload.message) || e.message);
+          }
+        });
+        actions.appendChild(cloneBtn);
+        if (tm.canEdit) {
+          const editBtn = document.createElement('button');
+          editBtn.type = 'button';
+          editBtn.className = 'crm-btn crm-btn--sm crm-btn--primary';
+          editBtn.textContent = tr('Edit');
+          editBtn.addEventListener('click', async () => {
+            const data = await openTemplateEditor({ template: tm });
+            if (!data) return;
+            try {
+              await Api.put('/checklist-templates/' + tm.id, data);
+              showClTmplStatus(tr('Template saved.'));
+              await loadChecklistTemplates();
+            } catch (e) {
+              showClTmplError((e.payload && e.payload.message) || e.message);
+            }
+          });
+          actions.appendChild(editBtn);
+          const delBtn = document.createElement('button');
+          delBtn.type = 'button';
+          delBtn.className = 'crm-btn crm-btn--sm crm-btn--ghost';
+          delBtn.textContent = tr('Delete');
+          delBtn.addEventListener('click', async () => {
+            const ok = await C.confirmDialog({
+              title: tr('Delete template?'),
+              message: tr('Deals that already used this list keep their checklist. Only the reusable template is removed.'),
+              confirmLabel: tr('Delete'),
+              cancelLabel: tr('Cancel'),
+            });
+            if (!ok) return;
+            try {
+              await Api.del('/checklist-templates/' + tm.id);
+              showClTmplStatus(tr('Template deleted.'));
+              await loadChecklistTemplates();
+            } catch (e) {
+              showClTmplError((e.payload && e.payload.message) || e.message);
+            }
+          });
+          actions.appendChild(delBtn);
+        }
+        list.appendChild(li);
+      });
+      if (empty) {
+        const hasCustom = rows.some((tm) => !tm.isSystem);
+        empty.hidden = hasCustom;
+      }
+      showClTmplStatus(rows.length
+        ? tr('%n template(s) ready to use on deals.', [rows.length])
+        : tr('No templates yet.'));
+    } catch (e) {
+      showClTmplStatus('');
+      showClTmplError((e.payload && e.payload.message) || e.message || tr('Could not load templates.'));
+    }
+  }
+
+  const newTmplBtn = document.getElementById('crm-cl-tmpl-new');
+  if (newTmplBtn && canManageWorkspace) {
+    newTmplBtn.addEventListener('click', async () => {
+      if (!currentWorkspaceId) {
+        showClTmplError(tr('Team settings are still loading.'));
+        return;
+      }
+      const data = await openTemplateEditor({});
+      if (!data) return;
+      try {
+        await Api.post('/checklist-templates', data);
+        showClTmplStatus(tr('Template saved. Use it from any deal → Checklist → From template.'));
+        await loadChecklistTemplates();
+      } catch (e) {
+        showClTmplError((e.payload && e.payload.message) || e.message);
+      }
+    });
+  }
 
   async function loadCirclesRollCall() {
     const mount = document.getElementById('crm-circles-roll-call');

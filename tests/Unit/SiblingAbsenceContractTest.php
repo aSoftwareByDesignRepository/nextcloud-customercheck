@@ -26,7 +26,7 @@ final class SiblingAbsenceContractTest extends TestCase
 		$this->assertStringContainsString('TicketCheck is not available', $src);
 		$this->assertStringContainsString('ProjectCheck is not available', $src);
 		$this->assertStringContainsString('id="crm-glance"', $src);
-		$this->assertStringContainsString('Unavailable', $src);
+		$this->assertStringContainsString('Not installed', $src);
 	}
 
 	public function testFacadeProbeReturnsEmptyOnMissingApps(): void

@@ -2,7 +2,20 @@
   'use strict';
   const C = window.CustomerCheckComponents || window.CrmComponents;
   const Api = window.CustomerCheckApi;
-  const t = (msg, args) => (window.t ? window.t('customercheck', msg, args || []) : msg);
+  const t = (msg, args) => {
+    const list = Array.isArray(args) ? args : [];
+    let out = window.t ? window.t('customercheck', msg, list) : msg;
+    // Nextcloud t() sometimes leaves %s / %1$s — fill locally (same as settings.js).
+    if (list.length && typeof out === 'string' && out.indexOf('%') !== -1) {
+      let i = 0;
+      out = out.replace(/%(?:\d+\$)?s/g, function () {
+        const v = list[i];
+        i += 1;
+        return v == null ? '' : String(v);
+      });
+    }
+    return out;
+  };
   if (C && C.init) { C.init(); }
 
   function shellCan(flag) {
@@ -528,6 +541,56 @@
     });
   });
 
+
+
+  document.querySelectorAll('[data-crm-remove-person]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const personId = parseInt(btn.getAttribute('data-crm-remove-person') || '0', 10);
+      if (!personId) return;
+      const row = btn.closest('tr[data-person-id]');
+      const personName = (row && row.getAttribute('data-person-name')) || '';
+      const ok = await C.confirmDialog({
+        title: t('Remove this person?'),
+        message: personName
+          ? t('Removes “%s” from this company in CustomerCheck. The Contacts app entry stays.', [personName])
+          : t('Removes them from this company in CustomerCheck. The Contacts app entry stays.'),
+        confirmLabel: t('Remove'),
+        cancelLabel: t('Cancel'),
+        variant: 'danger',
+        optionalCheckbox: true,
+        optionalCheckboxChecked: true,
+        optionalCheckboxLabel: t('Also return their shared mail to Review (not deleted — you can assign it to another company). Mail already deleted in Review stays gone.'),
+      });
+      if (!ok || ok.confirmed === false) return;
+      const returnMailToReview = !!(ok && ok.optionalChecked);
+      try {
+        const updatedAt = row ? (row.getAttribute('data-updated-at') || '') : '';
+        const res = await Api.del('/persons/' + personId, { updatedAt, returnMailToReview });
+        const data = (res && res.data) ? res.data : res;
+        const mailN = data && data.mailReturnedToReview ? parseInt(data.mailReturnedToReview, 10) : 0;
+        const live = document.getElementById('crm-live-region');
+        if (live) {
+          if (mailN > 0) {
+            live.textContent = personName
+              ? t('Removed “%s”. %s mail item(s) returned to Review.', [personName, String(mailN)])
+              : t('Person removed. %s mail item(s) returned to Review.', [String(mailN)]);
+          } else {
+            live.textContent = personName
+              ? t('Removed “%s”.', [personName])
+              : t('Person removed.');
+          }
+        }
+        location.reload();
+      } catch (e) {
+        await C.alertDialog({
+          title: t('Could not remove person'),
+          message: (e.payload && e.payload.message) || e.message,
+          variant: 'danger',
+        });
+      }
+    });
+  });
+
   document.querySelectorAll('[data-crm-open-contacts]').forEach((link) => {
     link.addEventListener('click', () => {
       const name = link.getAttribute('data-person-name') || '';
@@ -663,7 +726,7 @@
         billingStateLabel: billingStateLabel,
         billingTone: billingTone,
       });
-      Company360Present.renderBillingSummaryTiles(body, tiles, t);
+      Company360Present.renderBillingSummaryTiles(body, tiles, t, billing);
       return;
     }
     const b = billing;
@@ -766,7 +829,7 @@
   if (addActivity) {
     addActivity.addEventListener('click', async () => {
       const today = new Date().toISOString().slice(0, 10);
-      const data = await promptFields(t('Add reminder'), [
+      const data = await promptFields(t('Add to-do'), [
         { name: 'title', label: t('What should you remember?'), required: true, hint: t('Example: Call Anna about renewal.') },
         { name: 'dueDate', label: t('Due date'), type: 'date', required: true, value: today },
         {
@@ -782,12 +845,44 @@
             { value: 'todo', label: t('To-do') },
           ],
         },
+        { name: 'alsoOnPhone', label: t('Also send to Tasks'), type: 'checkbox', value: false, advanced: true },
+        { name: 'toldCustomer', label: t('Told the customer'), type: 'checkbox', value: false, advanced: true },
       ]);
       if (!data) return;
       if (!data.dueDate) data.dueDate = today;
       if (!data.type) data.type = 'todo';
       try {
-        await Api.post('/activities', Object.assign({ companyId }, data));
+        if (data.toldCustomer) {
+          await Api.post('/companies/' + companyId + '/promises', {
+            title: data.title,
+            dueOn: data.dueDate || null,
+          });
+          if (liveRegion()) liveRegion().textContent = t('Promise added.');
+          const promisesPanel = document.getElementById('crm-promises');
+          if (promisesPanel) promisesPanel.open = true;
+          await loadPromises();
+          return;
+        }
+        if (data.alsoOnPhone) {
+          await Api.post('/companies/' + companyId + '/tasks', {
+            title: data.title,
+            type: data.type || 'todo',
+            dueDate: data.dueDate || today,
+            pushToTasks: true,
+          });
+          if (liveRegion()) liveRegion().textContent = t('Sent to Tasks.');
+          const phonePanel = document.getElementById('crm-open-tasks');
+          if (phonePanel) phonePanel.open = true;
+          await loadCommandCenter();
+          location.reload();
+          return;
+        }
+        await Api.post('/activities', {
+          companyId: companyId,
+          title: data.title,
+          dueDate: data.dueDate,
+          type: data.type || 'todo',
+        });
         location.reload();
       } catch (e) {
         await C.alertDialog({ title: t('Could not add reminder'), message: (e.payload && e.payload.message) || e.message, variant: 'danger' });
@@ -918,6 +1013,330 @@
       } catch (e) {
         await C.alertDialog({ title: t('Could not save deal'), message: (e.payload && e.payload.message) || e.message, variant: 'danger' });
       }
+    });
+  });
+
+  async function loadWorkspaceMemberOptions() {
+    const stack = document.querySelector('.crm-page-stack[data-company-id]');
+    const wsId = stack ? parseInt(stack.getAttribute('data-workspace-id') || '0', 10) : 0;
+    const opts = [{ value: '', label: t('Nobody yet') }];
+    if (!(wsId > 0)) {
+      return opts;
+    }
+    try {
+      const res = await Api.get('/workspaces/' + wsId + '/members');
+      const raw = (res && res.data) || [];
+      const rows = Array.isArray(raw) ? raw : (raw.members || raw.items || []);
+      (Array.isArray(rows) ? rows : []).forEach((m) => {
+        const uid = String(m.userId || m.uid || m.id || '').trim();
+        if (!uid) return;
+        const name = String(m.displayName || m.name || uid).trim();
+        opts.push({ value: uid, label: name + (name !== uid ? ' (' + uid + ')' : '') });
+      });
+    } catch (e) {
+      /* assignee optional — empty list still allows unassigned tasks */
+    }
+    return opts;
+  }
+
+  async function openDealChecklist(dealId, dealTitle) {
+    const dlgId = 'crm-deal-checklist-' + dealId;
+    const Ux = window.CustomerCheckDealChecklistUx;
+    if (!Ux) {
+      await C.alertDialog({ title: t('Could not open checklist'), message: t('Something went wrong. Reload the page and try again.'), variant: 'danger' });
+      return;
+    }
+    if (!Ux) {
+      await C.alertDialog({
+        title: t('Could not open checklist'),
+        message: t('Reload the page and try again.'),
+        variant: 'danger',
+      });
+      return;
+    }
+    const uxHelpers = { t: t, escapeHtml: escapeHtml };
+    const memberOpts = await loadWorkspaceMemberOptions();
+    const doneNote = Ux.DEFAULT_CHECKLIST_DONE_NOTE || 'Done';
+
+    const loadTemplates = async () => {
+      try {
+        const res = await Api.get('/checklist-templates');
+        return Array.isArray(res.data) ? res.data : [];
+      } catch (e) {
+        return [];
+      }
+    };
+
+    const applyTemplate = async (templateId, mode, refresh) => {
+      const useMode = mode === 'replace' ? 'replace' : 'append';
+      if (useMode === 'replace') {
+        const ok = await C.confirmDialog({
+          title: t('Replace open tasks?'),
+          message: t('Open checklist tasks on this deal will be removed (including their attachments) and replaced by the template. Finished tasks stay in history.'),
+          confirmLabel: t('Replace open'),
+          cancelLabel: t('Cancel'),
+          requireTypedConfirm: Ux.requireTypedReplaceConfirm(),
+        });
+        if (!ok) return;
+      }
+      try {
+        await Api.post('/deals/' + dealId + '/checklist/from-template', {
+          templateId: parseInt(String(templateId), 10),
+          mode: useMode,
+        });
+        await refresh();
+      } catch (e) {
+        await C.alertDialog({
+          title: t('Could not apply template'),
+          message: (e.payload && e.payload.message) || e.message,
+          variant: 'danger',
+        });
+      }
+    };
+
+    const completeItem = async (itemId, evidenceNote, updatedAt, refresh) => {
+      try {
+        await Api.post('/deal-checklist-items/' + itemId + '/complete', {
+          evidenceNote: String(evidenceNote || doneNote).trim() || doneNote,
+          updatedAt: updatedAt,
+        });
+        await refresh();
+      } catch (e) {
+        await C.alertDialog({
+          title: t('Could not mark done'),
+          message: (e.payload && e.payload.message) || e.message,
+          variant: 'danger',
+        });
+      }
+    };
+
+    const renderBody = async () => {
+      let payload;
+      try {
+        const res = await Api.get('/deals/' + dealId + '/checklist');
+        payload = res.data || { items: [] };
+      } catch (e) {
+        await C.alertDialog({
+          title: t('Could not open checklist'),
+          message: (e.payload && e.payload.message) || e.message,
+          variant: 'danger',
+        });
+        return null;
+      }
+      const items = Array.isArray(payload.items) ? payload.items : [];
+      const empty = items.length === 0;
+      let itemsHtml = '';
+      if (!empty) {
+        itemsHtml = '<ul class="crm-deal-checklist" role="list">';
+        items.forEach((it) => {
+          itemsHtml += Ux.buildChecklistItemRowHtml(it, uxHelpers);
+        });
+        itemsHtml += '</ul>';
+      }
+      let startersHtml = '';
+      if (empty) {
+        const templates = await loadTemplates();
+        startersHtml = Ux.buildTemplateStarterButtonsHtml(templates, uxHelpers);
+      }
+      return Ux.buildChecklistPanelHtml(
+        { dealId: dealId, itemsHtml: itemsHtml, startersHtml: startersHtml, empty: empty },
+        uxHelpers,
+      );
+    };
+
+    const content = await renderBody();
+    if (content === null) return;
+    await C.openDialog({
+      id: dlgId,
+      title: t('Checklist') + (dealTitle ? ' — ' + dealTitle : ''),
+      content: content,
+      size: 'lg',
+    });
+
+    const bind = () => {
+      const panel = document.querySelector('#' + dlgId + ' .crm-deal-checklist-panel');
+      if (!panel) return;
+      const refresh = async () => {
+        const html = await renderBody();
+        if (html === null) return;
+        panel.outerHTML = html;
+        bind();
+        const live = document.getElementById('crm-live-region');
+        if (live) live.textContent = t('Checklist updated.');
+      };
+      const closeBtn = document.querySelector('#' + dlgId + ' [data-cl-close]');
+      if (closeBtn) {
+        closeBtn.addEventListener('click', () => C.closeModal(document.getElementById(dlgId)));
+      }
+      const quick = document.querySelector('#' + dlgId + ' [data-cl-quickadd]');
+      if (quick) {
+        quick.addEventListener('submit', async (ev) => {
+          ev.preventDefault();
+          const input = quick.querySelector('input[name="title"]');
+          const title = input ? String(input.value || '').trim() : '';
+          if (!title) {
+            if (input) input.focus();
+            return;
+          }
+          const submitBtn = quick.querySelector('button[type="submit"]');
+          if (submitBtn) submitBtn.disabled = true;
+          try {
+            await Api.post('/deals/' + dealId + '/checklist', { title: title });
+            await refresh();
+          } catch (e) {
+            if (submitBtn) submitBtn.disabled = false;
+            await C.alertDialog({
+              title: t('Could not add task'),
+              message: (e.payload && e.payload.message) || e.message,
+              variant: 'danger',
+            });
+          }
+        });
+      }
+      document.querySelectorAll('#' + dlgId + ' [data-cl-apply-tmpl]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          btn.disabled = true;
+          await applyTemplate(btn.getAttribute('data-cl-apply-tmpl'), 'append', refresh);
+          btn.disabled = false;
+        });
+      });
+      const tmplBtn = document.querySelector('#' + dlgId + ' [data-cl-template]');
+      if (tmplBtn) {
+        tmplBtn.addEventListener('click', async () => {
+          const templates = await loadTemplates();
+          if (templates.length === 0) {
+            await C.alertDialog({
+              title: t('No templates yet'),
+              message: t('Ask a workspace manager to add checklist templates, or add tasks by hand.'),
+              variant: 'info',
+            });
+            return;
+          }
+          const data = await promptFields(t('Start from template'), [
+            {
+              name: 'templateId',
+              label: t('Template'),
+              type: 'select',
+              required: true,
+              options: templates.map((tm) => ({
+                value: String(tm.id),
+                label: String(tm.name || tm.id),
+              })),
+            },
+            {
+              name: 'mode',
+              label: t('If this deal already has tasks'),
+              type: 'select',
+              value: 'append',
+              advanced: true,
+              options: [
+                { value: 'append', label: t('Keep existing and add these') },
+                { value: 'replace', label: t('Replace open tasks with this template') },
+              ],
+            },
+          ]);
+          if (!data) return;
+          await applyTemplate(data.templateId, data.mode === 'replace' ? 'replace' : 'append', refresh);
+        });
+      }
+      document.querySelectorAll('#' + dlgId + ' [data-cl-done]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const itemId = btn.getAttribute('data-cl-done');
+          const row = btn.closest('[data-item-id]');
+          const updatedAt = row ? row.getAttribute('data-updated-at') : null;
+          btn.disabled = true;
+          await completeItem(itemId, doneNote, updatedAt, refresh);
+          btn.disabled = false;
+        });
+      });
+      document.querySelectorAll('#' + dlgId + ' [data-cl-done-note]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const itemId = btn.getAttribute('data-cl-done-note');
+          const row = btn.closest('[data-item-id]');
+          const updatedAt = row ? row.getAttribute('data-updated-at') : null;
+          const data = await promptFields(t('Done with note'), [
+            {
+              name: 'evidenceNote',
+              label: t('What did you do?'),
+              type: 'textarea',
+              required: true,
+              maxlength: 2000,
+              value: doneNote,
+              hint: t('A short note is enough. Or attach a file, then tap Done.'),
+            },
+          ]);
+          if (!data) return;
+          await completeItem(itemId, data.evidenceNote, updatedAt, refresh);
+        });
+      });
+      document.querySelectorAll('#' + dlgId + ' [data-cl-assign]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const itemId = btn.getAttribute('data-cl-assign');
+          const row = btn.closest('[data-item-id]');
+          const updatedAt = row ? row.getAttribute('data-updated-at') : null;
+          const data = await promptFields(t('Assign task'), [
+            { name: 'assigneeUserId', label: t('Assign to'), type: 'select', options: memberOpts },
+            { name: 'dueOn', label: t('Due date'), type: 'date', advanced: true },
+          ]);
+          if (!data) return;
+          try {
+            await Api.put('/deal-checklist-items/' + itemId, {
+              assigneeUserId: data.assigneeUserId || null,
+              dueOn: data.dueOn || null,
+              updatedAt: updatedAt,
+            });
+            await refresh();
+          } catch (e) {
+            await C.alertDialog({
+              title: t('Could not assign'),
+              message: (e.payload && e.payload.message) || e.message,
+              variant: 'danger',
+            });
+          }
+        });
+      });
+      document.querySelectorAll('#' + dlgId + ' [data-cl-file]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const itemId = btn.getAttribute('data-cl-file');
+          const Picker = window.CustomerCheckFolderPicker;
+          let fileId = 0;
+          if (Picker && typeof Picker.pickFile === 'function') {
+            const picked = await Picker.pickFile();
+            if (picked && picked.fileId) {
+              fileId = parseInt(String(picked.fileId), 10) || 0;
+            }
+          }
+          if (!(fileId > 0)) {
+            await C.alertDialog({
+              title: t('Pick a file'),
+              message: t('Use the file picker to attach a Nextcloud file.'),
+              variant: 'info',
+            });
+            return;
+          }
+          try {
+            await Api.post('/deal-checklist-items/' + itemId + '/files', { fileId: fileId });
+            await refresh();
+          } catch (e) {
+            await C.alertDialog({
+              title: t('Could not attach file'),
+              message: (e.payload && e.payload.message) || e.message,
+              variant: 'danger',
+            });
+          }
+        });
+      });
+    };
+    bind();
+  }
+
+  document.querySelectorAll('[data-crm-deal-checklist]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const row = btn.closest('[data-deal-id]');
+      const dealId = btn.getAttribute('data-crm-deal-checklist') || (row && row.getAttribute('data-deal-id'));
+      const title = row ? row.getAttribute('data-title') || '' : '';
+      if (!dealId) return;
+      await openDealChecklist(dealId, title);
     });
   });
 
@@ -1310,50 +1729,381 @@
             (canWrite
               ? '<div class="crm-empty-state__actions">' +
                 '<button type="button" class="crm-btn crm-btn--primary crm-btn--lg" data-crm-trigger="crm-log-email">' + escapeHtml(t('Log email')) + '</button> ' +
-                '<button type="button" class="crm-btn crm-btn--secondary" data-crm-trigger="crm-add-activity">' + escapeHtml(t('Add reminder')) + '</button>' +
+                '<button type="button" class="crm-btn crm-btn--secondary" data-crm-trigger="crm-add-activity">' + escapeHtml(t('Add to-do')) + '</button>' +
                 '</div>'
               : '') +
             '</div>';
         } else {
-          feedEl.innerHTML = '';
-          items.forEach((item) => {
-            const row = document.createElement('article');
-            row.className = 'crm-feed__item';
+          const board = document.createElement('div');
+          board.className = 'crm-review-board crm-communication-board';
+          board.setAttribute('role', 'region');
+          board.setAttribute('aria-label', t('Message list'));
+          board.setAttribute('data-crm-talk-sort', 'sent');
+          board.setAttribute('data-crm-talk-sort-dir', 'desc');
 
-            const badges = document.createElement('div');
-            badges.className = 'crm-feed__badges';
-            const badge = document.createElement('span');
-            badge.className = 'crm-badge';
-            badge.textContent = feedKindLabel(item.kind);
-            badges.appendChild(badge);
-            if (item.shared || item.kind === 'shared_mail') {
-              const sharedBadge = document.createElement('span');
-              sharedBadge.className = 'crm-badge crm-badge--warning';
-              sharedBadge.textContent = t('Shared');
-              badges.appendChild(sharedBadge);
-            }
-            if (item.private || item.kind === 'mail_related') {
-              const privBadge = document.createElement('span');
-              privBadge.className = 'crm-badge crm-badge--neutral';
-              privBadge.textContent = item.privacyBadge || t('Private to you');
-              badges.appendChild(privBadge);
-            }
-            row.appendChild(badges);
+          const toolbar = document.createElement('div');
+          toolbar.className = 'crm-review-board__toolbar';
+          toolbar.innerHTML = '<p class="crm-muted crm-review-board__hint" role="note">' +
+            escapeHtml(t('Open a row to read the message.')) + '</p>';
 
-            const strong = document.createElement('strong');
-            strong.className = 'crm-feed__subject';
-            strong.textContent = item.subject || '';
-            row.appendChild(strong);
+          function sortBtnHtml(col, label, sortKey, sortDir) {
+            const active = sortKey === col;
+            const aria = active ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none';
+            const arrow = !active ? '' : (sortDir === 'asc' ? ' ↑' : ' ↓');
+            return '<button type="button" class="crm-btn crm-btn--ghost crm-review-sort' + (active ? ' is-active' : '') + '" ' +
+              'data-crm-talk-sort="' + escapeHtml(col) + '" aria-pressed="' + (active ? 'true' : 'false') + '" ' +
+              'aria-sort="' + aria + '">' + escapeHtml(label) + escapeHtml(arrow) + '</button>';
+          }
 
-            const meta = document.createElement('p');
-            meta.className = 'crm-feed__meta crm-muted';
-            const metaParts = [];
-            if (item.occurredAt) metaParts.push(formatDisplayDate(item.occurredAt));
-            if (item.personName) metaParts.push(item.personName);
-            meta.textContent = metaParts.join(' · ');
-            row.appendChild(meta);
-            feedEl.appendChild(row);
+          const pane = document.createElement('div');
+          pane.className = 'crm-mail-3pane crm-review-mail crm-review-table crm-communication-feed';
+          const thread = document.createElement('div');
+          thread.className = 'crm-mail-3pane__thread';
+          const list = document.createElement('ul');
+          list.className = 'crm-mail-thread crm-review-list';
+          list.setAttribute('role', 'listbox');
+          list.setAttribute('aria-label', t('Message list'));
+          list.tabIndex = 0;
+
+          const detailLi = document.createElement('li');
+          detailLi.className = 'crm-review-detail-row';
+          detailLi.setAttribute('data-crm-talk-detail-row', '');
+          detailLi.setAttribute('role', 'presentation');
+          detailLi.hidden = true;
+          const reader = document.createElement('section');
+          reader.className = 'crm-review-detail crm-review-reader';
+          reader.setAttribute('data-crm-talk-reader', '');
+          reader.setAttribute('role', 'region');
+          reader.setAttribute('aria-label', t('Details'));
+          reader.setAttribute('aria-live', 'polite');
+          reader.tabIndex = -1;
+          reader.innerHTML = '<div class="crm-mail-reader__empty crm-empty-state" role="status"><p class="crm-empty-state__text">' +
+            escapeHtml(t('Select a message to read and decide.')) + '</p></div>';
+          detailLi.appendChild(reader);
+
+          const models = items.map(function (item, idx) {
+            const whenRaw = String(item.occurredAt || item.sentAt || '').trim();
+            const whenTs = whenRaw
+              ? (new Date(/T|\s\d{1,2}:/.test(whenRaw) ? whenRaw : (whenRaw + 'T12:00:00')).getTime() || 0)
+              : 0;
+            return {
+              item: item,
+              idx: idx,
+              id: String(item.id || ('feed-' + idx)),
+              from: String(item.from || item.personName || feedKindLabel(item.kind) || ''),
+              subject: String(item.subject || ''),
+              status: feedKindLabel(item.kind),
+              whenRaw: whenRaw,
+              whenTs: whenTs,
+            };
           });
+
+          function sortedModels() {
+            const key = board.getAttribute('data-crm-talk-sort') || 'sent';
+            const dir = board.getAttribute('data-crm-talk-sort-dir') === 'asc' ? 'asc' : 'desc';
+            const mul = dir === 'desc' ? -1 : 1;
+            return models.slice().sort(function (a, b) {
+              let av = '';
+              let bv = '';
+              if (key === 'from') {
+                av = a.from.toLowerCase();
+                bv = b.from.toLowerCase();
+              } else if (key === 'status') {
+                av = a.status.toLowerCase();
+                bv = b.status.toLowerCase();
+              } else if (key === 'sent') {
+                if (a.whenTs < b.whenTs) return -1 * mul;
+                if (a.whenTs > b.whenTs) return 1 * mul;
+                return 0;
+              } else {
+                av = a.subject.toLowerCase();
+                bv = b.subject.toLowerCase();
+              }
+              if (av < bv) return -1 * mul;
+              if (av > bv) return 1 * mul;
+              return 0;
+            });
+          }
+
+          function paintTalkReader(model) {
+            const item = model.item;
+            const crmMailId = parseInt(String(item.crmMailId || '0'), 10) || 0;
+            const fromLabel = model.from || feedKindLabel(item.kind);
+            const badges = [];
+            badges.push(feedKindLabel(item.kind));
+            if (item.shared || item.kind === 'shared_mail') badges.push(t('Shared'));
+            if (item.private || item.kind === 'mail_related') badges.push(item.privacyBadge || t('Private to you'));
+
+            list.querySelectorAll('.crm-mail-thread-row').forEach(function (el) {
+              const on = el.getAttribute('data-crm-feed-id') === model.id;
+              el.setAttribute('aria-selected', on ? 'true' : 'false');
+              el.classList.toggle('is-selected', on);
+              el.tabIndex = on ? 0 : -1;
+            });
+            const opt = list.querySelector('[data-crm-feed-id="' + model.id.replace(/"/g, '') + '"]');
+            if (opt) {
+              list.setAttribute('aria-activedescendant', opt.id);
+              if (detailLi.parentNode !== list || opt.nextElementSibling !== detailLi) {
+                opt.after(detailLi);
+              }
+              detailLi.hidden = false;
+            }
+
+            let actionsHtml = '';
+            if ((item.shared || item.kind === 'shared_mail') && crmMailId > 0) {
+              const bodyId = 'crm-mail-preview-body-c' + model.id.replace(/[^a-zA-Z0-9_-]/g, '') + '-m' + crmMailId;
+              actionsHtml =
+                '<div class="crm-mail-preview" data-crm-mail-preview="' + escapeHtml(String(crmMailId)) + '">' +
+                '<div class="crm-mail-preview__actions crm-inline-actions crm-review-mail-tools">' +
+                '<button type="button" class="crm-btn crm-btn--secondary" data-crm-mail-preview-toggle ' +
+                'aria-expanded="false" aria-controls="' + escapeHtml(bodyId) + '" ' +
+                'title="' + escapeHtml(t('Plain text only — attachments stay in the mailbox.')) + '">' +
+                escapeHtml(t('Show message')) + '</button>' +
+                '<button type="button" class="crm-btn crm-btn--primary" data-crm-mail-reply ' +
+                'aria-label="' + escapeHtml(t('Answer: %s', [String(item.subject || item.title || t('Shared mail'))])) + '" ' +
+                'title="' + escapeHtml(t('Opens your mail program with To and subject filled in. CustomerCheck does not send the email.')) + '">' +
+                escapeHtml(t('Answer')) + '</button></div>' +
+                '<pre class="crm-mail-preview__body" id="' + escapeHtml(bodyId) + '" role="region" aria-label="' +
+                escapeHtml(t('Message text')) + '" tabindex="0" hidden></pre></div>';
+            } else if (item.snippet) {
+              actionsHtml = '<p class="crm-muted">' + escapeHtml(String(item.snippet)) + '</p>';
+            }
+
+            const whenLabel = model.whenRaw ? formatDisplayDate(model.whenRaw) : '';
+            reader.innerHTML =
+              '<h3 class="crm-review-detail__title visually-hidden">' + escapeHtml(t('Details')) + '</h3>' +
+              '<div class="crm-mail-reader__panel"><header class="crm-mail-reader__header">' +
+              '<p class="crm-mail-reader__from"><span class="crm-mail-reader__label">' + escapeHtml(t('From')) +
+              '</span> ' + escapeHtml(String(fromLabel || t('Unknown sender'))) + '</p>' +
+              '<h3 class="crm-mail-reader__subject">' + escapeHtml(item.subject || '') + '</h3>' +
+              (whenLabel
+                ? ('<p class="crm-mail-reader__when crm-muted"><span class="crm-mail-reader__label">' +
+                  escapeHtml(t('Sent')) + '</span> ' + escapeHtml(whenLabel) + '</p>')
+                : '') +
+              '<p class="crm-mail-reader__meta">' + badges.map(function (b) {
+                return '<span class="crm-badge">' + escapeHtml(b) + '</span>';
+              }).join('') + '</p></header>' +
+              '<div class="crm-mail-reader__body">' + actionsHtml + '</div></div>';
+
+            const previewWrap = reader.querySelector('[data-crm-mail-preview]');
+            if (!previewWrap) return;
+            const toggle = previewWrap.querySelector('[data-crm-mail-preview-toggle]');
+            const replyBtn = previewWrap.querySelector('[data-crm-mail-reply]');
+            const pre = previewWrap.querySelector('.crm-mail-preview__body');
+            async function openReplyCompose() {
+              if (!replyBtn || replyBtn.getAttribute('aria-busy') === 'true') return;
+              replyBtn.disabled = true;
+              replyBtn.setAttribute('aria-busy', 'true');
+              try {
+                const stack = document.querySelector('.crm-page-stack[data-company-id]');
+                const ws = stack ? parseInt(stack.getAttribute('data-workspace-id') || '0', 10) : 0;
+                if (!(ws > 0)) throw new Error(t('Workspace missing on this page.'));
+                let res = await Api.get('/workspaces/' + ws + '/mail/' + crmMailId + '/reply');
+                let pack = (res && res.data) || res || {};
+                const thin = !pack.available || String(pack.bodyText || '').length < 40;
+                if (thin) {
+                  try {
+                    // Hydrate once when Answer is first — richer quote in mailto.
+                    await Api.post('/workspaces/' + ws + '/mail/' + crmMailId + '/preview', {});
+                    res = await Api.get('/workspaces/' + ws + '/mail/' + crmMailId + '/reply');
+                    pack = (res && res.data) || res || {};
+                  } catch (hydrateErr) { /* keep first pack */ }
+                }
+                if (!pack.available) {
+                  await C.alertDialog({ title: t('Cannot answer'), message: t('This message has no usable reply address.'), variant: 'warning' });
+                  return;
+                }
+                const rawUrl = pack.mailAppUrl || pack.mailtoUrl || '';
+                const url = (typeof C.safeExternalHref === 'function') ? C.safeExternalHref(rawUrl, '#') : rawUrl;
+                if (!url || url === '#') {
+                  await C.alertDialog({ title: t('Cannot answer'), message: t('Could not open a mail program for this address.'), variant: 'danger' });
+                  return;
+                }
+                if (/^mailto:/i.test(url)) window.location.href = url;
+                else window.open(url, '_blank', 'noopener,noreferrer');
+              } catch (e) {
+                await C.alertDialog({ title: t('Cannot answer'), message: (e.payload && e.payload.message) || e.message || String(e), variant: 'danger' });
+              } finally {
+                replyBtn.disabled = false;
+                replyBtn.removeAttribute('aria-busy');
+              }
+            }
+            if (replyBtn) replyBtn.addEventListener('click', function () { void openReplyCompose(); });
+            if (toggle && pre) {
+              toggle.addEventListener('click', async function () {
+                if (toggle.getAttribute('aria-busy') === 'true') return;
+                if (!pre.hidden && pre.textContent) {
+                  pre.hidden = true;
+                  toggle.setAttribute('aria-expanded', 'false');
+                  toggle.textContent = t('Show message');
+                  return;
+                }
+                if (pre.getAttribute('data-loaded') === '1') {
+                  pre.hidden = false;
+                  toggle.setAttribute('aria-expanded', 'true');
+                  toggle.textContent = t('Hide message');
+                  try { pre.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+                  return;
+                }
+                toggle.disabled = true;
+                toggle.setAttribute('aria-busy', 'true');
+                try {
+                  const stack = document.querySelector('.crm-page-stack[data-company-id]');
+                  const ws = stack ? parseInt(stack.getAttribute('data-workspace-id') || '0', 10) : 0;
+                  if (!(ws > 0)) throw new Error(t('Workspace missing on this page.'));
+                  const res = await Api.post('/workspaces/' + ws + '/mail/' + crmMailId + '/preview', {});
+                  const payload = (res && res.data) || res || {};
+                  const textBody = payload.preview || '';
+                  // Never use innerHTML — mail bodies are untrusted.
+                  pre.textContent = textBody !== '' ? textBody : t('No message text could be loaded.');
+                  if (payload.truncated) pre.textContent += '\n\n' + t('(Preview truncated)');
+                  pre.setAttribute('data-loaded', '1');
+                  pre.hidden = false;
+                  toggle.setAttribute('aria-expanded', 'true');
+                  toggle.textContent = t('Hide message');
+                  try { pre.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+                } catch (e) {
+                  await C.alertDialog({
+                    title: t('Could not load message'),
+                    message: (e.payload && e.payload.message) || e.message || String(e),
+                    variant: 'danger',
+                  });
+                } finally {
+                  toggle.disabled = false;
+                  toggle.removeAttribute('aria-busy');
+                }
+              });
+              // Opening a row always loads the message — never require a second click.
+              toggle.click();
+            }
+          }
+
+          function renderTalkRows() {
+            const sortKey = board.getAttribute('data-crm-talk-sort') || 'sent';
+            const sortDir = board.getAttribute('data-crm-talk-sort-dir') === 'asc' ? 'asc' : 'desc';
+            const sortbar = board.querySelector('.crm-review-sortbar');
+            if (sortbar) {
+              sortbar.innerHTML =
+                sortBtnHtml('sent', t('Sent'), sortKey, sortDir) +
+                sortBtnHtml('from', t('From'), sortKey, sortDir) +
+                sortBtnHtml('subject', t('Subject'), sortKey, sortDir) +
+                sortBtnHtml('status', t('Status'), sortKey, sortDir);
+              sortbar.querySelectorAll('[data-crm-talk-sort]').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                  const col = btn.getAttribute('data-crm-talk-sort') || 'sent';
+                  const cur = board.getAttribute('data-crm-talk-sort') || 'sent';
+                  const curDir = board.getAttribute('data-crm-talk-sort-dir') === 'asc' ? 'asc' : 'desc';
+                  let nextDir;
+                  if (cur === col) nextDir = curDir === 'asc' ? 'desc' : 'asc';
+                  else nextDir = col === 'sent' ? 'desc' : 'asc';
+                  board.setAttribute('data-crm-talk-sort', col);
+                  board.setAttribute('data-crm-talk-sort-dir', nextDir);
+                  renderTalkRows();
+                });
+              });
+            }
+            const selectedEl = list.querySelector('.crm-mail-thread-row.is-selected');
+            const selectedId = selectedEl ? (selectedEl.getAttribute('data-crm-feed-id') || '') : '';
+            list.querySelectorAll('.crm-mail-thread-row').forEach(function (el) { el.remove(); });
+            if (detailLi.parentNode === list) detailLi.remove();
+            detailLi.hidden = true;
+            reader.innerHTML = '<div class="crm-mail-reader__empty crm-empty-state" role="status"><p class="crm-empty-state__text">' +
+              escapeHtml(t('Select a message to read and decide.')) + '</p></div>';
+
+            sortedModels().forEach(function (model) {
+              const item = model.item;
+              const li = document.createElement('li');
+              li.className = 'crm-mail-thread-row crm-review-row crm-feed__item';
+              li.setAttribute('role', 'option');
+              li.id = 'crm-feed-opt-' + model.id.replace(/[^a-zA-Z0-9_-]/g, '_');
+              li.setAttribute('data-crm-feed-id', model.id);
+              li.setAttribute('aria-selected', 'false');
+              li.tabIndex = -1;
+              const fromLabel = model.from || t('Unknown sender');
+              const main = document.createElement('div');
+              main.className = 'crm-mail-thread-row__main';
+              const fromEl = document.createElement('p');
+              fromEl.className = 'crm-mail-thread-row__from';
+              fromEl.textContent = fromLabel;
+              const subj = document.createElement('p');
+              subj.className = 'crm-mail-thread-row__subject crm-review-row__subject';
+              subj.textContent = item.subject || '';
+              main.appendChild(fromEl);
+              main.appendChild(subj);
+              if (item.snippet) {
+                const snip = document.createElement('p');
+                snip.className = 'crm-mail-thread-row__snippet crm-muted';
+                snip.textContent = String(item.snippet).slice(0, 140);
+                main.appendChild(snip);
+              }
+              const meta = document.createElement('p');
+              meta.className = 'crm-feed__meta crm-muted';
+              meta.innerHTML = '<span class="crm-badge">' + escapeHtml(feedKindLabel(item.kind)) + '</span>';
+              main.appendChild(meta);
+              li.appendChild(main);
+
+              const whenEl = document.createElement(model.whenRaw ? 'time' : 'span');
+              whenEl.className = 'crm-mail-thread-row__when' + (model.whenRaw ? '' : ' crm-muted');
+              if (model.whenRaw) {
+                whenEl.setAttribute('datetime', model.whenRaw);
+                whenEl.textContent = formatDisplayDate(model.whenRaw);
+              } else {
+                whenEl.setAttribute('aria-hidden', 'true');
+                whenEl.textContent = '—';
+              }
+              li.appendChild(whenEl);
+
+              const openBtn = document.createElement('button');
+              openBtn.type = 'button';
+              openBtn.className = 'crm-btn crm-btn--ghost crm-btn--sm crm-review-open';
+              openBtn.setAttribute('data-crm-talk-open', model.id);
+              openBtn.setAttribute('aria-label', t('Open details: %s', [item.subject || fromLabel]));
+              openBtn.textContent = t('Open');
+              li.appendChild(openBtn);
+
+              function openRow(ev) {
+                if (ev && ev.target && ev.target.closest && ev.target.closest('a, input')) return;
+                paintTalkReader(model);
+                try { li.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (e) { /* ignore */ }
+              }
+              openBtn.addEventListener('click', function (ev) {
+                ev.preventDefault();
+                ev.stopPropagation();
+                openRow(ev);
+              });
+              li.addEventListener('click', function (ev) {
+                if (ev.target.closest && ev.target.closest('[data-crm-talk-open]')) return;
+                openRow(ev);
+              });
+              li.addEventListener('keydown', function (ev) {
+                if (ev.key !== 'Enter' && ev.key !== ' ') return;
+                if (ev.target.closest && ev.target.closest('button, a, input')) return;
+                ev.preventDefault();
+                openRow(ev);
+              });
+              list.appendChild(li);
+              if (selectedId && selectedId === model.id) {
+                paintTalkReader(model);
+              }
+            });
+            list.appendChild(detailLi);
+          }
+
+          const sortbar = document.createElement('div');
+          sortbar.className = 'crm-review-sortbar';
+          sortbar.setAttribute('role', 'toolbar');
+          sortbar.setAttribute('aria-label', t('Sort'));
+
+          thread.appendChild(list);
+          pane.appendChild(thread);
+          board.appendChild(toolbar);
+          board.appendChild(sortbar);
+          board.appendChild(pane);
+          feedEl.innerHTML = '';
+          feedEl.appendChild(board);
+          renderTalkRows();
+          // Stay collapsed until the user picks a message.
+          // Never seed body text from list/feed JSON — on-demand preview API only.
         }
       }
 
@@ -1361,29 +2111,26 @@
       if (tasksBody) {
         const items = (tasks.data && tasks.data.items) || tasks.items || [];
         if (!items.length) {
-          const canWriteTasks = shellCan('write');
-          tasksBody.innerHTML = '<div class="crm-empty-state" role="status">' +
-            '<h3 class="crm-empty-state__title">' + escapeHtml(t('No open tasks')) + '</h3>' +
-            '<p class="crm-empty-state__text">' + escapeHtml(t('Nothing open for this company.')) + '</p>' +
-            (canWriteTasks
-              ? '<div class="crm-empty-state__actions"><button type="button" class="crm-btn crm-btn--primary crm-btn--lg" data-crm-trigger="crm-new-task">' + escapeHtml(t('New task')) + '</button></div>'
-              : '') +
-            '</div>';
+          tasksBody.innerHTML = '<p class="crm-muted" role="status">' + escapeHtml(t('Nothing open for this company.')) + '</p>';
         } else {
-          const table = document.createElement('div');
-          table.className = 'table-container crm-table--responsive';
-          let html = '<table class="table table--hover"><thead><tr><th scope="col">' + escapeHtml(t('Title')) + '</th><th scope="col">' + escapeHtml(t('Due')) + '</th><th scope="col" class="crm-table-actions-col">' + escapeHtml(t('Action')) + '</th></tr></thead><tbody>';
+          let html = '<ul class="crm-todo-list" role="list">';
           items.forEach((row) => {
             const deep = safeInternalHref(row.tasksDeepLink || '/apps/tasks/', '/apps/tasks/');
-            const tasksCell = row.inTasks
-              ? ('<div class="crm-table-actions"><a class="crm-btn crm-btn--sm crm-btn--primary" href="' + escapeHtml(deep) + '">' + escapeHtml(t('Open in Tasks')) + '</a></div>')
-              : ('<div class="crm-table-actions"><span class="crm-muted" aria-hidden="true">—</span></div>');
-            html += '<tr><td data-label="' + escapeHtml(t('Title')) + '">' + escapeHtml(row.title || '') + (row.isCallback ? ' <span class="crm-badge">' + escapeHtml(t('Callback')) + '</span>' : '') + '</td><td data-label="' + escapeHtml(t('Due')) + '">' + escapeHtml(row.dueDate ? formatDisplayDate(row.dueDate) : '—') + '</td><td class="actions-cell crm-table-actions-col" data-label="' + escapeHtml(t('Action')) + '">' + tasksCell + '</td></tr>';
+            const due = row.dueDate ? formatDisplayDate(row.dueDate) : '—';
+            html += '<li class="crm-todo-list__item"><div class="crm-todo-list__main">';
+            html += '<p class="crm-todo-list__title">' + escapeHtml(row.title || '') + '</p>';
+            html += '<p class="crm-muted crm-todo-list__meta"><span>' + escapeHtml(t('Due')) + ': ' + escapeHtml(due) + '</span>';
+            if (row.isCallback) {
+              html += '<span class="crm-badge">' + escapeHtml(t('Callback')) + '</span>';
+            }
+            html += '</p></div>';
+            if (row.inTasks) {
+              html += '<div class="crm-todo-list__actions"><a class="crm-btn crm-btn--primary crm-btn--lg" href="' + escapeHtml(deep) + '">' + escapeHtml(t('Open in Tasks')) + '</a></div>';
+            }
+            html += '</li>';
           });
-          html += '</tbody></table>';
-          table.innerHTML = html;
-          tasksBody.innerHTML = '';
-          tasksBody.appendChild(table);
+          html += '</ul>';
+          tasksBody.innerHTML = html;
         }
       }
 
@@ -1698,6 +2445,30 @@
       if (code === 'p3') return t('Low');
       return t('Normal');
     };
+    const renderMoves = function (mapSteps, writable) {
+      let html = '';
+      html += '<section class="crm-plan-moves" aria-labelledby="crm-plan-moves-title">';
+      html += '<h3 id="crm-plan-moves-title" class="crm-plan-moves__title">' + escapeHtml(t('Next moves')) + '</h3>';
+      html += '<p class="crm-muted crm-plan-moves__hint">' + escapeHtml(t('Plan moves stay here. Day-to-day to-dos live under To-dos above.')) + '</p>';
+      if (mapSteps.length) {
+        html += '<ul class="crm-todo-list crm-plan-moves__list" role="list">';
+        mapSteps.forEach((s) => {
+          const open = String(s.status || 'open') === 'open';
+          html += '<li class="crm-todo-list__item' + (open ? '' : ' crm-todo-list__item--closed') + '" data-map-step-id="' + escapeHtml(String(s.id || '')) + '">';
+          html += '<div class="crm-todo-list__main"><p class="crm-todo-list__title">' + escapeHtml(s.title || '') + '</p>';
+          html += '<p class="crm-muted crm-todo-list__meta"><span class="crm-badge">' + escapeHtml(s.statusLabel || s.status || '') + '</span></p></div>';
+          if (writable && open && s.id) {
+            html += '<div class="crm-todo-list__actions"><button type="button" class="crm-btn crm-btn--primary crm-btn--lg" data-crm-map-step-done="' + escapeHtml(String(s.id)) + '">' + escapeHtml(t('Done')) + '</button></div>';
+          }
+          html += '</li>';
+        });
+        html += '</ul>';
+      } else {
+        html += '<p class="crm-muted" role="status">' + escapeHtml(t('No moves yet — add one below.')) + '</p>';
+      }
+      html += '</section>';
+      return html;
+    };
     let generation = 0;
     try {
       generation = ++accountPlanGeneration;
@@ -1718,21 +2489,19 @@
           html += '<div><dt>' + escapeHtml(t('Health')) + '</dt><dd><span class="crm-badge">' + escapeHtml(plan.healthLabel || plan.health) + '</span></dd></div>';
         }
         html += '</dl>';
-        if (mapSteps.length) {
-          html += '<h3 class="crm-card__title">' + escapeHtml(t('Next steps')) + '</h3><ul class="crm-simple-list">';
-          mapSteps.forEach((s) => {
-            html += '<li>' + escapeHtml(s.title || '') + ' · <span class="crm-badge">' + escapeHtml(s.statusLabel || s.status || '') + '</span></li>';
-          });
-          html += '</ul>';
-        } else {
-          html += '<p class="crm-muted">' + escapeHtml(t('No next steps yet.')) + '</p>';
-        }
+        html += renderMoves(mapSteps, false);
         body.innerHTML = html;
         return;
       }
       html = '<form id="crm-account-plan-form" class="crm-form crm-form--stack" data-plan-updated-at="' + escapeHtml(plan.updatedAt || '') + '">';
       html += '<div class="form-group"><label class="form-label" for="crm-plan-goal">' + escapeHtml(t('Goal')) + '</label>';
-      html += '<textarea class="crm-input form-input" id="crm-plan-goal" name="goal" rows="3">' + escapeHtml(plan.goal || '') + '</textarea></div>';
+      html += '<textarea class="crm-input form-input crm-plan-goal" id="crm-plan-goal" name="goal" rows="4" maxlength="4000" placeholder="' + escapeHtml(t('e.g. Renew and grow seats this year')) + '">' + escapeHtml(plan.goal || '') + '</textarea></div>';
+      if (plan.healthLabel || plan.health) {
+        html += '<p role="status"><span class="crm-badge">' + escapeHtml(plan.healthLabel || plan.health) + '</span></p>';
+      }
+      html += '<details class="crm-plan-more">';
+      html += '<summary class="crm-plan-more__summary">' + escapeHtml(t('Priority, owner & review')) + '</summary>';
+      html += '<div class="crm-plan-more__body">';
       html += '<div class="form-group"><label class="form-label" for="crm-plan-priority">' + escapeHtml(t('Priority')) + '</label>';
       html += '<select class="crm-input form-select" id="crm-plan-priority" name="priority">';
       [
@@ -1753,23 +2522,13 @@
       html += '</div><p class="crm-muted">' + escapeHtml(t('Search by name or login, then pick a colleague. Never type a raw user id.')) + '</p></div>';
       html += '<div class="form-group"><label class="form-label" for="crm-plan-review">' + escapeHtml(t('Next review')) + '</label>';
       html += '<input class="crm-input form-input" id="crm-plan-review" name="nextReviewOn" type="date" value="' + escapeHtml(plan.nextReviewOn || '') + '" /></div>';
-      if (plan.healthLabel || plan.health) {
-        html += '<p role="status"><span class="crm-badge">' + escapeHtml(plan.healthLabel || plan.health) + '</span></p>';
-      }
-      html += '<div class="crm-form-actions"><button type="submit" class="crm-btn crm-btn--primary">' + escapeHtml(t('Save plan')) + '</button></div></form>';
-      if (mapSteps.length) {
-        html += '<h3 class="crm-card__title">' + escapeHtml(t('Next steps')) + '</h3><ul class="crm-simple-list">';
-        mapSteps.forEach((s) => {
-          html += '<li>' + escapeHtml(s.title || '') + ' · <span class="crm-badge">' + escapeHtml(s.statusLabel || s.status || '') + '</span></li>';
-        });
-        html += '</ul>';
-      } else {
-        html += '<p class="crm-muted">' + escapeHtml(t('No next steps yet.')) + '</p>';
-      }
-      html += '<form id="crm-map-step-form" class="crm-form crm-form--stack crm-form--inline" aria-label="' + escapeHtml(t('Add next step')) + '">';
-      html += '<label class="form-label" for="crm-map-step-title">' + escapeHtml(t('New next step')) + '</label>';
-      html += '<input class="crm-input form-input" id="crm-map-step-title" name="title" type="text" required maxlength="255" />';
-      html += '<button type="submit" class="crm-btn crm-btn--secondary">' + escapeHtml(t('Add step')) + '</button></form>';
+      html += '</div></details>';
+      html += '<div class="crm-form-actions"><button type="submit" class="crm-btn crm-btn--primary crm-btn--lg">' + escapeHtml(t('Save plan')) + '</button></div></form>';
+      html += renderMoves(mapSteps, true);
+      html += '<form id="crm-map-step-form" class="crm-form crm-form--stack crm-plan-add-move" aria-label="' + escapeHtml(t('Add a move to this plan')) + '">';
+      html += '<label class="form-label" for="crm-map-step-title">' + escapeHtml(t('What should happen next?')) + '</label>';
+      html += '<textarea class="crm-input form-input" id="crm-map-step-title" name="title" rows="3" required maxlength="255" placeholder="' + escapeHtml(t('e.g. Book a QBR with their CFO')) + '"></textarea>';
+      html += '<div class="crm-form-actions"><button type="submit" class="crm-btn crm-btn--primary crm-btn--lg">' + escapeHtml(t('Add move')) + '</button></div></form>';
       body.innerHTML = html;
       const ownerUid = String(plan.ownerUserId || '').trim();
       const ownerSearch = document.getElementById('crm-plan-owner-search');
@@ -1885,17 +2644,38 @@
           }
         });
       }
+      body.querySelectorAll('[data-crm-map-step-done]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const stepId = parseInt(btn.getAttribute('data-crm-map-step-done') || '0', 10);
+          if (!(stepId > 0)) return;
+          btn.disabled = true;
+          try {
+            await Api.post('/companies/' + companyId + '/account-plan/map-steps/' + stepId + '/done', {});
+            if (liveRegion()) liveRegion().textContent = t('Move marked done.');
+            await loadAccountPlan();
+          } catch (e) {
+            btn.disabled = false;
+            await C.alertDialog({ title: t('Could not mark move done'), message: (e.payload && e.payload.message) || e.message, variant: 'danger' });
+          }
+        });
+      });
       const mapForm = document.getElementById('crm-map-step-form');
       if (mapForm) {
         mapForm.addEventListener('submit', async (ev) => {
           ev.preventDefault();
-          const title = String(mapForm.elements.title.value || '').trim();
-          if (!title) return;
+          const title = String(mapForm.elements.title.value || '').replace(/\s+/g, ' ').trim();
+          if (!title) {
+            mapForm.elements.title.focus();
+            return;
+          }
+          const submitBtn = mapForm.querySelector('button[type="submit"]');
+          if (submitBtn) submitBtn.disabled = true;
           try {
             await Api.post('/companies/' + companyId + '/account-plan/map-steps', { title: title });
-            if (liveRegion()) liveRegion().textContent = t('Next step added.');
+            if (liveRegion()) liveRegion().textContent = t('Move added.');
             await loadAccountPlan();
           } catch (e) {
+            if (submitBtn) submitBtn.disabled = false;
             await C.alertDialog({ title: t('Could not add next step'), message: (e.payload && e.payload.message) || e.message, variant: 'danger' });
           }
         });
@@ -1936,38 +2716,26 @@
       }
       const items = (res.data && res.data.items) || res.items || [];
       if (!items.length) {
-        body.innerHTML = '<div class="crm-empty-state" role="status">' +
-          '<h3 class="crm-empty-state__title">' + escapeHtml(t('No promises yet')) + '</h3>' +
-          '<p class="crm-empty-state__text">' + escapeHtml(t('No customer promises yet.')) + '</p>' +
-          (shellCan('write')
-            ? '<div class="crm-empty-state__actions"><button type="button" class="crm-btn crm-btn--primary crm-btn--lg" id="crm-promises-empty-add">' + escapeHtml(t('Add promise')) + '</button></div>'
-            : '') +
-          '</div>';
-        const emptyAdd = document.getElementById('crm-promises-empty-add');
-        const headerAdd = document.getElementById('crm-add-promise');
-        if (emptyAdd && headerAdd) {
-          emptyAdd.addEventListener('click', () => headerAdd.click());
-        }
+        body.innerHTML = '<p class="crm-muted" role="status">' + escapeHtml(t('Nothing told the customer yet')) + '</p>';
         return;
       }
-      let html = '<div class="table-container crm-table--responsive"><table class="table table--hover"><thead><tr>';
-      html += '<th scope="col">' + escapeHtml(t('Title')) + '</th><th scope="col">' + escapeHtml(t('Due')) + '</th><th scope="col">' + escapeHtml(t('Status')) + '</th><th scope="col">' + escapeHtml(t('Actions')) + '</th>';
-      html += '</tr></thead><tbody>';
+      let html = '<ul class="crm-todo-list" role="list">';
       items.forEach((p) => {
-        html += '<tr data-promise-id="' + escapeHtml(String(p.id)) + '">';
-        html += '<td data-label="' + escapeHtml(t('Title')) + '">' + escapeHtml(p.title || '') + '</td>';
-        html += '<td data-label="' + escapeHtml(t('Due')) + '">' + escapeHtml(p.dueOn ? formatDisplayDate(p.dueOn) : '—') + '</td>';
-        html += '<td data-label="' + escapeHtml(t('Status')) + '"><span class="crm-badge">' + escapeHtml(p.statusLabel || p.status || '') + '</span></td>';
-        html += '<td data-label="' + escapeHtml(t('Actions')) + '">';
-        if (shellCan('write') && (p.status || '') === 'open') {
-          html += '<button type="button" class="crm-btn crm-btn--sm crm-btn--primary" data-crm-promise-done="' + escapeHtml(String(p.id)) + '">' + escapeHtml(t('Mark done')) + '</button> ';
-          html += '<button type="button" class="crm-btn crm-btn--sm crm-btn--secondary" data-crm-promise-cancel="' + escapeHtml(String(p.id)) + '">' + escapeHtml(t('Cancel')) + '</button>';
-        } else {
-          html += '—';
+        const due = p.dueOn ? formatDisplayDate(p.dueOn) : '—';
+        const open = (p.status || '') === 'open';
+        html += '<li class="crm-todo-list__item' + (open ? '' : ' crm-todo-list__item--closed') + '" data-promise-id="' + escapeHtml(String(p.id)) + '">';
+        html += '<div class="crm-todo-list__main"><p class="crm-todo-list__title">' + escapeHtml(p.title || '') + '</p>';
+        html += '<p class="crm-muted crm-todo-list__meta"><span>' + escapeHtml(t('Due')) + ': ' + escapeHtml(due) + '</span>';
+        html += '<span class="crm-badge">' + escapeHtml(p.statusLabel || p.status || '') + '</span></p></div>';
+        if (shellCan('write') && open) {
+          html += '<div class="crm-todo-list__actions">';
+          html += '<button type="button" class="crm-btn crm-btn--primary crm-btn--lg" data-crm-promise-done="' + escapeHtml(String(p.id)) + '">' + escapeHtml(t('Done')) + '</button>';
+          html += '<button type="button" class="crm-btn crm-btn--secondary crm-btn--sm" data-crm-promise-cancel="' + escapeHtml(String(p.id)) + '">' + escapeHtml(t('Cancel')) + '</button>';
+          html += '</div>';
         }
-        html += '</td></tr>';
+        html += '</li>';
       });
-      html += '</tbody></table></div>';
+      html += '</ul>';
       body.innerHTML = html;
       body.querySelectorAll('[data-crm-promise-done]').forEach((btn) => {
         btn.addEventListener('click', async () => {
@@ -2040,7 +2808,7 @@
   if (addPromiseBtn) {
     addPromiseBtn.addEventListener('click', async () => {
       const today = new Date().toISOString().slice(0, 10);
-      const data = await promptFields(t('Add promise'), [
+      const data = await promptFields(t('Told the customer'), [
         { name: 'title', label: t('Title'), required: true },
         { name: 'dueOn', label: t('Due date'), type: 'date', value: today, required: true },
       ]);
@@ -2058,9 +2826,8 @@
     });
   }
 
-})();
-
   // SHARED-IDENTITY W1 — 360 create/link/unlink CTAs (MH-04/05 / NN-12)
+  // Must stay inside this IIFE: Api / C / t / companyId / promptFields are local consts.
   (function wireIdentityLinks() {
     const box = document.getElementById('crm-identity-links');
     if (!box || !Api) return;
@@ -2208,3 +2975,5 @@
       });
     }
   })();
+
+})();

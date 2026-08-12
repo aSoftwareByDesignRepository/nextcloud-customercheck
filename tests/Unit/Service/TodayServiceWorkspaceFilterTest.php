@@ -61,8 +61,13 @@ final class TodayServiceWorkspaceFilterTest extends TestCase
 	{
 		$agreements = $this->createMock(AgreementMapper::class);
 		$agreements->expects($this->once())
-			->method('findRenewalCandidates')
-			->with(2000, 0, 7)
+			->method('findTodayRenewalCandidates')
+			->with(
+				$this->isInstanceOf(\DateTimeInterface::class),
+				$this->isInstanceOf(\DateTimeInterface::class),
+				2000,
+				7,
+			)
 			->willReturn([]);
 		$activities = $this->createMock(ActivityMapper::class);
 		$activities->expects($this->once())
@@ -92,7 +97,7 @@ final class TodayServiceWorkspaceFilterTest extends TestCase
 		$foreign->setWorkspaceId(99);
 
 		$agreements = $this->createMock(AgreementMapper::class);
-		$agreements->method('findRenewalCandidates')->willReturn([]);
+		$agreements->method('findTodayRenewalCandidates')->willReturn([]);
 		$activities = $this->createMock(ActivityMapper::class);
 		$activities->method('findOpenDueUpTo')->willReturn([]);
 		$companies = $this->createMock(CompanyMapper::class);
@@ -113,7 +118,7 @@ final class TodayServiceWorkspaceFilterTest extends TestCase
 	public function testWaitingTicketWithoutCompanyDroppedWhenWorkspaceScoped(): void
 	{
 		$agreements = $this->createMock(AgreementMapper::class);
-		$agreements->method('findRenewalCandidates')->willReturn([]);
+		$agreements->method('findTodayRenewalCandidates')->willReturn([]);
 		$activities = $this->createMock(ActivityMapper::class);
 		$activities->method('findOpenDueUpTo')->willReturn([]);
 		$companies = $this->createMock(CompanyMapper::class);
@@ -138,7 +143,7 @@ final class TodayServiceWorkspaceFilterTest extends TestCase
 		$mine->setWorkspaceId(7);
 
 		$agreements = $this->createMock(AgreementMapper::class);
-		$agreements->method('findRenewalCandidates')->willReturn([]);
+		$agreements->method('findTodayRenewalCandidates')->willReturn([]);
 		$activities = $this->createMock(ActivityMapper::class);
 		$activities->method('findOpenDueUpTo')->willReturn([]);
 		$companies = $this->createMock(CompanyMapper::class);

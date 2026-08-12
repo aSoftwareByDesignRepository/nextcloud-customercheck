@@ -12,18 +12,32 @@ final class SharedIdentityUiContractTest extends TestCase
 	public function testCompanyDetailHasIdentityCtas(): void
 	{
 		$html = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/company-detail.php');
+		$rows = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/common/crm-identity-rows.php');
 		$this->assertStringContainsString('id="crm-identity-links"', $html);
-		$this->assertStringContainsString('crm-badge--', $html);
+		$this->assertStringContainsString('crm-identity-rows.php', $html);
+		$this->assertStringContainsString('crm-badge--', $rows);
 		$css = (string)file_get_contents(dirname(__DIR__, 2) . '/css/common/identity-links.css');
 		$this->assertStringContainsString('min-height: 44px', $css);
 		$this->assertStringContainsString('common/identity-links', (string)file_get_contents(dirname(__DIR__, 2) . '/lib/Controller/PageController.php'));
 
-		$this->assertStringContainsString('data-crm-identity-create="pc"', $html);
-		$this->assertStringContainsString('data-crm-identity-link="pc"', $html);
-		$this->assertStringContainsString('role="alert"', $html);
-		$this->assertStringContainsString('Create in ProjectCheck', $html);
+		$this->assertStringContainsString('data-crm-identity-create="pc"', $rows);
+		$this->assertStringContainsString('data-crm-identity-link="pc"', $rows);
+		$this->assertStringContainsString('data-crm-identity-unlink="pc"', $rows);
+		$this->assertStringContainsString('data-crm-identity-unlink="tc"', $rows);
+		// Healthy linked rows must expose Unlink (not only broken links).
+		$this->assertMatchesRegularExpression(
+			'/\$pcState === \'linked\'.*?data-crm-identity-unlink="pc"/s',
+			$rows,
+		);
+		$this->assertMatchesRegularExpression(
+			'/\$tcState === \'linked\'.*?data-crm-identity-unlink="tc"/s',
+			$rows,
+		);
+		$this->assertStringContainsString('role="alert"', $rows);
+		$this->assertStringContainsString('Create in ProjectCheck', $rows);
 		$this->assertStringContainsString('min-height: 44px', $css);
 		$this->assertStringNotContainsString('style="', $html);
+		$this->assertStringNotContainsString('style="', $rows);
 	}
 
 	public function testCompanyDetailJsWiresIdentity(): void
@@ -34,6 +48,12 @@ final class SharedIdentityUiContractTest extends TestCase
 		$this->assertStringContainsString('pendingKeys', $js);
 		$this->assertStringContainsString('setIdentityBusy', $js);
 		$this->assertStringContainsString('unlink/projectcheck', $js);
+		// Bare Api/C/t/promptFields after the page IIFE close → ReferenceError (seen in browser console).
+		$this->assertDoesNotMatchRegularExpression(
+			'/^\}\)\(\);\s*(?:\/\/[^\n]*\n\s*)*\(function wireIdentityLinks/m',
+			$js,
+			'wireIdentityLinks must stay inside the company-detail IIFE so Api stays in scope',
+		);
 	}
 
 	public function testSupportRunbookExists(): void

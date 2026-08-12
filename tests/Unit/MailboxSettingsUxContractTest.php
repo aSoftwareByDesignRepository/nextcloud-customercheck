@@ -28,14 +28,26 @@ final class MailboxSettingsUxContractTest extends TestCase
 		$this->assertStringContainsString('id="crm-mailbox-list"', $html);
 		$this->assertStringContainsString('crm-fieldset', $html);
 		$this->assertStringContainsString('Inbox', $html);
-		$this->assertStringContainsString('Server settings (IMAP / SMTP)', $html);
+		$this->assertStringContainsString('Mail servers', $html);
 		$this->assertStringContainsString('id="crm-mailbox-servers"', $html);
 		$this->assertStringContainsString('id="crm-mbox-imap-host"', $html);
 		$this->assertStringContainsString('id="crm-mbox-smtp-host"', $html);
+		$this->assertStringContainsString('id="crm-mbox-imap-enc"', $html);
+		$this->assertStringContainsString('id="crm-mbox-smtp-enc"', $html);
+		$this->assertStringContainsString('value="465"', $html);
+		$this->assertStringContainsString('Do not paste the account id in parentheses', $html);
+		$this->assertStringContainsString('After sync: unmatched mail appears in Review', $html);
 		$this->assertStringNotContainsString('1 · Who', $html);
 		$this->assertStringNotContainsString('2 · Receive (IMAP)', $html);
+		$this->assertStringNotContainsString('Server settings (IMAP / SMTP)', $html);
+		$this->assertStringNotContainsString('<details class="crm-advanced" id="crm-mailbox-servers">', $html);
 		$this->assertStringContainsString('id="crm-mbox-id"', $html);
 		$this->assertStringContainsString('id="crm-mailbox-reset"', $html);
+		$this->assertStringContainsString('id="crm-mbox-folder-picker"', $html);
+		$this->assertStringContainsString('crm-folder-picker', $html);
+		$this->assertStringContainsString('Folders to sync', $html);
+		$this->assertStringNotContainsString('<textarea id="crm-mbox-folders"', $html);
+		$this->assertStringNotContainsString('One folder path per line', $html);
 		$this->assertStringContainsString('leave blank to keep the saved password', $html);
 	}
 
@@ -45,6 +57,10 @@ final class MailboxSettingsUxContractTest extends TestCase
 		$this->assertStringContainsString('function refreshMailboxes', $js);
 		$this->assertStringContainsString('mailboxesGeneration', $js);
 		$this->assertStringContainsString('const generation = ++mailboxesGeneration;', $js);
+		$this->assertStringContainsString('mailboxPayloadFromForm', $js);
+		$this->assertStringContainsString('imapEnc', $js);
+		$this->assertStringContainsString('smtpEnc', $js);
+		$this->assertStringContainsString('syncMailboxEncFromPorts', $js);
 		$this->assertStringContainsString("'/mailboxes'", $js);
 		$this->assertStringContainsString('CustomerCheckMailboxSettingsPresent', $js);
 		$this->assertStringContainsString('requireWorkspaceReady(mailboxTestStatus)', $js);
@@ -52,11 +68,25 @@ final class MailboxSettingsUxContractTest extends TestCase
 		$this->assertStringContainsString('mailboxSave.disabled = true', $js);
 		$this->assertStringContainsString('await refreshMailboxes()', $js);
 		$this->assertStringContainsString('resetMailboxForm()', $js);
+		$this->assertStringContainsString('fillMailboxFormFromCache', $js);
+		$this->assertStringContainsString('highlightSavedMailbox', $js);
+		$this->assertStringContainsString('Saved. Your mailbox is listed above', $js);
+		$this->assertStringContainsString('crm-mailbox-list__item--just-saved', $js);
 		$savePos = (int)strpos($js, "'/mailboxes', payload)");
 		$this->assertGreaterThan(0, $savePos);
-		$saveChunk = substr($js, $savePos, 400);
+		$saveChunk = substr($js, $savePos, 1200);
 		$this->assertStringContainsString('await refreshMailboxes()', $saveChunk);
+		$this->assertStringContainsString('fillMailboxFormFromCache(savedId', $saveChunk);
+		$this->assertStringContainsString('highlightSavedMailbox(savedId)', $saveChunk);
 		$this->assertStringNotContainsString('location.reload()', $saveChunk);
+		// Success path must not wipe the form (looked like data loss).
+		$this->assertStringNotContainsString('resetMailboxForm();', $saveChunk);
+		$this->assertStringContainsString('await syncMailboxNow(savedId, null);', $js);
+		$this->assertStringContainsString('function syncMailboxNow', $js);
+		$this->assertStringContainsString("'/mailboxes/' + mailboxId + '/sync'", $js);
+		$this->assertStringContainsString('function removeMailboxNow', $js);
+		$this->assertStringContainsString("Api.post('/workspaces/' + currentWorkspaceId + '/mailboxes/' + mailboxId + '/remove', {})", $js);
+		$this->assertStringContainsString('Remove this mailbox?', $js);
 		$this->assertStringContainsString('No members yet', $js);
 		$this->assertStringContainsString("empty.querySelector('.crm-empty-state__title').textContent = tr('No members yet');", $js);
 	}
@@ -82,6 +112,56 @@ final class MailboxSettingsUxContractTest extends TestCase
 		$this->assertStringContainsString("'secret_enc'", $src);
 		$this->assertStringContainsString("'hasSecret' => trim((string)(\$row['secret_enc'] ?? '')) !== ''", $src);
 		$this->assertStringNotContainsString("'hasSecret' => true,", $src);
+		$this->assertStringContainsString("'folders' => \$this->listFolderPaths(\$id)", $src);
+		$this->assertStringContainsString('array_key_exists(\'folders\', $data)', $src);
+		$this->assertStringContainsString('function listFolderPaths', $src);
+		$this->assertStringContainsString("->set('imap_enc'", $src);
+		$this->assertStringContainsString("->set('smtp_enc'", $src);
+		$this->assertStringContainsString('ImapConnection::normalizeUsername', $src);
+		$this->assertStringContainsString('ImapConnection::resolveSmtpEnc', $src);
+		// Update path must clear error quarantine or Sync permanently skips the box.
+		$this->assertStringContainsString("->set('status', \$qb->createNamedParameter('ok'))", $src);
+		$this->assertStringContainsString("->set('auth_fail_count', \$qb->createNamedParameter(0))", $src);
+		$this->assertStringContainsString('public function delete(int $workspaceId, int $mailboxId)', $src);
+		$this->assertStringContainsString('purgeOpenSharedMailReviewForMessages', $src);
+		$this->assertStringContainsString("->delete('crm_review_item')", $src);
+		$this->assertStringContainsString("->delete('crm_mailbox')", $src);
+		$this->assertStringContainsString("->delete('crm_mail_msg')", $src);
+		$this->assertStringContainsString("->delete('crm_mail_dft')", $src);
+	}
+
+	public function testSettingsJsHydratesFoldersOnEdit(): void
+	{
+		$js = (string)file_get_contents(dirname(__DIR__, 2) . '/js/pages/settings.js');
+		$this->assertStringContainsString('Array.isArray(box.folders)', $js);
+		$this->assertStringContainsString('renderMailboxFolderPicker', $js);
+		$this->assertStringContainsString('buildFolderPickerOptions', $js);
+		$this->assertStringContainsString('readCheckedFolderPaths', $js);
+		$this->assertStringContainsString('foldersWrapEl.hidden = folderList.length === 0', $js);
+		$this->assertStringNotContainsString('folderList.join(\'\\n\')', $js);
+	}
+
+	public function testPresentHelpersRegisterFolderPicker(): void
+	{
+		$boot = (string)file_get_contents(dirname(__DIR__, 2) . '/js/common/mailbox-settings-present.js');
+		$utils = (string)file_get_contents(dirname(__DIR__, 2) . '/js/utils/mailbox-settings-present.js');
+		$this->assertStringContainsString('buildFolderPickerOptions', $boot);
+		$this->assertStringContainsString('renderFolderPicker', $boot);
+		$this->assertStringContainsString('readCheckedFolderPaths', $boot);
+		$this->assertStringContainsString('export function buildFolderPickerOptions', $utils);
+		$this->assertStringContainsString('export function readCheckedFolderPaths', $utils);
+	}
+
+	public function testJobsAndMailboxDigestCrossLinks(): void
+	{
+		$jobs = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/settings/jobs.php');
+		$mailbox = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/settings/workspace-mailbox.php');
+		$this->assertStringContainsString('crm-form--stack', $jobs);
+		$this->assertStringContainsString('server clock', $jobs);
+		$this->assertStringContainsString('Team & mailbox', $jobs);
+		$this->assertStringContainsString('Reminders & digest', $mailbox);
+		$this->assertStringContainsString('Copy calendar feed URL', $mailbox);
+		$this->assertStringNotContainsString('aria-hidden="true"', $mailbox);
 	}
 
 	public function testCssDefinesMailboxListAndFieldsets(): void
@@ -89,7 +169,9 @@ final class MailboxSettingsUxContractTest extends TestCase
 		$css = (string)file_get_contents(dirname(__DIR__, 2) . '/css/app.css');
 		$this->assertStringContainsString('.crm-mailbox-settings', $css);
 		$this->assertStringContainsString('.crm-mailbox-list__item', $css);
+		$this->assertStringContainsString('.crm-mailbox-list__item--just-saved', $css);
 		$this->assertStringContainsString('.crm-fieldset__legend', $css);
 		$this->assertStringContainsString('.crm-ws-members__empty', $css);
+		$this->assertStringContainsString('.crm-folder-picker', $css);
 	}
 }

@@ -7,6 +7,8 @@ namespace OCA\CustomerCheck\Controller;
 use OCA\CustomerCheck\AppInfo\Application;
 use OCA\CustomerCheck\Constants;
 use OCA\CustomerCheck\Db\Company;
+use OCA\CustomerCheck\Db\Deal;
+use OCA\CustomerCheck\Db\Person;
 use OCA\CustomerCheck\Exception\AccessDeniedException;
 use OCA\CustomerCheck\Exception\AppAccessDeniedException;
 use OCA\CustomerCheck\Exception\ConflictException;
@@ -16,13 +18,17 @@ use OCA\CustomerCheck\Exception\ValidationException;
 use OCA\CustomerCheck\Service\AccessControlService;
 use OCA\CustomerCheck\Service\ActivityService;
 use OCA\CustomerCheck\Service\AgreementService;
+use OCA\CustomerCheck\Service\CompanyDocumentsService;
 use OCA\CustomerCheck\Service\CompanyService;
+use OCA\CustomerCheck\Service\DealChecklistService;
 use OCA\CustomerCheck\Service\DealService;
 use OCA\CustomerCheck\Service\MobileApiService;
 use OCA\CustomerCheck\Service\MobileGateService;
 use OCA\CustomerCheck\Service\MobileIdempotencyService;
 use OCA\CustomerCheck\Service\MobilePushService;
+use OCA\CustomerCheck\Service\PersonService;
 use OCA\CustomerCheck\Service\WorkspaceAccessService;
+use OCA\CustomerCheck\Service\WorkspaceService;
 use OCP\App\IAppManager;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
@@ -30,6 +36,7 @@ use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\IRequest;
+use OCP\IUserManager;
 use OCP\IUserSession;
 
 /**
@@ -62,12 +69,17 @@ class MobileController extends Controller
 		private readonly MobileGateService $gate,
 		private readonly MobileApiService $mobile,
 		private readonly CompanyService $companies,
+		private readonly PersonService $persons,
 		private readonly ActivityService $activities,
 		private readonly DealService $deals,
 		private readonly AgreementService $agreements,
 		private readonly MobileIdempotencyService $idempotency,
 		private readonly MobilePushService $push,
+		private readonly CompanyDocumentsService $documents,
+		private readonly WorkspaceService $workspaceService,
+		private readonly IUserManager $userManager,
 		private readonly IAppManager $appManager,
+		private readonly ?DealChecklistService $dealChecklists = null,
 	) {
 		parent::__construct($appName, $request);
 	}
@@ -109,7 +121,7 @@ class MobileController extends Controller
 		return $this->guard(function () use ($workspaceId): JSONResponse {
 			$uid = $this->requireGatedUid();
 			$wsId = $this->requireMobileWorkspace($uid, $workspaceId);
-			$today = $this->mobile->today($wsId);
+			$today = $this->mobile->today($wsId, $uid);
 
 			return $this->success(['items' => $today['items']], $today['meta']);
 		});
@@ -146,7 +158,378 @@ class MobileController extends Controller
 			$wsId = $this->requireMobileWorkspace($uid, $workspaceId);
 			$company = $this->requireCompanyInWorkspace($id, $wsId);
 
-			return $this->success($this->mobile->companyLite($company, $uid));
+			return $this->success($this->mobile->companyRoadDetail($company, $uid));
+		});
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function createCompany(int $workspaceId): JSONResponse
+	{
+		return $this->guard(function () use ($workspaceId): JSONResponse {
+			$this->assertSafeMutationChannel();
+			$uid = $this->requireGatedUid();
+			$wsId = $this->requireMobileWorkspace($uid, $workspaceId, 'write');
+			$body = $this->jsonBody();
+			$body['workspaceId'] = $wsId;
+			// Folder binding goes through CompanyDocumentsService (actor ACL) — never mass-assign.
+			unset($body['filesFolderId'], $body['filesFolderPath']);
+			$company = $this->idempotency->once(
+				$uid,
+				$this->scopedIdempotencyKey($body, 'co-create', '', $wsId),
+				fn () => $this->companies->create($body, $uid),
+				static fn ($c): int => (int)$c->getId(),
+				fn (int $cid) => $this->loadCompanyForIdempotentReplay($cid, $wsId),
+			);
+
+			return $this->success(
+				$this->mobile->companyRoadDetail($company, $uid),
+				null,
+				Http::STATUS_CREATED,
+			);
+		});
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function updateCompany(int $workspaceId, int $id): JSONResponse
+	{
+		return $this->guard(function () use ($workspaceId, $id): JSONResponse {
+			$this->assertSafeMutationChannel();
+			$uid = $this->requireGatedUid();
+			$wsId = $this->requireMobileWorkspace($uid, $workspaceId, 'write');
+			$this->requireCompanyInWorkspace($id, $wsId);
+			$body = $this->jsonBody();
+			unset($body['workspaceId'], $body['filesFolderId'], $body['filesFolderPath']);
+			$company = $this->companies->update($id, $body, $uid, $this->preconditionFrom($body));
+
+			return $this->success($this->mobile->companyRoadDetail($company, $uid));
+		});
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function createPerson(int $workspaceId, int $id): JSONResponse
+	{
+		return $this->guard(function () use ($workspaceId, $id): JSONResponse {
+			$this->assertSafeMutationChannel();
+			$uid = $this->requireGatedUid();
+			$wsId = $this->requireMobileWorkspace($uid, $workspaceId, 'write');
+			$this->requireCompanyInWorkspace($id, $wsId);
+			$body = $this->jsonBody();
+			$person = $this->idempotency->once(
+				$uid,
+				$this->scopedIdempotencyKey($body, 'pe-create', '', $wsId, $id),
+				fn () => $this->persons->create($id, $body, $uid),
+				static fn ($p): int => (int)$p->getId(),
+				fn (int $pid) => $this->loadPersonForIdempotentReplay($pid, $wsId, $id),
+			);
+
+			return $this->success(MobileApiService::serialisePerson($person), null, Http::STATUS_CREATED);
+		});
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function updatePerson(int $workspaceId, int $id): JSONResponse
+	{
+		return $this->guard(function () use ($workspaceId, $id): JSONResponse {
+			$this->assertSafeMutationChannel();
+			$uid = $this->requireGatedUid();
+			$wsId = $this->requireMobileWorkspace($uid, $workspaceId, 'write');
+			$person = $this->persons->get($id);
+			$this->requireCompanyInWorkspace((int)$person->getCompanyId(), $wsId);
+			$body = $this->jsonBody();
+			$updated = $this->persons->update($id, $body, $uid, $this->preconditionFrom($body));
+
+			return $this->success(MobileApiService::serialisePerson($updated));
+		});
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function createDeal(int $workspaceId, int $id): JSONResponse
+	{
+		return $this->guard(function () use ($workspaceId, $id): JSONResponse {
+			$this->assertSafeMutationChannel();
+			$uid = $this->requireGatedUid();
+			$wsId = $this->requireMobileWorkspace($uid, $workspaceId, 'write');
+			$this->requireCompanyInWorkspace($id, $wsId);
+			$body = $this->jsonBody();
+			$body['companyId'] = $id;
+			$deal = $this->idempotency->once(
+				$uid,
+				$this->scopedIdempotencyKey($body, 'de-create', '', $wsId, $id),
+				fn () => $this->deals->create($body, $uid),
+				static fn ($d): int => (int)$d->getId(),
+				fn (int $did) => $this->loadDealForIdempotentReplay($did, $wsId, $id),
+			);
+
+			return $this->success(
+				MobileApiService::serialiseDeal($deal, fn ($d): bool => $this->deals->isStale($d)),
+				null,
+				Http::STATUS_CREATED,
+			);
+		});
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function companyFiles(int $workspaceId, int $id): JSONResponse
+	{
+		return $this->guard(function () use ($workspaceId, $id): JSONResponse {
+			$uid = $this->requireGatedUid();
+			$wsId = $this->requireMobileWorkspace($uid, $workspaceId);
+			$this->requireCompanyInWorkspace($id, $wsId);
+			$listing = $this->documents->listChildren($id, $uid, false);
+			$files = [];
+			foreach ($listing['items'] as $item) {
+				if (!empty($item['isFolder'])) {
+					continue;
+				}
+				$files[] = [
+					'fileId' => (int)$item['fileId'],
+					'name' => (string)$item['name'],
+					'size' => (int)($item['size'] ?? 0),
+					'mtime' => (int)($item['mtime'] ?? 0),
+				];
+			}
+
+			return $this->success($files, [
+				'broken' => !empty($listing['broken']),
+				'path' => $listing['path'] ?? null,
+			]);
+		});
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function members(int $workspaceId): JSONResponse
+	{
+		return $this->guard(function () use ($workspaceId): JSONResponse {
+			$uid = $this->requireGatedUid();
+			$wsId = $this->requireMobileWorkspace($uid, $workspaceId);
+			$out = [];
+			foreach ($this->workspaceService->listMembers($wsId) as $member) {
+				$userId = (string)$member->getUserId();
+				$display = $this->userManager->get($userId)?->getDisplayName() ?? $userId;
+				$out[] = [
+					'userId' => $userId,
+					'displayName' => $display,
+					'role' => (string)$member->getRole(),
+				];
+			}
+
+			return $this->success($out);
+		});
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function checklistTemplates(int $workspaceId): JSONResponse
+	{
+		return $this->guard(function () use ($workspaceId): JSONResponse {
+			$uid = $this->requireGatedUid();
+			$wsId = $this->requireMobileWorkspace($uid, $workspaceId);
+			if ($this->dealChecklists === null) {
+				throw new NotFoundException('Checklist not available', Constants::ERR_NOT_FOUND);
+			}
+
+			return $this->success($this->dealChecklists->listTemplates($wsId));
+		});
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function dealChecklist(int $workspaceId, int $id): JSONResponse
+	{
+		return $this->guard(function () use ($workspaceId, $id): JSONResponse {
+			$uid = $this->requireGatedUid();
+			$wsId = $this->requireMobileWorkspace($uid, $workspaceId);
+			$this->requireDealInWorkspace($id, $wsId);
+			if ($this->dealChecklists === null) {
+				throw new NotFoundException('Checklist not available', Constants::ERR_NOT_FOUND);
+			}
+			$listed = $this->dealChecklists->listForDeal($id, $uid);
+
+			return $this->success($listed['items'] ?? []);
+		});
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function applyChecklistTemplate(int $workspaceId, int $id): JSONResponse
+	{
+		return $this->guard(function () use ($workspaceId, $id): JSONResponse {
+			$this->assertSafeMutationChannel();
+			$uid = $this->requireGatedUid();
+			$wsId = $this->requireMobileWorkspace($uid, $workspaceId, 'write');
+			$this->requireDealInWorkspace($id, $wsId);
+			if ($this->dealChecklists === null) {
+				throw new NotFoundException('Checklist not available', Constants::ERR_NOT_FOUND);
+			}
+			$body = $this->jsonBody();
+			$tmplId = (int)($body['templateId'] ?? 0);
+			$mode = strtolower(trim((string)($body['mode'] ?? 'append')));
+			if ($mode !== 'replace') {
+				$mode = 'append';
+			}
+			$listed = $this->idempotency->once(
+				$uid,
+				$this->scopedIdempotencyKey($body, 'cl-apply', 'tmpl:' . $tmplId . '|mode:' . $mode, $wsId, $id),
+				fn () => $this->dealChecklists->applyTemplate($id, $body, $uid),
+				static fn (array $row): int => (int)($row['dealId'] ?? $id),
+				fn (int $dealId): array => $this->loadDealChecklistForIdempotentReplay($dealId, $wsId, $id, $uid),
+			);
+			// once() committed — safe to fan-out deferred assign pushes from nested apply.
+			$this->dealChecklists->flushPendingAssignNotifies($listed);
+
+			return $this->success(
+				$listed['items'] ?? [],
+				[
+					'mode' => $listed['mode'] ?? null,
+					'inserted' => (int)($listed['inserted'] ?? 0),
+				],
+				Http::STATUS_CREATED,
+			);
+		});
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function updateChecklistItem(int $workspaceId, int $id): JSONResponse
+	{
+		return $this->guard(function () use ($workspaceId, $id): JSONResponse {
+			$this->assertSafeMutationChannel();
+			$uid = $this->requireGatedUid();
+			$wsId = $this->requireMobileWorkspace($uid, $workspaceId, 'write');
+			if ($this->dealChecklists === null) {
+				throw new NotFoundException('Checklist not available', Constants::ERR_NOT_FOUND);
+			}
+			$item = $this->dealChecklists->requireItemForGate($id);
+			$this->requireCompanyInWorkspace((int)$item->getCompanyId(), $wsId);
+			$body = $this->jsonBody();
+
+			return $this->success($this->dealChecklists->updateItem(
+				$id,
+				$body,
+				$uid,
+				$this->preconditionFrom($body),
+			));
+		});
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function linkChecklistFile(int $workspaceId, int $id): JSONResponse
+	{
+		return $this->guard(function () use ($workspaceId, $id): JSONResponse {
+			$this->assertSafeMutationChannel();
+			$uid = $this->requireGatedUid();
+			$wsId = $this->requireMobileWorkspace($uid, $workspaceId, 'write');
+			if ($this->dealChecklists === null) {
+				throw new NotFoundException('Checklist not available', Constants::ERR_NOT_FOUND);
+			}
+			$item = $this->dealChecklists->requireItemForGate($id);
+			$this->requireCompanyInWorkspace((int)$item->getCompanyId(), $wsId);
+			$body = $this->jsonBody();
+			$fileId = (int)($body['fileId'] ?? 0);
+			$payload = $this->idempotency->once(
+				$uid,
+				$this->scopedIdempotencyKey($body, 'cl-link', 'file:' . $fileId, $wsId, $id),
+				function () use ($id, $fileId, $uid): array {
+					$this->dealChecklists->linkFile($id, $fileId, $uid);
+
+					return $this->checklistItemPayload($id);
+				},
+				static fn (array $row): int => (int)($row['id'] ?? $id),
+				fn (int $itemId): array => $this->checklistItemPayloadForIdempotentReplay($itemId, $wsId, $id),
+			);
+
+			return $this->success($payload, null, Http::STATUS_CREATED);
+		});
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function uploadChecklistFile(int $workspaceId, int $id): JSONResponse
+	{
+		return $this->guard(function () use ($workspaceId, $id): JSONResponse {
+			$this->assertSafeMutationChannel();
+			$uid = $this->requireGatedUid();
+			$wsId = $this->requireMobileWorkspace($uid, $workspaceId, 'write');
+			if ($this->dealChecklists === null) {
+				throw new NotFoundException('Checklist not available', Constants::ERR_NOT_FOUND);
+			}
+			$item = $this->dealChecklists->requireItemForGate($id);
+			$companyId = (int)$item->getCompanyId();
+			$this->requireCompanyInWorkspace($companyId, $wsId);
+
+			$uploaded = $this->request->getUploadedFile('file');
+			if (!is_array($uploaded) || empty($uploaded['tmp_name']) || !is_uploaded_file((string)$uploaded['tmp_name'])) {
+				throw ValidationException::field(
+					Constants::ERR_VALIDATION,
+					'file',
+					'Pick a file to upload.',
+				);
+			}
+			$maxBytes = 20 * 1024 * 1024;
+			$size = (int)($uploaded['size'] ?? 0);
+			if ($size < 1 || $size > $maxBytes) {
+				throw ValidationException::field(
+					Constants::ERR_VALIDATION,
+					'file',
+					'File must be between 1 byte and 20 MB.',
+				);
+			}
+			$binary = file_get_contents((string)$uploaded['tmp_name']);
+			if ($binary === false || $binary === '') {
+				throw ValidationException::field(
+					Constants::ERR_VALIDATION,
+					'file',
+					'Could not read the uploaded file.',
+				);
+			}
+			$name = (string)($uploaded['name'] ?? 'upload.bin');
+			$body = $this->jsonBody();
+			$bytesDigest = hash('sha256', $binary);
+			$key = $this->scopedIdempotencyKey($body, 'cl-upload', 'bytes:' . $bytesDigest, $wsId, $id);
+			// Replay without re-upload — Files I/O must not sit inside the ledger TX.
+			// Argus: never return another item's payload for a reused key.
+			$existingItemId = $this->idempotency->findResourceId($uid, $key);
+			if ($existingItemId !== null) {
+				return $this->success(
+					$this->checklistItemPayloadForIdempotentReplay($existingItemId, $wsId, $id),
+					null,
+					Http::STATUS_CREATED,
+				);
+			}
+			$stored = $this->documents->uploadIntoCompanyFolder($companyId, $uid, $name, $binary);
+			$fileId = (int)($stored['fileId'] ?? 0);
+			try {
+				$payload = $this->idempotency->once(
+					$uid,
+					$key,
+					function () use ($fileId, $uid, $id): array {
+						$this->dealChecklists->linkFile($id, $fileId, $uid);
+
+						return $this->checklistItemPayload($id);
+					},
+					static fn (array $row): int => (int)($row['id'] ?? $id),
+					fn (int $itemId): array => $this->checklistItemPayloadForIdempotentReplay($itemId, $wsId, $id),
+				);
+			} catch (\Throwable $e) {
+				$this->documents->tryDeleteUploadedFile($uid, $fileId);
+				throw $e;
+			}
+			// Drop orphan bytes when this request's upload was not linked:
+			// - race loser (once() returned prior winner without linking our fileId)
+			// - unique-ledger race after factory (link rolled back with TX)
+			if (!$this->checklistPayloadLinksFileId($payload, $fileId)) {
+				$this->documents->tryDeleteUploadedFile($uid, $fileId);
+			}
+
+			return $this->success($payload, null, Http::STATUS_CREATED);
 		});
 	}
 
@@ -183,7 +566,11 @@ class MobileController extends Controller
 			$body = MobileApiService::normaliseActivityBody($this->jsonBody());
 			$companyId = (int)($body['companyId'] ?? 0);
 			$this->requireCompanyInWorkspace($companyId, $wsId);
-			$activity = $this->idempotency->createActivity($uid, $body, $this->idempotencyKey($body));
+			$activity = $this->idempotency->createActivity(
+				$uid,
+				$body,
+				$this->scopedIdempotencyKey($body, 'act-create', '', $wsId, $companyId),
+			);
 
 			return $this->success(
 				MobileApiService::serialiseActivity($activity),
@@ -265,6 +652,32 @@ class MobileController extends Controller
 		});
 	}
 
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function doneChecklistItem(int $workspaceId, int $id): JSONResponse
+	{
+		return $this->guard(function () use ($workspaceId, $id): JSONResponse {
+			$this->assertSafeMutationChannel();
+			$uid = $this->requireGatedUid();
+			$wsId = $this->requireMobileWorkspace($uid, $workspaceId, 'write');
+			if ($this->dealChecklists === null) {
+				throw new NotFoundException('Checklist not available', Constants::ERR_NOT_FOUND);
+			}
+			$item = $this->dealChecklists->requireItemForGate($id);
+			// Company workspace is authoritative — never trust denormalised item.workspace_id alone
+			// (stale after move would let old-book writers Done a company that left).
+			$this->requireCompanyInWorkspace((int)$item->getCompanyId(), $wsId);
+			$body = $this->jsonBody();
+
+			return $this->success($this->dealChecklists->completeItem(
+				$id,
+				$body,
+				$uid,
+				$this->preconditionFrom($body),
+			));
+		});
+	}
+
 	// ── Deals ───────────────────────────────────────────────────────────
 
 	#[NoAdminRequired]
@@ -339,6 +752,53 @@ class MobileController extends Controller
 	}
 
 	// ── Plumbing ────────────────────────────────────────────────────────
+
+	/**
+	 * Reload a checklist item DTO (with files) after link/upload.
+	 *
+	 * @return array<string, mixed>
+	 */
+	private function checklistItemPayload(int $itemId): array
+	{
+		if ($this->dealChecklists === null) {
+			throw new NotFoundException('Checklist not available', Constants::ERR_NOT_FOUND);
+		}
+		$item = $this->dealChecklists->requireItemForGate($itemId);
+		$listed = $this->dealChecklists->listForDeal((int)$item->getDealId());
+		foreach ($listed['items'] ?? [] as $row) {
+			if ((int)($row['id'] ?? 0) === $itemId) {
+				return $row;
+			}
+		}
+
+		throw new NotFoundException('Checklist item not found', Constants::ERR_NOT_FOUND);
+	}
+
+	/**
+	 * True when the item DTO already lists this NC file id (upload was linked).
+	 *
+	 * @param array<string, mixed> $payload
+	 */
+	private function checklistPayloadLinksFileId(array $payload, int $fileId): bool
+	{
+		if ($fileId < 1) {
+			return false;
+		}
+		$files = $payload['files'] ?? null;
+		if (!is_array($files)) {
+			return false;
+		}
+		foreach ($files as $file) {
+			if (!is_array($file)) {
+				continue;
+			}
+			if ((int)($file['fileId'] ?? 0) === $fileId) {
+				return true;
+			}
+		}
+
+		return false;
+	}
 
 	/**
 	 * Explicit workspace membership for companion routes (product §3.3).
@@ -488,22 +948,54 @@ class MobileController extends Controller
 	}
 
 	/**
-	 * Mutations accept app-password Authorization OR a valid CSRF requesttoken —
-	 * never a bare session cookie (CSRF hardening for NoCSRFRequired routes).
+	 * Mutations accept a valid CSRF requesttoken OR Basic credentials that
+	 * authenticate as the already-bound session user (companion app password).
+	 *
+	 * Junk `Authorization: Bearer x` / `Basic junk` MUST NOT bypass CSRF —
+	 * that would let a same-site attacker ride the victim's browser cookie.
 	 *
 	 * @throws AppAccessDeniedException
 	 */
 	private function assertSafeMutationChannel(): void
 	{
-		$auth = trim((string)$this->request->getHeader('Authorization'));
-		if ($auth !== '' && preg_match('/^(Basic|Bearer)\s+\S+/i', $auth) === 1) {
+		if ($this->request->passesCSRFCheck()) {
 			return;
 		}
-		if ($this->request->passesCSRFCheck()) {
+		if ($this->authorizationBasicAuthenticatesCurrentUser()) {
 			return;
 		}
 
 		throw new AppAccessDeniedException('CSRF or app password required');
+	}
+
+	/**
+	 * True only when Authorization Basic credentials checkPassword as the
+	 * current session UID (blocks presence-only Bearer/Basic CSRF escapes).
+	 */
+	private function authorizationBasicAuthenticatesCurrentUser(): bool
+	{
+		$auth = trim((string)$this->request->getHeader('Authorization'));
+		if (preg_match('/^Basic\s+(\S+)$/i', $auth, $m) !== 1) {
+			return false;
+		}
+		$decoded = base64_decode($m[1], true);
+		if ($decoded === false || !str_contains($decoded, ':')) {
+			return false;
+		}
+		[$login, $secret] = explode(':', $decoded, 2);
+		if ($login === '' || $secret === '') {
+			return false;
+		}
+		$current = $this->userSession->getUser();
+		if ($current === null) {
+			return false;
+		}
+		$authed = $this->userManager->checkPassword($login, $secret);
+		if ($authed === false) {
+			return false;
+		}
+
+		return hash_equals($current->getUID(), $authed->getUID());
 	}
 
 	/**
@@ -520,6 +1012,30 @@ class MobileController extends Controller
 		}
 
 		return null;
+	}
+
+	/**
+	 * Bind client Idempotency-Key to this operation + path resources + intent
+	 * so a retained key cannot replay across templates/modes/files/bytes
+	 * (Aristoteles — intent-blind replay after timeout).
+	 *
+	 * @param array<string, mixed> $body
+	 * @param string $intent Extra binding (e.g. "tmpl:3|mode:append", "file:55", "bytes:<sha256>")
+	 */
+	private function scopedIdempotencyKey(array $body, string $operation, string $intent = '', int ...$resourceIds): ?string
+	{
+		$raw = $this->idempotencyKey($body);
+		if ($raw === null) {
+			return null;
+		}
+		$parts = [$operation];
+		foreach ($resourceIds as $rid) {
+			$parts[] = (string)max(0, $rid);
+		}
+		// One digest: client key + intent (empty intent keeps create-* behaviour).
+		$parts[] = hash('sha256', $raw . "\0" . $intent);
+
+		return implode(':', $parts);
 	}
 
 	/**
@@ -541,6 +1057,75 @@ class MobileController extends Controller
 		}
 
 		return null;
+	}
+
+	private function loadCompanyForIdempotentReplay(int $companyId, int $workspaceId): Company
+	{
+		$this->requireCompanyInWorkspace($companyId, $workspaceId);
+
+		return $this->companies->get($companyId);
+	}
+
+	private function loadPersonForIdempotentReplay(int $personId, int $workspaceId, int $expectedCompanyId): Person
+	{
+		$person = $this->persons->get($personId);
+		if ((int)$person->getCompanyId() !== $expectedCompanyId) {
+			throw new NotFoundException('Person not found.', Constants::ERR_NOT_FOUND);
+		}
+		$this->requireCompanyInWorkspace((int)$person->getCompanyId(), $workspaceId);
+
+		return $person;
+	}
+
+	private function loadDealForIdempotentReplay(int $dealId, int $workspaceId, int $expectedCompanyId): Deal
+	{
+		$deal = $this->deals->get($dealId);
+		if ((int)$deal->getCompanyId() !== $expectedCompanyId) {
+			throw new NotFoundException('Deal not found.', Constants::ERR_NOT_FOUND);
+		}
+		$this->requireDealInWorkspace($dealId, $workspaceId);
+
+		return $deal;
+	}
+
+	/**
+	 * @return array{dealId: int, companyId: int, items: list<array<string, mixed>>}
+	 */
+	private function loadDealChecklistForIdempotentReplay(
+		int $dealId,
+		int $workspaceId,
+		int $expectedDealId,
+		string $uid,
+	): array {
+		if ($dealId !== $expectedDealId) {
+			throw new NotFoundException('Deal not found.', Constants::ERR_NOT_FOUND);
+		}
+		$this->requireDealInWorkspace($dealId, $workspaceId);
+		if ($this->dealChecklists === null) {
+			throw new NotFoundException('Checklist not available', Constants::ERR_NOT_FOUND);
+		}
+
+		return $this->dealChecklists->listForDeal($dealId, $uid);
+	}
+
+	/**
+	 * @return array<string, mixed>
+	 */
+	private function checklistItemPayloadForIdempotentReplay(
+		int $itemId,
+		int $workspaceId,
+		int $expectedItemId,
+	): array {
+		if ($itemId !== $expectedItemId) {
+			throw new NotFoundException('Checklist item not found', Constants::ERR_NOT_FOUND);
+		}
+		if ($this->dealChecklists === null) {
+			throw new NotFoundException('Checklist not available', Constants::ERR_NOT_FOUND);
+		}
+		$item = $this->dealChecklists->requireItemForGate($itemId);
+		$this->requireCompanyInWorkspace((int)$item->getCompanyId(), $workspaceId);
+
+		return $this->checklistItemPayload($itemId);
 	}
 
 	/**

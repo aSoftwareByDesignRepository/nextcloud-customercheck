@@ -175,4 +175,60 @@ final class FilesAccessServiceTest extends TestCase
 		$this->assertSame('quote.pdf', $out[0]['filename']);
 		$this->assertSame('%PDF', $out[0]['data']);
 	}
+
+	public function testAssertFileUnderFolderAcceptsDescendant(): void
+	{
+		$file = $this->createMock(File::class);
+		$file->method('getType')->willReturn(FileInfo::TYPE_FILE);
+		$file->method('getMimetype')->willReturn('image/jpeg');
+		$file->method('getSize')->willReturn(100);
+		$file->method('getPath')->willReturn('/ae/files/Customers/Acme/scan.jpg');
+
+		$folder = $this->createMock(Folder::class);
+		$folder->method('getPath')->willReturn('/ae/files/Customers/Acme');
+
+		$userFolder = $this->createMock(Folder::class);
+		$userFolder->method('getById')->willReturnCallback(static function (int $id) use ($file, $folder): array {
+			return match ($id) {
+				55 => [$file],
+				77 => [$folder],
+				default => [],
+			};
+		});
+		$root = $this->createMock(IRootFolder::class);
+		$root->method('getUserFolder')->with('ae')->willReturn($userFolder);
+
+		$result = $this->service($root)->assertFileUnderFolder('ae', 55, 77);
+		$this->assertSame($file, $result);
+	}
+
+	public function testAssertFileUnderFolderRejectsForeignPath(): void
+	{
+		$file = $this->createMock(File::class);
+		$file->method('getType')->willReturn(FileInfo::TYPE_FILE);
+		$file->method('getMimetype')->willReturn('image/jpeg');
+		$file->method('getSize')->willReturn(100);
+		$file->method('getPath')->willReturn('/ae/files/Personal/secret.jpg');
+
+		$folder = $this->createMock(Folder::class);
+		$folder->method('getPath')->willReturn('/ae/files/Customers/Acme');
+
+		$userFolder = $this->createMock(Folder::class);
+		$userFolder->method('getById')->willReturnCallback(static function (int $id) use ($file, $folder): array {
+			return match ($id) {
+				55 => [$file],
+				77 => [$folder],
+				default => [],
+			};
+		});
+		$root = $this->createMock(IRootFolder::class);
+		$root->method('getUserFolder')->with('ae')->willReturn($userFolder);
+
+		try {
+			$this->service($root)->assertFileUnderFolder('ae', 55, 77);
+			$this->fail('Expected ValidationException');
+		} catch (ValidationException $e) {
+			$this->assertArrayHasKey('fileId', $e->getFields());
+		}
+	}
 }

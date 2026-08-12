@@ -30,6 +30,7 @@ use OCA\CustomerCheck\Exception\ValidationException;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\JSONResponse;
+use OCP\IL10N;
 use OCP\IRequest;
 
 class PersonaApiController extends Controller
@@ -60,6 +61,7 @@ class PersonaApiController extends Controller
 		private readonly \OCA\CustomerCheck\Service\OneOnOneService $oneOnOne,
 		private readonly DirectoryOptionsService $directory,
 		private readonly SettingsService $settings,
+		private readonly IL10N $l10n,
 	) {
 		parent::__construct($appName, $request);
 	}
@@ -508,6 +510,20 @@ class PersonaApiController extends Controller
 	}
 
 	#[NoAdminRequired]
+	public function completeMapStep(int $companyId, int $id): JSONResponse
+	{
+		try {
+			$uid = $this->access->currentUserId();
+			$company = $this->companies->get($companyId);
+			$wsId = (int)($company->getWorkspaceId() ?? 0);
+			$this->workspaces->assertUserCanAccessCompany($uid, $wsId, 'write');
+			return $this->ok($this->plans->setMapStepStatus($companyId, $id, $wsId, 'done'));
+		} catch (\Throwable $e) {
+			return $this->fromThrowable($e);
+		}
+	}
+
+	#[NoAdminRequired]
 	public function oneOnOnePrep(int $workspaceId, string $reportUserId): JSONResponse
 	{
 		try {
@@ -681,12 +697,64 @@ class PersonaApiController extends Controller
 	}
 
 	#[NoAdminRequired]
+	public function deleteMailbox(int $workspaceId, int $id): JSONResponse
+	{
+		try {
+			$uid = $this->access->currentUserId();
+			$this->workspaces->assertCapability($uid, $workspaceId, 'mailbox');
+			$this->mailboxSync->deleteMailbox($workspaceId, $id);
+			return $this->ok(['deleted' => true, 'id' => $id]);
+		} catch (\Throwable $e) {
+			return $this->fromThrowable($e);
+		}
+	}
+
+	#[NoAdminRequired]
 	public function testMailbox(int $workspaceId): JSONResponse
 	{
 		try {
 			$uid = $this->access->currentUserId();
 			$this->workspaces->assertCapability($uid, $workspaceId, 'mailbox');
-			return $this->ok($this->mailboxSync->testConnection($this->requestBody()));
+			$body = $this->requestBody();
+			$body['workspaceId'] = $workspaceId;
+			return $this->ok($this->mailboxSync->testConnection($body));
+		} catch (\Throwable $e) {
+			return $this->fromThrowable($e);
+		}
+	}
+
+	#[NoAdminRequired]
+	public function syncMailbox(int $workspaceId, int $id): JSONResponse
+	{
+		try {
+			$uid = $this->access->currentUserId();
+			$this->workspaces->assertCapability($uid, $workspaceId, 'mailbox');
+			if ($id <= 0) {
+				throw ValidationException::field(
+					Constants::ERR_VALIDATION,
+					'id',
+					$this->l10n->t('Choose a mailbox to sync.'),
+				);
+			}
+			$result = $this->mailboxSync->syncOne($id, $workspaceId);
+			$message = match ((string)($result['status'] ?? '')) {
+				'ok' => $this->l10n->n(
+					'Synced %n message into the CRM index.',
+					'Synced %n messages into the CRM index.',
+					(int)($result['ingested'] ?? 0),
+				),
+				'locked' => $this->l10n->t('Sync already running for this mailbox. Try again in a moment.'),
+				'missing' => $this->l10n->t('Mailbox not found in this workspace.'),
+				'auth', 'error' => $this->l10n->t('IMAP login failed during sync. Test the connection and save again.'),
+				'no_imap' => $this->l10n->t('This server cannot sync that mailbox encryption mode without the PHP IMAP extension.'),
+				default => $this->l10n->t('Sync finished with status: %s', [(string)($result['status'] ?? 'unknown')]),
+			};
+
+			return $this->ok([
+				'ingested' => (int)($result['ingested'] ?? 0),
+				'status' => (string)($result['status'] ?? ''),
+				'message' => $message,
+			]);
 		} catch (\Throwable $e) {
 			return $this->fromThrowable($e);
 		}
@@ -806,6 +874,40 @@ class PersonaApiController extends Controller
 				'items' => $this->mailbox->unmatched($workspaceId),
 				'disclosure' => $this->mailbox->disclosure('shared', (string)$ctx['workspace']->getName()),
 			]);
+		} catch (\Throwable $e) {
+			return $this->fromThrowable($e);
+		}
+	}
+
+	/**
+	 * On-demand plain-text body preview for an indexed shared-mail message.
+	 * POST-only: may dial IMAP and cache plain text — side-effectful; CSRF via requesttoken.
+	 * Does not return HTML or attachments — full bodies stay on the IMAP server.
+	 */
+	#[NoAdminRequired]
+	public function previewMail(int $workspaceId, int $id): JSONResponse
+	{
+		try {
+			$uid = $this->access->currentUserId();
+			$this->workspaces->assertCapability($uid, $workspaceId, 'mail.read');
+
+			return $this->ok($this->mailboxSync->previewIndexedMessage($workspaceId, $id, $uid));
+		} catch (\Throwable $e) {
+			return $this->fromThrowable($e);
+		}
+	}
+
+	/**
+	 * Answer helper: mailto / Nextcloud Mail compose presets (no send from CRM).
+	 */
+	#[NoAdminRequired]
+	public function replyMail(int $workspaceId, int $id): JSONResponse
+	{
+		try {
+			$uid = $this->access->currentUserId();
+			$this->workspaces->assertCapability($uid, $workspaceId, 'mail.read');
+
+			return $this->ok($this->mailboxSync->replyComposeIndexedMessage($workspaceId, $id));
 		} catch (\Throwable $e) {
 			return $this->fromThrowable($e);
 		}

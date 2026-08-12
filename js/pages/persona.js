@@ -5,7 +5,20 @@
 (function () {
   'use strict';
 
-  const t = (msg, args) => (window.t ? window.t('customercheck', msg, args || []) : msg);
+  const t = (msg, args) => {
+    const list = Array.isArray(args) ? args : [];
+    let out = window.t ? window.t('customercheck', msg, list) : msg;
+    // Nextcloud t() sometimes leaves %s / %1$s — fill locally (same as settings.js).
+    if (list.length && typeof out === 'string' && out.indexOf('%') !== -1) {
+      let i = 0;
+      out = out.replace(/%(?:\d+\$)?s/g, function () {
+        const v = list[i];
+        i += 1;
+        return v == null ? '' : String(v);
+      });
+    }
+    return out;
+  };
 
   function qs(sel, root) {
     return (root || document).querySelector(sel);
@@ -20,6 +33,8 @@
     return !!(el && el.getAttribute('data-crm-can-' + flag) === '1');
   }
 
+  /** Monotonic load token — drops stale Review paints when filters race. */
+  let reviewLoadGeneration = 0;
 
   function escapeHtml(value) {
     return String(value == null ? '' : value)
@@ -28,6 +43,47 @@
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#39;');
+  }
+
+  /**
+   * RFC 2047 encoded-word → display text (defense if API/cache still returns =?…?=).
+   * Mirrors lib/Support/MimeHeader.php — plain subjects pass through unchanged.
+   */
+  function decodeMimeHeader(raw) {
+    const input = String(raw == null ? '' : raw).trim();
+    if (!input || input.indexOf('=?') === -1) {
+      return input;
+    }
+    const stillEncoded = /=\?[\w-]+\?[BQbq]\?[^\?]*\?=/;
+    const decoded = input.replace(/=\?([\w-]+)\?([BQbq])\?([^\?]*)\?=/g, function (_m, charset, enc, payload) {
+      let bin = '';
+      if (String(enc).toUpperCase() === 'Q') {
+        const qp = String(payload).replace(/_/g, ' ').replace(/=([0-9A-Fa-f]{2})/g, function (__m, hex) {
+          return String.fromCharCode(parseInt(hex, 16));
+        });
+        bin = qp;
+      } else {
+        try {
+          bin = atob(String(payload).replace(/\s+/g, ''));
+        } catch (_e) {
+          return _m;
+        }
+      }
+      try {
+        if (typeof TextDecoder !== 'undefined') {
+          const bytes = new Uint8Array(bin.length);
+          for (let i = 0; i < bin.length; i++) {
+            bytes[i] = bin.charCodeAt(i) & 0xff;
+          }
+          return new TextDecoder(String(charset || 'utf-8'), { fatal: false }).decode(bytes);
+        }
+      } catch (_e2) { /* fall through */ }
+      return bin;
+    });
+    if (!decoded || stillEncoded.test(decoded)) {
+      return input;
+    }
+    return decoded.replace(/[ \t]+/g, ' ').trim();
   }
 
   /** Chase reason codes — never show snake_case in the UI. */
@@ -286,22 +342,26 @@
   /**
    * Suite table — same pattern as Today / Companies (What · Detail · Action).
    * @param {HTMLElement} mount
-   * @param {Array<{title?: string, name?: string, why?: string, meta?: string, href?: string, cta?: string, actionHtml?: string}>} items
+   * @param {Array<{title?: string, name?: string, why?: string, meta?: string, href?: string, cta?: string, actionHtml?: string, id?: number|string, selectable?: boolean}>} items
    * @param {string} emptyMsg
    * @param {string} ariaLabel
+   * @param {{selectable?: boolean}=} options
    */
-  function renderSuiteTable(mount, items, emptyMsg, ariaLabel) {
+  function renderSuiteTable(mount, items, emptyMsg, ariaLabel, options) {
     clearMountBusy(mount);
     if (!items || !items.length) {
       mount.innerHTML = '<div class="crm-callout crm-callout--success" role="status"><p>' +
         escapeHtml(emptyMsg) + '</p></div>';
       return;
     }
+    const selectable = !!(options && options.selectable);
     const hasRichActions = items.some(function (it) { return !!it.actionHtml; });
-    const actionColClass = 'crm-table-actions-col' + (hasRichActions ? ' crm-table-actions-col--wide' : '');
+    const actionColClass = 'crm-table-actions-col actions-cell' +
+      (hasRichActions ? ' crm-table-actions-col--wide' : '');
+    const tableClass = 'table table--hover crm-table--responsive';
     let rows = '';
     items.forEach(function (it) {
-      const title = it.title || it.name || it.why || '';
+      const title = decodeMimeHeader(it.title || it.name || it.why || '');
       const meta = it.meta || '';
       const href = it.href || '';
       const cta = it.cta || t('Open');
@@ -313,20 +373,175 @@
       } else {
         action = '<span class="crm-muted">—</span>';
       }
-      rows += '<tr class="crm-today-row">' +
+      const rowId = it.id != null ? String(it.id) : '';
+      const canSelect = selectable && it.selectable !== false && rowId !== '';
+      const selectCell = selectable
+        ? ('<td data-label="' + escapeHtml(t('Select')) + '" class="crm-table-select-col">' +
+          (canSelect
+            ? ('<label class="crm-check crm-review-select">' +
+              '<input type="checkbox" class="crm-input" data-crm-review-select="' + escapeHtml(rowId) + '" value="' + escapeHtml(rowId) + '" />' +
+              '<span class="visually-hidden">' + escapeHtml(t('Select')) + ' ' + escapeHtml(title) + '</span></label>')
+            : '') +
+          '</td>')
+        : '';
+      rows += '<tr class="crm-today-row"' + (rowId ? ' data-crm-review-item-id="' + escapeHtml(rowId) + '"' : '') + '>' +
+        selectCell +
         '<td data-label="' + escapeHtml(t('What')) + '"><span class="crm-today-what">' + escapeHtml(title) + '</span></td>' +
         '<td data-label="' + escapeHtml(t('Detail')) + '">' + (meta ? escapeHtml(meta) : '—') + '</td>' +
         '<td data-label="' + escapeHtml(t('Action')) + '" class="' + actionColClass + '"><div class="crm-table-actions">' +
         action + '</div></td></tr>';
     });
+    const selectHead = selectable
+      ? ('<th scope="col" class="crm-table-select-col">' +
+        '<label class="crm-check crm-review-select-all">' +
+        '<input type="checkbox" class="crm-input" data-crm-review-select-all />' +
+        '<span class="visually-hidden">' + escapeHtml(t('Select all open items')) + '</span></label></th>')
+      : '';
     mount.innerHTML =
       '<div class="table-container crm-table--responsive" role="region" aria-label="' + escapeHtml(ariaLabel) + '">' +
-      '<table class="table table--hover">' +
+      '<table class="' + tableClass + '"' + (selectable ? ' data-crm-review-selectable="1"' : '') + '>' +
       '<thead><tr>' +
+      selectHead +
       '<th scope="col">' + escapeHtml(t('What')) + '</th>' +
       '<th scope="col">' + escapeHtml(t('Detail')) + '</th>' +
       '<th scope="col" class="' + actionColClass + '">' + escapeHtml(t('Action')) + '</th>' +
       '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+  }
+
+  /**
+   * Review inbox — mail-thread list (same pattern as company Talk) + inline detail.
+   * @returns {{ boardEl: Element, listEl: Element, readerEl: Element, detailRowEl: Element, tableEl: Element|null, options: Element[], colCount: number }|null}
+   */
+  function renderReviewBoard(mount, items, emptyMsg, ariaLabel, options) {
+    clearMountBusy(mount);
+    if (!items || !items.length) {
+      mount.innerHTML = '<div class="crm-callout crm-callout--success" role="status"><p>' +
+        escapeHtml(emptyMsg) + '</p></div>';
+      return null;
+    }
+    const selectable = !!(options && options.selectable);
+    const sortKey = (options && options.sortKey) || 'sent';
+    const sortDir = (options && options.sortDir) === 'asc' ? 'asc' : 'desc';
+    function sortBtn(col, label) {
+      const active = sortKey === col;
+      const aria = active ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none';
+      const arrow = !active ? '' : (sortDir === 'asc' ? ' ↑' : ' ↓');
+      return '<button type="button" class="crm-btn crm-btn--ghost crm-review-sort' + (active ? ' is-active' : '') + '" ' +
+        'data-crm-review-sort="' + escapeHtml(col) + '" aria-pressed="' + (active ? 'true' : 'false') + '" ' +
+        'aria-sort="' + aria + '">' +
+        escapeHtml(label) + escapeHtml(arrow) + '</button>';
+    }
+    let rows = '';
+    items.forEach(function (it) {
+      const title = decodeMimeHeader(it.title || '');
+      const fromLabel = decodeMimeHeader(it.from || it.snippet || '');
+      const rowId = it.id != null ? String(it.id) : '';
+      const canSelect = selectable && it.selectable !== false && rowId !== '';
+      const badges = Array.isArray(it.badges) ? it.badges : [];
+      const statusText = badges.map(function (b) { return String(b); }).join(' ');
+      const metaHtml = badges.length
+        ? badges.map(function (b) {
+          return '<span class="crm-badge">' + escapeHtml(String(b)) + '</span>';
+        }).join(' ')
+        : '';
+      const snippet = String(it.listSnippet || '').trim();
+      const whenRaw = String(it.sentAt || it.createdAt || '').trim();
+      const whenLabel = whenRaw ? formatDisplayDate(whenRaw) : '';
+      const whenSort = whenRaw ? String(new Date(/T|\s\d{1,2}:/.test(whenRaw) ? whenRaw : (whenRaw + 'T12:00:00')).getTime() || 0) : '0';
+      const selectCtl = selectable
+        ? (canSelect
+          ? ('<label class="crm-check crm-review-select">' +
+            '<input type="checkbox" class="crm-input" data-crm-review-select="' + escapeHtml(rowId) + '" value="' + escapeHtml(rowId) + '" />' +
+            '<span class="visually-hidden">' + escapeHtml(t('Select')) + ' ' + escapeHtml(title) + '</span></label>')
+          : '<span class="crm-review-select crm-review-select--spacer" aria-hidden="true"></span>')
+        : '';
+      const optId = rowId ? ('crm-review-opt-' + rowId) : '';
+      rows +=
+        '<li class="crm-mail-thread-row crm-review-row"' +
+        (optId ? ' id="' + escapeHtml(optId) + '"' : '') +
+        (rowId ? ' data-crm-review-item-id="' + escapeHtml(rowId) + '"' : '') +
+        ' data-crm-sort-from="' + escapeHtml(fromLabel.toLowerCase()) + '"' +
+        ' data-crm-sort-subject="' + escapeHtml(title.toLowerCase()) + '"' +
+        ' data-crm-sort-status="' + escapeHtml(statusText.toLowerCase()) + '"' +
+        ' data-crm-sort-sent="' + escapeHtml(whenSort) + '"' +
+        ' role="option" tabindex="0" aria-selected="false">' +
+        selectCtl +
+        '<div class="crm-mail-thread-row__main">' +
+        '<p class="crm-mail-thread-row__from">' + escapeHtml(fromLabel || t('Unknown sender')) + '</p>' +
+        '<p class="crm-mail-thread-row__subject crm-review-row__subject">' + escapeHtml(title) + '</p>' +
+        (snippet
+          ? ('<p class="crm-mail-thread-row__snippet crm-muted">' + escapeHtml(snippet) + '</p>')
+          : '') +
+        (metaHtml
+          ? ('<p class="crm-feed__meta crm-muted">' + metaHtml + '</p>')
+          : '') +
+        '</div>' +
+        (whenLabel
+          ? ('<time class="crm-mail-thread-row__when" datetime="' + escapeHtml(whenRaw) + '">' +
+            escapeHtml(whenLabel) + '</time>')
+          : '<span class="crm-mail-thread-row__when crm-muted" aria-hidden="true">—</span>') +
+        '<button type="button" class="crm-btn crm-btn--ghost crm-btn--sm crm-review-open" data-crm-review-open="' +
+        escapeHtml(rowId) + '" aria-label="' + escapeHtml(t('Open details: %s', [title])) + '">' +
+        escapeHtml(t('Open')) + '</button>' +
+        '</li>';
+    });
+    const selectToolbar = selectable
+      ? ('<div class="crm-review-board__toolbar">' +
+        '<label class="crm-check crm-review-select-all">' +
+        '<input type="checkbox" class="crm-input" data-crm-review-select-all />' +
+        '<span>' + escapeHtml(t('Select all open items')) + '</span></label>' +
+        '<p class="crm-muted crm-review-board__hint" role="note">' +
+        escapeHtml(t('Open a row to read it and decide.')) + '</p></div>')
+      : ('<div class="crm-review-board__toolbar">' +
+        '<p class="crm-muted crm-review-board__hint" role="note">' +
+        escapeHtml(t('Open a row to read it and decide.')) + '</p></div>');
+    mount.innerHTML =
+      '<div class="crm-review-board" role="region" aria-label="' + escapeHtml(ariaLabel) + '"' +
+      (selectable ? ' data-crm-review-selectable="1"' : '') + '>' +
+      selectToolbar +
+      '<div class="crm-review-sortbar" role="toolbar" aria-label="' + escapeHtml(t('Sort')) + '">' +
+      sortBtn('sent', t('Sent')) +
+      sortBtn('from', t('From')) +
+      sortBtn('subject', t('Subject')) +
+      sortBtn('status', t('Status')) +
+      '</div>' +
+      '<div class="crm-mail-3pane crm-review-mail crm-review-table">' +
+      '<div class="crm-mail-3pane__thread">' +
+      '<ul class="crm-mail-thread crm-review-list" role="listbox" aria-label="' + escapeHtml(t('Message list')) + '">' +
+      rows + '</ul></div></div></div>';
+    const listEl = mount.querySelector('.crm-review-list');
+    const detailLi = document.createElement('li');
+    detailLi.className = 'crm-review-detail-row';
+    detailLi.setAttribute('data-crm-review-detail-row', '');
+    detailLi.setAttribute('role', 'presentation');
+    detailLi.hidden = true;
+    const reader = document.createElement('section');
+    reader.className = 'crm-review-detail crm-review-reader';
+    reader.setAttribute('data-crm-review-reader', '');
+    reader.setAttribute('role', 'region');
+    reader.setAttribute('aria-label', t('Details'));
+    reader.setAttribute('aria-live', 'polite');
+    reader.tabIndex = -1;
+    reader.innerHTML =
+      '<h3 class="crm-review-detail__title visually-hidden">' + escapeHtml(t('Details')) + '</h3>' +
+      '<div class="crm-mail-reader__empty crm-empty-state" role="status">' +
+      '<p class="crm-empty-state__text">' + escapeHtml(t('Select a message to read and decide.')) + '</p>' +
+      '</div>';
+    detailLi.appendChild(reader);
+    if (listEl && listEl.firstElementChild) {
+      listEl.firstElementChild.after(detailLi);
+    } else if (listEl) {
+      listEl.appendChild(detailLi);
+    }
+    return {
+      boardEl: mount.querySelector('.crm-review-board'),
+      listEl: listEl,
+      readerEl: reader,
+      detailRowEl: detailLi,
+      tableEl: mount.querySelector('.crm-review-mail'),
+      options: Array.from(mount.querySelectorAll('li.crm-review-row')),
+      colCount: 0,
+    };
   }
 
   function pulseStat(value, label, hint, variant) {
@@ -1358,6 +1573,150 @@
     }
   }
 
+  /**
+   * Load + show a mail preview (never toggles closed). Preview is POST-only.
+   * @returns {Promise<boolean>}
+   */
+  async function openMailPreview(wrap, ws, mount, opts) {
+    if (!wrap || !(ws > 0)) return false;
+    const btn = wrap.querySelector('[data-crm-mail-preview-toggle]');
+    const pre = wrap.querySelector('.crm-mail-preview__body');
+    const mailId = parseInt(wrap.getAttribute('data-crm-mail-preview') || '0', 10);
+    if (!mailId || !pre) return false;
+    if (btn && btn.getAttribute('aria-busy') === 'true') return false;
+    if (!pre.hidden && pre.getAttribute('data-loaded') === '1') {
+      if (btn) {
+        btn.setAttribute('aria-expanded', 'true');
+        btn.textContent = t('Hide message');
+      }
+      return true;
+    }
+    if (pre.getAttribute('data-loaded') === '1') {
+      pre.hidden = false;
+      pre.classList.remove('crm-mail-preview__body--pending');
+      if (btn) {
+        btn.setAttribute('aria-expanded', 'true');
+        btn.textContent = t('Hide message');
+      }
+      if (!(opts && opts.quietFocus)) {
+        try { pre.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+      }
+      return true;
+    }
+    if (btn) {
+      btn.disabled = true;
+      btn.setAttribute('aria-busy', 'true');
+    }
+    try {
+      const res = await apiPost('/api/v1/workspaces/' + ws + '/mail/' + mailId + '/preview', {});
+      const bodyText = (res && res.preview) || '';
+      // Never use innerHTML — mail bodies are untrusted.
+      pre.textContent = bodyText !== ''
+        ? bodyText
+        : t('No message text could be loaded.');
+      if (res && res.truncated) {
+        pre.textContent += '\n\n' + t('(Preview truncated)');
+      }
+      pre.setAttribute('data-loaded', '1');
+      pre.hidden = false;
+      pre.classList.remove('crm-mail-preview__body--pending');
+      if (btn) {
+        btn.setAttribute('aria-expanded', 'true');
+        btn.textContent = t('Hide message');
+      }
+      if (!(opts && opts.quietFocus)) {
+        try { pre.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+      }
+      return true;
+    } catch (e) {
+      showAlert(mount, e.message || String(e));
+      return false;
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.removeAttribute('aria-busy');
+      }
+    }
+  }
+
+  /** Open every mail preview in root (Review: open row = read message, no second click). */
+  function ensureMailPreviewsOpen(root, ws, mount, opts) {
+    if (!root || !(ws > 0)) return;
+    root.querySelectorAll('[data-crm-mail-preview]').forEach(function (wrap) {
+      void openMailPreview(wrap, ws, mount, opts || {});
+    });
+  }
+
+  /**
+   * Shared Show/Hide message + Answer wiring (Review + Mail triage).
+   * Preview is POST-only; Answer hydrates a thin quote via preview once when needed.
+   */
+  function bindMailPreviewActions(root, ws, mount) {
+    if (!root || !(ws > 0)) return;
+    root.querySelectorAll('[data-crm-mail-preview-toggle]').forEach(function (btn) {
+      btn.addEventListener('click', async function () {
+        const wrap = btn.closest('[data-crm-mail-preview]');
+        if (!wrap) return;
+        const pre = wrap.querySelector('.crm-mail-preview__body');
+        if (!pre) return;
+        if (btn.getAttribute('aria-busy') === 'true') return;
+        if (!pre.hidden && pre.getAttribute('data-loaded') === '1') {
+          pre.hidden = true;
+          btn.setAttribute('aria-expanded', 'false');
+          btn.textContent = t('Show message');
+          return;
+        }
+        await openMailPreview(wrap, ws, mount, {});
+      });
+    });
+    root.querySelectorAll('[data-crm-mail-reply]').forEach(function (btn) {
+      btn.addEventListener('click', async function () {
+        const wrap = btn.closest('[data-crm-mail-preview]');
+        if (!wrap) return;
+        const mailId = parseInt(wrap.getAttribute('data-crm-mail-preview') || '0', 10);
+        if (!mailId || btn.getAttribute('aria-busy') === 'true') return;
+        btn.disabled = true;
+        btn.setAttribute('aria-busy', 'true');
+        try {
+          let pack = await apiGet('/api/v1/workspaces/' + ws + '/mail/' + mailId + '/reply');
+          // Hydrate cached preview once when Answer is pressed first — richer quote in mailto.
+          const thin = !pack || !pack.available || String(pack.bodyText || '').length < 40;
+          if (thin) {
+            try {
+              await apiPost('/api/v1/workspaces/' + ws + '/mail/' + mailId + '/preview', {});
+              pack = await apiGet('/api/v1/workspaces/' + ws + '/mail/' + mailId + '/reply');
+            } catch (hydrateErr) {
+              // Keep first reply pack if hydrate fails (rate limit / IMAP).
+            }
+          }
+          if (!pack || !pack.available) {
+            showAlert(mount, t('This message has no usable reply address.'));
+            return;
+          }
+          const C = window.CustomerCheckComponents || window.CrmComponents;
+          const rawUrl = pack.mailAppUrl || pack.mailtoUrl || '';
+          const url = (C && typeof C.safeExternalHref === 'function')
+            ? C.safeExternalHref(rawUrl, '#')
+            : rawUrl;
+          if (!url || url === '#') {
+            showAlert(mount, t('Could not open a mail program for this address.'));
+            return;
+          }
+          if (/^mailto:/i.test(url)) {
+            window.location.href = url;
+          } else {
+            window.open(url, '_blank', 'noopener,noreferrer');
+          }
+        } catch (e) {
+          showAlert(mount, e.message || String(e));
+        } finally {
+          btn.disabled = false;
+          btn.removeAttribute('aria-busy');
+        }
+      });
+    });
+  }
+
   async function loadMail(mount) {
     const ws = await resolveWorkspaceId();
     const data = await apiGet('/api/v1/workspaces/' + ws + '/mail/unmatched');
@@ -1391,6 +1750,20 @@
           title: m.subject || m.from || t('Shared mail'),
           meta: t('Shared') + (m.sentAt ? ' · ' + m.sentAt : '') + (m.from && m.subject ? ' · ' + m.from : ''),
           actionHtml:
+            '<div class="crm-mail-preview" data-crm-mail-preview="' + escapeHtml(String(mid)) + '">' +
+            '<div class="crm-mail-preview__actions crm-inline-actions">' +
+            '<button type="button" class="crm-btn crm-btn--secondary crm-btn--lg" data-crm-mail-preview-toggle ' +
+            'aria-expanded="false" aria-controls="crm-triage-preview-body-' + escapeHtml(String(mid)) + '" ' +
+            'title="' + escapeHtml(t('Plain text only — attachments stay in the mailbox.')) + '">' +
+            escapeHtml(t('Show message')) + '</button>' +
+            '<button type="button" class="crm-btn crm-btn--primary crm-btn--lg" data-crm-mail-reply ' +
+            'aria-label="' + escapeHtml(t('Answer: %s', [String(m.subject || t('Shared mail'))])) + '" ' +
+            'title="' + escapeHtml(t('Opens your mail program with To and subject filled in. CustomerCheck does not send the email.')) + '">' +
+            escapeHtml(t('Answer')) + '</button>' +
+            '</div>' +
+            '<pre class="crm-mail-preview__body" id="crm-triage-preview-body-' + escapeHtml(String(mid)) + '" ' +
+            'role="region" aria-label="' + escapeHtml(t('Message text')) + '" tabindex="0" hidden></pre>' +
+            '</div>' +
             '<form class="crm-form crm-form--inline crm-form--row crm-triage-assign" data-triage-id="' + escapeHtml(String(mid)) + '">' +
             '<label class="form-label" for="' + escapeHtml(searchId) + '">' + escapeHtml(t('Company')) + '</label>' +
             '<div class="user-picker crm-triage-company-picker">' +
@@ -1483,111 +1856,10 @@
         }
       });
     });
+    bindMailPreviewActions(body, ws, mount);
 
     // §14.4 — failed shared sends (workspace-visible to mail.read)
-    let drafts = { items: [], canMailSend: false };
-    try {
-      drafts = await apiGet('/api/v1/workspaces/' + ws + '/mail/drafts');
-    } catch (e) {
-      drafts = { items: [], canMailSend: false, error: e.message || String(e) };
-    }
-    const draftsHost = document.createElement('section');
-    draftsHost.className = 'crm-card';
-    draftsHost.setAttribute('aria-labelledby', 'crm-mail-drafts-title');
-    draftsHost.innerHTML =
-      '<header class="crm-card__header"><h2 id="crm-mail-drafts-title" class="crm-card__title">' +
-      escapeHtml(t('Failed sends')) + '</h2></header>' +
-      '<div class="crm-card__body">' +
-      '<p class="crm-muted" role="status">' +
-      escapeHtml(t('Messages that could not leave the shared mailbox. Everyone who can read mail in this workspace can see them.')) +
-      '</p>' +
-      '<div data-crm-mail-drafts-body></div></div>';
-    mount.appendChild(draftsHost);
-    const draftsBody = draftsHost.querySelector('[data-crm-mail-drafts-body]');
-    const draftItems = drafts.items || [];
-    const canSendDrafts = !!drafts.canMailSend;
-    if (drafts.error) {
-      draftsBody.innerHTML = '<p class="crm-muted" role="alert">' + escapeHtml(drafts.error) + '</p>';
-    } else {
-      renderSuiteTable(
-        draftsBody,
-        draftItems.map(function (d) {
-          const did = d.id;
-          let actions = '';
-          if (canSendDrafts) {
-            actions =
-              '<div class="crm-form-actions crm-form-actions--start">' +
-              '<button type="button" class="crm-btn crm-btn--primary" data-crm-draft-resend="' + escapeHtml(String(did)) + '">' +
-              escapeHtml(t('Send again')) + '</button>' +
-              '<button type="button" class="crm-btn crm-btn--secondary" data-crm-draft-delete="' + escapeHtml(String(did)) + '">' +
-              escapeHtml(t('Discard')) + '</button></div>';
-          } else {
-            actions = '<p class="crm-muted">' + escapeHtml(t('Ask a teammate with send permission to retry or discard.')) + '</p>';
-          }
-          return {
-            title: d.subject || t('Failed send'),
-            meta: (d.to ? d.to : '') + (d.updatedAt ? ' · ' + d.updatedAt : ''),
-            actionHtml: actions,
-          };
-        }),
-        t('No failed sends waiting.'),
-        t('Failed sends'),
-      );
-      draftsBody.querySelectorAll('[data-crm-draft-resend]').forEach(function (btn) {
-        btn.addEventListener('click', async function () {
-          if (btn.disabled) return;
-          const C = window.CustomerCheckComponents || window.CrmComponents;
-          const id = btn.getAttribute('data-crm-draft-resend');
-          const ok = C && typeof C.confirmDialog === 'function'
-            ? await C.confirmDialog({
-              title: t('Send again?'),
-              message: t('This sends from the shared mailbox. Everyone who can read mail can see it.'),
-              confirmLabel: t('Send'),
-              cancelLabel: t('Cancel'),
-              variant: 'info',
-            })
-            : null;
-          if (!ok || !ok.confirmed) return;
-          btn.disabled = true;
-          try {
-            await apiPost('/api/v1/workspaces/' + ws + '/mail/drafts/' + id + '/send', {
-              idempotencyKey: makeDraftSendKey(),
-            });
-            const live = document.getElementById('crm-live-region');
-            if (live) live.textContent = t('Message sent from the shared mailbox.');
-            await loadMail(mount);
-          } catch (e) {
-            btn.disabled = false;
-            showAlert(draftsHost, e.message || String(e));
-          }
-        });
-      });
-      draftsBody.querySelectorAll('[data-crm-draft-delete]').forEach(function (btn) {
-        btn.addEventListener('click', async function () {
-          if (btn.disabled) return;
-          const C = window.CustomerCheckComponents || window.CrmComponents;
-          const id = btn.getAttribute('data-crm-draft-delete');
-          const ok = C && typeof C.confirmDialog === 'function'
-            ? await C.confirmDialog({
-              title: t('Discard this failed send?'),
-              message: t('The message will be removed from this workspace inbox. This cannot be undone.'),
-              confirmLabel: t('Discard'),
-              cancelLabel: t('Cancel'),
-              variant: 'danger',
-            })
-            : null;
-          if (!ok || !ok.confirmed) return;
-          btn.disabled = true;
-          try {
-            await apiDelete('/api/v1/workspaces/' + ws + '/mail/drafts/' + id);
-            await loadMail(mount);
-          } catch (e) {
-            btn.disabled = false;
-            showAlert(draftsHost, e.message || String(e));
-          }
-        });
-      });
-    }
+    await renderFailedSendsSection(mount, ws, function () { return loadMail(mount); });
   }
 
   function sectionList(title, items, emptyMsg, mapFn) {
@@ -1774,11 +2046,19 @@
     const kind = (mount.getAttribute('data-crm-review-kind') || '').trim();
     const includeArchived = !!(document.getElementById('crm-review-include-archived') || {}).checked
       || mount.getAttribute('data-crm-include-archived') === '1';
+    const searchQ = (document.getElementById('crm-review-q') || {}).value
+      || mount.getAttribute('data-crm-review-q')
+      || '';
     let qs = [];
     if (kind) qs.push('kind=' + encodeURIComponent(kind));
     if (includeArchived) qs.push('includeArchived=1');
+    if (String(searchQ).trim() !== '') qs.push('q=' + encodeURIComponent(String(searchQ).trim()));
     const qsKind = qs.length ? ('?' + qs.join('&')) : '';
+    const loadGen = ++reviewLoadGeneration;
     const data = await apiGet('/api/v1/workspaces/' + ws + '/review/items' + qsKind);
+    if (loadGen !== reviewLoadGeneration) {
+      return;
+    }
     clearMountBusy(mount);
     mount.innerHTML = '';
     const canWrite = data.canWrite !== false && shellCan('write');
@@ -1837,7 +2117,7 @@
     }
 
     const head = document.createElement('p');
-    head.className = 'crm-muted';
+    head.className = 'crm-muted crm-review-count';
     head.setAttribute('role', 'status');
     head.textContent = openCount === 1
       ? t('1 item needs a decision')
@@ -1875,14 +2155,39 @@
     });
     mount.appendChild(kindChips);
 
-    const filterBar = document.createElement('details');
-    filterBar.className = 'crm-advanced';
+    // AZ-style filter toolbar: search always visible; archived is a quiet secondary row.
+    const filterBar = document.createElement('div');
+    filterBar.className = 'crm-review-toolbar';
+    filterBar.setAttribute('role', 'search');
+    filterBar.setAttribute('aria-label', t('Search Review'));
     filterBar.innerHTML =
-      '<summary class="crm-advanced__summary">' + escapeHtml(t('More options')) + '</summary>' +
+      '<form class="crm-form crm-review-search">' +
+      '<div class="crm-review-search__field">' +
+      '<label class="form-label" for="crm-review-q">' + escapeHtml(t('Search Review')) + '</label>' +
+      '<input type="search" id="crm-review-q" class="form-input crm-input" autocomplete="off" ' +
+      'placeholder="' + escapeHtml(t('From, subject, date, or snippet…')) + '" value="' + escapeHtml(String(searchQ || '')) + '" />' +
+      '</div>' +
+      '<div class="crm-review-search__actions">' +
+      '<button type="submit" class="crm-btn crm-btn--primary">' + escapeHtml(t('Search')) + '</button>' +
+      '</div>' +
+      '</form>' +
+      '<div class="crm-review-toolbar__extra">' +
       '<label class="crm-switch" for="crm-review-include-archived">' +
       '<input type="checkbox" id="crm-review-include-archived" class="crm-input" ' + (includeArchived ? 'checked ' : '') + '/>' +
-      '<span>' + escapeHtml(t('Include archived companies in suggestions')) + '</span></label>';
+      '<span>' + escapeHtml(t('Include archived companies in suggestions')) + '</span></label>' +
+      '</div>';
     mount.appendChild(filterBar);
+    const searchBar = filterBar.querySelector('form.crm-review-search');
+    if (searchBar) {
+      searchBar.addEventListener('submit', function (ev) {
+        ev.preventDefault();
+        const qEl = searchBar.querySelector('#crm-review-q');
+        const nextQ = qEl ? String(qEl.value || '').trim() : '';
+        if (nextQ) mount.setAttribute('data-crm-review-q', nextQ);
+        else mount.removeAttribute('data-crm-review-q');
+        void loadReview(mount);
+      });
+    }
     const archToggle = filterBar.querySelector('#crm-review-include-archived');
     if (archToggle) {
       archToggle.addEventListener('change', function () {
@@ -1895,6 +2200,26 @@
     body.setAttribute('data-crm-review-body', '');
     mount.appendChild(body);
 
+    let bulkBar = null;
+    if (canWrite) {
+      bulkBar = document.createElement('div');
+      bulkBar.className = 'crm-review-bulk-bar';
+      bulkBar.setAttribute('data-crm-review-bulk', '');
+      bulkBar.setAttribute('role', 'region');
+      bulkBar.setAttribute('aria-label', t('Select items to remove'));
+      bulkBar.hidden = true;
+      bulkBar.innerHTML =
+        '<p class="crm-muted crm-review-bulk-bar__hint" data-crm-review-bulk-count>' +
+        escapeHtml(t('Select items to remove')) + '</p>' +
+        '<div class="crm-inline-actions crm-review-bulk-bar__actions">' +
+        '<button type="button" class="crm-btn crm-btn--secondary" data-crm-review-bulk-clear disabled>' +
+        escapeHtml(t('Clear selection')) + '</button>' +
+        '<button type="button" class="crm-btn crm-btn--primary" data-crm-review-bulk-remove disabled>' +
+        escapeHtml(t('Delete / remove selected')) + '</button>' +
+        '</div>';
+      mount.insertBefore(bulkBar, body);
+    }
+
     function reasonText(code) {
       const map = {
         person_email_exact: t('Exact person email match'),
@@ -1905,16 +2230,11 @@
       return map[code] || code || t('Suggested match');
     }
 
-    renderSuiteTable(
-      body,
-      items.map(function (item) {
+    const viewModels = items.map(function (item) {
         const top = (item.suggestions && item.suggestions[0]) || null;
         const companyLabel = top && top.companyName
           ? String(top.companyName)
           : (top ? ('#' + String(top.companyId)) : '');
-        const suggestLabel = top
-          ? (companyLabel + ' · ' + t('%s percent match', [String(top.score)]) + ' — ' + reasonText(top.reasonCode))
-          : t('No suggestion');
         const prefillId = top ? String(top.companyId) : '';
         const prefillName = top && top.companyName ? String(top.companyName) : '';
         const searchId = 'crm-review-search-' + item.id;
@@ -1926,13 +2246,48 @@
         const ref = item.sourceRef || {};
         const anomalyField = String(ref.fieldKey || '');
         const anomalyRaw = String(ref.raw || item.snippet || '');
+        const mailMsgId = item.sourceKind === 'shared_mail'
+          ? (parseInt(String(ref.mailMsgId || '0'), 10) || 0)
+          : 0;
+        const fromAddr = String(ref.from || (item.sourceKind === 'shared_mail' ? (item.snippet || '') : '') || '');
+        const badges = [sourceKindLabel(item.sourceKind), statusLabel(item.status)];
+        if (item.overhead) {
+          badges.push(t('Overhead'));
+        }
+        if (top && companyLabel) {
+          badges.push(t('Suggested: %s', [companyLabel]));
+        }
         const companyNameHint = (item.sourceKind === 'import_anomaly' && anomalyField === 'company_name' && anomalyRaw)
           ? ('<p class="crm-callout" role="status">' +
             escapeHtml(t('Ambiguous company name from import: “%s”. Pick the matching company or mark no relation.', [anomalyRaw])) +
             '</p>')
           : '';
+        // Read zone first: message loads when the row opens (no second click).
+        const mailPreviewBlock = mailMsgId > 0
+          ? ('<div class="crm-review-zone crm-review-zone--read">' +
+            '<p class="crm-review-zone__label" id="crm-review-read-label-' + escapeHtml(String(item.id)) + '">' +
+            escapeHtml(t('Message')) + '</p>' +
+            '<div class="crm-mail-preview" data-crm-mail-preview="' + escapeHtml(String(mailMsgId)) + '" ' +
+            'data-crm-mail-auto-open="1" aria-labelledby="crm-review-read-label-' + escapeHtml(String(item.id)) + '">' +
+            '<pre class="crm-mail-preview__body crm-mail-preview__body--pending" id="crm-mail-preview-body-' +
+            escapeHtml('r' + String(item.id) + '-m' + String(mailMsgId)) + '" ' +
+            'role="region" aria-label="' + escapeHtml(t('Message text')) + '" tabindex="0" hidden></pre>' +
+            '<div class="crm-mail-preview__actions crm-inline-actions crm-review-mail-tools">' +
+            '<button type="button" class="crm-btn crm-btn--primary crm-btn--lg" data-crm-mail-reply ' +
+            'aria-label="' + escapeHtml(t('Answer: %s', [String(item.subject || t('Shared mail'))])) + '" ' +
+            'title="' + escapeHtml(t('Opens your mail program with To and subject filled in. CustomerCheck does not send the email.')) + '">' +
+            escapeHtml(t('Answer')) + '</button>' +
+            '<button type="button" class="crm-btn crm-btn--ghost" data-crm-mail-preview-toggle ' +
+            'id="crm-mail-preview-btn-' + escapeHtml(String(item.id)) + '" ' +
+            'aria-expanded="false" aria-controls="crm-mail-preview-body-' +
+            escapeHtml('r' + String(item.id) + '-m' + String(mailMsgId)) + '" ' +
+            'title="' + escapeHtml(t('Plain text only — attachments stay in the mailbox.')) + '">' +
+            escapeHtml(t('Show message')) + '</button>' +
+            '</div></div></div>')
+          : '';
         if (terminal && item.overhead) {
           actions =
+            mailPreviewBlock +
             '<p class="crm-callout" role="status">' + overheadHint + '</p>' +
             (canReopen
               ? '<button type="button" class="crm-btn crm-btn--secondary" data-crm-review-reopen="' +
@@ -1942,53 +2297,101 @@
               : '');
         } else if (terminal && canReopen) {
           actions =
+            mailPreviewBlock +
             '<button type="button" class="crm-btn crm-btn--secondary" data-crm-review-reopen="' +
             escapeHtml(String(item.id)) + '">' +
             escapeHtml(t('Reopen')) +
             '</button>';
         } else if (canWrite && !terminal) {
           const searchValue = prefillName || (anomalyField === 'company_name' ? anomalyRaw : '');
-          const suggestChip = top
-            ? ('<p class="crm-callout crm-review-suggest-chip" role="status">' +
-              escapeHtml(t('Suggested: %s', [companyLabel])) + ' · ' +
-              escapeHtml(t('%s percent match', [String(top.score)])) + '</p>')
+          const hasSuggest = !!(top && prefillId);
+          const quickAssign = hasSuggest
+            ? ('<button type="button" class="crm-btn crm-btn--primary crm-btn--lg" data-crm-review-quick-assign ' +
+              'data-company-id="' + escapeHtml(prefillId) + '">' +
+              escapeHtml(t('Assign to %s', [companyLabel])) + '</button>')
             : '';
-          actions =
-            companyNameHint +
-            suggestChip +
-            '<form class="crm-form crm-review-assign" data-review-id="' + escapeHtml(String(item.id)) + '" data-crm-review-row tabindex="-1">' +
-            '<div class="crm-review-primary">' +
-            '<label class="form-label" for="' + escapeHtml(searchId) + '">' + escapeHtml(t('Company')) + '</label>' +
-            '<div class="user-picker">' +
+          const pickerBlock =
+            '<div class="user-picker crm-review-company-picker">' +
+            '<label class="form-label visually-hidden" for="' + escapeHtml(searchId) + '">' +
+            escapeHtml(hasSuggest ? t('Or pick another company') : t('Company')) + '</label>' +
             '<input type="search" id="' + escapeHtml(searchId) + '" class="form-input crm-input user-picker__search" ' +
             'role="combobox" aria-autocomplete="list" aria-controls="' + escapeHtml(suggestId) + '" aria-expanded="false" ' +
             'autocomplete="off" placeholder="' + escapeHtml(t('Search by company name…')) + '" value="' + escapeHtml(searchValue) + '" />' +
             '<ul id="' + escapeHtml(suggestId) + '" class="user-picker__list" role="listbox" hidden></ul>' +
             '<input type="hidden" id="' + escapeHtml(hiddenId) + '" name="companyId" value="' + escapeHtml(prefillId) + '" />' +
-            '</div>' +
-            '<div class="crm-inline-actions crm-review-primary__actions">' +
-            '<button type="submit" class="crm-btn crm-btn--primary">' + escapeHtml(t('Assign')) + '</button>' +
-            '<button type="button" class="crm-btn crm-btn--secondary" data-crm-review-none>' + escapeHtml(t('No relation')) + '</button>' +
-            '</div></div>' +
-            '<details class="crm-advanced crm-review-more">' +
-            '<summary class="crm-advanced__summary">' + escapeHtml(t('More options')) + '</summary>' +
-            '<p class="crm-muted" data-crm-review-overhead-hint>' + overheadHint + '</p>' +
-            '<label class="form-label" for="crm-review-deal-' + escapeHtml(String(item.id)) + '">' + escapeHtml(t('Deal (optional)')) + '</label>' +
-            '<select id="crm-review-deal-' + escapeHtml(String(item.id)) + '" name="dealId" class="form-select crm-input" data-crm-review-deal>' +
-            '<option value="">' + escapeHtml(t('No deal — mark as overhead')) + '</option>' +
-            '</select>' +
-            '<div class="crm-inline-actions">' +
+            '</div>';
+          // With suggestion: one-tap assign. Without: search + Assign as one clean row.
+          const companySection = hasSuggest
+            ? ('<p class="crm-callout crm-review-suggest-chip" role="status">' +
+              escapeHtml(t('Suggested: %s', [companyLabel])) + ' · ' +
+              escapeHtml(t('%s percent match', [String(top.score)])) +
+              (top.reasonCode ? (' — ' + escapeHtml(reasonText(top.reasonCode))) : '') +
+              '</p>' +
+              quickAssign +
+              '<details class="crm-advanced crm-review-pick-other">' +
+              '<summary class="crm-advanced__summary">' + escapeHtml(t('Pick another company')) + '</summary>' +
+              '<div class="crm-review-assign-row">' +
+              pickerBlock +
+              '<button type="submit" class="crm-btn crm-btn--primary crm-btn--lg">' + escapeHtml(t('Assign')) + '</button>' +
+              '</div></details>')
+            : ('<div class="crm-review-pick-company">' +
+              '<p class="crm-review-decide__heading">' + escapeHtml(t('Assign to a company')) + '</p>' +
+              '<div class="crm-review-pick-company__body">' +
+              '<div class="crm-review-assign-row">' +
+              pickerBlock +
+              '<button type="submit" class="crm-btn crm-btn--primary crm-btn--lg">' + escapeHtml(t('Assign')) + '</button>' +
+              '</div></div></div>');
+          const dealField = hasSuggest
+            ? ('<div class="crm-review-more__field">' +
+              '<label class="form-label" for="crm-review-deal-' + escapeHtml(String(item.id)) + '">' + escapeHtml(t('Deal (optional)')) + '</label>' +
+              '<select id="crm-review-deal-' + escapeHtml(String(item.id)) + '" name="dealId" class="form-select crm-input" data-crm-review-deal>' +
+              '<option value="">' + escapeHtml(t('No deal — mark as overhead')) + '</option>' +
+              '</select>' +
+              '<p class="crm-muted crm-review-more__hint" data-crm-review-overhead-hint>' + overheadHint + '</p>' +
+              '</div>')
+            : ('<input type="hidden" name="dealId" value="" data-crm-review-deal />');
+          const laterBlock =
+            '<details class="crm-review-more">' +
+            '<summary>' + escapeHtml(t('Remind me later')) + '</summary>' +
+            '<div class="crm-review-more__body">' +
+            '<p class="crm-muted crm-review-more__hint">' +
+            escapeHtml(t('Hides this row for a while. It comes back to Review — the mail in the shared mailbox stays.')) +
+            '</p>' +
+            dealField +
+            '<div class="crm-review-more__field">' +
+            '<p class="form-label" id="crm-review-snooze-label-' + escapeHtml(String(item.id)) + '">' + escapeHtml(t('Bring back in')) + '</p>' +
+            '<div class="crm-review-snooze" role="group" aria-labelledby="crm-review-snooze-label-' + escapeHtml(String(item.id)) + '">' +
             '<button type="button" class="crm-btn crm-btn--secondary" data-crm-review-snooze="1d" title="' + escapeHtml(t('Tomorrow')) + '">' + escapeHtml(t('1 day')) + '</button>' +
             '<button type="button" class="crm-btn crm-btn--secondary" data-crm-review-snooze="7d" title="' + escapeHtml(t('Later')) + '">' + escapeHtml(t('7 days')) + '</button>' +
             '<button type="button" class="crm-btn crm-btn--secondary" data-crm-review-snooze="30d">' + escapeHtml(t('30 days')) + '</button>' +
-            '</div>' +
-            '<label class="form-label" for="crm-review-fu-' + escapeHtml(String(item.id)) + '">' + escapeHtml(t('Follow-up')) + '</label>' +
-            '<input type="text" id="crm-review-fu-' + escapeHtml(String(item.id)) + '" class="form-input crm-input" ' +
-            'name="followUpNote" autocomplete="off" minlength="3" ' +
-            'placeholder="' + escapeHtml(t('Short follow-up note (at least 3 characters)')) + '" />' +
-            '<button type="button" class="crm-btn crm-btn--secondary" data-crm-review-followup>' + escapeHtml(t('Follow-up')) + '</button>' +
-            '</details>' +
+            '</div></div></div></details>';
+          actions =
+            companyNameHint +
+            mailPreviewBlock +
+            '<form class="crm-form crm-review-assign" data-review-id="' + escapeHtml(String(item.id)) + '" data-crm-review-row tabindex="-1">' +
+            '<div class="crm-review-zone crm-review-zone--decide">' +
+            '<p class="visually-hidden">' + escapeHtml(t('What should happen?')) + '</p>' +
+            '<p class="crm-muted crm-review-decide__lead">' +
+            escapeHtml(t('Link it to a company, mark it unrelated, or remove it from this inbox.')) +
+            '</p>' +
+            '<div class="crm-review-primary">' +
+            companySection +
+            '<div class="crm-review-decide__secondary" role="group" aria-label="' + escapeHtml(t('What should happen?')) + '">' +
+            '<button type="button" class="crm-btn crm-btn--secondary" data-crm-review-none title="' +
+            escapeHtml(t('Not a customer or company you track.')) + '">' +
+            escapeHtml(t('No relation')) + '</button>' +
+            '<button type="button" class="crm-btn crm-btn--secondary" data-crm-review-discard' +
+            (item.sourceKind === 'shared_mail' ? ' data-crm-review-discard-mail="1"' : '') +
+            ' title="' +
+            escapeHtml(item.sourceKind === 'shared_mail'
+              ? t('Deletes this message from the shared mailbox (for spam and junk).')
+              : t('Removes this item from Review.')) + '">' +
+            escapeHtml(item.sourceKind === 'shared_mail' ? t('Delete mail') : t('Remove from Review')) + '</button>' +
+            '</div></div></div>' +
+            laterBlock +
             '</form>';
+        } else if (mailPreviewBlock) {
+          actions = mailPreviewBlock + actions;
         }
         if (canWrite && item.sourceKind === 'import_anomaly' && !terminal) {
           const fieldKey = String(ref.fieldKey || 'country');
@@ -2006,16 +2409,270 @@
               '</form></details>';
           }
         }
+        const subject = item.subject || item.snippet || t('Review item');
         return {
-          title: item.subject || item.snippet || t('Review item'),
-          meta: sourceKindLabel(item.sourceKind) + ' · ' + statusLabel(item.status) +
-            (item.overhead ? (' · ' + t('Overhead')) : '') + ' · ' + suggestLabel,
+          id: item.id,
+          selectable: canWrite && !terminal,
+          title: subject,
+          subject: subject,
+          from: fromAddr || (item.sourceKind === 'shared_mail' ? String(item.snippet || '') : sourceKindLabel(item.sourceKind)),
+          listSnippet: item.sourceKind === 'shared_mail' ? '' : String(item.snippet || '').slice(0, 140),
+          badges: badges,
           actionHtml: actions,
+          mailMsgId: mailMsgId,
+          sentAt: item.sentAt || null,
+          createdAt: item.createdAt || item.updatedAt || null,
         };
-      }),
+      });
+
+    if (!mount.getAttribute('data-crm-review-sort')) {
+      mount.setAttribute('data-crm-review-sort', 'sent');
+      mount.setAttribute('data-crm-review-sort-dir', 'desc');
+    }
+    const sortKey = mount.getAttribute('data-crm-review-sort') || 'sent';
+    const sortDir = mount.getAttribute('data-crm-review-sort-dir') === 'asc' ? 'asc' : 'desc';
+    function sortModels(list, key, dir) {
+      const mul = dir === 'desc' ? -1 : 1;
+      return list.slice().sort(function (a, b) {
+        let av = '';
+        let bv = '';
+        if (key === 'from') {
+          av = String(a.from || '').toLowerCase();
+          bv = String(b.from || '').toLowerCase();
+        } else if (key === 'status') {
+          av = (a.badges || []).join(' ').toLowerCase();
+          bv = (b.badges || []).join(' ').toLowerCase();
+        } else if (key === 'sent') {
+          const aRaw = String(a.sentAt || a.createdAt || '');
+          const bRaw = String(b.sentAt || b.createdAt || '');
+          const aTs = aRaw ? (new Date(/T|\s\d{1,2}:/.test(aRaw) ? aRaw : (aRaw + 'T12:00:00')).getTime() || 0) : 0;
+          const bTs = bRaw ? (new Date(/T|\s\d{1,2}:/.test(bRaw) ? bRaw : (bRaw + 'T12:00:00')).getTime() || 0) : 0;
+          if (aTs < bTs) return -1 * mul;
+          if (aTs > bTs) return 1 * mul;
+          return 0;
+        } else {
+          av = String(a.subject || a.title || '').toLowerCase();
+          bv = String(b.subject || b.title || '').toLowerCase();
+        }
+        if (av < bv) return -1 * mul;
+        if (av > bv) return 1 * mul;
+        return 0;
+      });
+    }
+    const sortedModels = sortModels(viewModels, sortKey, sortDir);
+    const board = renderReviewBoard(
+      body,
+      sortedModels,
       t('Nothing to review'),
       t('Review inbox'),
+      { selectable: canWrite, sortKey: sortKey, sortDir: sortDir },
     );
+
+    const byId = {};
+    viewModels.forEach(function (vm) { byId[String(vm.id)] = vm; });
+    const threadRows = board ? board.options : [];
+    let focusIdx = 0;
+    let selectedId = '';
+
+    function activeReaderForm() {
+      return body.querySelector('[data-crm-review-reader] [data-crm-review-row], [data-crm-review-reader] [data-review-id]');
+    }
+
+    function markThreadSelection(id) {
+      threadRows.forEach(function (row, idx) {
+        const rid = row.getAttribute('data-crm-review-item-id') || '';
+        const on = rid === String(id);
+        row.setAttribute('aria-selected', on ? 'true' : 'false');
+        row.classList.toggle('is-selected', on);
+        row.tabIndex = on ? 0 : -1;
+        if (on) focusIdx = idx;
+      });
+      if (board && board.listEl) {
+        const opt = id ? document.getElementById('crm-review-opt-' + id) : null;
+        if (opt) board.listEl.setAttribute('aria-activedescendant', opt.id);
+        else board.listEl.removeAttribute('aria-activedescendant');
+      }
+    }
+
+    function placeDetailUnderRow(row) {
+      if (!board || !board.detailRowEl || !row || !board.listEl) return board && board.readerEl;
+      const detailTr = board.detailRowEl;
+      detailTr.hidden = false;
+      if (detailTr.parentNode !== board.listEl || row.nextElementSibling !== detailTr) {
+        row.after(detailTr);
+      }
+      return board.readerEl;
+    }
+
+    function selectReviewItem(id, opts) {
+      const vm = byId[String(id)];
+      if (!vm || !board) return;
+      selectedId = String(id);
+      mount.setAttribute('data-crm-review-selected', selectedId);
+      markThreadSelection(selectedId);
+      const row = document.getElementById('crm-review-opt-' + selectedId);
+      const reader = placeDetailUnderRow(row);
+      if (!reader) return;
+      const chipBadges = (vm.badges || []).filter(function (b) {
+        return /suggested\s*:/i.test(String(b));
+      });
+      const header =
+        '<header class="crm-mail-reader__header">' +
+        '<p class="crm-mail-reader__from"><span class="crm-mail-reader__label">' + escapeHtml(t('From')) + '</span> ' +
+        escapeHtml(vm.from || t('Unknown sender')) + '</p>' +
+        '<h3 class="crm-mail-reader__subject">' + escapeHtml(vm.subject || vm.title || '') + '</h3>' +
+        (function () {
+          const whenRaw = String(vm.sentAt || vm.createdAt || '').trim();
+          if (!whenRaw) return '';
+          return '<p class="crm-mail-reader__when crm-muted"><span class="crm-mail-reader__label">' +
+            escapeHtml(vm.sentAt ? t('Sent') : t('Added')) + '</span> ' +
+            escapeHtml(formatDisplayDate(whenRaw)) + '</p>';
+        }()) +
+        (chipBadges.length
+          ? ('<p class="crm-mail-reader__meta">' + chipBadges.map(function (b) {
+            return '<span class="crm-badge">' + escapeHtml(String(b)) + '</span>';
+          }).join('') + '</p>')
+          : '') +
+        '</header>';
+      reader.innerHTML =
+        '<h3 class="crm-review-detail__title visually-hidden">' + escapeHtml(t('Details')) + '</h3>' +
+        '<div class="crm-mail-reader__panel">' + header +
+        '<div class="crm-mail-reader__body" data-crm-review-reader-actions>' + (vm.actionHtml || '') + '</div></div>';
+      bindMailPreviewActions(reader, ws, mount);
+      // Opening a row always loads the message — never require a second click.
+      ensureMailPreviewsOpen(reader, ws, mount, { quietFocus: !!(opts && opts.quietFocus) });
+      if (!(opts && opts.quietFocus) && row) {
+        try {
+          row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        } catch (scrollErr) { /* ignore */ }
+      }
+      if (canReopen) {
+        reader.querySelectorAll('[data-crm-review-reopen]').forEach(function (btn) {
+          btn.addEventListener('click', async function () {
+            const rid = btn.getAttribute('data-crm-review-reopen');
+            try {
+              await apiPost('/api/v1/workspaces/' + ws + '/review/items/' + rid + '/reopen', {});
+              await loadReview(mount);
+            } catch (e) {
+              showAlert(mount, e.message || String(e));
+            }
+          });
+        });
+      }
+      if (canWrite) {
+        reader.querySelectorAll('[data-review-id]').forEach(function (form) {
+          wireReviewAssignForm(form);
+        });
+        reader.querySelectorAll('[data-crm-review-learn]').forEach(function (learnForm) {
+          wireReviewLearnForm(learnForm);
+        });
+      }
+      if (!(opts && opts.quietFocus) && row) {
+        try { row.focus({ preventScroll: true }); } catch (e) { try { row.focus(); } catch (e2) { /* ignore */ } }
+      }
+    }
+
+    if (board && threadRows.length) {
+      board.listEl.addEventListener('click', function (ev) {
+        if (ev.target.closest && ev.target.closest('[data-crm-review-select], .crm-review-select')) return;
+        const openBtn = ev.target.closest ? ev.target.closest('[data-crm-review-open]') : null;
+        if (openBtn) {
+          ev.preventDefault();
+          const oid = openBtn.getAttribute('data-crm-review-open');
+          if (oid) selectReviewItem(oid);
+          return;
+        }
+        const row = ev.target.closest ? ev.target.closest('li.crm-review-row') : null;
+        if (!row || !board.listEl.contains(row)) return;
+        const id = row.getAttribute('data-crm-review-item-id');
+        if (id) selectReviewItem(id);
+      });
+      board.listEl.addEventListener('keydown', function (ev) {
+        if (ev.key !== 'Enter' && ev.key !== ' ') return;
+        const row = ev.target.closest ? ev.target.closest('li.crm-review-row') : null;
+        if (!row || ev.target.closest('[data-crm-review-select], .crm-review-select, button, a, input')) return;
+        ev.preventDefault();
+        const id = row.getAttribute('data-crm-review-item-id');
+        if (id) selectReviewItem(id);
+      });
+      if (board.boardEl) {
+        board.boardEl.querySelectorAll('[data-crm-review-sort]').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            const col = btn.getAttribute('data-crm-review-sort') || 'sent';
+            const cur = mount.getAttribute('data-crm-review-sort') || 'sent';
+            const curDir = mount.getAttribute('data-crm-review-sort-dir') === 'asc' ? 'asc' : 'desc';
+            let nextDir;
+            if (cur === col) {
+              nextDir = curDir === 'asc' ? 'desc' : 'asc';
+            } else {
+              nextDir = col === 'sent' ? 'desc' : 'asc';
+            }
+            mount.setAttribute('data-crm-review-sort', col);
+            mount.setAttribute('data-crm-review-sort-dir', nextDir);
+            void loadReview(mount);
+          });
+        });
+      }
+      // Stay collapsed until the user opens a row (no auto-pick of the first message).
+      const prefer = mount.getAttribute('data-crm-review-selected') || '';
+      if (prefer && byId[prefer]) {
+        selectReviewItem(prefer, { quietFocus: true });
+      } else {
+        mount.removeAttribute('data-crm-review-selected');
+        if (board.detailRowEl) board.detailRowEl.hidden = true;
+      }
+    }
+
+    // Instant client-side filter — Search still hits the server on submit.
+    const liveQ = document.getElementById('crm-review-q');
+    if (liveQ && board && board.listEl) {
+      const applyLiveFilter = function () {
+        const q = String(liveQ.value || '').trim().toLowerCase();
+        let visible = 0;
+        board.listEl.querySelectorAll('li.crm-review-row').forEach(function (row) {
+          if (!q) {
+            row.hidden = false;
+            visible += 1;
+            return;
+          }
+          const hay = [
+            row.getAttribute('data-crm-sort-from') || '',
+            row.getAttribute('data-crm-sort-subject') || '',
+            row.getAttribute('data-crm-sort-status') || '',
+          ].join(' ');
+          const show = hay.indexOf(q) !== -1;
+          row.hidden = !show;
+          if (show) visible += 1;
+        });
+        let note = board.boardEl.querySelector('[data-crm-review-filter-note]');
+        if (!note) {
+          note = document.createElement('p');
+          note.className = 'crm-muted';
+          note.setAttribute('data-crm-review-filter-note', '');
+          note.setAttribute('role', 'status');
+          const tableWrap = board.boardEl.querySelector('.table-container');
+          if (tableWrap && tableWrap.parentNode) {
+            tableWrap.parentNode.insertBefore(note, tableWrap.nextSibling);
+          }
+        }
+        if (!q) {
+          note.hidden = true;
+          note.textContent = '';
+        } else {
+          note.hidden = false;
+          note.textContent = visible === 0
+            ? t('No rows match this filter.')
+            : (visible === 1
+              ? t('1 row matches')
+              : t('%s rows match', [String(visible)]));
+        }
+        if (board.detailRowEl) {
+          const sel = board.listEl.querySelector('li.crm-review-row.is-selected');
+          board.detailRowEl.hidden = !sel || !!sel.hidden;
+        }
+      };
+      liveQ.addEventListener('input', applyLiveFilter);
+    }
 
     if (items.length === 0) {
       const emptyCta = document.createElement('div');
@@ -2076,50 +2733,69 @@
       });
     }
 
-    // GNQ §5.6 keyboard: j/k move focus; a assign; s snooze; n no relation.
-    const rows = Array.from(body.querySelectorAll('[data-crm-review-row], [data-review-id]'));
-    let focusIdx = 0;
+    // GNQ §5.6 keyboard: j/k move thread selection; a assign; s snooze; n no relation.
     function focusRow(i) {
-      if (!rows.length) return;
-      focusIdx = (i + rows.length) % rows.length;
-      rows[focusIdx].focus();
+      if (!threadRows.length) return;
+      focusIdx = (i + threadRows.length) % threadRows.length;
+      const id = threadRows[focusIdx].getAttribute('data-crm-review-item-id');
+      if (id) selectReviewItem(id);
     }
     if (typeof mount._crmReviewKeydown === 'function') {
       mount.removeEventListener('keydown', mount._crmReviewKeydown);
     }
     mount._crmReviewKeydown = function (ev) {
-      if (!rows.length) return;
+      if (!threadRows.length) return;
       const tag = (ev.target && ev.target.tagName) || '';
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') {
         if (ev.key !== 'Escape') return;
       }
+      const form = activeReaderForm();
       if (ev.key === 'j' || ev.key === 'ArrowDown') {
         ev.preventDefault();
         focusRow(focusIdx + 1);
       } else if (ev.key === 'k' || ev.key === 'ArrowUp') {
         ev.preventDefault();
         focusRow(focusIdx - 1);
-      } else if (ev.key === 'a' && rows[focusIdx]) {
-        const btn = rows[focusIdx].querySelector('button[type="submit"]');
+      } else if (ev.key === 'a' && form) {
+        const quick = form.querySelector('[data-crm-review-quick-assign]');
+        if (quick) {
+          ev.preventDefault();
+          quick.click();
+          return;
+        }
+        const pickCompany = form.querySelector('.crm-review-pick-company');
+        const searchOpen = pickCompany && pickCompany.querySelector('.user-picker__search');
+        if (searchOpen && !String(searchOpen.value || '').trim() && !(form.querySelector('[name="companyId"]') || {}).value) {
+          ev.preventDefault();
+          searchOpen.focus();
+          return;
+        }
+        const btn = form.querySelector('button[type="submit"]');
         if (btn) {
           ev.preventDefault();
           btn.click();
         }
-      } else if (ev.key === 's' && rows[focusIdx]) {
-        const btn = rows[focusIdx].querySelector('[data-crm-review-snooze="7d"]')
-          || rows[focusIdx].querySelector('[data-crm-review-snooze]');
+      } else if (ev.key === 's' && form) {
+        const btn = form.querySelector('[data-crm-review-snooze="7d"]')
+          || form.querySelector('[data-crm-review-snooze]');
         if (btn) {
           ev.preventDefault();
           btn.click();
         }
-      } else if (ev.key === 'n' && rows[focusIdx]) {
-        const btn = rows[focusIdx].querySelector('[data-crm-review-none]');
+      } else if (ev.key === 'n' && form) {
+        const btn = form.querySelector('[data-crm-review-none]');
         if (btn) {
           ev.preventDefault();
           btn.click();
         }
-      } else if (ev.key === 'Enter' && rows[focusIdx]) {
-        const search = rows[focusIdx].querySelector('.user-picker__search');
+      } else if ((ev.key === 'd' || ev.key === 'Delete') && form) {
+        const btn = form.querySelector('[data-crm-review-discard]');
+        if (btn) {
+          ev.preventDefault();
+          btn.click();
+        }
+      } else if (ev.key === 'Enter' && form) {
+        const search = form.querySelector('.user-picker__search');
         if (search) {
           ev.preventDefault();
           search.focus();
@@ -2128,31 +2804,45 @@
     };
     mount.addEventListener('keydown', mount._crmReviewKeydown);
 
-    if (canReopen) {
-      body.querySelectorAll('[data-crm-review-reopen]').forEach(function (btn) {
-        btn.addEventListener('click', async function () {
-          const rid = btn.getAttribute('data-crm-review-reopen');
-          try {
-            await apiPost('/api/v1/workspaces/' + ws + '/review/items/' + rid + '/reopen', {});
-            await loadReview(mount);
-          } catch (e) {
-            showAlert(mount, e.message || String(e));
-          }
-        });
-      });
-    }
-
-    if (!canWrite) {
-      return;
-    }
-
-    body.querySelectorAll('[data-review-id]').forEach(function (form) {
+    function wireReviewAssignForm(form) {
+      if (!form || form.getAttribute('data-crm-review-wired') === '1') return;
+      form.setAttribute('data-crm-review-wired', '1');
       const rid = form.getAttribute('data-review-id');
       const search = form.querySelector('.user-picker__search');
       const suggest = form.querySelector('.user-picker__list');
       const hidden = form.querySelector('[name="companyId"]');
       const dealSelect = form.querySelector('[data-crm-review-deal]');
       const overheadHintEl = form.querySelector('[data-crm-review-overhead-hint]');
+
+      const quickBtn = form.querySelector('[data-crm-review-quick-assign]');
+      if (quickBtn) {
+        quickBtn.addEventListener('click', async function () {
+          const companyId = parseInt(quickBtn.getAttribute('data-company-id') || (hidden ? hidden.value : '0'), 10);
+          if (!(companyId > 0)) {
+            showAlert(mount, t('Pick a company first.'));
+            return;
+          }
+          if (hidden) hidden.value = String(companyId);
+          quickBtn.disabled = true;
+          try {
+            const payload = { companyId: companyId };
+            if (dealSelect && dealSelect.value) {
+              payload.dealId = parseInt(dealSelect.value, 10);
+            }
+            await apiPost('/api/v1/workspaces/' + ws + '/review/items/' + rid + '/assign', payload);
+            await loadReview(mount);
+          } catch (e) {
+            const msg = e.message || String(e);
+            showAlert(mount, msg);
+            // Concurrent triage: refresh so the row does not stay "assignable" after a peer won.
+            if (/handled this message|not open for triage|Reload Review/i.test(msg)) {
+              try { await loadReview(mount); } catch (reloadErr) { /* keep alert */ }
+            }
+          } finally {
+            quickBtn.disabled = false;
+          }
+        });
+      }
 
       async function loadDealsForCompany(companyId) {
         if (!dealSelect) {
@@ -2264,7 +2954,11 @@
           await apiPost('/api/v1/workspaces/' + ws + '/review/items/' + rid + '/assign', payload);
           await loadReview(mount);
         } catch (e) {
-          showAlert(form, e.message || String(e));
+          const msg = e.message || String(e);
+          showAlert(form, msg);
+          if (/handled this message|not open for triage|Reload Review/i.test(msg)) {
+            try { await loadReview(mount); } catch (reloadErr) { /* keep alert */ }
+          }
         }
       });
       form.querySelectorAll('[data-crm-review-snooze]').forEach(function (snoozeBtn) {
@@ -2307,9 +3001,40 @@
           }
         });
       }
-    });
+      const discardBtn = form.querySelector('[data-crm-review-discard]');
+      if (discardBtn) {
+        discardBtn.addEventListener('click', async function () {
+          const C = window.CustomerCheckComponents || window.CrmComponents;
+          const isMail = discardBtn.getAttribute('data-crm-review-discard-mail') === '1';
+          const ok = C && typeof C.confirmDialog === 'function'
+            ? await C.confirmDialog({
+              title: isMail ? t('Delete this mail?') : t('Remove from Review?'),
+              message: isMail
+                ? t('Deletes the message from the shared mailbox. Use this for spam and junk. It also leaves Review.')
+                : t('Removes this item from Review.'),
+              confirmLabel: isMail ? t('Delete mail') : t('Remove from Review'),
+              cancelLabel: t('Cancel'),
+              variant: 'danger',
+            })
+            : { confirmed: true };
+          if (!ok || !ok.confirmed) return;
+          try {
+            await apiPost('/api/v1/workspaces/' + ws + '/review/items/' + rid + '/discard', {});
+            const live = document.getElementById('crm-live-region');
+            if (live) {
+              live.textContent = isMail ? t('Mail deleted.') : t('1 item removed from Review');
+            }
+            await loadReview(mount);
+          } catch (e) {
+            showAlert(form, e.message || String(e));
+          }
+        });
+      }
+    }
 
-    body.querySelectorAll('[data-crm-review-learn]').forEach(function (learnForm) {
+    function wireReviewLearnForm(learnForm) {
+      if (!learnForm || learnForm.getAttribute('data-crm-review-wired') === '1') return;
+      learnForm.setAttribute('data-crm-review-wired', '1');
       async function applyCountryMap(learn, closeNote) {
         const input = learnForm.querySelector('input');
         const canonical = input ? String(input.value || '').trim() : '';
@@ -2339,6 +3064,239 @@
           }
         });
       }
+    }
+
+    if (!canWrite) {
+      if (!kind || kind === 'shared_mail') {
+        await renderFailedSendsSection(mount, ws, function () { return loadReview(mount); });
+      }
+      return;
+    }
+
+    function selectedReviewIds() {
+
+      return Array.from(body.querySelectorAll('[data-crm-review-select]:checked'))
+        .map(function (el) { return parseInt(el.value, 10); })
+        .filter(function (id) { return id > 0; });
+    }
+
+    function syncReviewBulkBar() {
+      if (!bulkBar) return;
+      const ids = selectedReviewIds();
+      const countEl = bulkBar.querySelector('[data-crm-review-bulk-count]');
+      const clearBtn = bulkBar.querySelector('[data-crm-review-bulk-clear]');
+      const removeBtn = bulkBar.querySelector('[data-crm-review-bulk-remove]');
+      const n = ids.length;
+      if (countEl) {
+        countEl.textContent = n === 0
+          ? t('Select items to remove')
+          : (n === 1
+            ? t('1 item selected')
+            : t('%s items selected', [String(n)]));
+      }
+      if (clearBtn) clearBtn.disabled = n === 0;
+      if (removeBtn) {
+        removeBtn.disabled = n === 0;
+        removeBtn.textContent = n > 0 ? t('Delete / remove selected') + ' (' + String(n) + ')' : t('Delete / remove selected');
+      }
+      bulkBar.hidden = n === 0;
+      const allBoxes = Array.from(body.querySelectorAll('[data-crm-review-select]'));
+      const selectAlls = Array.from(body.querySelectorAll('[data-crm-review-select-all]'));
+      if (selectAlls.length && allBoxes.length) {
+        const checked = allBoxes.filter(function (b) { return b.checked; }).length;
+        const allOn = checked === allBoxes.length;
+        const mixed = checked > 0 && checked < allBoxes.length;
+        selectAlls.forEach(function (selectAll) {
+          selectAll.checked = allOn;
+          selectAll.indeterminate = mixed;
+        });
+      }
+    }
+
+    if (canWrite) {
+      body.addEventListener('change', function (ev) {
+        const tEl = ev.target;
+        if (!tEl) return;
+        if (tEl.matches && tEl.matches('[data-crm-review-select-all]')) {
+          body.querySelectorAll('[data-crm-review-select]').forEach(function (box) {
+            box.checked = !!tEl.checked;
+          });
+          syncReviewBulkBar();
+          return;
+        }
+        if (tEl.matches && tEl.matches('[data-crm-review-select]')) {
+          syncReviewBulkBar();
+        }
+      });
+      if (bulkBar) {
+        const clearBtn = bulkBar.querySelector('[data-crm-review-bulk-clear]');
+        if (clearBtn) {
+          clearBtn.addEventListener('click', function () {
+            body.querySelectorAll('[data-crm-review-select]').forEach(function (box) {
+              box.checked = false;
+            });
+            body.querySelectorAll('[data-crm-review-select-all]').forEach(function (selectAll) {
+              selectAll.checked = false;
+              selectAll.indeterminate = false;
+            });
+            syncReviewBulkBar();
+          });
+        }
+        const removeBtn = bulkBar.querySelector('[data-crm-review-bulk-remove]');
+        if (removeBtn) {
+          removeBtn.addEventListener('click', async function () {
+            const ids = selectedReviewIds();
+            if (!ids.length) {
+              showAlert(mount, t('Select at least one item to remove.'));
+              return;
+            }
+            const C = window.CustomerCheckComponents || window.CrmComponents;
+            const ok = C && typeof C.confirmDialog === 'function'
+              ? await C.confirmDialog({
+                title: t('Delete or remove selected?'),
+                message: t('Shared-mailbox messages are deleted on the mail server (spam/junk). Other items only leave Review.'),
+                confirmLabel: t('Delete / remove selected'),
+                cancelLabel: t('Cancel'),
+                variant: 'danger',
+              })
+              : { confirmed: true };
+            if (!ok || !ok.confirmed) return;
+            removeBtn.disabled = true;
+            try {
+              const result = await apiPost('/api/v1/workspaces/' + ws + '/review/items/discard-bulk', { ids: ids });
+              const n = (result && result.discarded) || 0;
+              const live = document.getElementById('crm-live-region');
+              if (live) {
+                live.textContent = n === 1
+                  ? t('1 item deleted or removed')
+                  : t('%s items deleted or removed', [String(n)]);
+              }
+              await loadReview(mount);
+            } catch (e) {
+              removeBtn.disabled = false;
+              showAlert(mount, e.message || String(e));
+            }
+          });
+        }
+      }
+      syncReviewBulkBar();
+    }
+
+    // Failed SMTP outbox belongs with shared mail Review (mail-triage redirects here).
+    if (!kind || kind === 'shared_mail') {
+      await renderFailedSendsSection(mount, ws, function () { return loadReview(mount); });
+    }
+  }
+
+  /**
+   * Failed shared-mailbox SMTP sends — visible on Review (shared mail) and legacy mail-triage.
+   * @param {HTMLElement} mount
+   * @param {number} ws
+   * @param {() => Promise<void>} reload
+   */
+  async function renderFailedSendsSection(mount, ws, reload) {
+    let drafts = { items: [], canMailSend: false };
+    try {
+      drafts = await apiGet('/api/v1/workspaces/' + ws + '/mail/drafts');
+    } catch (e) {
+      drafts = { items: [], canMailSend: false, error: e.message || String(e) };
+    }
+    const draftsHost = document.createElement('section');
+    draftsHost.className = 'crm-card';
+    draftsHost.setAttribute('aria-labelledby', 'crm-mail-drafts-title');
+    draftsHost.innerHTML =
+      '<header class="crm-card__header"><h2 id="crm-mail-drafts-title" class="crm-card__title">' +
+      escapeHtml(t('Failed sends')) + '</h2></header>' +
+      '<div class="crm-card__body">' +
+      '<p class="crm-muted" role="status">' +
+      escapeHtml(t('Messages that could not leave the shared mailbox. Everyone who can read mail in this workspace can see them.')) +
+      '</p>' +
+      '<div data-crm-mail-drafts-body></div></div>';
+    mount.appendChild(draftsHost);
+    const draftsBody = draftsHost.querySelector('[data-crm-mail-drafts-body]');
+    const draftItems = drafts.items || [];
+    const canSendDrafts = !!drafts.canMailSend;
+    if (drafts.error) {
+      draftsBody.innerHTML = '<p class="crm-muted" role="alert">' + escapeHtml(drafts.error) + '</p>';
+      return;
+    }
+    renderSuiteTable(
+      draftsBody,
+      draftItems.map(function (d) {
+        const did = d.id;
+        let actions = '';
+        if (canSendDrafts) {
+          actions =
+            '<div class="crm-form-actions crm-form-actions--start">' +
+            '<button type="button" class="crm-btn crm-btn--primary" data-crm-draft-resend="' + escapeHtml(String(did)) + '">' +
+            escapeHtml(t('Send again')) + '</button>' +
+            '<button type="button" class="crm-btn crm-btn--secondary" data-crm-draft-delete="' + escapeHtml(String(did)) + '">' +
+            escapeHtml(t('Discard')) + '</button></div>';
+        } else {
+          actions = '<p class="crm-muted">' + escapeHtml(t('Ask a teammate with send permission to retry or discard.')) + '</p>';
+        }
+        return {
+          title: d.subject || t('Failed send'),
+          meta: (d.to ? d.to : '') + (d.updatedAt ? ' · ' + d.updatedAt : ''),
+          actionHtml: actions,
+        };
+      }),
+      t('No failed sends waiting.'),
+      t('Failed sends'),
+    );
+    draftsBody.querySelectorAll('[data-crm-draft-resend]').forEach(function (btn) {
+      btn.addEventListener('click', async function () {
+        if (btn.disabled) return;
+        const C = window.CustomerCheckComponents || window.CrmComponents;
+        const id = btn.getAttribute('data-crm-draft-resend');
+        const ok = C && typeof C.confirmDialog === 'function'
+          ? await C.confirmDialog({
+            title: t('Send again?'),
+            message: t('This sends from the shared mailbox. Everyone who can read mail can see it.'),
+            confirmLabel: t('Send'),
+            cancelLabel: t('Cancel'),
+            variant: 'info',
+          })
+          : null;
+        if (!ok || !ok.confirmed) return;
+        btn.disabled = true;
+        try {
+          await apiPost('/api/v1/workspaces/' + ws + '/mail/drafts/' + id + '/send', {
+            idempotencyKey: makeDraftSendKey(),
+          });
+          const live = document.getElementById('crm-live-region');
+          if (live) live.textContent = t('Message sent from the shared mailbox.');
+          await reload();
+        } catch (e) {
+          btn.disabled = false;
+          showAlert(draftsHost, e.message || String(e));
+        }
+      });
+    });
+    draftsBody.querySelectorAll('[data-crm-draft-delete]').forEach(function (btn) {
+      btn.addEventListener('click', async function () {
+        if (btn.disabled) return;
+        const C = window.CustomerCheckComponents || window.CrmComponents;
+        const id = btn.getAttribute('data-crm-draft-delete');
+        const ok = C && typeof C.confirmDialog === 'function'
+          ? await C.confirmDialog({
+            title: t('Discard this failed send?'),
+            message: t('The message will be removed from this workspace inbox. This cannot be undone.'),
+            confirmLabel: t('Discard'),
+            cancelLabel: t('Cancel'),
+            variant: 'danger',
+          })
+          : null;
+        if (!ok || !ok.confirmed) return;
+        btn.disabled = true;
+        try {
+          await apiDelete('/api/v1/workspaces/' + ws + '/mail/drafts/' + id);
+          await reload();
+        } catch (e) {
+          btn.disabled = false;
+          showAlert(draftsHost, e.message || String(e));
+        }
+      });
     });
   }
 

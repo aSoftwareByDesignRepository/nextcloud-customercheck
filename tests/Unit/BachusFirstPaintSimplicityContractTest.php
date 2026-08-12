@@ -18,30 +18,34 @@ final class BachusFirstPaintSimplicityContractTest extends TestCase
 		$this->root = dirname(__DIR__, 2);
 	}
 
-	public function testRoleCueYieldsToWelcomeCoach(): void
+	public function testRoleCueRemovedForCalmFirstPaint(): void
 	{
 		$html = (string)file_get_contents($this->root . '/templates/company-detail.php');
-		$this->assertStringContainsString('$showWelcomeCoach = $canWritePage && ($personsEmpty || $dealsEmpty)', $html);
-		$this->assertStringContainsString('$showRoleCue = !$showWelcomeCoach', $html);
-		$this->assertStringContainsString('if ($showRoleCue):', $html);
-		$this->assertStringContainsString('How to use this page', $html);
-		$this->assertStringContainsString('Buttons to add or change stay hidden', $html);
-		$this->assertStringNotContainsString('Look-only role', $html);
+		$this->assertStringNotContainsString('How to use this page', $html);
+		$this->assertStringNotContainsString('crm-360-role', $html);
+		$this->assertStringContainsString('data-crm-360-focus="1"', $html);
 	}
 
 	public function testEmptyStatesDeferCtasToCoach(): void
 	{
 		$html = (string)file_get_contents($this->root . '/templates/company-detail.php');
-		$this->assertStringContainsString('!$showWelcomeCoach', $html);
+		// People share the Today panel with the coach — defer duplicate empty CTA there.
 		$this->assertMatchesRegularExpression(
 			'/showWelcomeCoach && \$personsEmpty[\s\S]{0,120}hidden/',
 			$html,
 		);
-		$this->assertMatchesRegularExpression(
-			'/showWelcomeCoach && \$dealsEmpty[\s\S]{0,120}hidden/',
+		$this->assertStringContainsString('!$showWelcomeCoach', $html);
+		// Deals are on their own focus tab — coach must not strip Add deal from that panel.
+		$this->assertDoesNotMatchRegularExpression(
+			'/showWelcomeCoach && \$dealsEmpty[\s\S]{0,180}hidden/',
 			$html,
 		);
-		$this->assertGreaterThanOrEqual(2, substr_count($html, '!$showWelcomeCoach'));
+		$dealsStart = strpos($html, 'id="crm-deals"');
+		$this->assertNotFalse($dealsStart);
+		$dealsChunk = substr($html, (int)$dealsStart, 1400);
+		$this->assertStringContainsString('id="crm-add-deal"', $dealsChunk);
+		$this->assertStringNotContainsString('$showWelcomeCoach && $dealsEmpty', $dealsChunk);
+		$this->assertStringContainsString('data-crm-trigger="crm-add-deal"', $dealsChunk);
 	}
 
 	public function testCoachWithoutEmailOffersCallTomorrow(): void
@@ -66,5 +70,15 @@ final class BachusFirstPaintSimplicityContractTest extends TestCase
 		$this->assertStringContainsString("t('Add an email first')", $js);
 		$this->assertStringContainsString("t('Call tomorrow')", $js);
 		$this->assertStringContainsString('crm-schedule-callback', $js);
+	}
+
+	public function testQuickStartDoesNotCompeteWithWelcomeCoach(): void
+	{
+		$this->assertNotContains(
+			'company-detail',
+			\OCA\CustomerCheck\Service\PageQuickStartCatalog::requiredPageIds(),
+		);
+		$qs = (string)file_get_contents($this->root . '/lib/Service/PageQuickStartCatalog.php');
+		$this->assertStringNotContainsString("'company-detail' => [", $qs);
 	}
 }

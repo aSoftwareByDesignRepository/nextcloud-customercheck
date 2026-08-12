@@ -98,7 +98,7 @@ class PageController extends Controller
 	#[NoCSRFRequired]
 	public function today(): TemplateResponse
 	{
-		$this->registerFrontEndAssets('pages/today');
+		$this->registerFrontEndAssets('pages/today', null, [], ['common/deal-checklist-ux']);
 		$uid = $this->accessControl->currentUserIdOrEmpty();
 		$wsId = 0;
 		$role = 'member';
@@ -418,7 +418,7 @@ class PageController extends Controller
 	#[NoCSRFRequired]
 	public function companyDetail(int $id): TemplateResponse
 	{
-		$this->registerFrontEndAssets('pages/company-detail', null, ['common/identity-links'], ['common/jump-nav', 'common/folder-picker', 'common/glance-summary', 'common/company360-present', 'pages/persona']);
+		$this->registerFrontEndAssets('pages/company-detail', null, ['common/identity-links'], ['common/company360-focus', 'common/folder-picker', 'common/glance-summary', 'common/company360-present', 'common/deal-checklist-ux', 'pages/persona']);
 		$company = $this->requireCompanyPage($id);
 		$now = $this->timeFactory->getDateTime();
 		$agreements = [];

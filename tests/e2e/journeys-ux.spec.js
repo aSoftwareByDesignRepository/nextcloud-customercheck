@@ -25,18 +25,33 @@ test.describe('CustomerCheck extreme simplicity journeys', () => {
     await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
 
     await expect(page.locator('#crm-identity')).toBeVisible();
-    await expect(page.locator('#crm-identity-links')).toBeVisible();
-    await expect(page.locator('#crm-contracts')).toBeVisible();
+    await expect(page.locator('#crm-identity-links')).toBeAttached();
     await expect(page.locator('#crm-persons')).toBeVisible();
     await expect(page.locator('#crm-activities')).toBeVisible();
+    await page.locator('[data-crm-focus-tab="deals"]').click();
+    await expect(page.locator('#crm-contracts')).toBeVisible();
+    await page.locator('[data-crm-focus-tab="money"]').click();
     await expect(page.locator('#crm-linked-bundle')).toBeVisible();
     await expect(page.locator('#crm-linked-bundle')).not.toHaveAttribute('open', '');
     await expect(page.locator('#crm-tickets')).toHaveCount(1);
-    await expect(page.locator('#crm-timeline')).toBeVisible();
 
-    // Jump nav opens the collapsed linked-apps bundle
-    await page.locator('.crm-jump-nav__more-summary').click({ force: true });
-    await page.locator('.crm-jump-nav__link[href="#crm-tickets"]').click({ force: true });
+    // Expand Linked apps: identity CTAs live here — not a second setup card.
+    await page.locator('#crm-linked-bundle > summary').click();
+    await expect(page.locator('#crm-linked-bundle')).toHaveAttribute('open', '');
+    await expect(page.locator('#crm-linked-bundle .crm-linked-status__row')).toHaveCount(3);
+    await expect(page.locator('#crm-linked-bundle #crm-identity-links')).toBeVisible();
+    await expect(page.locator('details#crm-identity-links')).toHaveCount(0);
+    await expect(page.locator('#crm-linked-bundle .crm-linked-bundle__setup')).toHaveCount(0);
+    await expect(page.locator('#crm-linked-bundle .crm-card--nested')).toHaveCount(0);
+
+    await page.locator('[data-crm-focus-tab="more"]').click();
+    await expect(page.locator('#crm-timeline')).toBeAttached();
+
+    // Focus tabs + hash opens the Money panel and linked-apps bundle
+    await page.evaluate(() => {
+      window.location.hash = 'crm-tickets';
+    });
+    await expect(page.locator('[data-crm-focus-tab="money"][aria-selected="true"]')).toBeVisible();
     await expect(page.locator('#crm-linked-bundle')).toHaveJSProperty('open', true);
     await expect(page.locator('#crm-tickets')).toBeVisible();
   });
@@ -75,7 +90,11 @@ test.describe('CustomerCheck extreme simplicity journeys', () => {
     await page.goto('/apps/customercheck/companies/new');
     await page.waitForSelector('#crm-main-content', { timeout: 30000 });
     const options = await page.locator('#crm-company-status option').allTextContents();
-    expect(options).toEqual(expect.arrayContaining(['Lead', 'Active', 'Paused', 'Churned']));
+    // EN or DE UI locale — assert values, not a single language.
+    expect(options.join(' ')).toMatch(/Lead/i);
+    expect(options.join(' ')).toMatch(/Active|Aktiv/i);
+    expect(options.join(' ')).toMatch(/Paused|Pausiert/i);
+    expect(options.join(' ')).toMatch(/Churned|Aufgewühlt|Abgewandert/i);
   });
 
   test('company 360 and today pass axe serious/critical', async ({ page }) => {

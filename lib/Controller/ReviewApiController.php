@@ -148,6 +148,40 @@ class ReviewApiController extends Controller
 		}
 	}
 
+	/**
+	 * Remove junk from Review. Shared mail is deleted on the IMAP host.
+	 */
+	#[NoAdminRequired]
+	public function discard(int $workspaceId, int $id): JSONResponse
+	{
+		try {
+			$uid = $this->access->currentUserId();
+			$this->assertReviewWrite($uid, $workspaceId);
+
+			return $this->ok($this->review->discard($workspaceId, $id, $uid));
+		} catch (\Throwable $e) {
+			return $this->fromThrowable($e);
+		}
+	}
+
+	/**
+	 * Bulk remove junk from Review (same semantics as single discard — shared mail deleted on IMAP).
+	 */
+	#[NoAdminRequired]
+	public function discardBulk(int $workspaceId): JSONResponse
+	{
+		try {
+			$uid = $this->access->currentUserId();
+			$this->assertReviewWrite($uid, $workspaceId);
+			$body = $this->requestBody();
+			$ids = is_array($body['ids'] ?? null) ? $body['ids'] : [];
+
+			return $this->ok($this->review->discardBulk($workspaceId, $ids, $uid));
+		} catch (\Throwable $e) {
+			return $this->fromThrowable($e);
+		}
+	}
+
 	#[NoAdminRequired]
 	public function followUp(int $workspaceId, int $id): JSONResponse
 	{

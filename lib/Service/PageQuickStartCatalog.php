@@ -52,7 +52,7 @@ final class PageQuickStartCatalog
 	{
 		return [
 			'today', 'pulse', 'brief', 'my-accounts', 'team', 'strategy',
-			'mail-triage', 'review', 'conflicts', 'prepare-meeting', 'companies', 'company-detail', 'company-form',
+			'mail-triage', 'review', 'conflicts', 'prepare-meeting', 'companies', 'company-form',
 			'pipeline', 'agreements', 'agreement-form', 'money', 'activities',
 			'import', 'settings', 'app-settings', 'support-us',
 		];
@@ -277,23 +277,7 @@ final class PageQuickStartCatalog
 					],
 				],
 			],
-			'company-detail' => [
-				'lead' => $l->t('This is one customer. Start with a person, then a deal if you have a quote.'),
-				'steps' => [
-					[
-						'title' => $l->t('1. Add a person'),
-						'text' => $l->t('Someone you talk to. Name is enough; email lets you log messages.'),
-					],
-					[
-						'title' => $l->t('2. Add a deal (optional)'),
-						'text' => $l->t('A quote or opportunity needs only a title. Value can wait.'),
-					],
-					[
-						'title' => $l->t('3. Log what you discussed'),
-						'text' => $l->t('Use Log email or Call tomorrow under Communication after you talk.'),
-					],
-				],
-			],
+			// company-detail: no Quick start — Welcome Coach owns next steps on the 360 page.
 			'company-form' => [
 				'lead' => $l->t('Create or edit a customer record — name first, details later.'),
 				'steps' => [
@@ -407,19 +391,19 @@ final class PageQuickStartCatalog
 				],
 			],
 			'import' => [
-				'lead' => $l->t('Bring customers in from a mail file or another app — preview, then import.'),
+				'lead' => $l->t('Bring customers in — drop a file, check the preview, tap import.'),
 				'steps' => [
 					[
-						'title' => $l->t('1. Drop the file from mail'),
-						'text' => $l->t('CSV or JSON works. You can also paste the contents or pick ProjectCheck / TicketCheck.'),
+						'title' => $l->t('1. Drop or paste'),
+						'text' => $l->t('A CSV/JSON from mail, or one company name per line. Other apps appear as tiles when installed.'),
 					],
 					[
 						'title' => $l->t('2. Check the preview'),
-						'text' => $l->t('Green “Ready” rows are safe. Names that need a pick wait for you.'),
+						'text' => $l->t('Ready rows are safe. Only names with a choice need a quick pick.'),
 					],
 					[
-						'title' => $l->t('3. Import ready, then add people'),
-						'text' => $l->t('Tap Import ready, then open companies to add contacts.'),
+						'title' => $l->t('3. Tap import'),
+						'text' => $l->t('One green button adds the ready companies. Then open them to add people.'),
 						'href' => $link('companies'),
 						'linkLabel' => $l->t('Open Companies'),
 					],

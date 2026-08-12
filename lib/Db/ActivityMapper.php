@@ -96,10 +96,18 @@ class ActivityMapper extends QBMapper
 	/**
 	 * Open activities due on or before the given date — Today queue + digest counts.
 	 *
+	 * When `$excludeAlreadyReminded` is true, rows that already have an
+	 * (activity_id, due_date) claim in `crm_actdue` are omitted so a fixed
+	 * chunk size cannot starve newer due work behind already-ledged rows.
+	 *
 	 * @return Activity[]
 	 */
-	public function findOpenDueUpTo(\DateTimeInterface $date, int $limit = 500, ?int $workspaceId = null): array
-	{
+	public function findOpenDueUpTo(
+		\DateTimeInterface $date,
+		int $limit = 500,
+		?int $workspaceId = null,
+		bool $excludeAlreadyReminded = false,
+	): array {
 		$qb = $this->db->getQueryBuilder();
 		$qb->select('*')
 			->from($this->getTableName())
@@ -113,6 +121,14 @@ class ActivityMapper extends QBMapper
 		$this->excludeArchivedCompanies($qb);
 		if ($workspaceId !== null && $workspaceId > 0) {
 			$this->restrictToWorkspace($qb, $workspaceId);
+		}
+		if ($excludeAlreadyReminded) {
+			// Correlated anti-join: already-claimed (activity, due) pairs stay out of the chunk.
+			$qb->andWhere($qb->createFunction(
+				'NOT EXISTS (SELECT 1 FROM `*PREFIX*crm_actdue` ad'
+				. ' WHERE ad.activity_id = id'
+				. ' AND ad.due_date_snap = due_date)',
+			));
 		}
 
 		return $this->findEntities($qb);

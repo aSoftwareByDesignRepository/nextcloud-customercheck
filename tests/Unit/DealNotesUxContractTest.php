@@ -42,7 +42,7 @@ final class DealNotesUxContractTest extends TestCase
 		$this->assertStringContainsString('id="crm-deals-table"', $html);
 		$this->assertStringContainsString("\$l->t('More deal actions')", $html);
 		$dealsStart = strpos($html, 'id="crm-deals"');
-		$dealsEnd = strpos($html, 'id="crm-promises"', (int)$dealsStart);
+		$dealsEnd = strpos($html, 'id="crm-next-steps"', (int)$dealsStart);
 		$chunk = substr($html, (int)$dealsStart, (int)$dealsEnd - (int)$dealsStart);
 		$this->assertStringContainsString('data-crm-edit-chase', $chunk);
 		$this->assertStringContainsString('data-crm-dismiss-followups', $chunk);
@@ -95,10 +95,7 @@ final class DealNotesUxContractTest extends TestCase
 		$this->assertStringContainsString('$densityNeedsAttention', $html);
 		$this->assertStringContainsString('crm-glance-density--calm', $html);
 		$this->assertStringContainsString('All clear — expand if you need the numbers.', $html);
-		$this->assertStringContainsString('crm-360-role', $html);
-		$this->assertStringContainsString('crm-callout--info crm-360-role', $html);
-		$this->assertStringContainsString('$showRoleCue', $html);
-		$this->assertStringContainsString('!$showWelcomeCoach', $html);
+		$this->assertStringContainsString('data-crm-360-focus="1"', $html);
 	}
 
 	public function testTextareaPromptHonoursMaxlength(): void

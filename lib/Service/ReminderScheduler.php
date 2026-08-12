@@ -296,21 +296,28 @@ class ReminderScheduler
 		\DateTimeInterface $validUntil,
 		int $daysUntil,
 	): bool {
+		$companyName = '';
+		$workspaceId = 0;
+		try {
+			$company = $this->companyMapper->findById((int)$agreement->getCompanyId());
+			$companyName = (string)$company->getName();
+			$workspaceId = (int)($company->getWorkspaceId() ?? 0);
+		} catch (\Throwable) {
+			$companyName = '';
+		}
+
+		// Fail closed before claiming: never consume the unique ledger when we
+		// cannot notify anyone (missing workspace would permanently silence).
+		if ($workspaceId <= 0) {
+			return false;
+		}
+
 		$row = $this->claimLedgerSlot((int)$agreement->getId(), $offset, $validUntil);
 		if ($row === null) {
 			return false;
 		}
 
 		try {
-			$companyName = '';
-			$workspaceId = 0;
-			try {
-				$company = $this->companyMapper->findById((int)$agreement->getCompanyId());
-				$companyName = (string)$company->getName();
-				$workspaceId = (int)($company->getWorkspaceId() ?? 0);
-			} catch (\Throwable) {
-				$companyName = '';
-			}
 			$graceUntil = '';
 			if ($offset === 0) {
 				$graceUntil = DateMath::addDays($validUntil, Constants::GRACE_DAYS)->format('Y-m-d');
@@ -325,16 +332,19 @@ class ReminderScheduler
 				'validUntil' => $validUntil->format('Y-m-d'),
 				'graceUntil' => $graceUntil,
 			];
-			if ($workspaceId > 0) {
-				$this->notificationService->notifyWorkspaceUsers(
-					$workspaceId,
-					Constants::NOTIFY_REMINDER,
-					'agreement',
-					(string)$agreement->getId(),
-					$params,
-				);
+			$delivered = $this->notificationService->notifyWorkspaceUsers(
+				$workspaceId,
+				Constants::NOTIFY_REMINDER,
+				'agreement',
+				(string)$agreement->getId(),
+				$params,
+			);
+			if ($delivered === 0) {
+				// Empty membership — release so a later tick retries.
+				$this->reminderLogMapper->delete($row);
+
+				return false;
 			}
-			// Fail closed when company has no workspace — never broadcast names.
 		} catch (\Throwable $e) {
 			// Notify failed — release so the next run retries this exact offset.
 			$this->reminderLogMapper->delete($row);
@@ -364,8 +374,18 @@ class ReminderScheduler
 		}
 
 		// Grace end: the churn decision becomes an explicit, dated task (§6.2).
+		// Isolated from ledger — notify already succeeded; never lose the claim
+		// if task creation fails (compensating sweep can recreate via hasOpenSystemActivity).
 		if ($offset === -Constants::GRACE_DAYS) {
-			$this->activityService->createChurnDecisionTask($agreement);
+			try {
+				$this->activityService->createChurnDecisionTask($agreement);
+			} catch (\Throwable $e) {
+				$this->logger->warning('CustomerCheck: churn decision task failed after grace reminder (ledger kept)', [
+					'app' => 'customercheck',
+					'agreementId' => (int)$agreement->getId(),
+					'exception' => $e,
+				]);
+			}
 		}
 
 		return true;

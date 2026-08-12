@@ -15,7 +15,7 @@ final class Company360PageContractTest extends TestCase
 	{
 		$controller = (string)file_get_contents(dirname(__DIR__, 2) . '/lib/Controller/PageController.php');
 		$this->assertStringContainsString(
-			"registerFrontEndAssets('pages/company-detail', null, ['common/identity-links'], ['common/jump-nav', 'common/folder-picker', 'common/glance-summary', 'common/company360-present', 'pages/persona'])",
+			"registerFrontEndAssets('pages/company-detail', null, ['common/identity-links'], ['common/company360-focus', 'common/folder-picker', 'common/glance-summary', 'common/company360-present', 'common/deal-checklist-ux', 'pages/persona'])",
 			$controller,
 		);
 	}
@@ -51,23 +51,31 @@ final class Company360PageContractTest extends TestCase
 	public function testSiblingEmptiesUseGrannyEmptyStates(): void
 	{
 		$html = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/company-detail.php');
-		foreach (['crm-projects', 'crm-tickets', 'crm-invoices', 'crm-documents'] as $id) {
-			$pos = strpos($html, 'id="' . $id . '"');
-			$this->assertNotFalse($pos, $id);
-			$chunk = substr($html, $pos, 2200);
-			$this->assertStringContainsString('crm-empty-state__title', $chunk, $id . ' needs empty title');
+		// Documents stay a classic empty-state card.
+		$docPos = strpos($html, 'id="crm-documents"');
+		$this->assertNotFalse($docPos, 'crm-documents');
+		$this->assertStringContainsString('crm-empty-state__title', substr($html, $docPos, 2200), 'crm-documents needs empty title');
+		// Projects/tickets/invoices: collapsed roster OR peer cards with granny empties.
+		$this->assertStringContainsString('crm-linked-status__row', $html);
+		foreach (['crm-projects', 'crm-tickets', 'crm-invoices'] as $id) {
+			$peer = strrpos($html, 'id="' . $id . '"');
+			$this->assertNotFalse($peer, $id);
+			$chunk = substr($html, $peer, 2200);
+			$this->assertTrue(
+				str_contains($chunk, 'crm-empty-state__title') || str_contains($chunk, 'crm-linked-status__title'),
+				$id . ' needs empty title or status roster title',
+			);
 		}
 		$this->assertStringContainsString('Open support tickets from TicketCheck when linked.', $html);
 		$this->assertStringNotContainsString('id="crm-communication-more"', $html);
 	}
 
-	public function testJumpNavIncludesInvoices(): void
+	public function testFocusTabsIncludeMoneySections(): void
 	{
 		$html = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/company-detail.php');
-		$start = strpos($html, '$jumpNavItems');
-		$end = strpos($html, 'crm-jump-nav.php', (int)$start);
-		$chunk = substr($html, (int)$start, (int)$end - (int)$start);
-		$this->assertStringContainsString("'#crm-invoices'", $chunk);
+		$this->assertStringContainsString('id="crm-billing"', $html);
+		$this->assertStringContainsString('id="crm-invoices"', $html);
+		$this->assertStringContainsString('data-crm-focus-panel="money"', $html);
 	}
 
 	public function testTasksRenderEscapesTitlesAndSanitizesDeepLinks(): void
@@ -79,8 +87,17 @@ final class Company360PageContractTest extends TestCase
 		$this->assertStringContainsString('generation = ++promisesGeneration;', $js);
 		$this->assertStringContainsString('generation = ++accountPlanGeneration;', $js);
 		$this->assertStringContainsString('paintBillingSummary', $js);
-		$this->assertStringContainsString('crm-feed__subject', $js);
+		// Talk/mail board mirrors Review: subject class, sort bar, sent time, Open, inline detail.
+		$this->assertStringContainsString('crm-review-row__subject', $js);
+		$this->assertStringContainsString('crm-review-board crm-communication-board', $js);
+		$this->assertStringContainsString('crm-review-sortbar', $js);
+		$this->assertStringContainsString('crm-mail-thread-row__when', $js);
+		$this->assertStringContainsString('crm-review-open', $js);
+		$this->assertStringContainsString('data-crm-talk-detail-row', $js);
+		$this->assertStringContainsString('opt.after(detailLi)', $js);
+		$this->assertStringContainsString('escapeHtml(item.subject || \'\')', $js);
 		$this->assertStringContainsString('crm-empty-state__title', $js);
+		$this->assertStringContainsString('Never seed body text from list/feed JSON', $js);
 		$boot = (string)file_get_contents(dirname(__DIR__, 2) . '/js/common/company360-present.js');
 		$this->assertStringContainsString('crm-billing-strip', $boot);
 	}
@@ -133,23 +150,29 @@ final class Company360PageContractTest extends TestCase
 		$this->assertStringContainsString("s.indexOf('//') === 0", $boot);
 		$this->assertStringContainsString("s.indexOf('\\\\') !== -1", $boot);
 		$this->assertStringContainsString('buildBillingSummaryTiles', $utils);
+		$this->assertStringContainsString('buildBillingHonesty', $utils);
 		$this->assertStringContainsString('buildBillingSummaryTiles', $boot);
+		$this->assertStringContainsString('buildBillingHonesty', $boot);
 		$this->assertStringContainsString('crm-billing-strip', $boot);
+		$this->assertStringContainsString('crm-billing-honesty', $boot);
+		$this->assertStringContainsString('crm-billing-actions', $boot);
 		$this->assertStringContainsString('textContent', $boot);
 	}
 
-	public function testCssGivesZonesBreathingRoomAndNestedScrollMargin(): void
+	public function testCssGivesFocusPanelsBreathingRoomAndNestedScrollMargin(): void
 	{
 		$css = (string)file_get_contents(dirname(__DIR__, 2) . '/css/app.css');
-		$this->assertStringContainsString('.crm-360-zone [id]', $css);
+		$this->assertStringContainsString('.crm-360-focus__panel [id]', $css);
 		$this->assertStringContainsString('scroll-margin-top: 6.5rem', $css);
-		$this->assertStringContainsString('.crm-feed__subject', $css);
+		$this->assertStringContainsString('.crm-review-row__subject', $css);
 		$this->assertStringContainsString('.crm-billing-strip', $css);
-		$this->assertStringContainsString('Jump-nav owns sticky', $css);
+		$this->assertStringContainsString('.crm-billing-honesty', $css);
+		$this->assertStringContainsString('.crm-billing-panel', $css);
+		$this->assertStringContainsString('Focus tabs own sticky chrome', $css);
 		$this->assertDoesNotMatchRegularExpression(
 			'/@media \(min-width: 1024px\) \{[^}]*#crm-glance \.crm-glance-pin \{[^}]*position:\s*sticky/s',
 			$css,
-			'Glance pin must not compete with jump-nav sticky',
+			'Glance pin must not compete with focus tab sticky',
 		);
 	}
 }

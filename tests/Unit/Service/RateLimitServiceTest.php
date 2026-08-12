@@ -45,6 +45,50 @@ final class RateLimitServiceTest extends TestCase
 		$this->assertFalse($svc->allow('lead:1.2.3.4', 2, 600));
 	}
 
+	public function testPeekDoesNotConsumeToken(): void
+	{
+		$config = $this->createMock(IConfig::class);
+		$store = [];
+		$config->method('getAppValue')->willReturnCallback(
+			static function (string $app, string $key, string $default = '') use (&$store): string {
+				return $store[$key] ?? $default;
+			}
+		);
+		$config->expects($this->never())->method('setAppValue');
+
+		$time = $this->createMock(ITimeFactory::class);
+		$time->method('getTime')->willReturn(1_700_000_000);
+		$locking = $this->createMock(ILockingProvider::class);
+		$locking->expects($this->once())->method('acquireLock');
+		$locking->expects($this->once())->method('releaseLock');
+
+		$svc = new RateLimitService($config, $time, $locking);
+		$this->assertTrue($svc->allow('mail_preview_u:alex', 5, 60, false));
+	}
+
+	public function testPeekBlocksAtCeilingWithoutWrite(): void
+	{
+		$config = $this->createMock(IConfig::class);
+		$key = 'rl_' . substr(hash('sha256', 'mail_preview_u:alex'), 0, 40);
+		$config->method('getAppValue')->willReturnCallback(
+			static function (string $app, string $k, string $default = '') use ($key): string {
+				if ($k === $key) {
+					return json_encode(['start' => 1_700_000_000, 'count' => 5], JSON_THROW_ON_ERROR);
+				}
+
+				return $default;
+			}
+		);
+		$config->expects($this->never())->method('setAppValue');
+
+		$time = $this->createMock(ITimeFactory::class);
+		$time->method('getTime')->willReturn(1_700_000_000);
+		$locking = $this->createMock(ILockingProvider::class);
+
+		$svc = new RateLimitService($config, $time, $locking);
+		$this->assertFalse($svc->allow('mail_preview_u:alex', 5, 60, false));
+	}
+
 	public function testContestedLockFailsClosed(): void
 	{
 		$config = $this->createMock(IConfig::class);

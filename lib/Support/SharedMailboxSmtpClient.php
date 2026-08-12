@@ -107,7 +107,14 @@ final class SharedMailboxSmtpClient
 	{
 		self::assertConfig($cfg);
 
-		$host = trim((string)($cfg['host'] ?? ''));
+		$host = ImapConnection::normalizeHost((string)($cfg['host'] ?? ''));
+		if (ImapConnection::isBlockedMailHost($host)) {
+			throw ValidationException::field(
+				'VALIDATION',
+				'smtp',
+				'Use a public mail host — localhost and private network addresses are not allowed.',
+			);
+		}
 		$port = (int)($cfg['port'] ?? 587);
 		$enc = strtolower(trim((string)($cfg['enc'] ?? 'tls')));
 		$user = (string)($cfg['username'] ?? '');

@@ -27,6 +27,9 @@ final class DialogUxContractTest extends TestCase
 		$this->assertStringContainsString("dialog.setAttribute('aria-modal', 'true')", $js);
 		$this->assertStringContainsString('Focus trap is _bindFocusTrap only', $js);
 		$this->assertStringContainsString('${this._escapeHtml(message)}', $js);
+		$this->assertStringContainsString('optionalCheckbox', $js);
+		$this->assertStringContainsString('confirm-dialog__optional', $js);
+		$this->assertStringContainsString('optionalChecked', $js);
 		$this->assertStringContainsString('safeExternalHref', $js);
 		$this->assertStringContainsString('buildMailPackDialogHtml', $js);
 		$this->assertStringContainsString('Always rebuild when an id is reused', $js);

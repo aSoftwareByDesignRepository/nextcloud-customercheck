@@ -22,7 +22,7 @@ test.describe('Review keyboard assign', () => {
     await login(page, credsFromEnv('ADMIN'));
     await openReview(page);
 
-    const rows = page.locator('[data-crm-review-row], form[data-review-id]');
+    const rows = page.locator('[data-crm-review-reader] [data-crm-review-row], [data-crm-review-reader] form[data-review-id]');
     const count = await rows.count();
     test.skip(count === 0, 'No open Review items seeded for keyboard assign');
 

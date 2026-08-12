@@ -31,7 +31,7 @@ final class WorkspaceSettingsSectionCatalogTest extends TestCase
 		$sections = WorkspaceSettingsSectionCatalog::SECTIONS;
 		self::assertSame($sections, array_values(array_unique($sections)));
 		self::assertSame(
-			['mailbox', 'preferences', 'review-sources', 'circles', 'integrations'],
+			['mailbox', 'preferences', 'checklists', 'review-sources', 'circles', 'integrations'],
 			$sections,
 		);
 	}
@@ -51,9 +51,11 @@ final class WorkspaceSettingsSectionCatalogTest extends TestCase
 		self::assertTrue($this->catalog->isVisible('preferences', false));
 		self::assertTrue($this->catalog->isVisible('integrations', false));
 		self::assertFalse($this->catalog->isVisible('mailbox', false));
+		self::assertFalse($this->catalog->isVisible('checklists', false));
 		self::assertFalse($this->catalog->isVisible('review-sources', false));
 		self::assertFalse($this->catalog->isVisible('circles', false));
 		self::assertTrue($this->catalog->isVisible('mailbox', true));
+		self::assertTrue($this->catalog->isVisible('checklists', true));
 		self::assertFalse($this->catalog->isVisible('bogus', true));
 	}
 

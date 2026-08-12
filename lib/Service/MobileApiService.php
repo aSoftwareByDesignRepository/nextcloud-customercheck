@@ -28,6 +28,10 @@ class MobileApiService
 		private readonly FacadeProbeService $facades,
 		private readonly ?ReviewService $review = null,
 		private readonly ?EditConflictService $editConflicts = null,
+		private readonly ?DealChecklistService $dealChecklists = null,
+		private readonly ?OooCoverService $oooCover = null,
+		private readonly ?PersonService $persons = null,
+		private readonly ?DealService $deals = null,
 	) {
 	}
 
@@ -36,14 +40,22 @@ class MobileApiService
 	 *
 	 * @return array{items: list<array<string, mixed>>, meta: array{truncated: bool, total: int, reviewOpenCount: int, conflictsOpenCount: int}}
 	 */
-	public function today(int $workspaceId): array
+	public function today(int $workspaceId, ?string $userId = null): array
 	{
 		$built = $this->todayService->build(null, $workspaceId);
 		$items = [];
 		foreach ($built['items'] as $item) {
 			$items[] = self::mapTodayItem($item);
 		}
+		if ($this->dealChecklists !== null && $userId !== null && $userId !== '') {
+			$owners = $this->oooCover?->mineOwnerIds($workspaceId, $userId) ?? [$userId];
+			foreach ($this->dealChecklists->openAssignedForToday($workspaceId, $owners, 50) as $row) {
+				$items[] = self::mapTodayItem($row);
+			}
+		}
 		$meta = $built['meta'];
+		$meta['truncated'] = count($items) >= 100;
+		$meta['total'] = count($items);
 		$meta['reviewOpenCount'] = $this->review?->countOpen($workspaceId) ?? 0;
 		$meta['conflictsOpenCount'] = $this->editConflicts?->countOpen($workspaceId) ?? 0;
 
@@ -80,6 +92,12 @@ class MobileApiService
 				sprintf('act:%d', (int)($item['activityId'] ?? 0)),
 				['type' => 'activity', 'id' => (int)($item['activityId'] ?? 0)],
 			],
+			'deal_checklist' => [
+				'deal_checklist',
+				((string)($item['dueDate'] ?? '') !== '' && (string)$item['dueDate'] < date('Y-m-d')) ? 'danger' : 'warning',
+				sprintf('dcl:%d', (int)($item['checklistItemId'] ?? 0)),
+				['type' => 'deal_checklist', 'id' => (int)($item['checklistItemId'] ?? 0)],
+			],
 			'deal_stale' => [
 				'deal_stale',
 				'info',
@@ -99,13 +117,32 @@ class MobileApiService
 			'kind' => $mobileKind,
 			'urgency' => $urgency,
 			'title' => $companyName !== '' ? ($companyName . ' — ' . $label) : $label,
-			'subtitle' => $dueDate,
+			'subtitle' => self::todaySubtitle($kind, $item, $dueDate),
 			'companyId' => isset($item['companyId']) && $item['companyId'] !== null ? (int)$item['companyId'] : null,
 			'deepLink' => $deepLink,
 			'updatedAt' => isset($item['updatedAt']) && is_string($item['updatedAt']) && $item['updatedAt'] !== ''
 				? $item['updatedAt']
 				: null,
 		];
+	}
+
+	/**
+	 * @param array<string, mixed> $item
+	 */
+	private static function todaySubtitle(string $kind, array $item, ?string $dueDate): ?string
+	{
+		$parts = [];
+		if ($kind === 'deal_checklist') {
+			$dealTitle = trim((string)($item['dealTitle'] ?? ''));
+			if ($dealTitle !== '') {
+				$parts[] = $dealTitle;
+			}
+		}
+		if ($dueDate !== null && $dueDate !== '') {
+			$parts[] = $dueDate;
+		}
+
+		return $parts !== [] ? implode(' · ', $parts) : null;
 	}
 
 	/**
@@ -170,6 +207,72 @@ class MobileApiService
 				'ticketcheck' => $ticketsAvailable,
 			],
 			'updatedAt' => OptimisticLock::format($company->getUpdatedAt()),
+		];
+	}
+
+	/**
+	 * Company 360 for road authoring — lite signals + full fields + persons + deals.
+	 *
+	 * @return array<string, mixed>
+	 */
+	public function companyRoadDetail(Company $company, string $userId): array
+	{
+		$base = $this->companyLite($company, $userId);
+		$companyId = (int)$company->getId();
+		$persons = [];
+		if ($this->persons !== null) {
+			foreach ($this->persons->listForCompany($companyId) as $person) {
+				$persons[] = self::serialisePerson($person);
+			}
+		}
+		$deals = [];
+		if ($this->deals !== null) {
+			foreach ($this->deals->search(['companyId' => $companyId, 'workspaceId' => (int)($company->getWorkspaceId() ?? 0)], 200) as $deal) {
+				$deals[] = self::serialiseDeal($deal, fn ($d): bool => $this->deals->isStale($d));
+			}
+		}
+
+		return array_merge($base, [
+			'vatId' => $company->getVatId(),
+			'addrStreet' => $company->getAddrStreet(),
+			'addrZip' => $company->getAddrZip(),
+			'addrCity' => $company->getAddrCity(),
+			'country' => (string)$company->getCountry(),
+			'website' => $company->getWebsite(),
+			'notes' => $company->getNotes(),
+			'kamTier' => (string)$company->getKamTier(),
+			'kamTierLock' => (int)$company->getKamTierLock(),
+			'accountOwnerUserId' => $company->getAccountOwnerUserId(),
+			'touchIntervalDays' => $company->getTouchIntervalDays(),
+			'nextTouchOn' => $company->getNextTouchOn()?->format('Y-m-d'),
+			'pcCustomerId' => $company->getPcCustomerId(),
+			'tcCustomerId' => $company->getTcCustomerId(),
+			'filesFolderId' => $company->getFilesFolderId(),
+			'filesFolderPath' => $company->getFilesFolderPath(),
+			'workspaceId' => $company->getWorkspaceId(),
+			'persons' => $persons,
+			'deals' => $deals,
+		]);
+	}
+
+	/**
+	 * @return array<string, mixed>
+	 */
+	public static function serialisePerson(\OCA\CustomerCheck\Db\Person $p): array
+	{
+		return [
+			'id' => (int)$p->getId(),
+			'companyId' => (int)$p->getCompanyId(),
+			'name' => (string)$p->getName(),
+			'role' => $p->getRole(),
+			'buyingRole' => $p->getBuyingRole(),
+			'status' => method_exists($p, 'getStatus') ? $p->getStatus() : null,
+			'email' => $p->getEmail(),
+			'phone' => $p->getPhone(),
+			'isPrimary' => (int)$p->getIsPrimary() === 1,
+			'contactsUid' => $p->getContactsUid(),
+			'reportsToPersonId' => method_exists($p, 'getReportsToPersonId') ? $p->getReportsToPersonId() : null,
+			'updatedAt' => OptimisticLock::format($p->getUpdatedAt()),
 		];
 	}
 

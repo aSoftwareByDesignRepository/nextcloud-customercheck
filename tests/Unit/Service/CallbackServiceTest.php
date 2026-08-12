@@ -47,6 +47,15 @@ final class CallbackServiceTest extends TestCase
 		$svc->schedule(7, ['dueDate' => ''], 'admin');
 	}
 
+	public function testScheduleRejectsImpossibleCalendarDate(): void
+	{
+		$companies = $this->createMock(CompanyService::class);
+		$companies->expects(self::once())->method('get')->with(7)->willReturn(new Company());
+		$svc = $this->service(companies: $companies);
+		$this->expectException(ValidationException::class);
+		$svc->schedule(7, ['dueDate' => '2026-02-30'], 'admin');
+	}
+
 	public function testScheduleRejectsPersonFromOtherCompany(): void
 	{
 		$companies = $this->createMock(CompanyService::class);

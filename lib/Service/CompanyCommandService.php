@@ -212,6 +212,7 @@ class CompanyCommandService
 		try {
 			foreach ($this->mailbox->matchedForCompany($companyId, 50) as $msg) {
 				$sent = (string)($msg['sentAt'] ?? '');
+				$snippet = trim((string)($msg['snippet'] ?? ''));
 				$raw[] = [
 					'id' => 'shared_mail:' . (int)$msg['id'],
 					'kind' => 'shared_mail',
@@ -220,7 +221,12 @@ class CompanyCommandService
 					'personId' => null,
 					'personName' => null,
 					'subject' => (string)($msg['subject'] ?? ''),
-					'snippet' => (string)($msg['snippet'] ?? ''),
+					'snippet' => $snippet,
+					'from' => (string)($msg['from'] ?? ''),
+					// Never embed cached body text in list/feed payloads — fetch via /mail/{id}/preview.
+					'preview' => null,
+					'hasPreview' => !empty($msg['hasPreview']),
+					'crmMailId' => (int)$msg['id'],
 					'deepLink' => null,
 					'mailMessageId' => isset($msg['messageId']) ? (string)$msg['messageId'] : null,
 					'shared' => true,
@@ -361,23 +367,49 @@ class CompanyCommandService
 	/** @return array<string, mixed> */
 	private function resolveBilling(\OCA\CustomerCheck\Db\Company $company): array
 	{
+		$companyId = (int)$company->getId();
 		$pcId = (int)($company->getPcCustomerId() ?? 0);
-		$pcLinked = $pcId > 0 && $this->facades->projectcheckAvailable();
-		$icLinked = $pcId > 0 && $this->facades->invoicecheckAvailable();
-		$overdue = 0;
-		$open = 0;
+		$pcAvailable = $this->facades->projectcheckAvailable();
+		$icAvailable = $this->facades->invoicecheckAvailable();
+		$pcLinked = $pcId > 0 && $pcAvailable;
+		$icLinked = $pcId > 0 && $icAvailable;
+		$icOverdue = 0;
+		$icOpen = 0;
 		$billable = null;
 		$billableKnown = false;
 		$uninvoiced = null;
 		$uninvoicedKnown = false;
 
+		$licenseOverdue = 0;
+		$licenseOpen = 0;
+		$licensePaid = 0;
+		$licenseNone = 0;
+		$licenseTotal = 0;
+		foreach ($this->agreementMapper->findByCompany($companyId) as $ag) {
+			$status = (string)$ag->getStatus();
+			if (in_array($status, Constants::AGREEMENT_TERMINAL_STATUSES, true)) {
+				continue;
+			}
+			$licenseTotal++;
+			$bucket = $this->billing->classifyAgreementInvoiceStatus((string)$ag->getInvoiceStatus());
+			if ($bucket === 'overdue') {
+				$licenseOverdue++;
+			} elseif ($bucket === 'open') {
+				$licenseOpen++;
+			} elseif ($bucket === 'paid') {
+				$licensePaid++;
+			} else {
+				$licenseNone++;
+			}
+		}
+
 		if ($icLinked) {
 			foreach ($this->facades->listInvoicesForPcCustomer($pcId, 200) as $row) {
 				$bucket = $this->billing->classifyInvoiceRow($row);
 				if ($bucket === 'overdue') {
-					$overdue++;
+					$icOverdue++;
 				} elseif ($bucket === 'open') {
-					$open++;
+					$icOpen++;
 				}
 			}
 		}
@@ -411,16 +443,46 @@ class CompanyCommandService
 			}
 		}
 
-		return $this->billing->evaluate([
+		$merged = $this->billing->mergeInvoiceCounts(
+			$icLinked,
+			$icOverdue,
+			$icOpen,
+			$licenseOverdue,
+			$licenseOpen,
+		);
+		$licenseLinked = ($licenseOverdue + $licenseOpen + $licensePaid) > 0
+			|| in_array($merged['sourceMode'], ['licenses', 'licenses_fallback'], true);
+
+		$evaluated = $this->billing->evaluate([
 			'pcLinked' => $pcLinked || $icLinked,
 			'icLinked' => $icLinked,
-			'overdueCount' => $overdue,
-			'openCount' => $open,
+			'licenseLinked' => $licenseLinked,
+			'overdueCount' => $merged['overdueCount'],
+			'openCount' => $merged['openCount'],
 			'openBillableMinutes' => $billable,
 			'billableKnown' => $billableKnown,
 			'uninvoicedProjects' => $uninvoiced,
 			'uninvoicedKnown' => $uninvoicedKnown,
 		]);
+
+		$evaluated['sourceMode'] = $merged['sourceMode'];
+		$evaluated['sources'] = [
+			'projectCheckAvailable' => $pcAvailable,
+			'invoiceCheckAvailable' => $icAvailable,
+			'projectCheckLinked' => $pcLinked,
+			'invoiceCheckLinked' => $icLinked,
+			'licenses' => $licenseTotal > 0,
+		];
+		$evaluated['licenses'] = [
+			'total' => $licenseTotal,
+			'overdue' => $licenseOverdue,
+			'sent' => $licenseOpen,
+			'paid' => $licensePaid,
+			'none' => $licenseNone,
+			'unpaid' => $licenseOverdue + $licenseOpen,
+		];
+
+		return $evaluated;
 	}
 
 	/** @return array{validUntil: ?string, daysLeft: ?int, agreementId: ?int} */

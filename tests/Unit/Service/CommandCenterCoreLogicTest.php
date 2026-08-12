@@ -69,6 +69,51 @@ final class CommandCenterCoreLogicTest extends TestCase
 		self::assertSame('unknown', $r['state']);
 	}
 
+	public function testBillingCriticalFromLicenseSignalAlone(): void
+	{
+		$svc = new BillingIntegrityService();
+		$r = $svc->evaluate([
+			'pcLinked' => false,
+			'icLinked' => false,
+			'licenseLinked' => true,
+			'overdueCount' => 1,
+			'openCount' => 0,
+		]);
+		self::assertSame('critical', $r['state']);
+		self::assertSame(1, $r['overdueCount']);
+	}
+
+	public function testClassifyAgreementInvoiceStatuses(): void
+	{
+		$svc = new BillingIntegrityService();
+		self::assertSame('overdue', $svc->classifyAgreementInvoiceStatus('overdue'));
+		self::assertSame('open', $svc->classifyAgreementInvoiceStatus('sent'));
+		self::assertSame('paid', $svc->classifyAgreementInvoiceStatus('paid'));
+		self::assertSame('ignore', $svc->classifyAgreementInvoiceStatus('none'));
+		self::assertSame('ignore', $svc->classifyAgreementInvoiceStatus(''));
+	}
+
+	public function testMergePrefersInvoiceCheckThenLicenseFallback(): void
+	{
+		$svc = new BillingIntegrityService();
+		$ic = $svc->mergeInvoiceCounts(true, 2, 1, 9, 9);
+		self::assertSame('invoicecheck', $ic['sourceMode']);
+		self::assertSame(2, $ic['overdueCount']);
+		self::assertSame(1, $ic['openCount']);
+
+		$fallback = $svc->mergeInvoiceCounts(true, 0, 0, 1, 2);
+		self::assertSame('licenses_fallback', $fallback['sourceMode']);
+		self::assertSame(1, $fallback['overdueCount']);
+		self::assertSame(2, $fallback['openCount']);
+
+		$licenses = $svc->mergeInvoiceCounts(false, 0, 0, 3, 0);
+		self::assertSame('licenses', $licenses['sourceMode']);
+		self::assertSame(3, $licenses['overdueCount']);
+
+		$none = $svc->mergeInvoiceCounts(false, 0, 0, 0, 0);
+		self::assertSame('none', $none['sourceMode']);
+	}
+
 	public function testClassifyInvoiceOverdueFlag(): void
 	{
 		$svc = new BillingIntegrityService();

@@ -88,9 +88,9 @@ $navItem = static function (
 		</li>
 		<?php
 		$navItem($is('pipeline'), $u('pipeline'), 'kanban', $l->t('Deals'), $l->t('All deals — table or board'));
-		$navItem($is('agreements', 'agreement-form'), $u('agreements'), 'file-text', $l->t('Agreements'), $l->t('Licenses and renewals'));
+		$navItem($is('agreements', 'agreement-form'), $u('agreements'), 'file-text', $l->t('Licenses & renewals'), $l->t('Licenses and renewals'));
 		$navItem($is('money'), $u('money'), 'coins', $l->t('Money'), $l->t('Invoices and overdue cash'));
-		$navItem($is('activities'), $u('activities'), 'check-square', $l->t('Activities'), $l->t('Logged calls and to-dos'));
+		$navItem($is('activities'), $u('activities'), 'check-square', $l->t('To-dos'), $l->t('Open calls and follow-ups'));
 		?>
 
 		<li class="nav-section-divider" role="separator" aria-hidden="true"></li>
