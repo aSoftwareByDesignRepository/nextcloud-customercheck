@@ -35,7 +35,7 @@ $lastLabel = (string)($mailSummary['lastContactLabel'] ?? '');
 			<?php endif; ?>
 		</div>
 		<?php if (!empty($_['canWrite'])): ?>
-		<p class="crm-muted crm-emails__log-hint"><?php p($l->t('To log a message, use Log email under Communication above.')); ?></p>
+		<p class="crm-muted crm-emails__log-hint"><?php p($l->t('To log a message, use Log talk under Communication above.')); ?></p>
 		<?php endif; ?>
 	</summary>
 	<div class="crm-card__body">
@@ -148,10 +148,10 @@ $lastLabel = (string)($mailSummary['lastContactLabel'] ?? '');
 			<?php if ($mailTouches === []): ?>
 				<div class="crm-empty-state" role="status">
 					<h4 class="crm-empty-state__title"><?php p($l->t('Nothing logged for this company yet')); ?></h4>
-					<p class="crm-empty-state__text"><?php p($l->t('Tap Log email under Talk after an important reply or call follow-up.')); ?></p>
+					<p class="crm-empty-state__text"><?php p($l->t('Tap Log talk under Talk after an important reply or call follow-up.')); ?></p>
 					<?php if (!empty($_['canWrite'])): ?>
 					<div class="crm-empty-state__actions">
-						<button type="button" class="crm-btn crm-btn--primary" data-crm-trigger="crm-log-email"><?php p($l->t('Log email')); ?></button>
+						<button type="button" class="crm-btn crm-btn--primary" data-crm-trigger="crm-log-email"><?php p($l->t('Log talk')); ?></button>
 					</div>
 					<?php endif; ?>
 				</div>

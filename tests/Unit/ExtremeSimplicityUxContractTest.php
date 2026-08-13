@@ -110,10 +110,14 @@ final class ExtremeSimplicityUxContractTest extends TestCase
 		$this->assertStringContainsString('crm-persons-table', $detail);
 		$this->assertStringNotContainsString("\$l->t('Phone')); ?></th>", $detail);
 		$this->assertStringNotContainsString("\$l->t('Buying role')); ?></th>", $detail);
-		// Flat roster: last touch + address book + role visible — never a More scroll-trap.
-		$this->assertStringContainsString("\$l->t('Address book')); ?></th>", $detail);
-		$this->assertStringContainsString("\$l->t('Last touch')); ?></th>", $detail);
-		$this->assertStringContainsString("\$l->t('Role in buying')); ?></th>", $detail);
+		// Lean roster: Name / Email / Action; Last touch + role under crm-person-more (not a More menu scroll-trap).
+		$this->assertStringContainsString('crm-person-more', $detail);
+		$this->assertStringContainsString("\$l->t('Address book')", $detail);
+		$this->assertStringContainsString("\$l->t('Last touch')", $detail);
+		$this->assertStringContainsString("\$l->t('Role in buying')", $detail);
+		$this->assertStringNotContainsString("\$l->t('Address book')); ?></th>", $detail);
+		$this->assertStringNotContainsString("\$l->t('Last touch')); ?></th>", $detail);
+		$this->assertStringNotContainsString("\$l->t('Role in buying')); ?></th>", $detail);
 		$this->assertStringContainsString("\$l->t('Log talk')", $detail);
 		$this->assertStringContainsString('data-crm-trigger="crm-log-email"', $detail);
 		$this->assertStringContainsString('$showWelcomeCoach', $detail);
@@ -187,7 +191,8 @@ final class ExtremeSimplicityUxContractTest extends TestCase
 		$js = (string)file_get_contents(dirname(__DIR__, 2) . '/js/pages/company-detail.js');
 		$this->assertStringContainsString("t('Needs links')", $js);
 		$this->assertStringNotContainsString("t('Gap')", $js);
-		$this->assertStringContainsString("[t('Company'), dto.name || '—', '']", $js);
+		$this->assertStringContainsString("[t('Primary contact'),", $js);
+		$this->assertStringNotContainsString("[t('Company'), dto.name || '—', '']", $js);
 		$this->assertStringNotContainsString("dto.slug || ''", $js);
 		$this->assertStringContainsString("crm-callout--danger", $js);
 		$this->assertStringContainsString("t('Try again')", $js);
@@ -329,7 +334,10 @@ final class ExtremeSimplicityUxContractTest extends TestCase
 		$this->assertStringContainsString('data-crm-complete-activity', $html);
 		$this->assertStringContainsString('table-container crm-table--responsive', $html);
 		$this->assertStringContainsString('crm-today-row', $html);
-		$this->assertStringContainsString('crm-today-role', $html);
+		$this->assertStringContainsString('crm-today-focus-line', $html);
+		$this->assertStringContainsString('%s need you', $html);
+		$this->assertStringNotContainsString('class="crm-card crm-today-role"', $html);
+		$this->assertStringNotContainsString('crm-today-role__stats', $html);
 		$this->assertStringContainsString('Jump to queue', $html);
 		$js = (string)file_get_contents(dirname(__DIR__, 2) . '/js/pages/today.js');
 		$this->assertStringContainsString('/activities/', $js);

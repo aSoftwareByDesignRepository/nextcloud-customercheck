@@ -30,15 +30,29 @@ test.describe('Bachus extreme simplicity journeys', () => {
     await expect(toolbar).toBeVisible();
     await expect(page.locator('[data-crm-persona-mount="review"] details.crm-review-tools')).toHaveCount(0);
     await expect(page.locator('#crm-review-q')).toBeVisible();
+    await expect(page.locator('#crm-review-include-archived')).toBeAttached();
+    await page.locator('[data-crm-persona-mount="review"] .crm-review-toolbar__extra > summary').click();
     await expect(page.locator('#crm-review-include-archived')).toBeVisible();
     await expect(page.locator('[data-crm-persona-mount="review"] .crm-review-board').first()).toBeVisible();
     await expect(page.locator('[data-crm-persona-mount="review"] .crm-mail-thread, [data-crm-persona-mount="review"] .crm-review-table').first()).toBeVisible();
     await expect(page.locator('[data-crm-review-sort]').first()).toBeVisible();
-    const openBtn = page.locator('[data-crm-review-open]').first();
-    if (await openBtn.count()) {
-      await expect(openBtn).toBeVisible();
-      await openBtn.click();
+    await expect(page.locator('[data-crm-review-sort="status"]')).toHaveCount(0);
+    const reviewRow = page.locator('[data-crm-persona-mount="review"] li.crm-review-row').first();
+    if (await reviewRow.count()) {
+      await reviewRow.click();
       await expect(page.locator('[data-crm-review-reader] .crm-mail-reader__subject, [data-crm-review-reader] .crm-review-zone__label').first()).toBeVisible();
+      const dealMore = page.locator('[data-crm-review-reader] details.crm-review-deal-more').first();
+      const dealField = page.locator('[data-crm-review-reader] .crm-review-deal-field').first();
+      if (await dealMore.count()) {
+        await dealMore.locator('summary').click();
+        await expect(dealField).toBeVisible();
+        const later = page.locator('[data-crm-review-reader] details.crm-review-more').first();
+        if (await later.count()) {
+          await expect(later.locator('[data-crm-review-deal]')).toHaveCount(0);
+        }
+      } else if (await dealField.count()) {
+        await expect(dealField).toBeVisible();
+      }
     }
 
     // Kind chip filters without dead end (EN or DE labels).
@@ -175,7 +189,7 @@ test.describe('Bachus extreme simplicity journeys', () => {
     expect(serious, JSON.stringify(serious, null, 2)).toEqual([]);
   });
 
-  test('Company 360 emails log is collapsed; single Log email remains', async ({ page }) => {
+  test('Company 360 emails log is collapsed; single Log talk remains', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await login(page, credsFromEnv('ADMIN'));
     await page.goto('/apps/customercheck/companies/new');
@@ -186,6 +200,10 @@ test.describe('Bachus extreme simplicity journeys', () => {
     await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
 
     await expect(page.locator('#crm-log-email')).toHaveCount(1);
+    await expect(page.locator('#crm-log-email')).toContainText(/Log talk|Gespräch|Protokollieren|Gespräch protokollieren/i);
+    await expect(page.locator('#crm-identity')).toBeVisible();
+    await expect(page.locator('#crm-identity h2')).toHaveCount(0);
+    await expect(page.locator('#crm-glance-summary .crm-stat-tile')).toHaveCount(4, { timeout: 20000 });
     // Emails roster lives under More (focus tabs) — open it before asserting.
     await page.locator('[data-crm-focus-tab="more"]').click();
     const emails = page.locator('#crm-emails');

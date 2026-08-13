@@ -120,6 +120,7 @@ final class WorkspaceAclSurfaceContractTest extends TestCase
 		$this->assertStringContainsString('function looksLikeHtml', $src);
 		$this->assertStringContainsString('function humanMessageFromBody', $src);
 		$this->assertStringContainsString('Server temporarily unavailable (HTTP 503)', $src);
+		$this->assertStringContainsString('opts.signal = signal', $src);
 		$this->assertStringNotContainsString("message: text }", $src);
 	}
 

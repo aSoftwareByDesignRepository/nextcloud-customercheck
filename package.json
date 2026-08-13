@@ -16,6 +16,8 @@
         "l10n:variants": "php scripts/sync-l10n-variants.php && php scripts/rebuild-l10n-js.php",
         "test:mutation:l10n-de": "php tests/Mutation/run-l10n-de-quality-mutations.php",
         "test:mutation:bachus": "php tests/Mutation/run-bachus-simplicity-mutations.php",
+        "test:mutation:zeus-bachus-shouldfix": "php tests/Mutation/run-zeus-bachus-shouldfix-mutations.php",
+        "test:mutation:argus-bachus-mail": "php tests/Mutation/run-argus-bachus-mail-security-mutations.php",
         "test:mutation:deal-checklist": "php tests/Mutation/run-deal-checklist-mutations.php",
         "test:mutation:company360-focus": "php tests/Mutation/run-company360-focus-mutations.php"
     },

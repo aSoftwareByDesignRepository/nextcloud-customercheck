@@ -68,12 +68,31 @@
 		return raw;
 	}
 
-	async function request(method, path, body, extraHeaders) {
+	/**
+	 * @param {string} method
+	 * @param {string} path
+	 * @param {unknown} [body]
+	 * @param {Record<string, string>|{ headers?: Record<string, string>, signal?: AbortSignal }} [extra]
+	 *        Legacy: plain header map (e.g. Idempotency-Key).
+	 *        New: { headers, signal } for AbortController support (mail preview stampede).
+	 */
+	async function request(method, path, body, extra) {
+		let extraHeaders = null;
+		let signal = null;
+		if (extra && typeof extra === 'object') {
+			if (Object.prototype.hasOwnProperty.call(extra, 'signal')
+				|| Object.prototype.hasOwnProperty.call(extra, 'headers')) {
+				signal = extra.signal || null;
+				extraHeaders = extra.headers && typeof extra.headers === 'object' ? extra.headers : null;
+			} else {
+				extraHeaders = extra;
+			}
+		}
 		const headers = {
 			'Accept': 'application/json',
 			'requesttoken': requestToken(),
 		};
-		if (extraHeaders && typeof extraHeaders === 'object') {
+		if (extraHeaders) {
 			Object.keys(extraHeaders).forEach((k) => {
 				if (extraHeaders[k] != null && extraHeaders[k] !== '') {
 					headers[k] = String(extraHeaders[k]);
@@ -81,6 +100,9 @@
 			});
 		}
 		const opts = { method: method.toUpperCase(), headers, credentials: 'same-origin' };
+		if (signal) {
+			opts.signal = signal;
+		}
 		if (body !== undefined && body !== null) {
 			headers['Content-Type'] = 'application/json';
 			opts.body = JSON.stringify(body);

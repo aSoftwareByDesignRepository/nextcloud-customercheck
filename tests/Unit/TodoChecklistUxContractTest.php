@@ -30,7 +30,8 @@ final class TodoChecklistUxContractTest extends TestCase
 		$this->assertStringContainsString('id="crm-open-tasks"', $chunk);
 		$this->assertStringContainsString('crm-todo-list', $chunk);
 		$this->assertStringContainsString('data-crm-complete-activity', $chunk);
-		$this->assertStringContainsString('data-crm-push-todo', $chunk);
+		$this->assertStringNotContainsString('data-crm-push-todo', $chunk);
+		$this->assertStringNotContainsString("\$l->t('Send to Tasks')", $chunk);
 		$this->assertStringContainsString('id="crm-add-promise"', $chunk);
 		$this->assertStringContainsString('id="crm-new-task"', $chunk);
 		$this->assertStringContainsString('crm-next-steps__extra-actions', $chunk);

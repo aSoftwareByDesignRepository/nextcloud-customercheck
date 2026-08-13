@@ -37,6 +37,8 @@
     'crm-projects': 'money',
     'crm-tickets': 'money',
     'crm-invoices': 'money',
+    // Identity may live in Money (cold merge) OR More (warm manage).
+    // SECTION_TAB_MAP is fallback only — resolveTabForElement(DOM panel) is authoritative.
     'crm-identity-links': 'more',
     'crm-account-plan': 'more',
     'crm-emails': 'more',

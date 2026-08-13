@@ -849,6 +849,21 @@ dialog.crm-native-dialog .crm-form-actions--start {
 	flex-wrap: wrap;
 	margin-top: var(--crm-space-3);
 }
+#app-content.crm-app .crm-card--compact > .crm-card__body {
+	padding-block: var(--crm-space-3, 0.75rem);
+}
+#app-content.crm-app .crm-identity-strip {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	gap: var(--crm-space-3, 0.75rem);
+}
+#app-content.crm-app .crm-identity-strip__notes {
+	margin: 0;
+	flex: 1 1 12rem;
+	max-width: 48rem;
+	line-height: 1.45;
+}
 #app-content.crm-app .crm-identity-row--spaced {
 	margin-top: var(--crm-space-5);
 }
@@ -2716,7 +2731,20 @@ dialog.crm-native-dialog .crm-advanced__body {
 	opacity: 0.55;
 }
 
-/* Today Command Board — suite tables + role dashboard */
+/* Today Command Board — suite tables + focus line */
+#app-content.crm-app .crm-today-focus-line {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--crm-space-2, 0.5rem);
+	margin: 0 0 var(--crm-space-3, 0.75rem);
+	font-size: 1.05rem;
+	line-height: 1.45;
+}
+#app-content.crm-app .crm-today-focus-line__count {
+	font-weight: 600;
+	color: var(--color-main-text);
+}
 #app-content.crm-app .crm-today-role .crm-card__header {
 	display: flex;
 	flex-wrap: wrap;
@@ -3542,6 +3570,13 @@ dialog.crm-native-dialog .crm-advanced__body {
 	min-width: 0;
 	background: transparent;
 }
+#app-content.crm-app .crm-mail-thread-row__option {
+	display: flex;
+	flex: 1 1 auto;
+	align-items: flex-start;
+	gap: var(--crm-space-3, 0.75rem);
+	min-width: 0;
+}
 #app-content.crm-app .crm-mail-thread-row:last-child {
 	border-bottom: none;
 }
@@ -3549,7 +3584,8 @@ dialog.crm-native-dialog .crm-advanced__body {
 	background: color-mix(in srgb, var(--color-primary-element) 6%, var(--color-main-background));
 }
 #app-content.crm-app .crm-mail-thread-row.is-selected,
-#app-content.crm-app .crm-mail-thread-row[aria-selected="true"] {
+#app-content.crm-app .crm-mail-thread-row[aria-selected="true"],
+#app-content.crm-app .crm-mail-thread-row[aria-current="true"] {
 	background: color-mix(in srgb, var(--color-primary-element) 12%, var(--color-main-background));
 	box-shadow: inset 3px 0 0 var(--color-primary-element);
 }
@@ -3629,9 +3665,14 @@ dialog.crm-native-dialog .crm-advanced__body {
 	font-size: var(--crm-fs-sm, 0.875rem);
 	line-height: 1.3;
 	white-space: nowrap;
-	color: var(--color-text-maxcontrast, var(--crm-muted, #666));
+	/* Keep ≥4.5:1 on selected-row tint (#e0edf3-ish mixes); #6b6b6b failed axe at 4.46. */
+	color: var(--color-text-maxcontrast, #4a4a4a);
 	text-align: end;
 	min-width: 5.5rem;
+}
+#app-content.crm-app .crm-mail-thread-row.is-selected .crm-mail-thread-row__when,
+#app-content.crm-app .crm-mail-thread-row[aria-selected="true"] .crm-mail-thread-row__when {
+	color: var(--color-main-text, #222);
 }
 @media (max-width: 640px) {
 	#app-content.crm-app .crm-mail-thread-row__when {
@@ -3652,7 +3693,8 @@ dialog.crm-native-dialog .crm-advanced__body {
 	min-height: 44px;
 	min-width: 4.5rem;
 }
-#app-content.crm-app li.crm-review-detail-row {
+#app-content.crm-app li.crm-review-detail-row,
+#app-content.crm-app .crm-mail-3pane__reader.crm-review-detail-row {
 	display: block;
 	cursor: default;
 	padding: var(--crm-space-3, 0.75rem) var(--crm-space-4, 1rem) var(--crm-space-4, 1rem);
@@ -3660,10 +3702,12 @@ dialog.crm-native-dialog .crm-advanced__body {
 	background: color-mix(in srgb, var(--color-background-dark, var(--color-main-background)) 40%, var(--color-main-background));
 	box-shadow: none;
 }
-#app-content.crm-app li.crm-review-detail-row:hover {
+#app-content.crm-app li.crm-review-detail-row:hover,
+#app-content.crm-app .crm-mail-3pane__reader.crm-review-detail-row:hover {
 	background: color-mix(in srgb, var(--color-background-dark, var(--color-main-background)) 40%, var(--color-main-background));
 }
-#app-content.crm-app li.crm-review-detail-row[hidden] {
+#app-content.crm-app li.crm-review-detail-row[hidden],
+#app-content.crm-app .crm-mail-3pane__reader.crm-review-detail-row[hidden] {
 	display: none !important;
 }
 @media (max-width: 640px) {
@@ -4326,6 +4370,55 @@ dialog.crm-native-dialog .crm-advanced__body {
 	margin: var(--crm-space-1, 4px) 0 0;
 	font-size: var(--crm-fs-sm, 0.875rem);
 	color: var(--crm-muted, var(--color-text-maxcontrast));
+}
+#app-content.crm-app .crm-person-more {
+	margin-block-start: 0.35rem;
+}
+#app-content.crm-app .crm-person-more__summary {
+	cursor: pointer;
+	font-size: var(--crm-fs-sm, 0.875rem);
+	font-weight: 600;
+	color: var(--color-text-maxcontrast, var(--crm-muted));
+	min-height: 44px;
+	display: inline-flex;
+	align-items: center;
+}
+#app-content.crm-app .crm-person-more__summary:focus-visible {
+	outline: 3px solid color-mix(in srgb, var(--color-primary-element, #0082c9) 55%, transparent);
+	outline-offset: 2px;
+}
+#app-content.crm-app .crm-person-more__body {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	margin-block-start: 0.5rem;
+	padding: 0.65rem 0.75rem;
+	border-radius: var(--crm-radius-md, 10px);
+	background: var(--color-background-hover, var(--crm-bg-soft));
+}
+#app-content.crm-app .crm-person-more__row {
+	margin: 0;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.35rem 0.65rem;
+}
+#app-content.crm-app .crm-review-deal-field {
+	margin: 0.5rem 0 0.75rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+	max-width: 28rem;
+}
+#app-content.crm-app .crm-review-deal-field__hint {
+	margin: 0;
+	font-size: var(--crm-fs-sm, 0.875rem);
+}
+#app-content.crm-app .crm-review-toolbar__extra {
+	margin-block-start: 0.35rem;
+}
+#app-content.crm-app button.crm-review-open.crm-sr-only {
+	position: absolute;
 }
 #app-content.crm-app .crm-emails__log-hint {
 	margin: 0;

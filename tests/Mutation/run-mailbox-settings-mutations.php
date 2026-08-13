@@ -123,10 +123,10 @@ $cases = [
 	],
 	[
 		'file' => $root . '/templates/settings/workspace-mailbox.php',
-		'find' => '<fieldset class="crm-fieldset" id="crm-mailbox-servers">',
-		'replace' => '<details class="crm-advanced" id="crm-mailbox-servers">',
+		'find' => '<details class="crm-advanced" id="crm-mailbox-servers">',
+		'replace' => '<fieldset class="crm-fieldset" id="crm-mailbox-servers">',
 		'test' => 'MailboxSettingsUxContractTest',
-		'label' => 'mail servers collapse back into details',
+		'label' => 'mail servers escape progressive disclosure',
 	],
 	[
 		'file' => $root . '/lib/Service/MailboxService.php',

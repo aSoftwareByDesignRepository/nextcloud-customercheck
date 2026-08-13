@@ -96,7 +96,7 @@ test.describe('Command Center binary ACs', () => {
       await expect(calmDensity.locator('.crm-glance-density__lead')).toContainText(/Projects, tickets|Projekte, Tickets/i);
     } else {
       await expect(attentionDensity).toBeVisible();
-      await expect(attentionDensity.locator('.crm-glance-density__lead')).toContainText(/Big number|Große Zahl/i);
+      await expect(attentionDensity.locator('.crm-glance-density__lead')).toContainText(/Open a number|Zahl öffnen|Öffne eine Zahl|jump|spring/i);
     }
     const kpis = page.locator('#crm-glance .crm-glance-kpi');
     await expect(kpis).toHaveCount(3);

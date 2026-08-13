@@ -47,6 +47,15 @@
     }
   }
 
+  /** Billing severity wins on overdue; coverage gap never hides under Paid-up success. */
+  function moneyGlanceTone(billingState, coverageGap) {
+    const bill = billingTone(billingState);
+    if (!coverageGap) {
+      return bill;
+    }
+    return bill === 'danger' ? 'danger' : 'warning';
+  }
+
   function coverageTileParts(cov, t) {
     const c = cov && typeof cov === 'object' ? cov : {};
     const label = c.gap ? t('Needs links') : (c.covered ? t('Covered') : t('Coverage'));
@@ -95,7 +104,8 @@
     const last = (d.lastDiscussion && typeof d.lastDiscussion === 'object') ? d.lastDiscussion : {};
     const billing = (d.billing && typeof d.billing === 'object') ? d.billing : {};
     const primary = (d.primaryPerson && typeof d.primaryPerson === 'object') ? d.primaryPerson : null;
-    const cov = coverageTileParts(d.coverage, t);
+    const coverageRaw = (d.coverage && typeof d.coverage === 'object') ? d.coverage : {};
+    const cov = coverageTileParts(coverageRaw, t);
     const renewal = renewalTileParts(d.runway, formatDisplayDate, t);
     const nextTouch = d.nextTouchOn ? String(d.nextTouchOn) : '';
     const billingState = billing.state ? String(billing.state) : 'unknown';
@@ -108,25 +118,14 @@
       primaryMeta = primary.role ? String(primary.role) : '';
     }
 
-    let lastValue = t('Nothing logged yet');
-    let lastMeta = '';
-    if (last.summary) {
-      lastValue = String(last.summary);
-      lastMeta = last.at ? formatDisplayDate(String(last.at)) : '';
-    }
-
-    const moneyMeta = overdue > 0
+    let moneyMeta = overdue > 0
       ? (String(overdue) + ' ' + t('overdue'))
       : '';
+    if (!moneyMeta && coverageRaw.gap) {
+      moneyMeta = cov.meta ? (cov.label + ': ' + cov.meta) : cov.label;
+    }
 
     return [
-      {
-        key: 'company',
-        label: t('Company'),
-        value: String(d.name || '').trim() || '—',
-        meta: '',
-        tone: 'primary',
-      },
       {
         key: 'primary',
         label: t('Primary contact'),
@@ -135,31 +134,12 @@
         tone: primary && primaryValue !== t('No primary person') ? 'neutral' : 'warning',
       },
       {
-        key: 'coverage',
-        label: t('Coverage'),
-        value: cov.label,
-        meta: cov.meta,
-        tone: cov.tone,
-      },
-      {
-        key: 'nextTouch',
-        label: t('Next touch'),
-        value: nextTouch ? formatDisplayDate(nextTouch) : t('Not scheduled'),
-        meta: '',
-        tone: nextTouch ? 'neutral' : 'warning',
-      },
-      {
-        key: 'lastDiscussion',
-        label: t('Last discussion'),
-        value: lastValue,
-        meta: lastMeta,
-        tone: 'neutral',
-      },
-      {
         key: 'nextAction',
         label: t('Next action'),
         value: next.label ? String(next.label) : t('No urgent action'),
-        meta: '',
+        meta: last.summary
+          ? (t('Last talk') + ': ' + String(last.summary) + (last.at ? ' · ' + formatDisplayDate(String(last.at)) : ''))
+          : (nextTouch ? (t('Next touch') + ': ' + formatDisplayDate(nextTouch)) : ''),
         tone: next.label ? 'primary' : 'success',
       },
       {
@@ -167,7 +147,7 @@
         label: t('Money'),
         value: billingStateLabel(billingState, t),
         meta: moneyMeta,
-        tone: billingTone(billingState),
+        tone: moneyGlanceTone(billingState, !!coverageRaw.gap),
       },
       {
         key: 'renewal',
@@ -234,6 +214,7 @@
     coverageMissingLabel: coverageMissingLabel,
     billingStateLabel: billingStateLabel,
     billingTone: billingTone,
+    moneyGlanceTone: moneyGlanceTone,
     coverageTileParts: coverageTileParts,
     renewalTileParts: renewalTileParts,
     sanitizeGlanceTone: sanitizeGlanceTone,

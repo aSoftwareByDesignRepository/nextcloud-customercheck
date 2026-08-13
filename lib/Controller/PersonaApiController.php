@@ -918,7 +918,10 @@ class PersonaApiController extends Controller
 	{
 		try {
 			$uid = $this->access->currentUserId();
+			// ARGUS MF-01: matching shared mail mutates CRM + company feed — write required.
+			// mail.read alone (viewer) may preview/reply-compose but must not triage/assign.
 			$this->workspaces->assertCapability($uid, $workspaceId, 'mail.read');
+			$this->workspaces->assertCapability($uid, $workspaceId, 'write');
 			$body = $this->requestBody();
 			$this->mailbox->triageAssign($id, $workspaceId, (int)($body['companyId'] ?? 0));
 			return $this->ok(['ok' => true]);

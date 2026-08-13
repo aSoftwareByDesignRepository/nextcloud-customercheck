@@ -1,0 +1,1402 @@
+{
+  "%1$d of %2$d assigned": {
+    "fr": "%1$d sur %2$d attribués",
+    "it": "%1$d di %2$d assegnati"
+  },
+  "%1$d renewals, %2$d overdue activities — open Today.": {
+    "fr": "%1$d renouvellements, %2$d activités en retard — ouvre Aujourd’hui.",
+    "it": "%1$d rinnovi, %2$d attività in ritardo — apri Oggi."
+  },
+  "%1$s for %2$s is due today — open Today.": {
+    "fr": "%1$s pour %2$s est dû aujourd’hui — ouvre Aujourd’hui.",
+    "it": "%1$s per %2$s scade oggi — apri Oggi."
+  },
+  "%1$s for %2$s is overdue (%3$d days) — open Today.": {
+    "fr": "%1$s pour %2$s est en retard (%3$d jours) — ouvre Aujourd’hui.",
+    "it": "%1$s per %2$s è in ritardo (%3$d giorni) — apri Oggi."
+  },
+  "%1$s · %2$s · promises %3$d/%4$d · expected cash €%5$s (deals not counted as cash). Open This week.": {
+    "fr": "%1$s · %2$s · promesses %3$d/%4$d · encaissement attendu €%5$s (les Deals ne comptent pas comme cash). Ouvre Cette semaine.",
+    "it": "%1$s · %2$s · promesse %3$d/%4$d · incasso previsto €%5$s (i Deal non contano come cash). Apri Questa settimana."
+  },
+  "%1$s — open CustomerCheck for details.": {
+    "fr": "%1$s — ouvre CustomerCheck pour les détails.",
+    "it": "%1$s — apri CustomerCheck per i dettagli."
+  },
+  "%1$s, %2$s deals, %3$s": {
+    "fr": "%1$s, %2$s Deals, %3$s",
+    "it": "%1$s, %2$s Deal, %3$s"
+  },
+  "%1$s: %2$s expired today": {
+    "fr": "%1$s : %2$s a expiré aujourd’hui",
+    "it": "%1$s: %2$s scaduto oggi"
+  },
+  "%1$s: %2$s expired today (grace until %3$s)": {
+    "fr": "%1$s : %2$s a expiré aujourd’hui (délai de grâce jusqu’au %3$s)",
+    "it": "%1$s: %2$s scaduto oggi (periodo di grazia fino al %3$s)"
+  },
+  "%1$s: %2$s expires in 30 days": {
+    "fr": "%1$s : %2$s expire dans 30 jours",
+    "it": "%1$s: %2$s scade tra 30 giorni"
+  },
+  "%1$s: %2$s expires in 60 days": {
+    "fr": "%1$s : %2$s expire dans 60 jours",
+    "it": "%1$s: %2$s scade tra 60 giorni"
+  },
+  "%1$s: %2$s expires in 7 days — customer clients will hit 402 at expiry": {
+    "fr": "%1$s : %2$s expire dans 7 jours — les clients du client auront une erreur 402 à l’échéance",
+    "it": "%1$s: %2$s scade tra 7 giorni — i client del cliente riceveranno 402 alla scadenza"
+  },
+  "%1$s: %2$s grace ended — access stopped": {
+    "fr": "%1$s : délai de grâce %2$s terminé — accès coupé",
+    "it": "%1$s: periodo di grazia %2$s terminato — accesso interrotto"
+  },
+  "%1$s: %2$s is due today": {
+    "fr": "%1$s : %2$s est dû aujourd’hui",
+    "it": "%1$s: %2$s scade oggi"
+  },
+  "%1$s: %2$s is overdue (%3$d days)": {
+    "fr": "%1$s : %2$s est en retard (%3$d jours)",
+    "it": "%1$s: %2$s è in ritardo (%3$d giorni)"
+  },
+  "%1$s: %2$s renewal reminder": {
+    "fr": "%1$s : rappel de renouvellement %2$s",
+    "it": "%1$s: promemoria rinnovo %2$s"
+  },
+  "%1$s: %2$s. %3$s. %4$s": {
+    "fr": "%1$s: %2$s. %3$s. %4$s",
+    "it": "%1$s: %2$s. %3$s. %4$s"
+  },
+  "%d dedicated app admin(s) selected": {
+    "fr": "%d admin(s) d’app dédié(s) sélectionné(s)",
+    "it": "%d admin app dedicato/i selezionato/i"
+  },
+  "%d group(s) selected": {
+    "fr": "%d groupe(s) sélectionné(s)",
+    "it": "%d gruppo/i selezionato/i"
+  },
+  "%n contact with email": {
+    "fr": "%n contact avec e-mail",
+    "it": "%n contatto con e-mail"
+  },
+  "%n contacts with email": {
+    "fr": "%n contacts avec e-mail",
+    "it": "%n contatti con e-mail"
+  },
+  "%n day past due": {
+    "fr": "%n jour de retard",
+    "it": "%n giorno di ritardo"
+  },
+  "%n days past due": {
+    "fr": "%n jours de retard",
+    "it": "%n giorni di ritardo"
+  },
+  "%n item": {
+    "fr": "%n élément",
+    "it": "%n elemento"
+  },
+  "%n items": {
+    "fr": "%n éléments",
+    "it": "%n elementi"
+  },
+  "%n logged message": {
+    "fr": "%n message enregistré",
+    "it": "%n messaggio registrato"
+  },
+  "%n logged messages": {
+    "fr": "%n messages enregistrés",
+    "it": "%n messaggi registrati"
+  },
+  "%n open edit conflict": {
+    "fr": "%n conflit d’édition ouvert",
+    "it": "%n conflitto di modifica aperto"
+  },
+  "%n open edit conflicts": {
+    "fr": "%n conflits d’édition ouverts",
+    "it": "%n conflitti di modifica aperti"
+  },
+  "%n review item needs a decision": {
+    "fr": "%n élément à revoir attend une décision",
+    "it": "%n voce in revisione richiede una decisione"
+  },
+  "%n review items need a decision": {
+    "fr": "%n éléments à revoir attendent une décision",
+    "it": "%n voci in revisione richiedono una decisione"
+  },
+  "%s already on the team had their role updated.": {
+    "fr": "Le rôle de %s, déjà dans l’équipe, a été mis à jour.",
+    "it": "Il ruolo di %s, già nel team, è stato aggiornato."
+  },
+  "%s days": {
+    "fr": "%s jours",
+    "it": "%s giorni"
+  },
+  "%s days left": {
+    "fr": "%s jours restants",
+    "it": "%s giorni rimasti"
+  },
+  "%s days past due": {
+    "fr": "%s jours de retard",
+    "it": "%s giorni di ritardo"
+  },
+  "%s failed logins": {
+    "fr": "%s connexions échouées",
+    "it": "%s accessi non riusciti"
+  },
+  "%s is AGPL software on your Nextcloud. Bug reports and ideas on GitHub stay welcome. When you need priority email, hour packs, workshops, or a commissioned feature, we invoice only after you accept a quote.": {
+    "fr": "%s est un logiciel AGPL sur ta Nextcloud. Les signalements de bugs et les idées sur GitHub restent les bienvenus. Si tu as besoin d’e-mail prioritaire, de packs d’heures, d’ateliers ou d’une fonctionnalité sur mesure, on ne facture qu’après acceptation d’un devis.",
+    "it": "%s è software AGPL sulla tua Nextcloud. Segnalazioni di bug e idee su GitHub restano benvenute. Se ti servono e-mail prioritaria, pacchetti ore, workshop o una funzione su commissione, fatturiamo solo dopo che accetti un preventivo."
+  },
+  "%s items need a decision": {
+    "fr": "%s éléments attendent une décision",
+    "it": "%s elementi richiedono una decisione"
+  },
+  "%s mailbox(es) connected.": {
+    "fr": "%s boîte(s) mail connectée(s).",
+    "it": "%s casella/e collegata/e."
+  },
+  "%s open in ProjectCheck": {
+    "fr": "%s ouverts dans ProjectCheck",
+    "it": "%s aperti in ProjectCheck"
+  },
+  "%s open in TicketCheck": {
+    "fr": "%s ouverts dans TicketCheck",
+    "it": "%s aperti in TicketCheck"
+  },
+  "%s percent match": {
+    "fr": "%s pour cent de correspondance",
+    "it": "%s per cento di corrispondenza"
+  },
+  "%s product codes available for agreements.": {
+    "fr": "%s codes produit disponibles pour les accords.",
+    "it": "%s codici prodotto disponibili per gli accordi."
+  },
+  "%s skipped.": {
+    "fr": "%s ignoré(s).",
+    "it": "%s saltato/i."
+  },
+  "%s unpaid — open money": {
+    "fr": "%s impayé — ouvre Argent",
+    "it": "%s non pagato — apri Denaro"
+  },
+  "%s waiting": {
+    "fr": "%s en attente",
+    "it": "%s in attesa"
+  },
+  "%s · %d need attention · %d open deals": {
+    "fr": "%s · %d à traiter · %d Deals ouverts",
+    "it": "%s · %d da seguire · %d Deal aperti"
+  },
+  "%sh quota": {
+    "fr": "quota %sh",
+    "it": "quota %sh"
+  },
+  "%sh used": {
+    "fr": "%sh utilisées",
+    "it": "%sh usate"
+  },
+  "(%s file(s) attached)": {
+    "fr": "(%s fichier(s) joint(s))",
+    "it": "(%s file allegato/i)"
+  },
+  "1 day": {
+    "fr": "1 jour",
+    "it": "1 giorno"
+  },
+  "1 item needs a decision": {
+    "fr": "1 élément attend une décision",
+    "it": "1 elemento richiede una decisione"
+  },
+  "1 · Talk & people": {
+    "fr": "1 · Talk et personnes",
+    "it": "1 · Talk e persone"
+  },
+  "1. Add a person": {
+    "fr": "1. Ajoute une personne",
+    "it": "1. Aggiungi una persona"
+  },
+  "1. Add workspace members": {
+    "fr": "1. Ajoute des membres de l’équipe",
+    "it": "1. Aggiungi membri del team"
+  },
+  "1. Drop the file from mail": {
+    "fr": "1. Dépose le fichier depuis le mail",
+    "it": "1. Trascina il file dalla mail"
+  },
+  "1. Enter the name": {
+    "fr": "1. Saisis le nom",
+    "it": "1. Inserisci il nome"
+  },
+  "1. Filter the list": {
+    "fr": "1. Filtre la liste",
+    "it": "1. Filtra l’elenco"
+  },
+  "1. Filter what matters": {
+    "fr": "1. Filtre ce qui compte",
+    "it": "1. Filtra ciò che conta"
+  },
+  "1. Find your accounts": {
+    "fr": "1. Trouve tes comptes",
+    "it": "1. Trova i tuoi account"
+  },
+  "1. Open a message": {
+    "fr": "1. Ouvre un message",
+    "it": "1. Apri un messaggio"
+  },
+  "1. Open the conflict": {
+    "fr": "1. Ouvre le conflit",
+    "it": "1. Apri il conflitto"
+  },
+  "1. Pick table or board": {
+    "fr": "1. Choisis tableau ou board",
+    "it": "1. Scegli tabella o board"
+  },
+  "1. Pick the company": {
+    "fr": "1. Choisis l’entreprise",
+    "it": "1. Scegli l’azienda"
+  },
+  "1. Put faces on addresses": {
+    "fr": "1. Mets un visage sur les adresses",
+    "it": "1. Metti un volto alle e-mail"
+  },
+  "1. Read the metrics": {
+    "fr": "1. Lis les indicateurs",
+    "it": "1. Leggi le metriche"
+  },
+  "1. Read the suggestion": {
+    "fr": "1. Lis la suggestion",
+    "it": "1. Leggi il suggerimento"
+  },
+  "1. Review access": {
+    "fr": "1. Vérifie les accès",
+    "it": "1. Controlla gli accessi"
+  },
+  "1. Review owned work": {
+    "fr": "1. Passe en revue ton travail",
+    "it": "1. Rivedi il lavoro di tua responsabilità"
+  },
+  "1. Scan plan health": {
+    "fr": "1. Regarde l’état des plans",
+    "it": "1. Controlla lo stato dei piani"
+  },
+  "1. Scan the queues": {
+    "fr": "1. Parcours les files",
+    "it": "1. Scorri le code"
+  },
+  "1. Search or filter": {
+    "fr": "1. Cherche ou filtre",
+    "it": "1. Cerca o filtra"
+  },
+  "1. Skim the stack": {
+    "fr": "1. Survole la pile",
+    "it": "1. Dai un’occhiata alla pila"
+  },
+  "1. Spot who needs help": {
+    "fr": "1. Repère qui a besoin d’aide",
+    "it": "1. Individua chi ha bisogno di aiuto"
+  },
+  "1. Start with overdue": {
+    "fr": "1. Commence par les retards",
+    "it": "1. Inizia dai ritardi"
+  },
+  "1. Use the app freely": {
+    "fr": "1. Utilise l’app librement",
+    "it": "1. Usa l’app liberamente"
+  },
+  "1–30 days": {
+    "fr": "1–30 jours",
+    "it": "1–30 giorni"
+  },
+  "2 · Sell & keep": {
+    "fr": "2 · Vendre et fidéliser",
+    "it": "2 · Vendi e trattieni"
+  },
+  "2. Add a deal (optional)": {
+    "fr": "2. Ajoute un Deal (facultatif)",
+    "it": "2. Aggiungi un Deal (facoltativo)"
+  },
+  "2. Check the preview": {
+    "fr": "2. Vérifie l’aperçu",
+    "it": "2. Controlla l’anteprima"
+  },
+  "2. Check unpaid": {
+    "fr": "2. Vérifie les impayés",
+    "it": "2. Controlla i non pagati"
+  },
+  "2. Choose and resolve": {
+    "fr": "2. Choisis et résous",
+    "it": "2. Scegli e risolvi"
+  },
+  "2. Commit or adjust": {
+    "fr": "2. Valide ou ajuste",
+    "it": "2. Conferma o regola"
+  },
+  "2. Complete or open": {
+    "fr": "2. Termine ou ouvre",
+    "it": "2. Completa o apri"
+  },
+  "2. Configure mailbox if shared": {
+    "fr": "2. Configure la boîte mail si elle est partagée",
+    "it": "2. Configura la casella se è condivisa"
+  },
+  "2. Cover while away": {
+    "fr": "2. Couvre pendant ton absence",
+    "it": "2. Copri durante l’assenza"
+  },
+  "2. Fix coverage gaps": {
+    "fr": "2. Comble les trous de couverture",
+    "it": "2. Colma i buchi di copertura"
+  },
+  "2. Follow the red flags": {
+    "fr": "2. Suis les alertes rouges",
+    "it": "2. Segui le bandiere rosse"
+  },
+  "2. Link apps when ready": {
+    "fr": "2. Relie les apps quand tu es prêt",
+    "it": "2. Collega le app quando sei pronto"
+  },
+  "2. Log what matters": {
+    "fr": "2. Note ce qui compte",
+    "it": "2. Registra ciò che conta"
+  },
+  "2. Name, until, amount": {
+    "fr": "2. Nom, jusqu’au, montant",
+    "it": "2. Nome, fino a, importo"
+  },
+  "2. New deal = company + title": {
+    "fr": "2. Nouveau Deal = entreprise + titre",
+    "it": "2. Nuovo Deal = azienda + titolo"
+  },
+  "2. Note what you will ask": {
+    "fr": "2. Note ce que tu vas demander",
+    "it": "2. Annota cosa chiederai"
+  },
+  "2. Open a company": {
+    "fr": "2. Ouvre une entreprise",
+    "it": "2. Apri un’azienda"
+  },
+  "2. Open or create": {
+    "fr": "2. Ouvre ou crée",
+    "it": "2. Apri o crea"
+  },
+  "2. Open the company": {
+    "fr": "2. Ouvre l’entreprise",
+    "it": "2. Apri l’azienda"
+  },
+  "2. Or say no relation": {
+    "fr": "2. Ou indique sans lien",
+    "it": "2. Oppure indica nessun legame"
+  },
+  "2. Pick a company": {
+    "fr": "2. Choisis une entreprise",
+    "it": "2. Scegli un’azienda"
+  },
+  "2. Rotate public links when needed": {
+    "fr": "2. Renouvelle les liens publics si besoin",
+    "it": "2. Rinnova i link pubblici se serve"
+  },
+  "2. Support if it helps": {
+    "fr": "2. Support si ça aide",
+    "it": "2. Support se ti aiuta"
+  },
+  "2. Take one action": {
+    "fr": "2. Fais une seule action",
+    "it": "2. Fai un’azione"
+  },
+  "2–32 characters: a–z, 0–9, hyphen.": {
+    "fr": "2–32 caractères : a–z, 0–9, tiret.",
+    "it": "2–32 caratteri: a–z, 0–9, trattino."
+  },
+  "3 · Money & files": {
+    "fr": "3 · Argent et fichiers",
+    "it": "3 · Denaro e file"
+  },
+  "3. Add when missing": {
+    "fr": "3. Ajoute si manquant",
+    "it": "3. Aggiungi se manca"
+  },
+  "3. After the call": {
+    "fr": "3. Après l’appel",
+    "it": "3. Dopo la chiamata"
+  },
+  "3. Align with owners": {
+    "fr": "3. Aligne-toi avec les responsables",
+    "it": "3. Allineati con i responsabili"
+  },
+  "3. Ask for commissioned work": {
+    "fr": "3. Demande un travail sur mesure",
+    "it": "3. Chiedi un lavoro su commissione"
+  },
+  "3. Back to work": {
+    "fr": "3. Retour au travail",
+    "it": "3. Torna al lavoro"
+  },
+  "3. Follow up on old quotes": {
+    "fr": "3. Relance les anciens devis",
+    "it": "3. Riprendi i vecchi preventivi"
+  },
+  "3. Import ready, then add people": {
+    "fr": "3. Import prêt, puis ajoute des personnes",
+    "it": "3. Import pronto, poi aggiungi persone"
+  },
+  "3. Jump when stuck": {
+    "fr": "3. Passe à autre chose si tu bloques",
+    "it": "3. Passa oltre se sei bloccato"
+  },
+  "3. Keep plans alive": {
+    "fr": "3. Garde les plans vivants",
+    "it": "3. Tieni vivi i piani"
+  },
+  "3. Log from the company": {
+    "fr": "3. Enregistre depuis l’entreprise",
+    "it": "3. Registra dall’azienda"
+  },
+  "3. Log what you discussed": {
+    "fr": "3. Note ce que vous avez dit",
+    "it": "3. Registra cosa avete discusso"
+  },
+  "3. Move or escalate": {
+    "fr": "3. Déplace ou escalade",
+    "it": "3. Sposta o scala"
+  },
+  "3. Need more sources?": {
+    "fr": "3. Besoin de plus de sources ?",
+    "it": "3. Servono altre fonti?"
+  },
+  "3. Peek in Mail when you need the full thread": {
+    "fr": "3. Jette un œil dans Mail pour le fil complet",
+    "it": "3. Dai un’occhiata in Mail per il thread completo"
+  },
+  "3. Personal preference": {
+    "fr": "3. Préférence personnelle",
+    "it": "3. Preferenza personale"
+  },
+  "3. Save and open 360": {
+    "fr": "3. Enregistre et ouvre la vue 360",
+    "it": "3. Salva e apri la vista 360"
+  },
+  "3. Save — renew later": {
+    "fr": "3. Enregistre — renouvelle plus tard",
+    "it": "3. Salva — rinnova dopo"
+  },
+  "3. Seats and catalogue": {
+    "fr": "3. Sièges et catalogue",
+    "it": "3. Posti e catalogo"
+  },
+  "3. This list is your memory": {
+    "fr": "3. Cette liste, c’est ta mémoire",
+    "it": "3. Questo elenco è la tua memoria"
+  },
+  "3. Turn sources on": {
+    "fr": "3. Active les sources",
+    "it": "3. Attiva le fonti"
+  },
+  "3. Unknown needs a link": {
+    "fr": "3. L’inconnu a besoin d’un lien",
+    "it": "3. Lo sconosciuto richiede un collegamento"
+  },
+  "3. Use Money for amounts": {
+    "fr": "3. Utilise Argent pour les montants",
+    "it": "3. Usa Denaro per gli importi"
+  },
+  "3. Verify later": {
+    "fr": "3. Vérifie plus tard",
+    "it": "3. Verifica dopo"
+  },
+  "3. Watch runway": {
+    "fr": "3. Surveille la piste",
+    "it": "3. Tieni d’occhio la runway"
+  },
+  "30 days": {
+    "fr": "30 jours",
+    "it": "30 giorni"
+  },
+  "30 days before expiry — reminder, call accounts of €500 and above": {
+    "fr": "30 jours avant expiration — rappel, appelle les comptes de 500 € et plus",
+    "it": "30 giorni prima della scadenza — promemoria, chiama i conti da 500 € in su"
+  },
+  "31–60 days": {
+    "fr": "31–60 jours",
+    "it": "31–60 giorni"
+  },
+  "360° customer view": {
+    "fr": "Vue client 360°",
+    "it": "Vista cliente 360°"
+  },
+  "4 · Setup & history (rarely needed)": {
+    "fr": "4 · Réglages et historique (rarement utile)",
+    "it": "4 · Impostazioni e cronologia (serve di rado)"
+  },
+  "60 days before expiry — send renewal quote": {
+    "fr": "60 jours avant expiration — envoie un devis de renouvellement",
+    "it": "60 giorni prima della scadenza — invia preventivo di rinnovo"
+  },
+  "61–90 days": {
+    "fr": "61–90 jours",
+    "it": "61–90 giorni"
+  },
+  "7 days": {
+    "fr": "7 jours",
+    "it": "7 giorni"
+  },
+  "7 days after expiry — grace ended, decide about churn": {
+    "fr": "7 jours après expiration — délai de grâce terminé, décide du churn",
+    "it": "7 giorni dopo la scadenza — periodo di grazia finito, decidi sul churn"
+  },
+  "7 days before expiry — escalation, clients will hit 402 at expiry": {
+    "fr": "7 jours avant expiration — escalade, les clients auront une erreur 402 à l’échéance",
+    "it": "7 giorni prima della scadenza — escalation, i client riceveranno 402 alla scadenza"
+  },
+  "90+ days": {
+    "fr": "90+ jours",
+    "it": "90+ giorni"
+  },
+  "A clear label, when it ends, and the euro amount. That is enough for Money and renewals.": {
+    "fr": "Un libellé clair, une date de fin et le montant en euros. Ça suffit pour Argent et les renouvellements.",
+    "it": "Un’etichetta chiara, quando finisce e l’importo in euro. Basta per Denaro e i rinnovi."
+  },
+  "A company cannot be merged into itself.": {
+    "fr": "Une entreprise ne peut pas être fusionnée avec elle-même.",
+    "it": "Un’azienda non può essere unita a sé stessa."
+  },
+  "A company name is enough. Extra columns and JSON exports are fine.": {
+    "fr": "Un nom d’entreprise suffit. Colonnes en plus et exports JSON, pas de souci.",
+    "it": "Basta un nome azienda. Colonne extra ed export JSON vanno bene."
+  },
+  "A company with this short address already exists. Open it instead of creating a duplicate.": {
+    "fr": "Une entreprise avec cette adresse courte existe déjà. Ouvre-la plutôt que de créer un doublon.",
+    "it": "Esiste già un’azienda con questo indirizzo breve. Aprila invece di creare un duplicato."
+  },
+  "A contact cannot report to themselves.": {
+    "fr": "Un contact ne peut pas être son propre responsable.",
+    "it": "Un contatto non può dipendere da sé stesso."
+  },
+  "a customer": {
+    "fr": "un client",
+    "it": "un cliente"
+  },
+  "A customer with this name already exists. Link the existing one?": {
+    "fr": "Un client avec ce nom existe déjà. Relier celui qui existe ?",
+    "it": "Esiste già un cliente con questo nome. Collegare quello esistente?"
+  },
+  "A deal is a quote or opportunity. Tap Add deal and enter a title — value is optional.": {
+    "fr": "Un Deal, c’est un devis ou une opportunité. Appuie sur Ajouter un Deal et saisis un titre — la valeur est facultative.",
+    "it": "Un Deal è un preventivo o un’opportunità. Tocca Aggiungi Deal e inserisci un titolo — il valore è facoltativo."
+  },
+  "A deal is a quote or opportunity. Tap New deal to add one.": {
+    "fr": "Un Deal, c’est un devis ou une opportunité. Appuie sur Nouveau Deal pour en ajouter un.",
+    "it": "Un Deal è un preventivo o un’opportunità. Tocca Nuovo Deal per aggiungerne uno."
+  },
+  "A license key is required.": {
+    "fr": "Une clé de licence est obligatoire.",
+    "it": "Serve una chiave di licenza."
+  },
+  "A license needs at least one mobile seat or one terminal device.": {
+    "fr": "Une licence nécessite au moins un siège mobile ou un terminal.",
+    "it": "Una licenza richiede almeno un posto mobile o un terminale."
+  },
+  "A ProjectCheck customer with this name already exists. Link the existing customer instead.": {
+    "fr": "Un client ProjectCheck avec ce nom existe déjà. Relie plutôt le client existant.",
+    "it": "Esiste già un cliente ProjectCheck con questo nome. Collega invece il cliente esistente."
+  },
+  "A quick look at how your customers are doing.": {
+    "fr": "Un coup d’œil rapide sur l’état de tes clients.",
+    "it": "Uno sguardo rapido su come vanno i tuoi clienti."
+  },
+  "A quote or opportunity needs only a title. Value can wait.": {
+    "fr": "Un devis ou une opportunité n’a besoin que d’un titre. La valeur peut attendre.",
+    "it": "A un preventivo o un’opportunità basta un titolo. Il valore può aspettare."
+  },
+  "A scoped change with acceptance criteria and a delivery date — billed as project work.": {
+    "fr": "Un changement cadré avec critères d’acceptation et date de livraison — facturé comme travail de projet.",
+    "it": "Una modifica delimitata con criteri di accettazione e data di consegna — fatturata come lavoro di progetto."
+  },
+  "A send key is required so this message is not sent twice.": {
+    "fr": "Une clé d’envoi est obligatoire pour ne pas envoyer ce message deux fois.",
+    "it": "Serve una chiave di invio così il messaggio non parte due volte."
+  },
+  "A short name you will recognize later.": {
+    "fr": "Un nom court que tu reconnaîtras plus tard.",
+    "it": "Un nome breve che riconoscerai dopo."
+  },
+  "A TicketCheck customer with this name already exists. Link the existing customer instead.": {
+    "fr": "Un client TicketCheck avec ce nom existe déjà. Relie plutôt le client existant.",
+    "it": "Esiste già un cliente TicketCheck con questo nome. Collega invece il cliente esistente."
+  },
+  "A title is enough. Value and products are optional.": {
+    "fr": "Un titre suffit. Valeur et produits sont facultatifs.",
+    "it": "Basta un titolo. Valore e prodotti sono facoltativi."
+  },
+  "A valid Idempotency-Key is required to send from the shared mailbox.": {
+    "fr": "Une Idempotency-Key valide est obligatoire pour envoyer depuis la boîte mail partagée.",
+    "it": "Serve un’Idempotency-Key valida per inviare dalla casella condivisa."
+  },
+  "A website order id is required.": {
+    "fr": "Un identifiant de commande web est obligatoire.",
+    "it": "Serve un id ordine del sito."
+  },
+  "Abandon": {
+    "fr": "Abandonner",
+    "it": "Abbandona"
+  },
+  "Abandoned": {
+    "fr": "Abandonné",
+    "it": "Abbandonato"
+  },
+  "Access": {
+    "fr": "Accès",
+    "it": "Accesso"
+  },
+  "Access control": {
+    "fr": "Contrôle d’accès",
+    "it": "Controllo accessi"
+  },
+  "Access control, reminders, tokens, mobile license, and the agreement catalogue.": {
+    "fr": "Contrôle d’accès, rappels, jetons, licence mobile et catalogue des accords.",
+    "it": "Controllo accessi, promemoria, token, licenza mobile e catalogo accordi."
+  },
+  "Access denied": {
+    "fr": "Accès refusé",
+    "it": "Accesso negato"
+  },
+  "Access mode": {
+    "fr": "Mode d’accès",
+    "it": "Modalità di accesso"
+  },
+  "Access restriction is off — every logged-in user can see sales data. Not recommended.": {
+    "fr": "La restriction d’accès est désactivée — tout utilisateur connecté voit les données commerciales. Déconseillé.",
+    "it": "La restrizione di accesso è disattivata — ogni utente connesso vede i dati di vendita. Sconsigliato."
+  },
+  "Access restriction is on and no users or groups are allowlisted. Only app administrators can use CustomerCheck. Add colleagues below.": {
+    "fr": "La restriction d’accès est active et aucun utilisateur ni groupe n’est autorisé. Seuls les admins de l’app peuvent utiliser CustomerCheck. Ajoute des collègues ci-dessous.",
+    "it": "La restrizione di accesso è attiva e nessun utente o gruppo è in elenco consentito. Solo gli admin dell’app possono usare CustomerCheck. Aggiungi colleghi sotto."
+  },
+  "Access, reminders, intake URLs, and seats for the whole Nextcloud — admins only.": {
+    "fr": "Accès, rappels, URL d’entrée et sièges pour toute la Nextcloud — admins seulement.",
+    "it": "Accesso, promemoria, URL di ingresso e posti per tutta la Nextcloud — solo admin."
+  },
+  "Access, seats, and tokens": {
+    "fr": "Accès, sièges et jetons",
+    "it": "Accesso, posti e token"
+  },
+  "Account owner": {
+    "fr": "Responsable du compte",
+    "it": "Responsabile account"
+  },
+  "Account owners": {
+    "fr": "Responsables de compte",
+    "it": "Responsabili account"
+  },
+  "Account plan": {
+    "fr": "Plan de compte",
+    "it": "Piano account"
+  },
+  "Account plan not found.": {
+    "fr": "Plan de compte introuvable.",
+    "it": "Piano account non trovato."
+  },
+  "Account plan saved.": {
+    "fr": "Plan de compte enregistré.",
+    "it": "Piano account salvato."
+  },
+  "Account plans across the workspace — goals, health, next moves.": {
+    "fr": "Plans de compte dans toute l’équipe — objectifs, santé, prochaines actions.",
+    "it": "Piani account in tutto il team — obiettivi, stato, prossimi passi."
+  },
+  "Account plans across the workspace.": {
+    "fr": "Plans de compte dans toute l’équipe.",
+    "it": "Piani account in tutto il team."
+  },
+  "Account plans for your customers": {
+    "fr": "Plans de compte pour tes clients",
+    "it": "Piani account per i tuoi clienti"
+  },
+  "Account plans — open a company to add or edit one.": {
+    "fr": "Plans de compte — ouvre une entreprise pour en ajouter ou en modifier un.",
+    "it": "Piani account — apri un’azienda per aggiungerne o modificarne uno."
+  },
+  "Act on renewals": {
+    "fr": "Agis sur les renouvellements",
+    "it": "Agisci sui rinnovi"
+  },
+  "Action": {
+    "fr": "Action",
+    "it": "Azione"
+  },
+  "Action plan": {
+    "fr": "Plan d’action",
+    "it": "Piano d’azione"
+  },
+  "Actions": {
+    "fr": "Actions",
+    "it": "Azioni"
+  },
+  "Active": {
+    "fr": "Actif",
+    "it": "Attivo"
+  },
+  "Active for new agreements": {
+    "fr": "Actif pour les nouveaux accords",
+    "it": "Attivo per i nuovi accordi"
+  },
+  "Activities": {
+    "fr": "Activités",
+    "it": "Attività"
+  },
+  "Activity": {
+    "fr": "Activité",
+    "it": "Attività"
+  },
+  "Activity done": {
+    "fr": "Activité terminée",
+    "it": "Attività completata"
+  },
+  "Activity due": {
+    "fr": "Activité à échéance",
+    "it": "Attività in scadenza"
+  },
+  "Activity marked done.": {
+    "fr": "Activité marquée comme terminée.",
+    "it": "Attività segnata come completata."
+  },
+  "Activity reopened.": {
+    "fr": "Activité rouverte.",
+    "it": "Attività riaperta."
+  },
+  "Add a colleague below so they can help with customers.": {
+    "fr": "Ajoute un collègue ci-dessous pour qu’il puisse aider avec les clients.",
+    "it": "Aggiungi un collega sotto così può aiutarti con i clienti."
+  },
+  "Add a commitment": {
+    "fr": "Ajouter un engagement",
+    "it": "Aggiungi un impegno"
+  },
+  "Add a company or import a list. ProjectCheck and InvoiceCheck are optional — CustomerCheck works alone.": {
+    "fr": "Ajoute une entreprise ou importe une liste. ProjectCheck et InvoiceCheck sont facultatifs — CustomerCheck fonctionne seul.",
+    "it": "Aggiungi un’azienda o importa un elenco. ProjectCheck e InvoiceCheck sono facoltativi — CustomerCheck funziona da solo."
+  },
+  "Add a contact email and open this company first.": {
+    "fr": "Ajoute un e-mail de contact et ouvre d’abord cette entreprise.",
+    "it": "Aggiungi un’e-mail di contatto e apri prima questa azienda."
+  },
+  "Add a contact email or pick a recipient before composing.": {
+    "fr": "Ajoute un e-mail de contact ou choisis un destinataire avant de rédiger.",
+    "it": "Aggiungi un’e-mail di contatto o scegli un destinatario prima di scrivere."
+  },
+  "Add a contact email to open Mail threads for this company.": {
+    "fr": "Ajoute un e-mail de contact pour ouvrir les fils Mail de cette entreprise.",
+    "it": "Aggiungi un’e-mail di contatto per aprire i thread Mail di questa azienda."
+  },
+  "Add a contact email under People — then you can jump into Mail and keep a short CRM log here.": {
+    "fr": "Ajoute un e-mail de contact sous Personnes — ensuite tu pourras ouvrir Mail et tenir un court journal CRM ici.",
+    "it": "Aggiungi un’e-mail di contatto sotto Persone — poi potrai aprire Mail e tenere qui un breve registro CRM."
+  },
+  "Add a CSV or JSON file, or paste it, then tap Check my list.": {
+    "fr": "Ajoute un fichier CSV ou JSON, ou colle-le, puis appuie sur Vérifier ma liste.",
+    "it": "Aggiungi un file CSV o JSON, oppure incollalo, poi tocca Controlla il mio elenco."
+  },
+  "Add a license or partner package for a company.": {
+    "fr": "Ajoute une licence ou un pack partenaire pour une entreprise.",
+    "it": "Aggiungi una licenza o un pacchetto partner per un’azienda."
+  },
+  "Add a license or partner package when you have one — or import later.": {
+    "fr": "Ajoute une licence ou un pack partenaire quand tu en as un — ou importe plus tard.",
+    "it": "Aggiungi una licenza o un pacchetto partner quando ne hai uno — oppure importa dopo."
+  },
+  "Add a list first": {
+    "fr": "Ajoute d’abord une liste",
+    "it": "Aggiungi prima un elenco"
+  },
+  "Add a person first": {
+    "fr": "Ajoute d’abord une personne",
+    "it": "Aggiungi prima una persona"
+  },
+  "Add a person first, then deals and messages. Linked apps show when connected — if you see two Acmes, open the identity support guide in Help docs.": {
+    "fr": "Ajoute d’abord une personne, puis les Deals et les messages. Les apps liées apparaissent une fois connectées — si tu vois deux Acme, ouvre le guide identité dans l’aide.",
+    "it": "Aggiungi prima una persona, poi Deal e messaggi. Le app collegate compaiono quando sono connesse — se vedi due Acme, apri la guida sull’identità nella documentazione."
+  },
+  "Add a short follow-up note (at least 3 characters).": {
+    "fr": "Ajoute une courte note de suivi (au moins 3 caractères).",
+    "it": "Aggiungi una breve nota di follow-up (almeno 3 caratteri)."
+  },
+  "Add a short note as evidence that this promise was kept.": {
+    "fr": "Ajoute une courte note comme preuve que cette promesse a été tenue.",
+    "it": "Aggiungi una breve nota come prova che la promessa è stata mantenuta."
+  },
+  "Add a short reason (at least 3 characters).": {
+    "fr": "Ajoute une courte raison (au moins 3 caractères).",
+    "it": "Aggiungi una breve motivazione (almeno 3 caratteri)."
+  },
+  "Add an email first": {
+    "fr": "Ajoute d’abord un e-mail",
+    "it": "Aggiungi prima un’e-mail"
+  },
+  "Add as new company": {
+    "fr": "Ajouter comme nouvelle entreprise",
+    "it": "Aggiungi come nuova azienda"
+  },
+  "Add company": {
+    "fr": "Ajouter une entreprise",
+    "it": "Aggiungi azienda"
+  },
+  "Add custom code": {
+    "fr": "Ajouter un code perso",
+    "it": "Aggiungi codice personalizzato"
+  },
+  "Add deal": {
+    "fr": "Ajouter un Deal",
+    "it": "Aggiungi Deal"
+  },
+  "Add file": {
+    "fr": "Ajouter un fichier",
+    "it": "Aggiungi file"
+  },
+  "Add member": {
+    "fr": "Ajouter un membre",
+    "it": "Aggiungi membro"
+  },
+  "Add next step": {
+    "fr": "Ajouter la prochaine étape",
+    "it": "Aggiungi passo successivo"
+  },
+  "Add people to this workspace in Settings, then come back to help them.": {
+    "fr": "Ajoute des personnes à cette équipe dans Réglages, puis reviens pour les aider.",
+    "it": "Aggiungi persone a questo team in Impostazioni, poi torna ad aiutarle."
+  },
+  "Add people with their email under People. That is how CRM knows “who”.": {
+    "fr": "Ajoute des personnes avec leur e-mail sous Personnes. C’est comme ça que le CRM sait « qui ».",
+    "it": "Aggiungi persone con la loro e-mail sotto Persone. È così che il CRM sa « chi »."
+  },
+  "Add person": {
+    "fr": "Ajouter une personne",
+    "it": "Aggiungi persona"
+  },
+  "Add promise": {
+    "fr": "Ajouter une promesse",
+    "it": "Aggiungi promessa"
+  },
+  "Add reminder": {
+    "fr": "Ajouter un rappel",
+    "it": "Aggiungi promemoria"
+  },
+  "Add someone under People with an email — then you can log what you wrote with them in one step.": {
+    "fr": "Ajoute quelqu’un sous Personnes avec un e-mail — ensuite tu pourras enregistrer ce que tu lui as écrit en une étape.",
+    "it": "Aggiungi qualcuno sotto Persone con un’e-mail — poi potrai registrare in un passo ciò che gli hai scritto."
+  },
+  "Add someone you talk to. A name is enough — an email lets you log messages with them.": {
+    "fr": "Ajoute quelqu’un à qui tu parles. Un nom suffit — un e-mail te permet de noter les messages avec lui.",
+    "it": "Aggiungi qualcuno con cui parli. Basta un nome — un’e-mail ti permette di registrare i messaggi con lui."
+  },
+  "Add step": {
+    "fr": "Ajouter une étape",
+    "it": "Aggiungi passo"
+  },
+  "Add to this week": {
+    "fr": "Ajouter à cette semaine",
+    "it": "Aggiungi a questa settimana"
+  },
+  "Additional invoiceable options": {
+    "fr": "Options facturables en plus",
+    "it": "Opzioni fatturabili aggiuntive"
+  },
+  "Address book": {
+    "fr": "Carnet d’adresses",
+    "it": "Rubrica"
+  },
+  "Adds everyone in that group now. Not live sync — run again if the group changes.": {
+    "fr": "Ajoute maintenant tout le monde de ce groupe. Pas de sync en direct — relance si le groupe change.",
+    "it": "Aggiunge subito tutti di quel gruppo. Non è sync in tempo reale — rilancia se il gruppo cambia."
+  },
+  "Adds local people from a Circle you belong to. Not live sync — run again if the Circle changes.": {
+    "fr": "Ajoute des personnes locales d’un Circle dont tu fais partie. Pas de sync en direct — relance si le Circle change.",
+    "it": "Aggiunge persone locali da un Circle di cui fai parte. Non è sync in tempo reale — rilancia se il Circle cambia."
+  },
+  "Administrators (app admins) are always allowed. Changes apply immediately after save.": {
+    "fr": "Les administrateurs (admins de l’app) sont toujours autorisés. Les changements s’appliquent dès l’enregistrement.",
+    "it": "Gli amministratori (admin dell’app) sono sempre autorizzati. Le modifiche valgono subito dopo il salvataggio."
+  },
+  "Advanced": {
+    "fr": "Avancé",
+    "it": "Avanzate"
+  },
+  "Advanced options": {
+    "fr": "Options avancées",
+    "it": "Opzioni avanzate"
+  },
+  "After saving you land on the customer page — add a person next.": {
+    "fr": "Après l’enregistrement tu arrives sur la page client — ajoute ensuite une personne.",
+    "it": "Dopo il salvataggio arrivi sulla pagina cliente — poi aggiungi una persona."
+  },
+  "Agreement": {
+    "fr": "Accord",
+    "it": "Accordo"
+  },
+  "agreement": {
+    "fr": "accord",
+    "it": "accordo"
+  },
+  "Agreement cancelled": {
+    "fr": "Accord annulé",
+    "it": "Accordo annullato"
+  },
+  "Agreement cancelled.": {
+    "fr": "Accord annulé.",
+    "it": "Accordo annullato."
+  },
+  "Agreement catalogue": {
+    "fr": "Catalogue des accords",
+    "it": "Catalogo accordi"
+  },
+  "Agreement catalogue saved.": {
+    "fr": "Catalogue des accords enregistré.",
+    "it": "Catalogo accordi salvato."
+  },
+  "Agreement created": {
+    "fr": "Accord créé",
+    "it": "Accordo creato"
+  },
+  "Agreement does not belong to this company.": {
+    "fr": "L’accord n’appartient pas à cette entreprise.",
+    "it": "L’accordo non appartiene a questa azienda."
+  },
+  "Agreement renewal": {
+    "fr": "Renouvellement d’accord",
+    "it": "Rinnovo accordo"
+  },
+  "Agreement renewed.": {
+    "fr": "Accord renouvelé.",
+    "it": "Accordo rinnovato."
+  },
+  "Agreement replaced": {
+    "fr": "Accord remplacé",
+    "it": "Accordo sostituito"
+  },
+  "Agreement status changed": {
+    "fr": "Statut de l’accord modifié",
+    "it": "Stato accordo modificato"
+  },
+  "Agreements": {
+    "fr": "Accords",
+    "it": "Accordi"
+  },
+  "Agreements always hang under a customer. Create the company first if it is missing.": {
+    "fr": "Les accords sont toujours rattachés à un client. Crée d’abord l’entreprise s’il en manque une.",
+    "it": "Gli accordi stanno sempre sotto un cliente. Crea prima l’azienda se manca."
+  },
+  "Agreements are stored in CustomerCheck under companies in this workspace. Find renewals or a single company quickly.": {
+    "fr": "Les accords sont stockés dans CustomerCheck sous les entreprises de cette équipe. Trouve vite les renouvellements ou une entreprise.",
+    "it": "Gli accordi sono in CustomerCheck sotto le aziende di questo team. Trova in fretta i rinnovi o una singola azienda."
+  },
+  "Agreements without an invoice state yet.": {
+    "fr": "Accords sans état de facture pour l’instant.",
+    "it": "Accordi ancora senza stato fattura."
+  },
+  "Alert": {
+    "fr": "Alerte",
+    "it": "Avviso"
+  },
+  "All": {
+    "fr": "Tout",
+    "it": "Tutto"
+  },
+  "All agreements": {
+    "fr": "Tous les accords",
+    "it": "Tutti gli accordi"
+  },
+  "All clear": {
+    "fr": "Tout va bien",
+    "it": "Tutto a posto"
+  },
+  "All clear · InvoiceCheck": {
+    "fr": "Tout va bien · InvoiceCheck",
+    "it": "Tutto a posto · InvoiceCheck"
+  },
+  "All clear — expand if you need the numbers.": {
+    "fr": "Tout va bien — déplie si tu as besoin des chiffres.",
+    "it": "Tutto a posto — espandi se ti servono i numeri."
+  },
+  "All companies": {
+    "fr": "Toutes les entreprises",
+    "it": "Tutte le aziende"
+  },
+  "All customer data stays on this Nextcloud — CustomerCheck never contacts external services.": {
+    "fr": "Toutes les données clients restent sur cette Nextcloud — CustomerCheck ne contacte jamais de services externes.",
+    "it": "Tutti i dati clienti restano su questa Nextcloud — CustomerCheck non contatta mai servizi esterni."
+  },
+  "All deals — table or board": {
+    "fr": "Tous les Deals — tableau ou board",
+    "it": "Tutti i Deal — tabella o board"
+  },
+  "All deals — table or board. Each deal has an owner.": {
+    "fr": "Tous les Deals — tableau ou board. Chaque Deal a un responsable.",
+    "it": "Tutti i Deal — tabella o board. Ogni Deal ha un responsabile."
+  },
+  "All kinds": {
+    "fr": "Tous types",
+    "it": "Tutti i tipi"
+  },
+  "All licensed seats are assigned. Remove a seat or upgrade the license.": {
+    "fr": "Tous les sièges sous licence sont attribués. Retire un siège ou mets à niveau la licence.",
+    "it": "Tutti i posti in licenza sono assegnati. Rimuovi un posto o aggiorna la licenza."
+  },
+  "All links set — nice.": {
+    "fr": "Tous les liens sont en place — super.",
+    "it": "Tutti i collegamenti sono a posto — ottimo."
+  },
+  "All stages": {
+    "fr": "Toutes les étapes",
+    "it": "Tutte le fasi"
+  },
+  "All statuses": {
+    "fr": "Tous les statuts",
+    "it": "Tutti gli stati"
+  },
+  "All types": {
+    "fr": "Tous les types",
+    "it": "Tutti i tipi"
+  },
+  "Allowed groups": {
+    "fr": "Groupes autorisés",
+    "it": "Gruppi consentiti"
+  },
+  "Allowed users": {
+    "fr": "Utilisateurs autorisés",
+    "it": "Utenti consentiti"
+  },
+  "Almost there": {
+    "fr": "Presque fini",
+    "it": "Ci sei quasi"
+  },
+  "Also in linked apps": {
+    "fr": "Aussi dans les apps liées",
+    "it": "Anche nelle app collegate"
+  },
+  "Also send to Tasks": {
+    "fr": "Envoyer aussi vers Tasks",
+    "it": "Invia anche a Tasks"
+  },
+  "Ambiguous company name from import: “%s”. Pick the matching company or mark no relation.": {
+    "fr": "Nom d’entreprise ambigu à l’import : « %s ». Choisis l’entreprise correspondante ou marque sans lien.",
+    "it": "Nome azienda ambiguo dall’import: « %s ». Scegli l’azienda corrispondente o indica nessun legame."
+  },
+  "Amount": {
+    "fr": "Montant",
+    "it": "Importo"
+  },
+  "Amount (EUR)": {
+    "fr": "Montant (EUR)",
+    "it": "Importo (EUR)"
+  },
+  "An agreement cannot move from \"%1$s\" to \"%2$s\". Create a new agreement instead.": {
+    "fr": "Un accord ne peut pas passer de « %1$s » à « %2$s ». Crée plutôt un nouvel accord.",
+    "it": "Un accordo non può passare da « %1$s » a « %2$s ». Crea invece un nuovo accordo."
+  },
+  "Annual hour packs — Small, Standard, or Premium — with priority email for your organisation. This is invoiceable service — not a donation. See packages on our support page.": {
+    "fr": "Packs d’heures annuels — Small, Standard ou Premium — avec e-mail prioritaire pour ton organisation. C’est un service facturable — pas un don. Voir les packs sur notre page support.",
+    "it": "Pacchetti ore annuali — Small, Standard o Premium — con e-mail prioritaria per la tua organizzazione. È un servizio fatturabile — non una donazione. Vedi i pacchetti nella pagina di supporto."
+  },
+  "Another license update is in progress. Try again in a moment.": {
+    "fr": "Une autre mise à jour de licence est en cours. Réessaie dans un instant.",
+    "it": "È in corso un altro aggiornamento licenza. Riprova tra un momento."
+  },
+  "Another seat update is in progress. Try again in a moment.": {
+    "fr": "Une autre mise à jour de sièges est en cours. Réessaie dans un instant.",
+    "it": "È in corso un altro aggiornamento posti. Riprova tra un momento."
+  },
+  "Any": {
+    "fr": "Tous",
+    "it": "Qualsiasi"
+  },
+  "Any time": {
+    "fr": "À tout moment",
+    "it": "In qualsiasi momento"
+  },
+  "Anyone with these URLs can read renewal titles or post website leads and orders. Rotate if a link leaks.": {
+    "fr": "Quiconque a ces URL peut lire les titres de renouvellement ou envoyer des leads et commandes du site. Renouvelle le lien s’il fuit.",
+    "it": "Chiunque abbia questi URL può leggere i titoli di rinnovo o inviare lead e ordini dal sito. Rinnova il link se esce."
+  },
+  "App": {
+    "fr": "App",
+    "it": "App"
+  },
+  "App admin": {
+    "fr": "Admin de l’app",
+    "it": "Admin app"
+  },
+  "App administrators always have access. Turn restriction on and allowlist groups or users for everyone else.": {
+    "fr": "Les admins de l’app ont toujours accès. Active la restriction et autorise des groupes ou utilisateurs pour les autres.",
+    "it": "Gli admin dell’app hanno sempre accesso. Attiva la restrizione e metti in elenco gruppi o utenti per tutti gli altri."
+  },
+  "App administrators and Nextcloud admins always have access. When restriction is on, only allowlisted users and groups may use the app.": {
+    "fr": "Les admins de l’app et les admins Nextcloud ont toujours accès. Quand la restriction est active, seuls les utilisateurs et groupes autorisés peuvent utiliser l’app.",
+    "it": "Gli admin dell’app e gli admin Nextcloud hanno sempre accesso. Con la restrizione attiva, solo utenti e gruppi in elenco possono usare l’app."
+  },
+  "App not installed — link under Identity": {
+    "fr": "App non installée — lien sous Identité",
+    "it": "App non installata — collegamento sotto Identità"
+  },
+  "App settings": {
+    "fr": "Réglages de l’app",
+    "it": "Impostazioni app"
+  },
+  "App settings pages": {
+    "fr": "Pages des réglages de l’app",
+    "it": "Pagine impostazioni app"
+  },
+  "App-wide switch. Each team can still opt out under Team & mailbox → Enable weekly digest.": {
+    "fr": "Interrupteur pour toute l’app. Chaque équipe peut encore se désactiver sous Équipe et boîte mail → Activer le résumé hebdomadaire.",
+    "it": "Interruttore per tutta l’app. Ogni team può ancora disattivarlo sotto Team e casella → Attiva riepilogo settimanale."
+  },
+  "Applied once without learning": {
+    "fr": "Appliqué une fois sans mémoriser",
+    "it": "Applicato una volta senza apprendere"
+  },
+  "Apply": {
+    "fr": "Appliquer",
+    "it": "Applica"
+  },
+  "Apply & learn": {
+    "fr": "Appliquer et mémoriser",
+    "it": "Applica e impara"
+  },
+  "Apply a CustomerCheck Mobile license before assigning seats.": {
+    "fr": "Applique une licence CustomerCheck Mobile avant d’attribuer des sièges.",
+    "it": "Applica una licenza CustomerCheck Mobile prima di assegnare posti."
+  },
+  "Apply once": {
+    "fr": "Appliquer une fois",
+    "it": "Applica una volta"
+  },
+  "Archived": {
+    "fr": "Archivé",
+    "it": "Archiviato"
+  },
+  "Archived companies": {
+    "fr": "Entreprises archivées",
+    "it": "Aziende archiviate"
+  },
+  "Archived companies cannot be merged. Restore the source first.": {
+    "fr": "Les entreprises archivées ne peuvent pas être fusionnées. Restaure d’abord la source.",
+    "it": "Le aziende archiviate non si possono unire. Ripristina prima la sorgente."
+  },
+  "Ask a CustomerCheck administrator to add you under App settings → Access mode, or switch Access mode to Open if everyone should see the app.": {
+    "fr": "Demande à un admin CustomerCheck de t’ajouter sous Réglages de l’app → Mode d’accès, ou passe le mode d’accès sur Ouvert si tout le monde doit voir l’app.",
+    "it": "Chiedi a un admin CustomerCheck di aggiungerti sotto Impostazioni app → Modalità di accesso, oppure passa a Aperto se tutti devono vedere l’app."
+  },
+  "Ask a CustomerCheck administrator to check Access mode and allowlists under App settings.": {
+    "fr": "Demande à un admin CustomerCheck de vérifier le mode d’accès et les listes autorisées sous Réglages de l’app.",
+    "it": "Chiedi a un admin CustomerCheck di controllare modalità di accesso ed elenchi consentiti sotto Impostazioni app."
+  },
+  "Ask a Nextcloud administrator who manages CustomerCheck to help with this change.": {
+    "fr": "Demande à un admin Nextcloud qui gère CustomerCheck de t’aider pour ce changement.",
+    "it": "Chiedi a un admin Nextcloud che gestisce CustomerCheck di aiutarti con questa modifica."
+  },
+  "Ask a teammate with send permission to retry or discard.": {
+    "fr": "Demande à un collègue avec le droit d’envoyer de réessayer ou d’abandonner.",
+    "it": "Chiedi a un collega con permesso di invio di riprovare o scartare."
+  },
+  "Ask about setup or training": {
+    "fr": "Demander de l’aide pour la mise en place ou la formation",
+    "it": "Chiedi su setup o formazione"
+  },
+  "Ask an admin for access to this folder.": {
+    "fr": "Demande à un admin l’accès à ce dossier.",
+    "it": "Chiedi a un admin l’accesso a questa cartella."
+  },
+  "Ask for a partner offer": {
+    "fr": "Demander une offre partenaire",
+    "it": "Chiedi un’offerta partner"
+  },
+  "Assign": {
+    "fr": "Attribuer",
+    "it": "Assegna"
+  },
+  "Assign mail": {
+    "fr": "Attribuer le mail",
+    "it": "Assegna mail"
+  },
+  "Assign seat": {
+    "fr": "Attribuer un siège",
+    "it": "Assegna posto"
+  },
+  "Assign unmatched shared mail and other review items to a company.": {
+    "fr": "Attribue le mail partagé non rattaché et les autres éléments à revoir à une entreprise.",
+    "it": "Assegna a un’azienda la mail condivisa non abbinata e le altre voci da rivedere."
+  },
+  "Assign unmatched shared mail and review items": {
+    "fr": "Attribuer le mail partagé non rattaché et les éléments à revoir",
+    "it": "Assegna mail condivisa non abbinata e voci da rivedere"
+  },
+  "Assign unmatched shared mail to a company — personal Mail never appears here.": {
+    "fr": "Attribue le mail partagé non rattaché à une entreprise — le Mail personnel n’apparaît jamais ici.",
+    "it": "Assegna la mail condivisa non abbinata a un’azienda — la Mail personale non compare mai qui."
+  },
+  "Assign unmatched shared mail to a company. Personal Nextcloud Mail never appears here.": {
+    "fr": "Attribue le mail partagé non rattaché à une entreprise. Le Mail Nextcloud personnel n’apparaît jamais ici.",
+    "it": "Assegna la mail condivisa non abbinata a un’azienda. La Mail Nextcloud personale non compare mai qui."
+  },
+  "Assign unmatched shared mailbox messages.": {
+    "fr": "Attribuer les messages de la boîte mail partagée non rattachés.",
+    "it": "Assegna i messaggi della casella condivisa non abbinati."
+  },
+  "Assigned": {
+    "fr": "Attribué",
+    "it": "Assegnato"
+  },
+  "Assigned mobile seats": {
+    "fr": "Sièges mobiles attribués",
+    "it": "Posti mobile assegnati"
+  },
+  "Assigned to a deal — not overhead.": {
+    "fr": "Attribué à un Deal — pas de frais généraux.",
+    "it": "Assegnato a un Deal — non overhead."
+  },
+  "At a glance": {
+    "fr": "En un coup d’œil",
+    "it": "A colpo d’occhio"
+  },
+  "At least one agreement is required.": {
+    "fr": "Au moins un accord est obligatoire.",
+    "it": "Serve almeno un accordo."
+  },
+  "At most 50 custom product codes are allowed.": {
+    "fr": "Au plus 50 codes produit perso sont autorisés.",
+    "it": "Sono ammessi al massimo 50 codici prodotto personalizzati."
+  },
+  "At risk": {
+    "fr": "À risque",
+    "it": "A rischio"
+  },
+  "Attach a sales-log entry or fingerprint first.": {
+    "fr": "Joins d’abord une entrée du journal des ventes ou une empreinte.",
+    "it": "Allega prima una voce del registro vendite o un’impronta."
+  },
+  "Attachments (optional)": {
+    "fr": "Pièces jointes (facultatif)",
+    "it": "Allegati (facoltativo)"
+  },
+  "Attachments together are too large (max %s).": {
+    "fr": "Les pièces jointes ensemble sont trop volumineuses (max %s).",
+    "it": "Gli allegati insieme sono troppo grandi (max %s)."
+  },
+  "Attention": {
+    "fr": "Attention",
+    "it": "Attenzione"
+  },
+  "Attention queue": {
+    "fr": "File Attention",
+    "it": "Coda Attenzione"
+  },
+  "Attention summary": {
+    "fr": "Résumé Attention",
+    "it": "Riepilogo Attenzione"
+  },
+  "Auto": {
+    "fr": "Auto",
+    "it": "Auto"
+  },
+  "Automatic follow-up for deal \"%s\".": {
+    "fr": "Suivi automatique pour le Deal « %s ».",
+    "it": "Follow-up automatico per il Deal « %s »."
+  },
+  "available": {
+    "fr": "disponible",
+    "it": "disponibile"
+  },
+  "Away": {
+    "fr": "Absent",
+    "it": "Assente"
+  },
+  "Back": {
+    "fr": "Retour",
+    "it": "Indietro"
+  },
+  "Back to Companies": {
+    "fr": "Retour aux entreprises",
+    "it": "Torna alle aziende"
+  },
+  "Back to Nextcloud": {
+    "fr": "Retour à Nextcloud",
+    "it": "Torna a Nextcloud"
+  },
+  "Back to Team & mailbox": {
+    "fr": "Retour à Équipe et boîte mail",
+    "it": "Torna a Team e casella"
+  },
+  "Back to Today": {
+    "fr": "Retour à Aujourd’hui",
+    "it": "Torna a Oggi"
+  },
+  "Before both edits": {
+    "fr": "Avant les deux modifications",
+    "it": "Prima di entrambe le modifiche"
+  },
+  "Big number first — tap Open to jump there.": {
+    "fr": "Le gros chiffre d’abord — appuie sur Ouvrir pour y aller.",
+    "it": "Prima il numero grande — tocca Apri per andarci."
+  },
+  "Blocked": {
+    "fr": "Bloqué",
+    "it": "Bloccato"
+  },
+  "Blocker": {
+    "fr": "Blocker",
+    "it": "Blocker"
+  },
+  "Board": {
+    "fr": "Board",
+    "it": "Board"
+  },
+  "Bookable help for your organisation — while the app stays free": {
+    "fr": "Aide réservable pour ton organisation — pendant que l’app reste gratuite",
+    "it": "Aiuto prenotabile per la tua organizzazione — mentre l’app resta gratuita"
+  },
+  "Both companies link to different ProjectCheck customers. Unlink one before merging.": {
+    "fr": "Les deux entreprises sont liées à des clients ProjectCheck différents. Délie-en une avant de fusionner.",
+    "it": "Le due aziende sono collegate a clienti ProjectCheck diversi. Scollegane una prima di unire."
+  },
+  "Both companies link to different TicketCheck customers. Unlink one before merging.": {
+    "fr": "Les deux entreprises sont liées à des clients TicketCheck différents. Délie-en une avant de fusionner.",
+    "it": "Le due aziende sono collegate a clienti TicketCheck diversi. Scollegane una prima di unire."
+  },
+  "Breadcrumb": {
+    "fr": "Fil d’Ariane",
+    "it": "Percorso"
+  },
+  "Bring customers in from a mail file or another app — preview, then import.": {
+    "fr": "Importe des clients depuis un fichier mail ou une autre app — aperçu, puis import.",
+    "it": "Porta i clienti da un file mail o da un’altra app — anteprima, poi import."
+  },
+  "Bring in customers from CSV, ProjectCheck, TicketCheck, or a license sales log when available.": {
+    "fr": "Importe des clients depuis CSV, ProjectCheck, TicketCheck ou un journal de ventes de licences si disponible.",
+    "it": "Importa clienti da CSV, ProjectCheck, TicketCheck o da un registro vendite licenze se disponibile."
+  },
+  "Broken": {
+    "fr": "Cassé",
+    "it": "Rotto"
+  },
+  "Broken link": {
+    "fr": "Lien cassé",
+    "it": "Collegamento rotto"
+  },
+  "Broken link: ProjectCheck customer #%d was deleted or is missing.": {
+    "fr": "Lien cassé : le client ProjectCheck #%d a été supprimé ou est manquant.",
+    "it": "Collegamento rotto: il cliente ProjectCheck #%d è stato eliminato o manca."
+  },
+  "Broken link: TicketCheck customer #%d was deleted or is missing.": {
+    "fr": "Lien cassé : le client TicketCheck #%d a été supprimé ou est manquant.",
+    "it": "Collegamento rotto: il cliente TicketCheck #%d è stato eliminato o manca."
+  },
+  "Broken ProjectCheck link": {
+    "fr": "Lien ProjectCheck cassé",
+    "it": "Collegamento ProjectCheck rotto"
+  },
+  "Broken TicketCheck link": {
+    "fr": "Lien TicketCheck cassé",
+    "it": "Collegamento TicketCheck rotto"
+  },
+  "Browse companies": {
+    "fr": "Parcourir les entreprises",
+    "it": "Sfoglia aziende"
+  }
+}

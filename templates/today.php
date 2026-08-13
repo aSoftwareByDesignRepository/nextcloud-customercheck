@@ -134,11 +134,6 @@ $renderTodayTable = static function (array $items, bool $allowDone) use ($l, $ur
 									aria-label="<?php p($l->t('Mark done: %1$s (%2$s)', [$item['label'] ?? '', $companyName !== '' ? $companyName : $l->t('Company')])); ?>">
 									<?php p($l->t('Done')); ?>
 								</button>
-								<?php if ($openHref !== ''): ?>
-									<a class="crm-btn crm-btn--sm crm-btn--ghost" href="<?php p($openHref); ?>">
-										<?php p($l->t('Open')); ?>
-									</a>
-								<?php endif; ?>
 							<?php elseif ($cta === 'claim' && $allowDone && (int)($item['dealId'] ?? 0) > 0): ?>
 								<button type="button"
 									class="crm-btn crm-btn--sm crm-btn--primary"
@@ -150,7 +145,11 @@ $renderTodayTable = static function (array $items, bool $allowDone) use ($l, $ur
 								</button>
 							<?php elseif ($openHref !== ''): ?>
 								<a class="crm-btn crm-btn--sm crm-btn--primary" href="<?php p($openHref); ?>">
-									<?php p($ctaLabel($cta)); ?>
+									<?php
+									// Never label a navigate-only control "Done" when write is locked.
+									$navCta = ($cta === 'done' && !$allowDone) ? 'open' : $cta;
+									p($ctaLabel($navCta));
+									?>
 								</a>
 							<?php else: ?>
 								<span class="crm-muted">—</span>
@@ -165,32 +164,13 @@ $renderTodayTable = static function (array $items, bool $allowDone) use ($l, $ur
 	<?php
 };
 ?>
-<div id="crm-live-region" class="crm-sr-only" aria-live="polite"></div>
 <div class="crm-page-stack">
 	<?php if ($sections !== [] || $queueItems !== []): ?>
-		<section class="crm-card crm-today-role" aria-labelledby="crm-today-role-title">
-			<header class="crm-card__header">
-				<div class="crm-card__header-text">
-					<h2 id="crm-today-role-title" class="crm-card__title"><?php p($l->t('Your focus')); ?></h2>
-					<p class="crm-card__lead"><?php p($roleHelp); ?></p>
-				</div>
-				<?php if ($roleLabel !== ''): ?>
-					<span class="crm-badge crm-badge--info" aria-label="<?php p($l->t('Role')); ?>"><?php p($roleLabel); ?></span>
-				<?php endif; ?>
-			</header>
-			<div class="crm-card__body">
-				<div class="crm-today-role__stats" role="group" aria-label="<?php p($l->t('Attention summary')); ?>">
-					<div class="crm-today-stat">
-						<span class="crm-today-stat__value"><?php p((string)$totalItems); ?></span>
-						<span class="crm-today-stat__label"><?php p($l->t('Needs you')); ?></span>
-					</div>
-					<div class="crm-today-stat">
-						<span class="crm-today-stat__value"><?php p((string)count($sections !== [] ? $sections : ($queueItems !== [] ? [1] : []))); ?></span>
-						<span class="crm-today-stat__label"><?php p($l->t('Queues')); ?></span>
-					</div>
-				</div>
-			</div>
-		</section>
+		<p class="crm-muted crm-today-focus-line" id="crm-today-role-title">
+			<?php if ($roleLabel !== ''): ?><span class="crm-badge crm-badge--info"><?php p($roleLabel); ?></span> <?php endif; ?>
+			<?php p($roleHelp); ?>
+			<span class="crm-today-focus-line__count"> · <?php p($l->t('%s need you', [(string)$totalItems])); ?></span>
+		</p>
 
 		<?php if ($sections !== []): ?>
 			<nav class="crm-quick-filters" aria-label="<?php p($l->t('Jump to queue')); ?>">

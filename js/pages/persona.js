@@ -35,6 +35,26 @@
 
   /** Monotonic load token — drops stale Review paints when filters race. */
   let reviewLoadGeneration = 0;
+  /** Monotonic preview token — drops stale mail-body paints on rapid j/k row changes. */
+  let mailPreviewGeneration = 0;
+  /** Aborts in-flight Review preview fetch when the operator moves to another row. */
+  let mailPreviewAbort = null;
+
+  /**
+   * Bump preview generation and replace AbortController (ARGUS SF-01).
+   * @returns {{ gen: number, signal: AbortSignal|null }}
+   */
+  function bumpMailPreviewRequest() {
+    if (mailPreviewAbort) {
+      try { mailPreviewAbort.abort(); } catch (e) { /* ignore */ }
+    }
+    mailPreviewAbort = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    mailPreviewGeneration += 1;
+    return {
+      gen: mailPreviewGeneration,
+      signal: mailPreviewAbort ? mailPreviewAbort.signal : null,
+    };
+  }
 
   function escapeHtml(value) {
     return String(value == null ? '' : value)
@@ -209,8 +229,8 @@
     return json.data;
   }
 
-  async function apiPost(path, body) {
-    const res = await fetch(OC.generateUrl('/apps/customercheck' + path), {
+  async function apiPost(path, body, opts) {
+    const fetchOpts = {
       method: 'POST',
       credentials: 'same-origin',
       headers: {
@@ -218,12 +238,20 @@
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(body || {}),
-    });
+    };
+    if (opts && opts.signal) {
+      fetchOpts.signal = opts.signal;
+    }
+    const res = await fetch(OC.generateUrl('/apps/customercheck' + path), fetchOpts);
     const json = await res.json();
     if (!json.success) {
       throw new Error(json.message || 'Request failed');
     }
     return json.data;
+  }
+
+  function isAbortError(err) {
+    return !!(err && (err.name === 'AbortError' || err.code === 20));
   }
 
   async function apiPut(path, body) {
@@ -424,11 +452,13 @@
     const sortDir = (options && options.sortDir) === 'asc' ? 'asc' : 'desc';
     function sortBtn(col, label) {
       const active = sortKey === col;
-      const aria = active ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none';
       const arrow = !active ? '' : (sortDir === 'asc' ? ' ↑' : ' ↓');
+      const sortHint = active
+        ? (sortDir === 'asc' ? t('Sorted ascending') : t('Sorted descending'))
+        : t('Not sorted');
       return '<button type="button" class="crm-btn crm-btn--ghost crm-review-sort' + (active ? ' is-active' : '') + '" ' +
         'data-crm-review-sort="' + escapeHtml(col) + '" aria-pressed="' + (active ? 'true' : 'false') + '" ' +
-        'aria-sort="' + aria + '">' +
+        'aria-label="' + escapeHtml(label + ' — ' + sortHint) + '">' +
         escapeHtml(label) + escapeHtml(arrow) + '</button>';
     }
     let rows = '';
@@ -456,6 +486,7 @@
           : '<span class="crm-review-select crm-review-select--spacer" aria-hidden="true"></span>')
         : '';
       const optId = rowId ? ('crm-review-opt-' + rowId) : '';
+      // list + listitem (not listbox) so checkboxes stay valid for axe nested-interactive.
       rows +=
         '<li class="crm-mail-thread-row crm-review-row"' +
         (optId ? ' id="' + escapeHtml(optId) + '"' : '') +
@@ -464,7 +495,7 @@
         ' data-crm-sort-subject="' + escapeHtml(title.toLowerCase()) + '"' +
         ' data-crm-sort-status="' + escapeHtml(statusText.toLowerCase()) + '"' +
         ' data-crm-sort-sent="' + escapeHtml(whenSort) + '"' +
-        ' role="option" tabindex="0" aria-selected="false">' +
+        ' role="listitem" tabindex="-1" aria-current="false">' +
         selectCtl +
         '<div class="crm-mail-thread-row__main">' +
         '<p class="crm-mail-thread-row__from">' + escapeHtml(fromLabel || t('Unknown sender')) + '</p>' +
@@ -480,8 +511,9 @@
           ? ('<time class="crm-mail-thread-row__when" datetime="' + escapeHtml(whenRaw) + '">' +
             escapeHtml(whenLabel) + '</time>')
           : '<span class="crm-mail-thread-row__when crm-muted" aria-hidden="true">—</span>') +
-        '<button type="button" class="crm-btn crm-btn--ghost crm-btn--sm crm-review-open" data-crm-review-open="' +
-        escapeHtml(rowId) + '" aria-label="' + escapeHtml(t('Open details: %s', [title])) + '">' +
+        // Screen-reader / keyboard affordance only — row click already opens (no visible Open chrome).
+        '<button type="button" class="crm-sr-only crm-review-open" data-crm-review-open="' +
+        escapeHtml(rowId) + '" tabindex="-1" aria-label="' + escapeHtml(t('Open details: %s', [title])) + '">' +
         escapeHtml(t('Open')) + '</button>' +
         '</li>';
     });
@@ -503,18 +535,15 @@
       sortBtn('sent', t('Sent')) +
       sortBtn('from', t('From')) +
       sortBtn('subject', t('Subject')) +
-      sortBtn('status', t('Status')) +
       '</div>' +
       '<div class="crm-mail-3pane crm-review-mail crm-review-table">' +
       '<div class="crm-mail-3pane__thread">' +
-      '<ul class="crm-mail-thread crm-review-list" role="listbox" aria-label="' + escapeHtml(t('Message list')) + '">' +
-      rows + '</ul></div></div></div>';
+      '<ul class="crm-mail-thread crm-review-list" role="list" aria-label="' + escapeHtml(t('Message list')) + '">' +
+      rows + '</ul></div>' +
+      '<div class="crm-mail-3pane__reader crm-review-detail-row" data-crm-review-detail-row hidden></div>' +
+      '</div></div>';
     const listEl = mount.querySelector('.crm-review-list');
-    const detailLi = document.createElement('li');
-    detailLi.className = 'crm-review-detail-row';
-    detailLi.setAttribute('data-crm-review-detail-row', '');
-    detailLi.setAttribute('role', 'presentation');
-    detailLi.hidden = true;
+    const detailHost = mount.querySelector('[data-crm-review-detail-row]');
     const reader = document.createElement('section');
     reader.className = 'crm-review-detail crm-review-reader';
     reader.setAttribute('data-crm-review-reader', '');
@@ -527,19 +556,20 @@
       '<div class="crm-mail-reader__empty crm-empty-state" role="status">' +
       '<p class="crm-empty-state__text">' + escapeHtml(t('Select a message to read and decide.')) + '</p>' +
       '</div>';
-    detailLi.appendChild(reader);
-    if (listEl && listEl.firstElementChild) {
-      listEl.firstElementChild.after(detailLi);
-    } else if (listEl) {
-      listEl.appendChild(detailLi);
+    if (detailHost) {
+      detailHost.appendChild(reader);
+    }
+    const rowOptions = Array.from(mount.querySelectorAll('li.crm-review-row'));
+    if (rowOptions.length) {
+      rowOptions[0].tabIndex = 0;
     }
     return {
       boardEl: mount.querySelector('.crm-review-board'),
       listEl: listEl,
       readerEl: reader,
-      detailRowEl: detailLi,
+      detailRowEl: detailHost,
       tableEl: mount.querySelector('.crm-review-mail'),
-      options: Array.from(mount.querySelectorAll('li.crm-review-row')),
+      options: rowOptions,
       colCount: 0,
     };
   }
@@ -1584,8 +1614,17 @@
     const mailId = parseInt(wrap.getAttribute('data-crm-mail-preview') || '0', 10);
     if (!mailId || !pre) return false;
     if (btn && btn.getAttribute('aria-busy') === 'true') return false;
+    const expectedGen = (opts && Object.prototype.hasOwnProperty.call(opts, 'previewGeneration'))
+      ? opts.previewGeneration
+      : null;
+    function isStalePreview() {
+      if (!wrap.isConnected) return true;
+      return expectedGen != null && expectedGen !== mailPreviewGeneration;
+    }
     if (!pre.hidden && pre.getAttribute('data-loaded') === '1') {
       if (btn) {
+        btn.hidden = false;
+        btn.removeAttribute('hidden');
         btn.setAttribute('aria-expanded', 'true');
         btn.textContent = t('Hide message');
       }
@@ -1595,6 +1634,8 @@
       pre.hidden = false;
       pre.classList.remove('crm-mail-preview__body--pending');
       if (btn) {
+        btn.hidden = false;
+        btn.removeAttribute('hidden');
         btn.setAttribute('aria-expanded', 'true');
         btn.textContent = t('Hide message');
       }
@@ -1608,7 +1649,14 @@
       btn.setAttribute('aria-busy', 'true');
     }
     try {
-      const res = await apiPost('/api/v1/workspaces/' + ws + '/mail/' + mailId + '/preview', {});
+      const postOpts = {};
+      if (opts && opts.signal) {
+        postOpts.signal = opts.signal;
+      }
+      const res = await apiPost('/api/v1/workspaces/' + ws + '/mail/' + mailId + '/preview', {}, postOpts);
+      if (isStalePreview()) {
+        return false;
+      }
       const bodyText = (res && res.preview) || '';
       // Never use innerHTML — mail bodies are untrusted.
       pre.textContent = bodyText !== ''
@@ -1621,6 +1669,8 @@
       pre.hidden = false;
       pre.classList.remove('crm-mail-preview__body--pending');
       if (btn) {
+        btn.hidden = false;
+        btn.removeAttribute('hidden');
         btn.setAttribute('aria-expanded', 'true');
         btn.textContent = t('Hide message');
       }
@@ -1629,10 +1679,13 @@
       }
       return true;
     } catch (e) {
+      if (isAbortError(e) || isStalePreview()) {
+        return false;
+      }
       showAlert(mount, e.message || String(e));
       return false;
     } finally {
-      if (btn) {
+      if (btn && wrap.isConnected) {
         btn.disabled = false;
         btn.removeAttribute('aria-busy');
       }
@@ -1729,6 +1782,8 @@
         escapeHtml(data.disclosure) + '</p></div>';
       mount.appendChild(disclosure);
     }
+    // ARGUS MF-01: Assign is write-only — viewers may read/preview, not triage.
+    const canWrite = shellCan('write');
     const tableHost = document.createElement('section');
     tableHost.className = 'crm-card';
     tableHost.setAttribute('aria-labelledby', 'crm-mail-triage-title');
@@ -1746,10 +1801,7 @@
         const searchId = 'crm-triage-search-' + mid;
         const suggestId = 'crm-triage-suggest-' + mid;
         const hiddenId = 'crm-triage-company-' + mid;
-        return {
-          title: m.subject || m.from || t('Shared mail'),
-          meta: t('Shared') + (m.sentAt ? ' · ' + m.sentAt : '') + (m.from && m.subject ? ' · ' + m.from : ''),
-          actionHtml:
+        const previewHtml =
             '<div class="crm-mail-preview" data-crm-mail-preview="' + escapeHtml(String(mid)) + '">' +
             '<div class="crm-mail-preview__actions crm-inline-actions">' +
             '<button type="button" class="crm-btn crm-btn--secondary crm-btn--lg" data-crm-mail-preview-toggle ' +
@@ -1763,7 +1815,9 @@
             '</div>' +
             '<pre class="crm-mail-preview__body" id="crm-triage-preview-body-' + escapeHtml(String(mid)) + '" ' +
             'role="region" aria-label="' + escapeHtml(t('Message text')) + '" tabindex="0" hidden></pre>' +
-            '</div>' +
+            '</div>';
+        const assignHtml = canWrite
+          ? (
             '<form class="crm-form crm-form--inline crm-form--row crm-triage-assign" data-triage-id="' + escapeHtml(String(mid)) + '">' +
             '<label class="form-label" for="' + escapeHtml(searchId) + '">' + escapeHtml(t('Company')) + '</label>' +
             '<div class="user-picker crm-triage-company-picker">' +
@@ -1776,12 +1830,19 @@
             '<input type="hidden" id="' + escapeHtml(hiddenId) + '" name="companyId" value="" required />' +
             '</div>' +
             '<button type="submit" class="crm-btn crm-btn--primary">' + escapeHtml(t('Assign')) + '</button>' +
-            '</form>',
+            '</form>'
+          )
+          : '';
+        return {
+          title: m.subject || m.from || t('Shared mail'),
+          meta: t('Shared') + (m.sentAt ? ' · ' + m.sentAt : '') + (m.from && m.subject ? ' · ' + m.from : ''),
+          actionHtml: previewHtml + assignHtml,
         };
       }),
       t('No unmatched shared mail.'),
       t('Mail triage'),
     );
+    if (canWrite) {
     body.querySelectorAll('[data-triage-id]').forEach(function (form) {
       const mid = form.getAttribute('data-triage-id');
       const search = form.querySelector('.user-picker__search');
@@ -1842,20 +1903,30 @@
       }
       form.addEventListener('submit', async function (ev) {
         ev.preventDefault();
+        if (form.getAttribute('aria-busy') === 'true') {
+          return;
+        }
         const id = form.getAttribute('data-triage-id');
         const companyId = parseInt(hidden ? hidden.value : '0', 10);
         if (!companyId || companyId < 1) {
           showAlert(mount, t('Pick a company from the search results first.'));
           return;
         }
+        const submitBtns = form.querySelectorAll('button[type="submit"]');
+        form.setAttribute('aria-busy', 'true');
+        submitBtns.forEach(function (b) { b.disabled = true; });
         try {
           await apiPost('/api/v1/workspaces/' + ws + '/mail/' + id + '/triage', { companyId: companyId });
           await loadMail(mount);
         } catch (e) {
           showAlert(form, e.message || String(e));
+        } finally {
+          form.removeAttribute('aria-busy');
+          submitBtns.forEach(function (b) { b.disabled = false; });
         }
       });
     });
+    }
     bindMailPreviewActions(body, ws, mount);
 
     // §14.4 — failed shared sends (workspace-visible to mail.read)
@@ -2171,11 +2242,12 @@
       '<button type="submit" class="crm-btn crm-btn--primary">' + escapeHtml(t('Search')) + '</button>' +
       '</div>' +
       '</form>' +
-      '<div class="crm-review-toolbar__extra">' +
+      '<details class="crm-advanced crm-review-toolbar__extra">' +
+      '<summary class="crm-advanced__summary">' + escapeHtml(t('More search options')) + '</summary>' +
       '<label class="crm-switch" for="crm-review-include-archived">' +
       '<input type="checkbox" id="crm-review-include-archived" class="crm-input" ' + (includeArchived ? 'checked ' : '') + '/>' +
       '<span>' + escapeHtml(t('Include archived companies in suggestions')) + '</span></label>' +
-      '</div>';
+      '</details>';
     mount.appendChild(filterBar);
     const searchBar = filterBar.querySelector('form.crm-review-search');
     if (searchBar) {
@@ -2187,6 +2259,20 @@
         else mount.removeAttribute('data-crm-review-q');
         void loadReview(mount);
       });
+      // Instant search while typing (debounced) — no extra click for granny.
+      const qEl = searchBar.querySelector('#crm-review-q');
+      let searchTimer = null;
+      if (qEl) {
+        qEl.addEventListener('input', function () {
+          if (searchTimer) window.clearTimeout(searchTimer);
+          searchTimer = window.setTimeout(function () {
+            const nextQ = String(qEl.value || '').trim();
+            if (nextQ) mount.setAttribute('data-crm-review-q', nextQ);
+            else mount.removeAttribute('data-crm-review-q');
+            void loadReview(mount);
+          }, 320);
+        });
+      }
     }
     const archToggle = filterBar.querySelector('#crm-review-include-archived');
     if (archToggle) {
@@ -2215,7 +2301,7 @@
         '<button type="button" class="crm-btn crm-btn--secondary" data-crm-review-bulk-clear disabled>' +
         escapeHtml(t('Clear selection')) + '</button>' +
         '<button type="button" class="crm-btn crm-btn--primary" data-crm-review-bulk-remove disabled>' +
-        escapeHtml(t('Delete / remove selected')) + '</button>' +
+        escapeHtml(t('Remove selected')) + '</button>' +
         '</div>';
       mount.insertBefore(bulkBar, body);
     }
@@ -2277,12 +2363,12 @@
             'aria-label="' + escapeHtml(t('Answer: %s', [String(item.subject || t('Shared mail'))])) + '" ' +
             'title="' + escapeHtml(t('Opens your mail program with To and subject filled in. CustomerCheck does not send the email.')) + '">' +
             escapeHtml(t('Answer')) + '</button>' +
-            '<button type="button" class="crm-btn crm-btn--ghost" data-crm-mail-preview-toggle ' +
+            '<button type="button" class="crm-btn crm-btn--ghost" data-crm-mail-preview-toggle hidden ' +
             'id="crm-mail-preview-btn-' + escapeHtml(String(item.id)) + '" ' +
             'aria-expanded="false" aria-controls="crm-mail-preview-body-' +
             escapeHtml('r' + String(item.id) + '-m' + String(mailMsgId)) + '" ' +
             'title="' + escapeHtml(t('Plain text only — attachments stay in the mailbox.')) + '">' +
-            escapeHtml(t('Show message')) + '</button>' +
+            escapeHtml(t('Hide message')) + '</button>' +
             '</div></div></div>')
           : '';
         if (terminal && item.overhead) {
@@ -2341,14 +2427,17 @@
               pickerBlock +
               '<button type="submit" class="crm-btn crm-btn--primary crm-btn--lg">' + escapeHtml(t('Assign')) + '</button>' +
               '</div></div></div>');
+          // Optional deal stays with Assign (not under snooze) but collapsed so one-tap Assign stays calm.
           const dealField = hasSuggest
-            ? ('<div class="crm-review-more__field">' +
+            ? ('<details class="crm-advanced crm-review-deal-more">' +
+              '<summary class="crm-advanced__summary">' + escapeHtml(t('Optional deal')) + '</summary>' +
+              '<div class="crm-review-deal-field">' +
               '<label class="form-label" for="crm-review-deal-' + escapeHtml(String(item.id)) + '">' + escapeHtml(t('Deal (optional)')) + '</label>' +
               '<select id="crm-review-deal-' + escapeHtml(String(item.id)) + '" name="dealId" class="form-select crm-input" data-crm-review-deal>' +
               '<option value="">' + escapeHtml(t('No deal — mark as overhead')) + '</option>' +
               '</select>' +
-              '<p class="crm-muted crm-review-more__hint" data-crm-review-overhead-hint>' + overheadHint + '</p>' +
-              '</div>')
+              '<p class="crm-muted crm-review-deal-field__hint" data-crm-review-overhead-hint>' + overheadHint + '</p>' +
+              '</div></details>')
             : ('<input type="hidden" name="dealId" value="" data-crm-review-deal />');
           const laterBlock =
             '<details class="crm-review-more">' +
@@ -2357,7 +2446,6 @@
             '<p class="crm-muted crm-review-more__hint">' +
             escapeHtml(t('Hides this row for a while. It comes back to Review — the mail in the shared mailbox stays.')) +
             '</p>' +
-            dealField +
             '<div class="crm-review-more__field">' +
             '<p class="form-label" id="crm-review-snooze-label-' + escapeHtml(String(item.id)) + '">' + escapeHtml(t('Bring back in')) + '</p>' +
             '<div class="crm-review-snooze" role="group" aria-labelledby="crm-review-snooze-label-' + escapeHtml(String(item.id)) + '">' +
@@ -2376,6 +2464,7 @@
             '</p>' +
             '<div class="crm-review-primary">' +
             companySection +
+            dealField +
             '<div class="crm-review-decide__secondary" role="group" aria-label="' + escapeHtml(t('What should happen?')) + '">' +
             '<button type="button" class="crm-btn crm-btn--secondary" data-crm-review-none title="' +
             escapeHtml(t('Not a customer or company you track.')) + '">' +
@@ -2482,24 +2571,23 @@
       threadRows.forEach(function (row, idx) {
         const rid = row.getAttribute('data-crm-review-item-id') || '';
         const on = rid === String(id);
-        row.setAttribute('aria-selected', on ? 'true' : 'false');
+        row.setAttribute('aria-current', on ? 'true' : 'false');
         row.classList.toggle('is-selected', on);
         row.tabIndex = on ? 0 : -1;
         if (on) focusIdx = idx;
       });
-      if (board && board.listEl) {
-        const opt = id ? document.getElementById('crm-review-opt-' + id) : null;
-        if (opt) board.listEl.setAttribute('aria-activedescendant', opt.id);
-        else board.listEl.removeAttribute('aria-activedescendant');
-      }
     }
 
     function placeDetailUnderRow(row) {
-      if (!board || !board.detailRowEl || !row || !board.listEl) return board && board.readerEl;
-      const detailTr = board.detailRowEl;
-      detailTr.hidden = false;
-      if (detailTr.parentNode !== board.listEl || row.nextElementSibling !== detailTr) {
-        row.after(detailTr);
+      if (!board || !board.detailRowEl) return board && board.readerEl;
+		// Reader lives outside the thread list so axe aria-required-children stays clean.
+      board.detailRowEl.hidden = false;
+      if (row && typeof row.scrollIntoView === 'function') {
+        try {
+          row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        } catch (e) {
+          row.scrollIntoView(true);
+        }
       }
       return board.readerEl;
     }
@@ -2540,7 +2628,13 @@
         '<div class="crm-mail-reader__body" data-crm-review-reader-actions>' + (vm.actionHtml || '') + '</div></div>';
       bindMailPreviewActions(reader, ws, mount);
       // Opening a row always loads the message — never require a second click.
-      ensureMailPreviewsOpen(reader, ws, mount, { quietFocus: !!(opts && opts.quietFocus) });
+      // Bump generation + abort prior fetch so rapid j/k does not stampede IMAP.
+      const previewReq = bumpMailPreviewRequest();
+      ensureMailPreviewsOpen(reader, ws, mount, {
+        quietFocus: !!(opts && opts.quietFocus),
+        previewGeneration: previewReq.gen,
+        signal: previewReq.signal,
+      });
       if (!(opts && opts.quietFocus) && row) {
         try {
           row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -2574,7 +2668,10 @@
 
     if (board && threadRows.length) {
       board.listEl.addEventListener('click', function (ev) {
-        if (ev.target.closest && ev.target.closest('[data-crm-review-select], .crm-review-select')) return;
+        if (ev.target.closest && ev.target.closest('[data-crm-review-select], .crm-review-select')) {
+          ev.stopPropagation();
+          return;
+        }
         const openBtn = ev.target.closest ? ev.target.closest('[data-crm-review-open]') : null;
         if (openBtn) {
           ev.preventDefault();
@@ -2734,10 +2831,18 @@
     }
 
     // GNQ §5.6 keyboard: j/k move thread selection; a assign; s snooze; n no relation.
-    function focusRow(i) {
+    function focusRow(dir) {
       if (!threadRows.length) return;
-      focusIdx = (i + threadRows.length) % threadRows.length;
-      const id = threadRows[focusIdx].getAttribute('data-crm-review-item-id');
+      const visible = threadRows.filter(function (row) { return !row.hidden; });
+      if (!visible.length) return;
+      const step = dir >= 0 ? 1 : -1;
+      let cur = visible.indexOf(threadRows[focusIdx]);
+      if (cur < 0) {
+        cur = step > 0 ? -1 : 0;
+      }
+      const next = visible[(cur + step + visible.length) % visible.length];
+      focusIdx = threadRows.indexOf(next);
+      const id = next.getAttribute('data-crm-review-item-id');
       if (id) selectReviewItem(id);
     }
     if (typeof mount._crmReviewKeydown === 'function') {
@@ -2752,10 +2857,10 @@
       const form = activeReaderForm();
       if (ev.key === 'j' || ev.key === 'ArrowDown') {
         ev.preventDefault();
-        focusRow(focusIdx + 1);
+        focusRow(1);
       } else if (ev.key === 'k' || ev.key === 'ArrowUp') {
         ev.preventDefault();
-        focusRow(focusIdx - 1);
+        focusRow(-1);
       } else if (ev.key === 'a' && form) {
         const quick = form.querySelector('[data-crm-review-quick-assign]');
         if (quick) {
@@ -2811,7 +2916,7 @@
       const search = form.querySelector('.user-picker__search');
       const suggest = form.querySelector('.user-picker__list');
       const hidden = form.querySelector('[name="companyId"]');
-      const dealSelect = form.querySelector('[data-crm-review-deal]');
+      const dealSelect = form.querySelector('select[data-crm-review-deal]');
       const overheadHintEl = form.querySelector('[data-crm-review-overhead-hint]');
 
       const quickBtn = form.querySelector('[data-crm-review-quick-assign]');
@@ -2940,6 +3045,9 @@
       }
       form.addEventListener('submit', async function (ev) {
         ev.preventDefault();
+        if (form.getAttribute('aria-busy') === 'true') {
+          return;
+        }
         const companyId = parseInt(hidden ? hidden.value : '0', 10);
         if (!companyId || companyId < 1) {
           showAlert(mount, t('Pick a company from the search results first.'));
@@ -2950,6 +3058,9 @@
         if (dealRaw !== '') {
           payload.dealId = parseInt(dealRaw, 10);
         }
+        const submitBtns = form.querySelectorAll('button[type="submit"]');
+        form.setAttribute('aria-busy', 'true');
+        submitBtns.forEach(function (b) { b.disabled = true; });
         try {
           await apiPost('/api/v1/workspaces/' + ws + '/review/items/' + rid + '/assign', payload);
           await loadReview(mount);
@@ -2959,6 +3070,9 @@
           if (/handled this message|not open for triage|Reload Review/i.test(msg)) {
             try { await loadReview(mount); } catch (reloadErr) { /* keep alert */ }
           }
+        } finally {
+          form.removeAttribute('aria-busy');
+          submitBtns.forEach(function (b) { b.disabled = false; });
         }
       });
       form.querySelectorAll('[data-crm-review-snooze]').forEach(function (snoozeBtn) {
@@ -3006,8 +3120,11 @@
         discardBtn.addEventListener('click', async function () {
           const C = window.CustomerCheckComponents || window.CrmComponents;
           const isMail = discardBtn.getAttribute('data-crm-review-discard-mail') === '1';
-          const ok = C && typeof C.confirmDialog === 'function'
-            ? await C.confirmDialog({
+          if (!(C && typeof C.confirmDialog === 'function')) {
+            showAlert(form, t('Confirmation UI is unavailable. Reload the page and try again.'));
+            return;
+          }
+          const ok = await C.confirmDialog({
               title: isMail ? t('Delete this mail?') : t('Remove from Review?'),
               message: isMail
                 ? t('Deletes the message from the shared mailbox. Use this for spam and junk. It also leaves Review.')
@@ -3015,9 +3132,9 @@
               confirmLabel: isMail ? t('Delete mail') : t('Remove from Review'),
               cancelLabel: t('Cancel'),
               variant: 'danger',
-            })
-            : { confirmed: true };
+            });
           if (!ok || !ok.confirmed) return;
+          discardBtn.disabled = true;
           try {
             await apiPost('/api/v1/workspaces/' + ws + '/review/items/' + rid + '/discard', {});
             const live = document.getElementById('crm-live-region');
@@ -3026,6 +3143,7 @@
             }
             await loadReview(mount);
           } catch (e) {
+            discardBtn.disabled = false;
             showAlert(form, e.message || String(e));
           }
         });
@@ -3074,8 +3192,11 @@
     }
 
     function selectedReviewIds() {
-
       return Array.from(body.querySelectorAll('[data-crm-review-select]:checked'))
+        .filter(function (el) {
+          const row = el.closest('li.crm-review-row');
+          return !row || !row.hidden;
+        })
         .map(function (el) { return parseInt(el.value, 10); })
         .filter(function (id) { return id > 0; });
     }
@@ -3097,10 +3218,13 @@
       if (clearBtn) clearBtn.disabled = n === 0;
       if (removeBtn) {
         removeBtn.disabled = n === 0;
-        removeBtn.textContent = n > 0 ? t('Delete / remove selected') + ' (' + String(n) + ')' : t('Delete / remove selected');
+        removeBtn.textContent = n > 0 ? t('Remove selected') + ' (' + String(n) + ')' : t('Remove selected');
       }
       bulkBar.hidden = n === 0;
-      const allBoxes = Array.from(body.querySelectorAll('[data-crm-review-select]'));
+      const allBoxes = Array.from(body.querySelectorAll('[data-crm-review-select]')).filter(function (b) {
+        const row = b.closest('li.crm-review-row');
+        return !row || !row.hidden;
+      });
       const selectAlls = Array.from(body.querySelectorAll('[data-crm-review-select-all]'));
       if (selectAlls.length && allBoxes.length) {
         const checked = allBoxes.filter(function (b) { return b.checked; }).length;
@@ -3119,6 +3243,11 @@
         if (!tEl) return;
         if (tEl.matches && tEl.matches('[data-crm-review-select-all]')) {
           body.querySelectorAll('[data-crm-review-select]').forEach(function (box) {
+            const row = box.closest('li.crm-review-row');
+            if (row && row.hidden) {
+              box.checked = false;
+              return;
+            }
             box.checked = !!tEl.checked;
           });
           syncReviewBulkBar();
@@ -3151,15 +3280,17 @@
               return;
             }
             const C = window.CustomerCheckComponents || window.CrmComponents;
-            const ok = C && typeof C.confirmDialog === 'function'
-              ? await C.confirmDialog({
-                title: t('Delete or remove selected?'),
+            if (!(C && typeof C.confirmDialog === 'function')) {
+              showAlert(mount, t('Confirmation UI is unavailable. Reload the page and try again.'));
+              return;
+            }
+            const ok = await C.confirmDialog({
+                title: t('Remove selected?'),
                 message: t('Shared-mailbox messages are deleted on the mail server (spam/junk). Other items only leave Review.'),
-                confirmLabel: t('Delete / remove selected'),
+                confirmLabel: t('Remove selected'),
                 cancelLabel: t('Cancel'),
                 variant: 'danger',
-              })
-              : { confirmed: true };
+              });
             if (!ok || !ok.confirmed) return;
             removeBtn.disabled = true;
             try {

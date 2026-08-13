@@ -1,0 +1,1402 @@
+{
+  "Someone else resolved this conflict first.": {
+    "fr": "Quelqu’un d’autre a résolu ce conflit en premier.",
+    "it": "Qualcun altro ha risolto questo conflitto per primo."
+  },
+  "Someone you talk to. Name is enough; email lets you log messages.": {
+    "fr": "Quelqu’un à qui tu parles. Un nom suffit ; l’e-mail permet d’enregistrer les messages.",
+    "it": "Qualcuno con cui parli. Basta un nome; l’e-mail permette di registrare i messaggi."
+  },
+  "Something went wrong.": {
+    "fr": "Une erreur s’est produite.",
+    "it": "Qualcosa è andato storto."
+  },
+  "Sponsors and partner care fund fixes, reviews, and new features when you want them prioritised.": {
+    "fr": "Les Sponsors et le soin partenaire financent corrections, revues et nouvelles fonctionnalités quand tu veux les prioriser.",
+    "it": "I Sponsor e la cura partner finanziano correzioni, revisioni e nuove funzioni quando vuoi darle priorità."
+  },
+  "Stage": {
+    "fr": "Étape",
+    "it": "Fase"
+  },
+  "Stage went stale": {
+    "fr": "Étape devenue obsolète",
+    "it": "Fase diventata obsoleta"
+  },
+  "Stale": {
+    "fr": "Obsolète",
+    "it": "Obsoleto"
+  },
+  "Stale deal": {
+    "fr": "Deal obsolète",
+    "it": "Deal obsoleto"
+  },
+  "Stale deal days": {
+    "fr": "Jours de Deal obsolète",
+    "it": "Giorni Deal obsoleto"
+  },
+  "Stale deals": {
+    "fr": "Deals obsolètes",
+    "it": "Deal obsoleti"
+  },
+  "Stalled": {
+    "fr": "Bloqué",
+    "it": "Bloccato"
+  },
+  "Stalled plans need a next step. Use Strategy for the full plan list.": {
+    "fr": "Les plans bloqués ont besoin d’une prochaine étape. Utilise Stratégie pour la liste complète des plans.",
+    "it": "I piani bloccati richiedono un passo successivo. Usa Strategia per l’elenco completo dei piani."
+  },
+  "Start with Check Partner when you want ongoing, invoiceable care. Use the other options for a one-off workshop, a scoped feature, or official mobile licenses.": {
+    "fr": "Commence par Check Partner quand tu veux un soin continu et facturable. Utilise les autres options pour un atelier ponctuel, une fonctionnalité cadréé, ou des licences mobiles officielles.",
+    "it": "Inizia con Check Partner quando vuoi cura continua e fatturabile. Usa le altre opzioni per un workshop una tantum, una funzione delimitata, o licenze mobile ufficiali."
+  },
+  "Start with people and the shared mailbox — preferences come after.": {
+    "fr": "Commence par les personnes et la boîte mail partagée — les préférences viennent après.",
+    "it": "Inizia dalle persone e dalla casella condivisa — le preferenze vengono dopo."
+  },
+  "Start with your first customer": {
+    "fr": "Commence par ton premier client",
+    "it": "Inizia dal tuo primo cliente"
+  },
+  "Starts": {
+    "fr": "Début",
+    "it": "Inizio"
+  },
+  "Status": {
+    "fr": "Status",
+    "it": "Status"
+  },
+  "Steps of 15 minutes. Default is one hour.": {
+    "fr": "Pas de 15 minutes. Par défaut une heure.",
+    "it": "Passi di 15 minuti. Default un’ora."
+  },
+  "Steps of 15. Default is one hour.": {
+    "fr": "Pas de 15. Par défaut une heure.",
+    "it": "Passi di 15. Default un’ora."
+  },
+  "Still unpaid": {
+    "fr": "Toujours impayé",
+    "it": "Ancora non pagato"
+  },
+  "Stop reminders": {
+    "fr": "Arrêter les rappels",
+    "it": "Ferma i promemoria"
+  },
+  "Stop reminders?": {
+    "fr": "Arrêter les rappels ?",
+    "it": "Fermare i promemoria?"
+  },
+  "Stops renewals. You will be asked for a short reason.": {
+    "fr": "Arrête les renouvellements. On te demandera une courte raison.",
+    "it": "Ferma i rinnovi. Ti chiederemo una breve motivazione."
+  },
+  "Subject": {
+    "fr": "Objet",
+    "it": "Oggetto"
+  },
+  "Subject and reason are required.": {
+    "fr": "Objet et raison sont obligatoires.",
+    "it": "Oggetto e motivazione sono obbligatori."
+  },
+  "Suggested match": {
+    "fr": "Correspondance suggérée",
+    "it": "Corrispondenza suggerita"
+  },
+  "Suggested: %s": {
+    "fr": "Suggéré : %s",
+    "it": "Suggerito: %s"
+  },
+  "Sunday": {
+    "fr": "Dimanche",
+    "it": "Domenica"
+  },
+  "Superseded": {
+    "fr": "Remplacé",
+    "it": "Sostituito"
+  },
+  "Support & us": {
+    "fr": "Support et nous",
+    "it": "Supporto e noi"
+  },
+  "System": {
+    "fr": "System",
+    "it": "System"
+  },
+  "Table": {
+    "fr": "Tableau",
+    "it": "Tabella"
+  },
+  "Take the other edit": {
+    "fr": "Prendre l’autre modification",
+    "it": "Prendi l’altra modifica"
+  },
+  "Talk": {
+    "fr": "Talk",
+    "it": "Talk"
+  },
+  "Tap Import ready, then open companies to add contacts.": {
+    "fr": "Appuie sur Import prêt, puis ouvre les entreprises pour ajouter des contacts.",
+    "it": "Tocca Import pronto, poi apri le aziende per aggiungere contatti."
+  },
+  "Tap Log email under Talk after an important reply or call follow-up.": {
+    "fr": "Appuie sur Enregistrer l’e-mail sous Talk après une réponse importante ou un suivi d’appel.",
+    "it": "Tocca Registra e-mail sotto Talk dopo una risposta importante o un follow-up di chiamata."
+  },
+  "Task calendar URIs (one per line)": {
+    "fr": "URI d’agenda des tâches (une par ligne)",
+    "it": "URI calendario task (uno per riga)"
+  },
+  "Tasks": {
+    "fr": "Tasks",
+    "it": "Tasks"
+  },
+  "Tasks lists (opt-in)": {
+    "fr": "Listes Tasks (sur activation)",
+    "it": "Elenchi Tasks (su attivazione)"
+  },
+  "Team": {
+    "fr": "Team",
+    "it": "Team"
+  },
+  "Team & mailbox": {
+    "fr": "Équipe et boîte mail",
+    "it": "Team e casella"
+  },
+  "Team & mailbox settings saved": {
+    "fr": "Réglages Équipe et boîte mail enregistrés",
+    "it": "Impostazioni Team e casella salvate"
+  },
+  "Team coaching board": {
+    "fr": "Tableau de coaching d’équipe",
+    "it": "Board coaching del team"
+  },
+  "Team coaching tools need a manager role in this workspace.": {
+    "fr": "Les outils de coaching d’équipe demandent un rôle manager dans cette équipe.",
+    "it": "Gli strumenti di coaching del team richiedono un ruolo manager in questo team."
+  },
+  "Team members": {
+    "fr": "Membres de l’équipe",
+    "it": "Membri del team"
+  },
+  "Team members, shared mailbox, and your preferences.": {
+    "fr": "Membres de l’équipe, boîte mail partagée et tes préférences.",
+    "it": "Membri del team, casella condivisa e le tue preferenze."
+  },
+  "Team settings are still loading.": {
+    "fr": "Les réglages d’équipe chargent encore.",
+    "it": "Le impostazioni del team stanno ancora caricando."
+  },
+  "Team settings are still loading. Wait a moment, then try again.": {
+    "fr": "Les réglages d’équipe chargent encore. Attends un moment, puis réessaie.",
+    "it": "Le impostazioni del team stanno ancora caricando. Aspetta un momento, poi riprova."
+  },
+  "Team snapshot": {
+    "fr": "Instantané d’équipe",
+    "it": "Istantanea del team"
+  },
+  "Teammate": {
+    "fr": "Collègue",
+    "it": "Collega"
+  },
+  "Teammate who can read that folder. Never type a raw user id.": {
+    "fr": "Collègue qui peut lire ce dossier. Ne saisis jamais un id utilisateur brut.",
+    "it": "Collega che può leggere quella cartella. Non digitare mai un id utente grezzo."
+  },
+  "Teammates who need help": {
+    "fr": "Collègues qui ont besoin d’aide",
+    "it": "Colleghi che hanno bisogno di aiuto"
+  },
+  "Technical": {
+    "fr": "Technique",
+    "it": "Tecnico"
+  },
+  "Technical contact": {
+    "fr": "Contact technique",
+    "it": "Contatto tecnico"
+  },
+  "Test connection": {
+    "fr": "Tester la connexion",
+    "it": "Testa connessione"
+  },
+  "Test the connection successfully before saving.": {
+    "fr": "Teste la connexion avec succès avant d’enregistrer.",
+    "it": "Testa la connessione con successo prima di salvare."
+  },
+  "That Circle was not found or you cannot see its members.": {
+    "fr": "Ce Circle est introuvable ou tu ne peux pas voir ses membres.",
+    "it": "Quel Circle non è stato trovato oppure non puoi vedere i suoi membri."
+  },
+  "That company is not in the current workspace.": {
+    "fr": "Cette entreprise n’est pas dans l’équipe actuelle.",
+    "it": "Quell’azienda non è nel team attuale."
+  },
+  "That file is gone or you cannot read it.": {
+    "fr": "Ce fichier a disparu ou tu ne peux pas le lire.",
+    "it": "Quel file non c’è più oppure non puoi leggerlo."
+  },
+  "That folder is gone. Link a new one.": {
+    "fr": "Ce dossier a disparu. Lie-en un nouveau.",
+    "it": "Quella cartella non c’è più. Collegane una nuova."
+  },
+  "That is a file": {
+    "fr": "C’est un fichier",
+    "it": "È un file"
+  },
+  "That is a folder": {
+    "fr": "C’est un dossier",
+    "it": "È una cartella"
+  },
+  "That is enough to create one. Value and products stay under More options.": {
+    "fr": "Ça suffit pour en créer un. Valeur et produits restent sous Plus d’options.",
+    "it": "Basta per crearne uno. Valore e prodotti restano sotto Altre opzioni."
+  },
+  "That is enough — press Save. Optional details are under Advanced.": {
+    "fr": "Ça suffit — appuie sur Enregistrer. Les détails facultatifs sont sous Avancé.",
+    "it": "Basta — premi Salva. I dettagli facoltativi stanno sotto Avanzate."
+  },
+  "That is enough — press Save. Optional details stay under Advanced.": {
+    "fr": "Ça suffit — appuie sur Enregistrer. Les détails facultatifs restent sous Avancé.",
+    "it": "Basta — premi Salva. I dettagli facoltativi restano sotto Avanzate."
+  },
+  "That JSON could not be read": {
+    "fr": "Ce JSON n’a pas pu être lu",
+    "it": "Quel JSON non è stato letto"
+  },
+  "That Nextcloud group was not found.": {
+    "fr": "Ce groupe Nextcloud est introuvable.",
+    "it": "Quel gruppo Nextcloud non è stato trovato."
+  },
+  "That person needs an email address first.": {
+    "fr": "Cette personne a d’abord besoin d’une adresse e-mail.",
+    "it": "Quella persona ha prima bisogno di un’e-mail."
+  },
+  "That workspace was not found.": {
+    "fr": "Cette équipe est introuvable.",
+    "it": "Quel team non è stato trovato."
+  },
+  "The 360 page holds people, deals, mail, money, and the action plan.": {
+    "fr": "La page 360 regroupe personnes, Deals, mail, argent et le plan d’action.",
+    "it": "La pagina 360 raccoglie persone, Deal, mail, denaro e il piano d’azione."
+  },
+  "The agreement becomes cancelled and stops receiving renewal reminders.": {
+    "fr": "L’accord devient annulé et ne reçoit plus de rappels de renouvellement.",
+    "it": "L’accordo diventa annullato e non riceve più promemoria di rinnovo."
+  },
+  "The amount cannot be negative.": {
+    "fr": "Le montant ne peut pas être négatif.",
+    "it": "L’importo non può essere negativo."
+  },
+  "The Contacts link contains invalid characters.": {
+    "fr": "Le lien Contacts contient des caractères invalides.",
+    "it": "Il collegamento Contatti contiene caratteri non validi."
+  },
+  "The Contacts link is too long.": {
+    "fr": "Le lien Contacts est trop long.",
+    "it": "Il collegamento Contatti è troppo lungo."
+  },
+  "The CustomerCheck Mobile license has expired. Ask your administrator to renew it.": {
+    "fr": "La licence CustomerCheck Mobile a expiré. Demande à ton administrateur de la renouveler.",
+    "it": "La licenza CustomerCheck Mobile è scaduta. Chiedi al tuo amministratore di rinnovarla."
+  },
+  "The destination workspace was not found.": {
+    "fr": "L’équipe de destination est introuvable.",
+    "it": "Il team di destinazione non è stato trovato."
+  },
+  "The end date cannot be before the start date.": {
+    "fr": "La date de fin ne peut pas être avant la date de début.",
+    "it": "La data di fine non può essere prima della data di inizio."
+  },
+  "The grace period for \"%s\" has ended. Cancel the agreement or record a late renewal.": {
+    "fr": "Le délai de grâce pour « %s » est terminé. Annule l’accord ou enregistre un renouvellement tardif.",
+    "it": "Il periodo di grazia per « %s » è terminato. Annulla l’accordo o registra un rinnovo tardivo."
+  },
+  "The invoice for \"%s\" is paid but no license key is attached yet.": {
+    "fr": "La facture pour « %s » est payée mais aucune clé de licence n’est encore jointe.",
+    "it": "La fattura per « %s » è pagata ma non c’è ancora una chiave di licenza allegata."
+  },
+  "The key does not have the expected CUC2.<payload>.<signature> shape.": {
+    "fr": "La clé n’a pas la forme attendue CUC2.<payload>.<signature>.",
+    "it": "La chiave non ha la forma attesa CUC2.<payload>.<signature>."
+  },
+  "The key payload failed validation for CustomerCheck.": {
+    "fr": "La validation du payload de la clé a échoué pour CustomerCheck.",
+    "it": "La convalida del payload della chiave non è riuscita per CustomerCheck."
+  },
+  "The merge target is archived. Restore it or pick another company.": {
+    "fr": "La cible de fusion est archivée. Restaure-la ou choisis une autre entreprise.",
+    "it": "La destinazione di unione è archiviata. Ripristinala o scegli un’altra azienda."
+  },
+  "The message will be removed from this workspace inbox. This cannot be undone.": {
+    "fr": "Le message sera retiré de cette boîte d’équipe. Impossible d’annuler.",
+    "it": "Il messaggio sarà rimosso da questa casella del team. Non si può annullare."
+  },
+  "The mobile app stops working for everyone and all seat assignments are cleared. The web app is not affected. Continue?": {
+    "fr": "L’app mobile s’arrête pour tout le monde et toutes les attributions de sièges sont effacées. L’app web n’est pas affectée. Continuer ?",
+    "it": "L’app mobile si ferma per tutti e tutte le assegnazioni di posti vengono cancellate. L’app web non è interessata. Continuare?"
+  },
+  "The mobile app stops working for this colleague immediately. Remove the seat?": {
+    "fr": "L’app mobile s’arrête immédiatement pour ce collègue. Retirer le siège ?",
+    "it": "L’app mobile si ferma subito per questo collega. Rimuovere il posto?"
+  },
+  "The mobile license expired on %s. The mobile app is blocked until you paste a renewed key.": {
+    "fr": "La licence mobile a expiré le %s. L’app mobile est bloquée jusqu’à ce que tu colles une clé renouvelée.",
+    "it": "La licenza mobile è scaduta il %s. L’app mobile è bloccata finché non incolli una chiave rinnovata."
+  },
+  "The mobile license expires on %s (%d day(s) left). Renew in time so mobile colleagues stay connected.": {
+    "fr": "La licence mobile expire le %s (%d jour(s) restant(s)). Renouvelle à temps pour que les collègues mobiles restent connectés.",
+    "it": "La licenza mobile scade il %s (%d giorno/i rimasti). Rinnova in tempo così i colleghi mobile restano connessi."
+  },
+  "The Nextcloud folder browser could not be opened. Search by folder name instead?": {
+    "fr": "Le navigateur de dossiers Nextcloud n’a pas pu s’ouvrir. Chercher par nom de dossier à la place ?",
+    "it": "Il browser cartelle Nextcloud non si è aperto. Cercare per nome cartella invece?"
+  },
+  "The old URL will stop working immediately (HTTP 410). Continue?": {
+    "fr": "L’ancienne URL cessera de fonctionner immédiatement (HTTP 410). Continuer ?",
+    "it": "Il vecchio URL smetterà di funzionare subito (HTTP 410). Continuare?"
+  },
+  "The product code \"%s\" is not part of the agreement catalogue yet.": {
+    "fr": "Le code produit « %s » ne fait pas encore partie du catalogue des accords.",
+    "it": "Il codice prodotto « %s » non fa ancora parte del catalogo accordi."
+  },
+  "The ProjectCheck customer was created, but CustomerCheck could not save the link. Link the existing ProjectCheck customer on retry.": {
+    "fr": "Le client ProjectCheck a été créé, mais CustomerCheck n’a pas pu enregistrer le lien. Relie le client ProjectCheck existant en réessayant.",
+    "it": "Il cliente ProjectCheck è stato creato, ma CustomerCheck non ha potuto salvare il collegamento. Collega il cliente ProjectCheck esistente al nuovo tentativo."
+  },
+  "The scan actor must be a member of this workspace.": {
+    "fr": "L’acteur du scan doit être membre de cette équipe.",
+    "it": "L’attore della scansione deve essere membro di questo team."
+  },
+  "The signature does not match — the key was altered or not issued for CustomerCheck.": {
+    "fr": "La signature ne correspond pas — la clé a été altérée ou n’a pas été émise pour CustomerCheck.",
+    "it": "La firma non corrisponde — la chiave è stata alterata o non è stata emessa per CustomerCheck."
+  },
+  "The slug \"%s\" is already in use. Pick another one.": {
+    "fr": "Le slug « %s » est déjà utilisé. Choisis-en un autre.",
+    "it": "Lo slug « %s » è già in uso. Scegline un altro."
+  },
+  "The slug is the permanent key for this company and cannot be changed.": {
+    "fr": "Le slug est la clé permanente de cette entreprise et ne peut pas être changé.",
+    "it": "Lo slug è la chiave permanente di questa azienda e non può essere cambiato."
+  },
+  "The TicketCheck customer was created, but CustomerCheck could not save the link. Link the existing TicketCheck customer on retry.": {
+    "fr": "Le client TicketCheck a été créé, mais CustomerCheck n’a pas pu enregistrer le lien. Relie le client TicketCheck existant en réessayant.",
+    "it": "Il cliente TicketCheck è stato creato, ma CustomerCheck non ha potuto salvare il collegamento. Collega il cliente TicketCheck esistente al nuovo tentativo."
+  },
+  "The web app is free and never locked. A CUC2 key only unlocks the official CustomerCheck mobile app for the colleagues you pick below.": {
+    "fr": "L’app web est gratuite et jamais verrouillée. Une clé CUC2 débloque seulement l’app mobile officielle CustomerCheck pour les collègues que tu choisis ci-dessous.",
+    "it": "L’app web è gratis e non si blocca mai. Una chiave CUC2 sblocca solo l’app mobile ufficiale CustomerCheck per i colleghi che scegli sotto."
+  },
+  "These are activities logged in CustomerCheck for this workspace. Narrow by type or open vs done.": {
+    "fr": "Ce sont des activités enregistrées dans CustomerCheck pour cette équipe. Restreins par type ou ouvert vs terminé.",
+    "it": "Sono attività registrate in CustomerCheck per questo team. Restringi per tipo o aperto vs fatto."
+  },
+  "These companies belong to the workspace you selected. Type a name, or use quick filters for active and archived.": {
+    "fr": "Ces entreprises appartiennent à l’équipe que tu as sélectionnée. Tape un nom, ou utilise les filtres rapides pour actifs et archivés.",
+    "it": "Queste aziende appartengono al team che hai selezionato. Digita un nome, oppure usa i filtri rapidi per attivi e archiviati."
+  },
+  "These items come from %s. Everyone in this workspace with Review access can see them.": {
+    "fr": "Ces éléments viennent de %s. Tous dans cette équipe avec accès Review peuvent les voir.",
+    "it": "Queste voci arrivano da %s. Tutti in questo team con accesso Review possono vederle."
+  },
+  "These items come from sources your team turned on. Everyone with Review access can see them.": {
+    "fr": "Ces éléments viennent de sources activées par ton équipe. Tous avec accès Review peuvent les voir.",
+    "it": "Queste voci arrivano da fonti attivate dal tuo team. Tutti con accesso Review possono vederle."
+  },
+  "These messages come from the shared mailbox %1$s. Everyone in workspace %2$s who can read mail can see them.": {
+    "fr": "Ces messages viennent de la boîte mail partagée %1$s. Tous dans l’équipe %2$s qui peuvent lire le mail peuvent les voir.",
+    "it": "Questi messaggi arrivano dalla casella condivisa %1$s. Tutti nel team %2$s che possono leggere la mail possono vederli."
+  },
+  "These messages come from the shared mailbox. Anyone on the team who can read mail can see them.": {
+    "fr": "Ces messages viennent de la boîte mail partagée. Quiconque dans l’équipe qui peut lire le mail peut les voir.",
+    "it": "Questi messaggi arrivano dalla casella condivisa. Chiunque nel team possa leggere la mail può vederli."
+  },
+  "They wrote": {
+    "fr": "Ils ont écrit",
+    "it": "Hanno scritto"
+  },
+  "They wrote you": {
+    "fr": "Ils t’ont écrit",
+    "it": "Ti hanno scritto"
+  },
+  "This account already has an owner. Ask them or a manager to reassign it.": {
+    "fr": "Ce compte a déjà un responsable. Demande-leur ou à un manager de le réattribuer.",
+    "it": "Questo account ha già un responsabile. Chiedi a lui o a un manager di riassegnarlo."
+  },
+  "This activity changed. Reload and try again.": {
+    "fr": "Cette activité a changé. Recharge et réessaie.",
+    "it": "Questa attività è cambiata. Ricarica e riprova."
+  },
+  "This activity no longer exists.": {
+    "fr": "Cette activité n’existe plus.",
+    "it": "Questa attività non esiste più."
+  },
+  "This agreement is closed. Create a new agreement instead of editing it.": {
+    "fr": "Cet accord est clos. Crée un nouvel accord plutôt que de le modifier.",
+    "it": "Questo accordo è chiuso. Crea un nuovo accordo invece di modificarlo."
+  },
+  "This agreement no longer exists.": {
+    "fr": "Cet accord n’existe plus.",
+    "it": "Questo accordo non esiste più."
+  },
+  "This commitment is already closed. Reload the Brief.": {
+    "fr": "Cet engagement est déjà clos. Recharge le résumé.",
+    "it": "Questo impegno è già chiuso. Ricarica il riepilogo."
+  },
+  "This company already has an active budget decision-maker.": {
+    "fr": "Cette entreprise a déjà un décideur budget actif.",
+    "it": "Questa azienda ha già un decisore di budget attivo."
+  },
+  "This company is already in that workspace.": {
+    "fr": "Cette entreprise est déjà dans cette équipe.",
+    "it": "Questa azienda è già in quel team."
+  },
+  "This company is already linked to a different ProjectCheck customer.": {
+    "fr": "Cette entreprise est déjà liée à un autre client ProjectCheck.",
+    "it": "Questa azienda è già collegata a un altro cliente ProjectCheck."
+  },
+  "This company is already linked to a different TicketCheck customer.": {
+    "fr": "Cette entreprise est déjà liée à un autre client TicketCheck.",
+    "it": "Questa azienda è già collegata a un altro cliente TicketCheck."
+  },
+  "This company is not in the current workspace.": {
+    "fr": "Cette entreprise n’est pas dans l’équipe actuelle.",
+    "it": "Questa azienda non è nel team attuale."
+  },
+  "This company no longer exists.": {
+    "fr": "Cette entreprise n’existe plus.",
+    "it": "Questa azienda non esiste più."
+  },
+  "This conflict is already resolved.": {
+    "fr": "Ce conflit est déjà résolu.",
+    "it": "Questo conflitto è già risolto."
+  },
+  "This conflict record is incomplete.": {
+    "fr": "Cet enregistrement de conflit est incomplet.",
+    "it": "Questo record di conflitto è incompleto."
+  },
+  "This conflict was not found.": {
+    "fr": "Ce conflit est introuvable.",
+    "it": "Questo conflitto non è stato trovato."
+  },
+  "This contact no longer exists.": {
+    "fr": "Ce contact n’existe plus.",
+    "it": "Questo contatto non esiste più."
+  },
+  "This deal already has an owner. Ask them or a manager to reassign it.": {
+    "fr": "Ce Deal a déjà un responsable. Demande-leur ou à un manager de le réattribuer.",
+    "it": "Questo Deal ha già un responsabile. Chiedi a lui o a un manager di riassegnarlo."
+  },
+  "This deal changed. Reload and try again.": {
+    "fr": "Ce Deal a changé. Recharge et réessaie.",
+    "it": "Questo Deal è cambiato. Ricarica e riprova."
+  },
+  "This deal is won. Create a draft agreement pre-filled with company, value and products?": {
+    "fr": "Ce Deal est gagné. Créer un accord brouillon prérempli avec entreprise, valeur et produits ?",
+    "it": "Questo Deal è vinto. Creare un accordo bozza precompilato con azienda, valore e prodotti?"
+  },
+  "This deal no longer exists.": {
+    "fr": "Ce Deal n’existe plus.",
+    "it": "Questo Deal non esiste più."
+  },
+  "This draft no longer exists (or was already sent).": {
+    "fr": "Ce brouillon n’existe plus (ou a déjà été envoyé).",
+    "it": "Questa bozza non esiste più (o è già stata inviata)."
+  },
+  "This draft no longer exists.": {
+    "fr": "Ce brouillon n’existe plus.",
+    "it": "Questa bozza non esiste più."
+  },
+  "This entry is older than 7 days and can no longer be edited. Add a correcting entry instead.": {
+    "fr": "Cette entrée a plus de 7 jours et ne peut plus être modifiée. Ajoute plutôt une entrée de correction.",
+    "it": "Questa voce ha più di 7 giorni e non può più essere modificata. Aggiungi invece una voce di correzione."
+  },
+  "This file is too large (max %s).": {
+    "fr": "Ce fichier est trop volumineux (max %s).",
+    "it": "Questo file è troppo grande (max %s)."
+  },
+  "This file type is not allowed. Use a PDF (or another allowed type).": {
+    "fr": "Ce type de fichier n’est pas autorisé. Utilise un PDF (ou un autre type autorisé).",
+    "it": "Questo tipo di file non è consentito. Usa un PDF (o un altro tipo consentito)."
+  },
+  "This idempotency key was already used for a different company.": {
+    "fr": "Cette clé d’idempotence a déjà été utilisée pour une autre entreprise.",
+    "it": "Questa chiave di idempotenza è già stata usata per un’altra azienda."
+  },
+  "This inbox may include shared mail and platform sources (Contacts, Files, Calendar, Tasks, import). Everyone in this workspace with Review access can see them.": {
+    "fr": "Cette boîte peut inclure le mail partagé et des sources plateforme (Contacts, Files, Agenda, Tasks, import). Tous dans cette équipe avec accès Review peuvent les voir.",
+    "it": "Questa casella può includere mail condivisa e fonti piattaforma (Contatti, Files, Calendario, Tasks, import). Tutti in questo team con accesso Review possono vederle."
+  },
+  "This is one customer. Start with a person, then a deal if you have a quote.": {
+    "fr": "C’est un client. Commence par une personne, puis un Deal si tu as un devis.",
+    "it": "Questo è un cliente. Inizia da una persona, poi un Deal se hai un preventivo."
+  },
+  "This marks the promise as cancelled. It will no longer appear as open.": {
+    "fr": "Cela marque la promesse comme annulée. Elle n’apparaîtra plus comme ouverte.",
+    "it": "Questo segna la promessa come annullata. Non comparirà più come aperta."
+  },
+  "This message is not open for triage in the current workspace.": {
+    "fr": "Ce message n’est pas ouvert au triage dans l’équipe actuelle.",
+    "it": "Questo messaggio non è aperto allo smistamento nel team attuale."
+  },
+  "This month": {
+    "fr": "Ce mois-ci",
+    "it": "Questo mese"
+  },
+  "This month likely": {
+    "fr": "Ce mois-ci probable",
+    "it": "Questo mese probabile"
+  },
+  "This Nextcloud user does not exist.": {
+    "fr": "Cet utilisateur Nextcloud n’existe pas.",
+    "it": "Questo utente Nextcloud non esiste."
+  },
+  "This permanently deletes personal data for this company. Type the short address to confirm: %s": {
+    "fr": "Cela efface définitivement les données personnelles de cette entreprise. Tape l’adresse courte pour confirmer : %s",
+    "it": "Questo cancella definitivamente i dati personali di questa azienda. Digita l’indirizzo breve per confermare: %s"
+  },
+  "This ProjectCheck customer is already linked to another company.": {
+    "fr": "Ce client ProjectCheck est déjà lié à une autre entreprise.",
+    "it": "Questo cliente ProjectCheck è già collegato a un’altra azienda."
+  },
+  "This quarter": {
+    "fr": "Ce trimestre",
+    "it": "Questo trimestre"
+  },
+  "This review item is already closed.": {
+    "fr": "Cet élément Review est déjà clos.",
+    "it": "Questa voce Review è già chiusa."
+  },
+  "This review item was not found.": {
+    "fr": "Cet élément Review est introuvable.",
+    "it": "Questa voce Review non è stata trovata."
+  },
+  "This review source is turned off for the workspace.": {
+    "fr": "Cette source Review est désactivée pour l’équipe.",
+    "it": "Questa fonte Review è disattivata per il team."
+  },
+  "This sends as %s. Everyone on the team who can read mail can see it.": {
+    "fr": "Cela envoie en tant que %s. Toute l’équipe qui peut lire le mail peut le voir.",
+    "it": "Questo invia come %s. Tutto il team che può leggere la mail può vederlo."
+  },
+  "This sends from the shared mailbox. Everyone who can read mail can see it.": {
+    "fr": "Cela envoie depuis la boîte mail partagée. Tous ceux qui peuvent lire le mail peuvent le voir.",
+    "it": "Questo invia dalla casella condivisa. Chiunque possa leggere la mail può vederlo."
+  },
+  "This TicketCheck customer is already linked to another company.": {
+    "fr": "Ce client TicketCheck est déjà lié à une autre entreprise.",
+    "it": "Questo cliente TicketCheck è già collegato a un’altra azienda."
+  },
+  "This week": {
+    "fr": "Cette semaine",
+    "it": "Questa settimana"
+  },
+  "This week’s owned promises": {
+    "fr": "Promesses dont tu es responsable cette semaine",
+    "it": "Promesse di tua responsabilità questa settimana"
+  },
+  "this workspace": {
+    "fr": "cette équipe",
+    "it": "questo team"
+  },
+  "This workspace is archived and read-only.": {
+    "fr": "Cette équipe est archivée et en lecture seule.",
+    "it": "Questo team è archiviato e in sola lettura."
+  },
+  "This year": {
+    "fr": "Cette année",
+    "it": "Quest’anno"
+  },
+  "Three short steps to make this customer useful.": {
+    "fr": "Trois courtes étapes pour rendre ce client utile.",
+    "it": "Tre passi brevi per rendere utile questo cliente."
+  },
+  "Thursday": {
+    "fr": "Jeudi",
+    "it": "Giovedì"
+  },
+  "Ticket waiting on us": {
+    "fr": "Ticket en attente de nous",
+    "it": "Ticket in attesa di noi"
+  },
+  "TicketCheck": {
+    "fr": "TicketCheck",
+    "it": "TicketCheck"
+  },
+  "TicketCheck customer": {
+    "fr": "Client TicketCheck",
+    "it": "Cliente TicketCheck"
+  },
+  "TicketCheck did not return a customer id.": {
+    "fr": "TicketCheck n’a pas renvoyé d’id client.",
+    "it": "TicketCheck non ha restituito un id cliente."
+  },
+  "TicketCheck is not available for creating customers on this instance.": {
+    "fr": "TicketCheck n’est pas disponible pour créer des clients sur cette instance.",
+    "it": "TicketCheck non è disponibile per creare clienti su questa istanza."
+  },
+  "TicketCheck is not available on this instance, so ticket linking is disabled.": {
+    "fr": "TicketCheck n’est pas disponible sur cette instance, donc le lien tickets est désactivé.",
+    "it": "TicketCheck non è disponibile su questa istanza, quindi il collegamento ticket è disattivato."
+  },
+  "TicketCheck is not available on this instance.": {
+    "fr": "TicketCheck n’est pas disponible sur cette instance.",
+    "it": "TicketCheck non è disponibile su questa istanza."
+  },
+  "TicketCheck missing": {
+    "fr": "TicketCheck manquant",
+    "it": "TicketCheck mancante"
+  },
+  "Tickets": {
+    "fr": "Tickets",
+    "it": "Tickets"
+  },
+  "Tickets waiting": {
+    "fr": "Tickets en attente",
+    "it": "Ticket in attesa"
+  },
+  "Timeline": {
+    "fr": "Fil",
+    "it": "Timeline"
+  },
+  "Timing": {
+    "fr": "Timing",
+    "it": "Timing"
+  },
+  "Tip: start typing a name — matches from Contacts appear after you save.": {
+    "fr": "Astuce : commence à taper un nom — les correspondances Contacts apparaissent après l’enregistrement.",
+    "it": "Suggerimento: inizia a digitare un nome — le corrispondenze Contatti compaiono dopo il salvataggio."
+  },
+  "Title": {
+    "fr": "Titre",
+    "it": "Titolo"
+  },
+  "To": {
+    "fr": "À",
+    "it": "A"
+  },
+  "To colleague": {
+    "fr": "Au collègue",
+    "it": "Al collega"
+  },
+  "To log a message, use Log email under Communication above.": {
+    "fr": "Pour enregistrer un message, utilise Enregistrer l’e-mail sous Communication ci-dessus.",
+    "it": "Per registrare un messaggio, usa Registra e-mail sotto Comunicazione sopra."
+  },
+  "To-do": {
+    "fr": "Tâche",
+    "it": "To-do"
+  },
+  "Today": {
+    "fr": "Aujourd’hui",
+    "it": "Oggi"
+  },
+  "Today item": {
+    "fr": "Élément Aujourd’hui",
+    "it": "Voce Oggi"
+  },
+  "Token rotated": {
+    "fr": "Jeton renouvelé",
+    "it": "Token rinnovato"
+  },
+  "Tomorrow": {
+    "fr": "Demain",
+    "it": "Domani"
+  },
+  "Too many companies share this name. Enter a distinct slug manually.": {
+    "fr": "Trop d’entreprises partagent ce nom. Saisis un slug distinct manuellement.",
+    "it": "Troppe aziende condividono questo nome. Inserisci uno slug distinto manualmente."
+  },
+  "Too many files": {
+    "fr": "Trop de fichiers",
+    "it": "Troppi file"
+  },
+  "Too many requests. Please wait a minute and try again.": {
+    "fr": "Trop de requêtes. Attends une minute et réessaie.",
+    "it": "Troppe richieste. Aspetta un minuto e riprova."
+  },
+  "Too many requests. Try again later.": {
+    "fr": "Trop de requêtes. Réessaie plus tard.",
+    "it": "Troppe richieste. Riprova più tardi."
+  },
+  "Tools": {
+    "fr": "Outils",
+    "it": "Strumenti"
+  },
+  "Topic": {
+    "fr": "Sujet",
+    "it": "Argomento"
+  },
+  "Touch": {
+    "fr": "Contact",
+    "it": "Contatto"
+  },
+  "Try again": {
+    "fr": "Réessayer",
+    "it": "Riprova"
+  },
+  "Try another filter, or show all money again.": {
+    "fr": "Essaie un autre filtre, ou montre tout l’argent à nouveau.",
+    "it": "Prova un altro filtro, oppure mostra di nuovo tutto il denaro."
+  },
+  "Try another name.": {
+    "fr": "Essaie un autre nom.",
+    "it": "Prova un altro nome."
+  },
+  "Tuesday": {
+    "fr": "Mardi",
+    "it": "Martedì"
+  },
+  "Two people changed the same field — pick what to keep and write why.": {
+    "fr": "Deux personnes ont changé le même champ — choisis quoi garder et écris pourquoi.",
+    "it": "Due persone hanno cambiato lo stesso campo — scegli cosa tenere e scrivi perché."
+  },
+  "Two people changed the same thing. Keep what’s saved is already selected — add a short reason and Resolve.": {
+    "fr": "Deux personnes ont changé la même chose. Garder ce qui est enregistré est déjà sélectionné — ajoute une courte raison et Résoudre.",
+    "it": "Due persone hanno cambiato la stessa cosa. Tieni ciò che è salvato è già selezionato — aggiungi una breve motivazione e Risolvi."
+  },
+  "Two people changed the same thing. Pick what to keep, write a short reason, then Resolve.": {
+    "fr": "Deux personnes ont changé la même chose. Choisis quoi garder, écris une courte raison, puis Résoudre.",
+    "it": "Due persone hanno cambiato la stessa cosa. Scegli cosa tenere, scrivi una breve motivazione, poi Risolvi."
+  },
+  "Two people edited the same field — pick what to keep and write a short reason.": {
+    "fr": "Deux personnes ont modifié le même champ — choisis quoi garder et écris une courte raison.",
+    "it": "Due persone hanno modificato lo stesso campo — scegli cosa tenere e scrivi una breve motivazione."
+  },
+  "Type": {
+    "fr": "Type",
+    "it": "Tipo"
+  },
+  "Type a different value": {
+    "fr": "Saisir une autre valeur",
+    "it": "Digita un altro valore"
+  },
+  "Type at least 2 characters.": {
+    "fr": "Tape au moins 2 caractères.",
+    "it": "Digita almeno 2 caratteri."
+  },
+  "Type the short address \"%s\" exactly to confirm the deletion.": {
+    "fr": "Tape l’adresse courte « %s » exactement pour confirmer la suppression.",
+    "it": "Digita l’indirizzo breve « %s » esattamente per confermare l’eliminazione."
+  },
+  "Type the short address \"%s\" exactly to confirm the move.": {
+    "fr": "Tape l’adresse courte « %s » exactement pour confirmer le déplacement.",
+    "it": "Digita l’indirizzo breve « %s » esattamente per confermare lo spostamento."
+  },
+  "Unassigned": {
+    "fr": "Non attribué",
+    "it": "Non assegnato"
+  },
+  "Unavailable": {
+    "fr": "Indisponible",
+    "it": "Non disponibile"
+  },
+  "Unbilled hours": {
+    "fr": "Heures non facturées",
+    "it": "Ore non fatturate"
+  },
+  "Unbilled hours are not ready yet — we will not guess zero.": {
+    "fr": "Les heures non facturées ne sont pas encore prêtes — on ne devinera pas zéro.",
+    "it": "Le ore non fatturate non sono ancora pronte — non inventiamo zero."
+  },
+  "Unbilled hours unknown.": {
+    "fr": "Heures non facturées inconnues.",
+    "it": "Ore non fatturate sconosciute."
+  },
+  "Undo": {
+    "fr": "Annuler",
+    "it": "Annulla"
+  },
+  "Unique company domain match": {
+    "fr": "Correspondance unique du domaine d’entreprise",
+    "it": "Corrispondenza univoca del dominio azienda"
+  },
+  "Unknown": {
+    "fr": "Inconnu",
+    "it": "Sconosciuto"
+  },
+  "Unknown / none": {
+    "fr": "Inconnu / aucun",
+    "it": "Sconosciuto / nessuno"
+  },
+  "Unknown buying role.": {
+    "fr": "Rôle d’achat inconnu.",
+    "it": "Ruolo di acquisto sconosciuto."
+  },
+  "Unknown commitment kind.": {
+    "fr": "Type d’engagement inconnu.",
+    "it": "Tipo di impegno sconosciuto."
+  },
+  "Unknown company": {
+    "fr": "Entreprise inconnue",
+    "it": "Azienda sconosciuta"
+  },
+  "Unknown email template.": {
+    "fr": "Modèle d’e-mail inconnu.",
+    "it": "Modello e-mail sconosciuto."
+  },
+  "Unknown forecast bucket.": {
+    "fr": "Bucket de prévision inconnu.",
+    "it": "Bucket di forecast sconosciuto."
+  },
+  "Unknown import source.": {
+    "fr": "Source d’import inconnue.",
+    "it": "Fonte di import sconosciuta."
+  },
+  "Unknown Nextcloud user. Search the directory and pick a colleague.": {
+    "fr": "Utilisateur Nextcloud inconnu. Cherche dans l’annuaire et choisis un collègue.",
+    "it": "Utente Nextcloud sconosciuto. Cerca nella directory e scegli un collega."
+  },
+  "Unknown pipeline stage.": {
+    "fr": "Étape de pipeline inconnue.",
+    "it": "Fase pipeline sconosciuta."
+  },
+  "Unknown product code": {
+    "fr": "Code produit inconnu",
+    "it": "Codice prodotto sconosciuto"
+  },
+  "Unknown review source.": {
+    "fr": "Source Review inconnue.",
+    "it": "Fonte Review sconosciuta."
+  },
+  "Unknown verify action.": {
+    "fr": "Action de vérification inconnue.",
+    "it": "Azione di verifica sconosciuta."
+  },
+  "Unlabelled invoice": {
+    "fr": "Facture sans libellé",
+    "it": "Fattura senza etichetta"
+  },
+  "Unlabelled project": {
+    "fr": "Projet sans libellé",
+    "it": "Progetto senza etichetta"
+  },
+  "Unlabelled ticket": {
+    "fr": "Ticket sans libellé",
+    "it": "Ticket senza etichetta"
+  },
+  "Unlink": {
+    "fr": "Délier",
+    "it": "Scollega"
+  },
+  "Unlink folder": {
+    "fr": "Délier le dossier",
+    "it": "Scollega cartella"
+  },
+  "Unlink folder?": {
+    "fr": "Délier le dossier ?",
+    "it": "Scollegare la cartella?"
+  },
+  "Unlink from Contacts?": {
+    "fr": "Délier de Contacts ?",
+    "it": "Scollegare da Contatti?"
+  },
+  "Unlink ProjectCheck? Projects and invoices will hide until you link again.": {
+    "fr": "Délier ProjectCheck ? Les projets et factures se masqueront jusqu’à ce que tu reliés à nouveau.",
+    "it": "Scollegare ProjectCheck? Progetti e fatture si nasconderanno finché non colleghi di nuovo."
+  },
+  "Unlink TicketCheck? Tickets will hide until you link again.": {
+    "fr": "Délier TicketCheck ? Les tickets se masqueront jusqu’à ce que tu reliés à nouveau.",
+    "it": "Scollegare TicketCheck? I ticket si nasconderanno finché non colleghi di nuovo."
+  },
+  "Unlink?": {
+    "fr": "Délier ?",
+    "it": "Scollegare?"
+  },
+  "Unmapped %s: %s": {
+    "fr": "%s non mappé : %s",
+    "it": "%s non mappato: %s"
+  },
+  "Unmatched mail": {
+    "fr": "Mail non rattaché",
+    "it": "Mail non abbinata"
+  },
+  "Unmatched shared mail": {
+    "fr": "Mail partagé non rattaché",
+    "it": "Mail condivisa non abbinata"
+  },
+  "Unpaid": {
+    "fr": "Impayé",
+    "it": "Non pagato"
+  },
+  "Unpaid invoices": {
+    "fr": "Factures impayées",
+    "it": "Fatture non pagate"
+  },
+  "Unsupported file": {
+    "fr": "Fichier non pris en charge",
+    "it": "File non supportato"
+  },
+  "Until": {
+    "fr": "Jusqu’au",
+    "it": "Fino al"
+  },
+  "Untitled customer": {
+    "fr": "Client sans titre",
+    "it": "Cliente senza titolo"
+  },
+  "Up to date": {
+    "fr": "À jour",
+    "it": "Aggiornato"
+  },
+  "Update": {
+    "fr": "Mettre à jour",
+    "it": "Aggiorna"
+  },
+  "Update failed": {
+    "fr": "Échec de la mise à jour",
+    "it": "Aggiornamento non riuscito"
+  },
+  "Update the action plan on the company 360 page — keep goals short and clear.": {
+    "fr": "Mets à jour le plan d’action sur la page 360 de l’entreprise — garde des objectifs courts et clairs.",
+    "it": "Aggiorna il piano d’azione sulla pagina 360 dell’azienda — tieni obiettivi brevi e chiari."
+  },
+  "Use 3 to 64 characters: lowercase letters, digits and hyphens only.": {
+    "fr": "Utilise 3 à 64 caractères : minuscules, chiffres et tirets seulement.",
+    "it": "Usa da 3 a 64 caratteri: solo minuscole, cifre e trattini."
+  },
+  "Use a valid two-letter country code (ISO).": {
+    "fr": "Utilise un code pays à deux lettres valide (ISO).",
+    "it": "Usa un codice paese a due lettere valido (ISO)."
+  },
+  "Use Contacts match?": {
+    "fr": "Utiliser la correspondance Contacts ?",
+    "it": "Usare la corrispondenza Contatti?"
+  },
+  "Use gaps and overdue items as your meeting agenda. Keep it to three questions if you can.": {
+    "fr": "Utilise les trous et les retards comme ordre du jour. Limite-toi à trois questions si tu peux.",
+    "it": "Usa i buchi e i ritardi come agenda. Limita a tre domande se puoi."
+  },
+  "Use Jump to queue to skip to a section. Managers also see team stuck items here.": {
+    "fr": "Utilise Aller à la file pour sauter à une section. Les managers voient aussi ici les éléments bloqués de l’équipe.",
+    "it": "Usa Vai alla coda per saltare a una sezione. I manager vedono anche qui le voci bloccate del team."
+  },
+  "Use Log email or Call tomorrow under Communication after you talk.": {
+    "fr": "Utilise Enregistrer l’e-mail ou Appeler demain sous Communication après avoir parlé.",
+    "it": "Usa Registra e-mail o Chiama domani sotto Comunicazione dopo aver parlato."
+  },
+  "Use Log email or Call tomorrow under Talk when you speak.": {
+    "fr": "Utilise Enregistrer l’e-mail ou Appeler demain sous Talk quand tu parles.",
+    "it": "Usa Registra e-mail o Chiama domani sotto Talk quando parli."
+  },
+  "Use the cancel action so the cancellation reason is recorded.": {
+    "fr": "Utilise l’action annuler pour que la raison d’annulation soit enregistrée.",
+    "it": "Usa l’azione annulla così la motivazione di annullamento viene registrata."
+  },
+  "Use the two-letter country code, for example DE.": {
+    "fr": "Utilise le code pays à deux lettres, par exemple FR.",
+    "it": "Usa il codice paese a due lettere, ad esempio IT."
+  },
+  "Use this contact": {
+    "fr": "Utiliser ce contact",
+    "it": "Usa questo contatto"
+  },
+  "Use YYYY-MM-DD.": {
+    "fr": "Utilise AAAA-MM-JJ.",
+    "it": "Usa AAAA-MM-GG."
+  },
+  "Use “Open in Mail” for a contact to search your Mail accounts. CRM never copies full mailboxes — only this short log stays here.": {
+    "fr": "Utilise « Ouvrir dans Mail » pour un contact afin de chercher dans tes comptes Mail. Le CRM ne copie jamais les boîtes complètes — seul ce court journal reste ici.",
+    "it": "Usa « Apri in Mail » per un contatto per cercare nei tuoi account Mail. Il CRM non copia mai le caselle intere — resta qui solo questo breve registro."
+  },
+  "Username": {
+    "fr": "Nom d’utilisateur",
+    "it": "Nome utente"
+  },
+  "valid": {
+    "fr": "valide",
+    "it": "valido"
+  },
+  "Valid until": {
+    "fr": "Valide jusqu’au",
+    "it": "Valido fino al"
+  },
+  "Validate & save": {
+    "fr": "Valider et enregistrer",
+    "it": "Convalida e salva"
+  },
+  "Value": {
+    "fr": "Valeur",
+    "it": "Valore"
+  },
+  "Value (EUR, optional)": {
+    "fr": "Valeur (EUR, facultatif)",
+    "it": "Valore (EUR, facoltativo)"
+  },
+  "Value maps are not available.": {
+    "fr": "Les cartes de valeurs ne sont pas disponibles.",
+    "it": "Le mappe valori non sono disponibili."
+  },
+  "View only": {
+    "fr": "Lecture seule",
+    "it": "Solo visualizzazione"
+  },
+  "Viewer": {
+    "fr": "Lecteur",
+    "it": "Visualizzatore"
+  },
+  "Viewers cannot open the Team board.": {
+    "fr": "Les lecteurs ne peuvent pas ouvrir le tableau Équipe.",
+    "it": "I visualizzatori non possono aprire la board Team."
+  },
+  "Waiting on us": {
+    "fr": "En attente de nous",
+    "it": "In attesa di noi"
+  },
+  "Waiting ticket": {
+    "fr": "Ticket en attente",
+    "it": "Ticket in attesa"
+  },
+  "Waiting tickets": {
+    "fr": "Tickets en attente",
+    "it": "Ticket in attesa"
+  },
+  "We only preview first. Nothing is saved until you tap Import.": {
+    "fr": "On ne fait qu’un aperçu d’abord. Rien n’est enregistré tant que tu n’appuies pas sur Importer.",
+    "it": "Prima facciamo solo un’anteprima. Non si salva nulla finché non tocchi Importa."
+  },
+  "Webhook": {
+    "fr": "Webhook",
+    "it": "Webhook"
+  },
+  "Website inquiry": {
+    "fr": "Demande du site",
+    "it": "Richiesta dal sito"
+  },
+  "Website lead forms POST JSON to this URL. Rate limit: 30 requests per IP per 10 minutes.": {
+    "fr": "Les formulaires lead du site envoient du JSON en POST à cette URL. Limite : 30 requêtes par IP par 10 minutes.",
+    "it": "I moduli lead del sito inviano JSON in POST a questo URL. Limite: 30 richieste per IP per 10 minuti."
+  },
+  "Website lead link": {
+    "fr": "Lien lead du site",
+    "it": "Link lead del sito"
+  },
+  "Website leads must get a first touch within this many hours.": {
+    "fr": "Les leads du site doivent avoir un premier contact sous ce nombre d’heures.",
+    "it": "I lead del sito devono avere un primo contatto entro tante ore."
+  },
+  "Website order link": {
+    "fr": "Lien commande du site",
+    "it": "Link ordine del sito"
+  },
+  "Wednesday": {
+    "fr": "Mercredi",
+    "it": "Mercoledì"
+  },
+  "Week": {
+    "fr": "Semaine",
+    "it": "Settimana"
+  },
+  "Week of %s": {
+    "fr": "Semaine du %s",
+    "it": "Settimana del %s"
+  },
+  "Weekly digest notification": {
+    "fr": "Notification du résumé hebdomadaire",
+    "it": "Notifica riepilogo settimanale"
+  },
+  "Weekly digest sent": {
+    "fr": "Résumé hebdomadaire envoyé",
+    "it": "Riepilogo settimanale inviato"
+  },
+  "Weekly limits": {
+    "fr": "Limites hebdomadaires",
+    "it": "Limiti settimanali"
+  },
+  "Weekly promise check": {
+    "fr": "Contrôle des promesses hebdomadaires",
+    "it": "Controllo promesse settimanali"
+  },
+  "Weekly promise limit": {
+    "fr": "Limite de promesses hebdomadaires",
+    "it": "Limite promesse settimanali"
+  },
+  "What": {
+    "fr": "Quoi",
+    "it": "Cosa"
+  },
+  "What did you discuss?": {
+    "fr": "De quoi avez-vous parlé ?",
+    "it": "Di cosa avete discusso?"
+  },
+  "What happened on this account, newest first.": {
+    "fr": "Ce qui s’est passé sur ce compte, du plus récent au plus ancien.",
+    "it": "Cosa è successo su questo account, dal più recente."
+  },
+  "What is this deal?": {
+    "fr": "Qu’est-ce que ce Deal ?",
+    "it": "Cos’è questo Deal?"
+  },
+  "What matters": {
+    "fr": "Ce qui compte",
+    "it": "Ciò che conta"
+  },
+  "What needs attention right now.": {
+    "fr": "Ce qui demande de l’attention maintenant.",
+    "it": "Ciò che richiede attenzione adesso."
+  },
+  "What needs doing?": {
+    "fr": "Que faut-il faire ?",
+    "it": "Cosa c’è da fare?"
+  },
+  "What should you remember?": {
+    "fr": "Que dois-tu retenir ?",
+    "it": "Cosa dovresti ricordare?"
+  },
+  "What stays free": {
+    "fr": "Ce qui reste gratuit",
+    "it": "Ciò che resta gratis"
+  },
+  "What to move": {
+    "fr": "Quoi déplacer",
+    "it": "Cosa spostare"
+  },
+  "What was the email about?": {
+    "fr": "De quoi parlait l’e-mail ?",
+    "it": "Di cosa parlava l’e-mail?"
+  },
+  "What we will do": {
+    "fr": "Ce que nous ferons",
+    "it": "Cosa faremo"
+  },
+  "What will you finish?": {
+    "fr": "Que vas-tu terminer ?",
+    "it": "Cosa finirai?"
+  },
+  "What you last discussed — emails, calls and notes in one list.": {
+    "fr": "Ce dont vous avez parlé en dernier — e-mails, appels et notes en une liste.",
+    "it": "Ciò di cui avete discusso per ultimo — e-mail, chiamate e note in un elenco."
+  },
+  "What you told the customer.": {
+    "fr": "Ce que tu as dit au client.",
+    "it": "Ciò che hai detto al cliente."
+  },
+  "When": {
+    "fr": "Quand",
+    "it": "Quando"
+  },
+  "When a company is suggested, tap Assign. Use the chips to filter by source.": {
+    "fr": "Quand une entreprise est suggérée, appuie sur Attribuer. Utilise les pastilles pour filtrer par source.",
+    "it": "Quando viene suggerita un’azienda, tocca Assegna. Usa i chip per filtrare per fonte."
+  },
+  "When creating a new company from ProjectCheck": {
+    "fr": "Lors de la création d’une nouvelle entreprise depuis ProjectCheck",
+    "it": "Quando crei una nuova azienda da ProjectCheck"
+  },
+  "When invoices are overdue or unpaid, they show up here. You can also open agreements or a company.": {
+    "fr": "Quand les factures sont en retard ou impayées, elles apparaissent ici. Tu peux aussi ouvrir des accords ou une entreprise.",
+    "it": "Quando le fatture sono in ritardo o non pagate, compaiono qui. Puoi anche aprire accordi o un’azienda."
+  },
+  "When reminders and the weekly digest run.": {
+    "fr": "Quand les rappels et le résumé hebdomadaire s’exécutent.",
+    "it": "Quando partono i promemoria e il riepilogo settimanale."
+  },
+  "When shared mail or other sources need a company, they show up here.": {
+    "fr": "Quand le mail partagé ou d’autres sources ont besoin d’une entreprise, ils apparaissent ici.",
+    "it": "Quando la mail condivisa o altre fonti richiedono un’azienda, compaiono qui."
+  },
+  "When the queue is empty, jump back to Today.": {
+    "fr": "Quand la file est vide, reviens à Aujourd’hui.",
+    "it": "Quando la coda è vuota, torna a Oggi."
+  },
+  "When two people edit the same field at once, the choice shows up here.": {
+    "fr": "Quand deux personnes modifient le même champ en même temps, le choix apparaît ici.",
+    "it": "Quando due persone modificano lo stesso campo insieme, la scelta compare qui."
+  },
+  "When you write or receive something important, tap Log email — or use CRM compose helpers (renewal, delivery, Partner). Those appear here automatically.": {
+    "fr": "Quand tu écris ou reçois quelque chose d’important, appuie sur Enregistrer l’e-mail — ou utilise les aides de rédaction CRM (renouvellement, livraison, Partner). Elles apparaissent ici automatiquement.",
+    "it": "Quando scrivi o ricevi qualcosa di importante, tocca Registra e-mail — oppure usa gli aiuti di composizione CRM (rinnovo, consegna, Partner). Compariscono qui automaticamente."
+  },
+  "Where should we look?": {
+    "fr": "Où devons-nous chercher ?",
+    "it": "Dove dobbiamo guardare?"
+  },
+  "Which inboxes and folders feed Review.": {
+    "fr": "Quelles boîtes et dossiers alimentent Review.",
+    "it": "Quali caselle e cartelle alimentano Review."
+  },
+  "Which shared mailbox?": {
+    "fr": "Quelle boîte mail partagée ?",
+    "it": "Quale casella condivisa?"
+  },
+  "Who can work here — and who may send from the shared mailbox.": {
+    "fr": "Qui peut travailler ici — et qui peut envoyer depuis la boîte mail partagée.",
+    "it": "Chi può lavorare qui — e chi può inviare dalla casella condivisa."
+  },
+  "Who do you talk to at this company?": {
+    "fr": "À qui parles-tu dans cette entreprise ?",
+    "it": "Con chi parli in questa azienda?"
+  },
+  "Who is responsible for this customer? New companies default to you.": {
+    "fr": "Qui est responsable de ce client ? Les nouvelles entreprises te sont attribuées par défaut.",
+    "it": "Chi è responsabile di questo cliente? Le nuove aziende ti sono assegnate di default."
+  },
+  "Who may open CustomerCheck and who can administer it.": {
+    "fr": "Qui peut ouvrir CustomerCheck et qui peut l’administrer.",
+    "it": "Chi può aprire CustomerCheck e chi può amministrarlo."
+  },
+  "Who may use CustomerCheck, reminders, public links, mobile seats, and the agreement catalogue.": {
+    "fr": "Qui peut utiliser CustomerCheck, les rappels, les liens publics, les sièges mobiles et le catalogue des accords.",
+    "it": "Chi può usare CustomerCheck, i promemoria, i link pubblici, i posti mobile e il catalogo accordi."
+  },
+  "Who needs help": {
+    "fr": "Qui a besoin d’aide",
+    "it": "Chi ha bisogno di aiuto"
+  },
+  "Who needs help — managers only": {
+    "fr": "Qui a besoin d’aide — managers seulement",
+    "it": "Chi ha bisogno di aiuto — solo manager"
+  },
+  "Who needs help — one row per teammate. On track means fine; Needs help means coach them.": {
+    "fr": "Qui a besoin d’aide — une ligne par collègue. Sur la bonne voie veut dire ça va ; A besoin d’aide veut dire coach-les.",
+    "it": "Chi ha bisogno di aiuto — una riga per collega. In linea significa va bene; Ha bisogno di aiuto significa fai coaching."
+  },
+  "Who owes a weekly promise check.": {
+    "fr": "Qui doit un contrôle de promesses hebdomadaires.",
+    "it": "Chi deve un controllo promesse settimanali."
+  },
+  "Who wrote what": {
+    "fr": "Qui a écrit quoi",
+    "it": "Chi ha scritto cosa"
+  },
+  "Who, last talk, next step, money and renewals — at a glance.": {
+    "fr": "Qui, dernier échange, prochaine étape, argent et renouvellements — d’un coup d’œil.",
+    "it": "Chi, ultimo talk, passo successivo, denaro e rinnovi — a colpo d’occhio."
+  },
+  "Why": {
+    "fr": "Pourquoi",
+    "it": "Perché"
+  },
+  "Why this choice is right…": {
+    "fr": "Pourquoi ce choix est le bon…",
+    "it": "Perché questa scelta è quella giusta…"
+  },
+  "Win chance": {
+    "fr": "Chance de gain",
+    "it": "Probabilità di vittoria"
+  },
+  "With": {
+    "fr": "Avec",
+    "it": "Con"
+  },
+  "With whom": {
+    "fr": "Avec qui",
+    "it": "Con chi"
+  },
+  "Within 60 days": {
+    "fr": "Sous 60 jours",
+    "it": "Entro 60 giorni"
+  },
+  "Within 7 days": {
+    "fr": "Sous 7 jours",
+    "it": "Entro 7 giorni"
+  },
+  "Won": {
+    "fr": "Gagné",
+    "it": "Vinto"
+  },
+  "Won and lost deals cannot be reopened. Create a new deal instead.": {
+    "fr": "Les Deals gagnés et perdus ne peuvent pas être rouverts. Crée plutôt un nouveau Deal.",
+    "it": "I Deal vinti e persi non si possono riaprire. Crea invece un nuovo Deal."
+  },
+  "Work": {
+    "fr": "Travail",
+    "it": "Lavoro"
+  },
+  "Work top to bottom: talk → people → deals → money.": {
+    "fr": "Travaille de haut en bas : échanges → personnes → Deals → argent.",
+    "it": "Lavora dall’alto in basso: talk → persone → Deal → denaro."
+  },
+  "Works with sales-log CSV and company JSON from mail. Or click to choose a file.": {
+    "fr": "Fonctionne avec le CSV du journal des ventes et le JSON entreprise depuis le mail. Ou clique pour choisir un fichier.",
+    "it": "Funziona con il CSV del registro vendite e il JSON azienda dalla mail. Oppure clicca per scegliere un file."
+  },
+  "Workspace limit reached.": {
+    "fr": "Limite d’équipes atteinte.",
+    "it": "Limite team raggiunto."
+  },
+  "Workspace not found.": {
+    "fr": "Équipe introuvable.",
+    "it": "Team non trovato."
+  },
+  "Workspace slug must be 3–64 characters: a–z, 0–9, hyphen.": {
+    "fr": "Le slug d’équipe doit faire 3–64 caractères : a–z, 0–9, tiret.",
+    "it": "Lo slug del team deve essere di 3–64 caratteri: a–z, 0–9, trattino."
+  },
+  "Write invoice": {
+    "fr": "Écrire la facture",
+    "it": "Scrivi fattura"
+  },
+  "Wrong number of columns": {
+    "fr": "Mauvais nombre de colonnes",
+    "it": "Numero di colonne errato"
+  },
+  "You are not a member of any workspace.": {
+    "fr": "Tu n’es membre d’aucune équipe.",
+    "it": "Non sei membro di nessun team."
+  },
+  "You can attach at most %s files.": {
+    "fr": "Tu peux joindre au plus %s fichiers.",
+    "it": "Puoi allegare al massimo %s file."
+  },
+  "You can attach at most 5 files.": {
+    "fr": "Tu peux joindre au plus 5 fichiers.",
+    "it": "Puoi allegare al massimo 5 file."
+  },
+  "You can only verify your own commitments.": {
+    "fr": "Tu ne peux vérifier que tes propres engagements.",
+    "it": "Puoi verificare solo i tuoi impegni."
+  },
+  "You can open every section. Buttons to add or change stay hidden.": {
+    "fr": "Tu peux ouvrir chaque section. Les boutons pour ajouter ou modifier restent masqués.",
+    "it": "Puoi aprire ogni sezione. I pulsanti per aggiungere o modificare restano nascosti."
+  },
+  "You can read the weekly Brief here. Ask a workspace member to add commitments.": {
+    "fr": "Tu peux lire le résumé hebdomadaire ici. Demande à un membre de l’équipe d’ajouter des engagements.",
+    "it": "Puoi leggere il riepilogo settimanale qui. Chiedi a un membro del team di aggiungere impegni."
+  },
+  "You can use CustomerCheck. Only app administrators can change access policy and tokens.": {
+    "fr": "Tu peux utiliser CustomerCheck. Seuls les admins de l’app peuvent changer la politique d’accès et les jetons.",
+    "it": "Puoi usare CustomerCheck. Solo gli admin dell’app possono cambiare politica di accesso e token."
+  },
+  "You do not have access to CustomerCheck.": {
+    "fr": "Tu n’as pas accès à CustomerCheck.",
+    "it": "Non hai accesso a CustomerCheck."
+  },
+  "You do not have permission for this action in this workspace.": {
+    "fr": "Tu n’as pas la permission pour cette action dans cette équipe.",
+    "it": "Non hai il permesso per questa azione in questo team."
+  },
+  "You do not have permission to create that folder.": {
+    "fr": "Tu n’as pas la permission de créer ce dossier.",
+    "it": "Non hai il permesso di creare quella cartella."
+  },
+  "You do not have permission to send from the shared mailbox.": {
+    "fr": "Tu n’as pas la permission d’envoyer depuis la boîte mail partagée.",
+    "it": "Non hai il permesso di inviare dalla casella condivisa."
+  },
+  "You may only change your own activities in the mobile app.": {
+    "fr": "Tu ne peux modifier que tes propres activités dans l’app mobile.",
+    "it": "Nell’app mobile puoi modificare solo le tue attività."
+  },
+  "You must be signed in to claim a deal.": {
+    "fr": "Tu dois être connecté pour prendre un Deal.",
+    "it": "Devi essere connesso per prendere in carico un Deal."
+  },
+  "You need CustomerCheck administrator rights for this action.": {
+    "fr": "Tu as besoin des droits d’administrateur CustomerCheck pour cette action.",
+    "it": "Ti servono i diritti di amministratore CustomerCheck per questa azione."
+  },
+  "You wrote": {
+    "fr": "Tu as écrit",
+    "it": "Hai scritto"
+  },
+  "You wrote them": {
+    "fr": "Tu leur as écrit",
+    "it": "Hai scritto a loro"
+  },
+  "Your customer registry — find, filter, and open a 360° view.": {
+    "fr": "Ton registre clients — trouve, filtre et ouvre une vue 360°.",
+    "it": "Il tuo registro clienti — trova, filtra e apri una vista 360°."
+  }
+}

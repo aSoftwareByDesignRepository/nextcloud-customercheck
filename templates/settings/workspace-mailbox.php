@@ -17,58 +17,7 @@ $canManageWorkspace = !empty($_['canManageWorkspace']);
 	<div id="crm-ws-current" class="crm-page-stack crm-mailbox-settings__stack" hidden>
 		<p id="crm-ws-current-label" class="crm-muted crm-mailbox-settings__current crm-sr-only"></p>
 
-		<section class="crm-card" id="crm-ws-limits-card" aria-labelledby="crm-ws-limits-title">
-			<header class="crm-card__header">
-				<div class="crm-card__header-text">
-					<h3 id="crm-ws-limits-title" class="crm-card__title"><?php p($l->t('Weekly limits')); ?></h3>
-					<p class="crm-card__lead"><?php p($l->t('How many promises, how fast leads get a reply, and how long shared mail stays indexed.')); ?></p>
-				</div>
-			</header>
-			<div class="crm-card__body">
-				<form id="crm-ws-settings-form" class="crm-form crm-form--stack" novalidate>
-					<div class="form-group">
-						<label class="form-label" for="crm-ws-wip"><?php p($l->t('Weekly promise limit')); ?></label>
-						<input type="number" id="crm-ws-wip" name="wipLimit" class="form-input crm-input" min="3" max="15" step="1" required>
-						<p class="form-help"><?php p($l->t('How many new commitments the team may take on each week.')); ?></p>
-					</div>
-					<div class="form-group">
-						<label class="form-label" for="crm-ws-lead-sla"><?php p($l->t('First reply within (hours)')); ?></label>
-						<input type="number" id="crm-ws-lead-sla" name="leadSlaHours" class="form-input crm-input" min="1" max="168" step="1" required>
-						<p class="form-help"><?php p($l->t('Website leads must get a first touch within this many hours.')); ?></p>
-					</div>
-					<div class="form-group">
-						<label class="form-label" for="crm-ws-stuck"><?php p($l->t('Quote follow-up after (days)')); ?></label>
-						<input type="number" id="crm-ws-stuck" name="stuckChaseDays" class="form-input crm-input" min="1" max="90" step="1" required>
-						<p class="form-help"><?php p($l->t('Quoted deals without a follow-up show on Today after this many days.')); ?></p>
-					</div>
-					<div class="form-group">
-						<label class="form-label" for="crm-ws-mail-retention"><?php p($l->t('Shared mail retention (days)')); ?></label>
-						<input type="number" id="crm-ws-mail-retention" name="mailRetentionDays" class="form-input crm-input" min="30" max="3650" step="1" required>
-						<p class="form-help"><?php p($l->t('Indexed shared-mailbox messages older than this are deleted from CustomerCheck (minimum 30 days). The mailbox itself is unchanged.')); ?></p>
-					</div>
-					<label class="crm-switch">
-						<input type="checkbox" id="crm-ws-digest" name="digestEnabled" value="1">
-						<span><?php p($l->t('Enable weekly digest')); ?></span>
-					</label>
-					<p class="form-help"><?php
-						p($l->t('Sends a short “This week” note to managers and members. The app-wide schedule must also be on under Reminders & digest.'));
-					?></p>
-					<div class="form-group" id="crm-ws-ics-wrap" hidden>
-						<label class="form-label" for="crm-ws-ics-url"><?php p($l->t('Calendar feed for renewals')); ?></label>
-						<div class="crm-token-row">
-							<input id="crm-ws-ics-url" class="form-input crm-input" type="text" readonly value="">
-							<button type="button" class="crm-btn crm-btn--secondary" data-copy-target="crm-ws-ics-url" aria-label="<?php p($l->t('Copy calendar feed URL')); ?>"><?php p($l->t('Copy')); ?></button>
-							<button type="button" class="crm-btn crm-btn--danger" id="crm-ws-ics-rotate" aria-label="<?php p($l->t('Rotate calendar feed URL')); ?>"><?php p($l->t('Rotate')); ?></button>
-						</div>
-						<p class="form-help"><?php p($l->t('Calendar feed for renewals and open due dates. Rotate if the link leaks.')); ?></p>
-					</div>
-					<div class="crm-form-actions">
-						<button type="submit" class="crm-btn crm-btn--secondary"><?php p($l->t('Save team settings')); ?></button>
-					</div>
-				</form>
-			</div>
-		</section>
-
+		
 		<section class="crm-card" id="crm-ws-members-card" aria-labelledby="crm-ws-members-title">
 			<header class="crm-card__header">
 				<div class="crm-card__header-text">
@@ -201,10 +150,7 @@ $canManageWorkspace = !empty($_['canManageWorkspace']);
 			<div class="crm-card__body">
 				<div class="crm-callout crm-callout--warning" role="status">
 					<?php print_unescaped(IconCatalog::renderCalloutWell('alert-triangle', 'warning')); ?>
-					<p class="crm-callout__text"><?php p($l->t('Messages from a connected mailbox are shared with everyone on the team who can read mail. Do not connect a personal inbox.')); ?></p>
-				</div>
-				<div class="crm-callout" role="note">
-					<p class="crm-callout__text"><?php p($l->t('After sync: unmatched mail appears in Review (Shared mail). Matched mail appears on the company Talk feed. Send from a company or agreement — failed sends show under Review too.')); ?></p>
+					<p class="crm-callout__text"><?php p($l->t('Connect a team inbox only — not a personal one. Unmatched mail goes to Review; matched mail shows on company Talk.')); ?></p>
 				</div>
 
 				<div id="crm-mailbox-list" class="crm-mailbox-list-host" aria-live="polite"></div>
@@ -240,8 +186,10 @@ $canManageWorkspace = !empty($_['canManageWorkspace']);
 						</div>
 					</fieldset>
 
-					<fieldset class="crm-fieldset" id="crm-mailbox-servers">
-						<legend class="crm-fieldset__legend"><?php p($l->t('Mail servers')); ?></legend>
+					<details class="crm-advanced" id="crm-mailbox-servers">
+						<summary class="crm-advanced__summary"><?php p($l->t('Mail servers (from your hoster)')); ?></summary>
+						<fieldset class="crm-fieldset">
+						<legend class="crm-fieldset__legend visually-hidden"><?php p($l->t('Mail servers')); ?></legend>
 						<p class="crm-muted"><?php p($l->t('Copy these from your hoster manual setup sheet. IMAP receives mail; SMTP sends it.')); ?></p>
 						<div class="form-group">
 							<label class="form-label" for="crm-mbox-imap-host"><?php p($l->t('IMAP host')); ?></label>
@@ -280,7 +228,8 @@ $canManageWorkspace = !empty($_['canManageWorkspace']);
 							</div>
 						</div>
 						<p class="form-help"><?php p($l->t('Common defaults: IMAP 993 + SSL, SMTP 465 + SSL. Changing the port updates encryption automatically.')); ?></p>
-					</fieldset>
+						</fieldset>
+					</details>
 
 					<div id="crm-mailbox-folders-wrap" class="form-group" hidden>
 						<span class="form-label" id="crm-mbox-folders-label"><?php p($l->t('Folders to sync')); ?></span>
@@ -306,6 +255,62 @@ $canManageWorkspace = !empty($_['canManageWorkspace']);
 				</form>
 			</div>
 		</section>
+
+		<section class="crm-card" id="crm-ws-limits-card" aria-labelledby="crm-ws-limits-title">
+			<header class="crm-card__header">
+				<div class="crm-card__header-text">
+					<h3 id="crm-ws-limits-title" class="crm-card__title"><?php p($l->t('Weekly limits')); ?></h3>
+					<p class="crm-card__lead"><?php p($l->t('How many promises, how fast leads get a reply, and how long shared mail stays indexed.')); ?></p>
+				</div>
+			</header>
+			<div class="crm-card__body">
+				<form id="crm-ws-settings-form" class="crm-form crm-form--stack" novalidate>
+					<div class="form-group">
+						<label class="form-label" for="crm-ws-wip"><?php p($l->t('Weekly promise limit')); ?></label>
+						<input type="number" id="crm-ws-wip" name="wipLimit" class="form-input crm-input" min="3" max="15" step="1" required>
+						<p class="form-help"><?php p($l->t('How many new commitments the team may take on each week.')); ?></p>
+					</div>
+					<div class="form-group">
+						<label class="form-label" for="crm-ws-lead-sla"><?php p($l->t('First reply within (hours)')); ?></label>
+						<input type="number" id="crm-ws-lead-sla" name="leadSlaHours" class="form-input crm-input" min="1" max="168" step="1" required>
+						<p class="form-help"><?php p($l->t('Website leads must get a first touch within this many hours.')); ?></p>
+					</div>
+					<div class="form-group">
+						<label class="form-label" for="crm-ws-stuck"><?php p($l->t('Quote follow-up after (days)')); ?></label>
+						<input type="number" id="crm-ws-stuck" name="stuckChaseDays" class="form-input crm-input" min="1" max="90" step="1" required>
+						<p class="form-help"><?php p($l->t('Quoted deals without a follow-up show on Today after this many days.')); ?></p>
+					</div>
+					<div class="form-group">
+						<label class="form-label" for="crm-ws-mail-retention"><?php p($l->t('Shared mail retention (days)')); ?></label>
+						<input type="number" id="crm-ws-mail-retention" name="mailRetentionDays" class="form-input crm-input" min="30" max="3650" step="1" required>
+						<p class="form-help"><?php p($l->t('Indexed shared-mailbox messages older than this are deleted from CustomerCheck (minimum 30 days). The mailbox itself is unchanged.')); ?></p>
+					</div>
+					<label class="crm-switch">
+						<input type="checkbox" id="crm-ws-digest" name="digestEnabled" value="1">
+						<span><?php p($l->t('Enable weekly digest')); ?></span>
+					</label>
+					<p class="form-help"><?php
+						p($l->t('Sends a short “This week” note to managers and members. The app-wide schedule must also be on under Reminders & digest.'));
+					?></p>
+					<div class="form-group" id="crm-ws-ics-wrap" hidden>
+						<label class="form-label" for="crm-ws-ics-url"><?php p($l->t('Calendar feed for renewals')); ?></label>
+						<div class="crm-token-row">
+							<input id="crm-ws-ics-url" class="form-input crm-input" type="text" readonly value="">
+							<button type="button" class="crm-btn crm-btn--secondary" data-copy-target="crm-ws-ics-url" aria-label="<?php p($l->t('Copy calendar feed URL')); ?>"><?php p($l->t('Copy')); ?></button>
+							<button type="button" class="crm-btn crm-btn--danger" id="crm-ws-ics-rotate" aria-label="<?php p($l->t('Rotate calendar feed URL')); ?>"><?php p($l->t('Rotate')); ?></button>
+						</div>
+						<p class="form-help"><?php p($l->t('Calendar feed for renewals and open due dates. Rotate if the link leaks.')); ?></p>
+					</div>
+					<div class="crm-form-actions">
+						<button type="submit" class="crm-btn crm-btn--secondary"><?php p($l->t('Save team settings')); ?></button>
+					</div>
+				</form>
+			</div>
+		</section>
+
+		
+
+		
 
 		<details class="crm-advanced crm-card" id="crm-value-maps">
 			<summary class="crm-advanced__summary"><?php p($l->t('Data quality — country maps')); ?></summary>

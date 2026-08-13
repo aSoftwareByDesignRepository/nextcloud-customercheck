@@ -1,0 +1,1402 @@
+{
+  "Paid": {
+    "fr": "Payé",
+    "it": "Pagato"
+  },
+  "Paid (30 days)": {
+    "fr": "Payé (30 jours)",
+    "it": "Pagato (30 giorni)"
+  },
+  "Paid (last 30 days)": {
+    "fr": "Payé (30 derniers jours)",
+    "it": "Pagato (ultimi 30 giorni)"
+  },
+  "Paid lately": {
+    "fr": "Payé récemment",
+    "it": "Pagato di recente"
+  },
+  "Paid up": {
+    "fr": "À jour",
+    "it": "In regola"
+  },
+  "Parallel edits are detected with a three-way compare — not last-write-wins. Every resolution needs a reason.": {
+    "fr": "Les éditions parallèles sont détectées avec une comparaison à trois voies — pas dernier écrit gagne. Chaque résolution a besoin d’une raison.",
+    "it": "Le modifiche parallele si rilevano con un confronto a tre vie — non vince l’ultimo salvataggio. Ogni risoluzione richiede una motivazione."
+  },
+  "Parallel edits need a resolution with a reason.": {
+    "fr": "Les éditions parallèles ont besoin d’une résolution avec une raison.",
+    "it": "Le modifiche parallele richiedono una risoluzione con motivazione."
+  },
+  "Parallel edits on %1$s #%2$d need a resolution with a reason.": {
+    "fr": "Les éditions parallèles sur %1$s #%2$d ont besoin d’une résolution avec une raison.",
+    "it": "Le modifiche parallele su %1$s #%2$d richiedono una risoluzione con motivazione."
+  },
+  "Partner": {
+    "fr": "Partner",
+    "it": "Partner"
+  },
+  "Partner and project work are optional and invoiceable": {
+    "fr": "Le travail Partner et projet est facultatif et facturable",
+    "it": "Il lavoro Partner e di progetto è facoltativo e fatturabile"
+  },
+  "Partner hours": {
+    "fr": "Heures Partner",
+    "it": "Ore Partner"
+  },
+  "Partner hours alert": {
+    "fr": "Alerte heures Partner",
+    "it": "Avviso ore Partner"
+  },
+  "Partner hours running low": {
+    "fr": "Heures Partner bientôt épuisées",
+    "it": "Ore Partner quasi esaurite"
+  },
+  "Partner mail": {
+    "fr": "Mail Partner",
+    "it": "Mail Partner"
+  },
+  "Partner mail failed": {
+    "fr": "Échec du mail Partner",
+    "it": "Mail Partner non riuscita"
+  },
+  "Partner mail is for Check Partner agreements.": {
+    "fr": "Le mail Partner est pour les accords Check Partner.",
+    "it": "La mail Partner è per gli accordi Check Partner."
+  },
+  "Partner mail prepared.": {
+    "fr": "Mail Partner préparé.",
+    "it": "Mail Partner preparata."
+  },
+  "Partner quota": {
+    "fr": "Quota Partner",
+    "it": "Quota Partner"
+  },
+  "Password": {
+    "fr": "Mot de passe",
+    "it": "Password"
+  },
+  "Past due — send a payment reminder.": {
+    "fr": "En retard — envoie un rappel de paiement.",
+    "it": "In ritardo — invia un sollecito di pagamento."
+  },
+  "Paste CSV or JSON here — or one company name per line.": {
+    "fr": "Colle du CSV ou JSON ici — ou un nom d’entreprise par ligne.",
+    "it": "Incolla qui CSV o JSON — oppure un nome azienda per riga."
+  },
+  "Paste license key": {
+    "fr": "Coller la clé de licence",
+    "it": "Incolla chiave licenza"
+  },
+  "Paste the file contents": {
+    "fr": "Coller le contenu du fichier",
+    "it": "Incolla il contenuto del file"
+  },
+  "Paste the license key first.": {
+    "fr": "Colle d’abord la clé de licence.",
+    "it": "Incolla prima la chiave di licenza."
+  },
+  "Paused": {
+    "fr": "En pause",
+    "it": "In pausa"
+  },
+  "Payment reminder": {
+    "fr": "Rappel de paiement",
+    "it": "Sollecito di pagamento"
+  },
+  "Payment reminder prepared.": {
+    "fr": "Rappel de paiement préparé.",
+    "it": "Sollecito di pagamento preparato."
+  },
+  "PDF linked (file %s)": {
+    "fr": "PDF lié (fichier %s)",
+    "it": "PDF collegato (file %s)"
+  },
+  "PDF, PNG, JPEG or plain text — max 5 files, 10 MiB each.": {
+    "fr": "PDF, PNG, JPEG ou texte brut — max 5 fichiers, 10 Mio chacun.",
+    "it": "PDF, PNG, JPEG o testo semplice — max 5 file, 10 MiB ciascuno."
+  },
+  "People": {
+    "fr": "Personnes",
+    "it": "Persone"
+  },
+  "People, agreements, deals, activities and history move to the company you pick. This company is archived afterwards.": {
+    "fr": "Personnes, accords, Deals, activités et historique passent à l’entreprise que tu choisis. Cette entreprise est archivée ensuite.",
+    "it": "Persone, accordi, Deal, attività e cronologia passano all’azienda che scegli. Questa azienda viene poi archiviata."
+  },
+  "Period": {
+    "fr": "Période",
+    "it": "Periodo"
+  },
+  "Periodic scan needs a teammate login. Without it, use Send to Review only. Never type a raw user id.": {
+    "fr": "Le scan périodique a besoin du login d’un collègue. Sans ça, utilise seulement Envoyer vers Review. Ne saisis jamais un id utilisateur brut.",
+    "it": "La scansione periodica richiede il login di un collega. Senza, usa solo Invia a Review. Non digitare mai un id utente grezzo."
+  },
+  "Person": {
+    "fr": "Person",
+    "it": "Person"
+  },
+  "Person away": {
+    "fr": "Personne absente",
+    "it": "Persona assente"
+  },
+  "Personal choices that do not affect other users.": {
+    "fr": "Choix personnels qui n’affectent pas les autres utilisateurs.",
+    "it": "Scelte personali che non riguardano gli altri utenti."
+  },
+  "Personal data erased": {
+    "fr": "Données personnelles effacées",
+    "it": "Dati personali cancellati"
+  },
+  "Phone": {
+    "fr": "Téléphone",
+    "it": "Telefono"
+  },
+  "Phone tasks": {
+    "fr": "Tâches téléphone",
+    "it": "Task telefono"
+  },
+  "PHP IMAP extension is not available on this server.": {
+    "fr": "L’extension PHP IMAP n’est pas disponible sur ce serveur.",
+    "it": "L’estensione PHP IMAP non è disponibile su questo server."
+  },
+  "Pick a Circle to import.": {
+    "fr": "Choisis un Circle à importer.",
+    "it": "Scegli un Circle da importare."
+  },
+  "Pick a company first — then open Prepare meeting from that customer.": {
+    "fr": "Choisis d’abord une entreprise — puis ouvre Préparer la réunion depuis ce client.",
+    "it": "Scegli prima un’azienda — poi apri Prepara riunione da quel cliente."
+  },
+  "Pick a company from the search results first.": {
+    "fr": "Choisis d’abord une entreprise dans les résultats de recherche.",
+    "it": "Scegli prima un’azienda nei risultati di ricerca."
+  },
+  "Pick a company in this workspace.": {
+    "fr": "Choisis une entreprise dans cette équipe.",
+    "it": "Scegli un’azienda in questo team."
+  },
+  "Pick a customer folder": {
+    "fr": "Choisis un dossier client",
+    "it": "Scegli una cartella cliente"
+  },
+  "Pick a deal that belongs to this company.": {
+    "fr": "Choisis un Deal qui appartient à cette entreprise.",
+    "it": "Scegli un Deal che appartiene a questa azienda."
+  },
+  "Pick a due date for the callback.": {
+    "fr": "Choisis une date d’échéance pour le rappel.",
+    "it": "Scegli una data di scadenza per la richiamata."
+  },
+  "Pick a file (for example a PDF), not a folder.": {
+    "fr": "Choisis un fichier (par exemple un PDF), pas un dossier.",
+    "it": "Scegli un file (ad esempio un PDF), non una cartella."
+  },
+  "Pick a file in Files, then choose it.": {
+    "fr": "Choisis un fichier dans Files, puis sélectionne-le.",
+    "it": "Scegli un file in Files, poi selezionalo."
+  },
+  "Pick a file, not a folder.": {
+    "fr": "Choisis un fichier, pas un dossier.",
+    "it": "Scegli un file, non una cartella."
+  },
+  "Pick a folder": {
+    "fr": "Choisis un dossier",
+    "it": "Scegli una cartella"
+  },
+  "Pick a folder in the browser, then click Choose.": {
+    "fr": "Choisis un dossier dans le navigateur, puis clique sur Choisir.",
+    "it": "Scegli una cartella nel browser, poi clicca Scegli."
+  },
+  "Pick a folder, not a file.": {
+    "fr": "Choisis un dossier, pas un fichier.",
+    "it": "Scegli una cartella, non un file."
+  },
+  "Pick a loss reason code.": {
+    "fr": "Choisis un code de raison de perte.",
+    "it": "Scegli un codice motivo di perdita."
+  },
+  "Pick a manager on this company.": {
+    "fr": "Choisis un manager sur cette entreprise.",
+    "it": "Scegli un manager su questa azienda."
+  },
+  "Pick a match": {
+    "fr": "Choisis une correspondance",
+    "it": "Scegli una corrispondenza"
+  },
+  "Pick a Nextcloud group to import.": {
+    "fr": "Choisis un groupe Nextcloud à importer.",
+    "it": "Scegli un gruppo Nextcloud da importare."
+  },
+  "Pick a PDF file you can read in Files.": {
+    "fr": "Choisis un fichier PDF que tu peux lire dans Files.",
+    "it": "Scegli un file PDF che puoi leggere in Files."
+  },
+  "Pick a person on this company.": {
+    "fr": "Choisis une personne sur cette entreprise.",
+    "it": "Scegli una persona su questa azienda."
+  },
+  "Pick a reason": {
+    "fr": "Choisis une raison",
+    "it": "Scegli una motivazione"
+  },
+  "Pick a record that belongs to this company.": {
+    "fr": "Choisis un enregistrement qui appartient à cette entreprise.",
+    "it": "Scegli un record che appartiene a questa azienda."
+  },
+  "Pick a teammate for 1:1 prep.": {
+    "fr": "Choisis un collègue pour préparer un 1:1.",
+    "it": "Scegli un collega per preparare un 1:1."
+  },
+  "Pick a type, status or expiry window — applies instantly.": {
+    "fr": "Choisis un type, un statut ou une fenêtre d’expiration — s’applique tout de suite.",
+    "it": "Scegli un tipo, uno stato o una finestra di scadenza — si applica subito."
+  },
+  "Pick a workspace first.": {
+    "fr": "Choisis d’abord une équipe.",
+    "it": "Scegli prima un team."
+  },
+  "Pick an agreement that belongs to this company.": {
+    "fr": "Choisis un accord qui appartient à cette entreprise.",
+    "it": "Scegli un accordo che appartiene a questa azienda."
+  },
+  "Pick one row and finish it — follow-ups, renewals, mail, and tasks waiting on you.": {
+    "fr": "Choisis une ligne et termine-la — suivis, renouvellements, mail et tâches qui t’attendent.",
+    "it": "Scegli una riga e finiscila — follow-up, rinnovi, mail e task che ti aspettano."
+  },
+  "Pick PDF": {
+    "fr": "Choisir PDF",
+    "it": "Scegli PDF"
+  },
+  "Pick table or board as your default deals view. Access policy and seats live under App settings.": {
+    "fr": "Choisis tableau ou board comme vue Deals par défaut. Politique d’accès et sièges sont sous Réglages de l’app.",
+    "it": "Scegli tabella o board come vista Deal predefinita. Politica di accesso e posti stanno sotto Impostazioni app."
+  },
+  "Pick the company this activity belongs to.": {
+    "fr": "Choisis l’entreprise à laquelle appartient cette activité.",
+    "it": "Scegli l’azienda a cui appartiene questa attività."
+  },
+  "Pick the company this agreement belongs to.": {
+    "fr": "Choisis l’entreprise à laquelle appartient cet accord.",
+    "it": "Scegli l’azienda a cui appartiene questo accordo."
+  },
+  "Pick the company this promise belongs to.": {
+    "fr": "Choisis l’entreprise à laquelle appartient cette promesse.",
+    "it": "Scegli l’azienda a cui appartiene questa promessa."
+  },
+  "Pick the ProjectCheck customer by name to load invoices and projects. Choose “Not linked” to unlink.": {
+    "fr": "Choisis le client ProjectCheck par nom pour charger factures et projets. Choisis « Non lié » pour délier.",
+    "it": "Scegli il cliente ProjectCheck per nome per caricare fatture e progetti. Scegli « Non collegato » per scollegare."
+  },
+  "Pick the TicketCheck customer by name for open tickets on the 360 view. Choose “Not linked” to unlink.": {
+    "fr": "Choisis le client TicketCheck par nom pour les tickets ouverts dans la vue 360. Choisis « Non lié » pour délier.",
+    "it": "Scegli il cliente TicketCheck per nome per i ticket aperti nella vista 360. Scegli « Non collegato » per scollegare."
+  },
+  "Pick who is out and who covers them. Ownership stays with the primary.": {
+    "fr": "Choisis qui est absent et qui le couvre. La responsabilité reste au principal.",
+    "it": "Scegli chi è assente e chi lo copre. La responsabilità resta al principale."
+  },
+  "Plan at risk": {
+    "fr": "Plan à risque",
+    "it": "Piano a rischio"
+  },
+  "Plan goal": {
+    "fr": "Objectif du plan",
+    "it": "Obiettivo del piano"
+  },
+  "Plan healthy": {
+    "fr": "Plan sain",
+    "it": "Piano sano"
+  },
+  "Plan owner": {
+    "fr": "Responsable du plan",
+    "it": "Responsabile del piano"
+  },
+  "Plan stalled": {
+    "fr": "Plan bloqué",
+    "it": "Piano bloccato"
+  },
+  "Planning labels — not expected cash.": {
+    "fr": "Libellés de planification — pas l’encaissement attendu.",
+    "it": "Etichette di pianificazione — non l’incasso previsto."
+  },
+  "Plans": {
+    "fr": "Plans",
+    "it": "Piani"
+  },
+  "Plans that need a look": {
+    "fr": "Plans qui méritent un regard",
+    "it": "Piani da dare un’occhiata"
+  },
+  "Please choose a .csv, .json, or .txt file from mail.": {
+    "fr": "Choisis un fichier .csv, .json ou .txt depuis le mail.",
+    "it": "Scegli un file .csv, .json o .txt dalla mail."
+  },
+  "Please correct the highlighted fields.": {
+    "fr": "Corrige les champs surlignés.",
+    "it": "Correggi i campi evidenziati."
+  },
+  "Please fill in: %s": {
+    "fr": "Remplis : %s",
+    "it": "Compila: %s"
+  },
+  "Possible": {
+    "fr": "Possible",
+    "it": "Possibile"
+  },
+  "Preference saved": {
+    "fr": "Préférence enregistrée",
+    "it": "Preferenza salvata"
+  },
+  "Preferences": {
+    "fr": "Préférences",
+    "it": "Preferenze"
+  },
+  "Preferences, members, mailbox, and integrations.": {
+    "fr": "Préférences, membres, boîte mail et intégrations.",
+    "it": "Preferenze, membri, casella e integrazioni."
+  },
+  "Prepare meeting": {
+    "fr": "Préparer la réunion",
+    "it": "Prepara riunione"
+  },
+  "Prepared message": {
+    "fr": "Message préparé",
+    "it": "Messaggio preparato"
+  },
+  "Preview matches": {
+    "fr": "Aperçu des correspondances",
+    "it": "Anteprima corrispondenze"
+  },
+  "Price": {
+    "fr": "Prix",
+    "it": "Prezzo"
+  },
+  "Primary": {
+    "fr": "Principal",
+    "it": "Principale"
+  },
+  "Primary contact": {
+    "fr": "Contact principal",
+    "it": "Contatto principale"
+  },
+  "Priority": {
+    "fr": "Priorité",
+    "it": "Priorità"
+  },
+  "Private mail": {
+    "fr": "Mail privé",
+    "it": "Mail privata"
+  },
+  "Private to you": {
+    "fr": "Privé pour toi",
+    "it": "Privato per te"
+  },
+  "Product": {
+    "fr": "Produit",
+    "it": "Prodotto"
+  },
+  "Product \"%1$s\" is always of kind \"%2$s\".": {
+    "fr": "Le produit « %1$s » est toujours de type « %2$s ».",
+    "it": "Il prodotto « %1$s » è sempre di tipo « %2$s »."
+  },
+  "Product codes": {
+    "fr": "Codes produit",
+    "it": "Codici prodotto"
+  },
+  "Products (optional)": {
+    "fr": "Produits (facultatif)",
+    "it": "Prodotti (facoltativo)"
+  },
+  "ProjectCheck": {
+    "fr": "ProjectCheck",
+    "it": "ProjectCheck"
+  },
+  "ProjectCheck customer": {
+    "fr": "Client ProjectCheck",
+    "it": "Cliente ProjectCheck"
+  },
+  "ProjectCheck did not return a customer id.": {
+    "fr": "ProjectCheck n’a pas renvoyé d’id client.",
+    "it": "ProjectCheck non ha restituito un id cliente."
+  },
+  "ProjectCheck is not available for creating customers on this instance.": {
+    "fr": "ProjectCheck n’est pas disponible pour créer des clients sur cette instance.",
+    "it": "ProjectCheck non è disponibile per creare clienti su questa istanza."
+  },
+  "ProjectCheck is not available on this instance, so invoice/project linking is disabled.": {
+    "fr": "ProjectCheck n’est pas disponible sur cette instance, donc le lien factures/projets est désactivé.",
+    "it": "ProjectCheck non è disponibile su questa istanza, quindi il collegamento fatture/progetti è disattivato."
+  },
+  "ProjectCheck is not available on this instance.": {
+    "fr": "ProjectCheck n’est pas disponible sur cette instance.",
+    "it": "ProjectCheck non è disponibile su questa istanza."
+  },
+  "ProjectCheck is off — unbilled hours cannot be shown.": {
+    "fr": "ProjectCheck est désactivé — les heures non facturées ne peuvent pas s’afficher.",
+    "it": "ProjectCheck è spento — le ore non fatturate non possono essere mostrate."
+  },
+  "ProjectCheck missing": {
+    "fr": "ProjectCheck manquant",
+    "it": "ProjectCheck mancante"
+  },
+  "ProjectCheck name not updated": {
+    "fr": "Nom ProjectCheck non mis à jour",
+    "it": "Nome ProjectCheck non aggiornato"
+  },
+  "ProjectCheck or TicketCheck links are optional. You can add them after save.": {
+    "fr": "Les liens ProjectCheck ou TicketCheck sont facultatifs. Tu peux les ajouter après l’enregistrement.",
+    "it": "I collegamenti ProjectCheck o TicketCheck sono facoltativi. Puoi aggiungerli dopo il salvataggio."
+  },
+  "Projects": {
+    "fr": "Projets",
+    "it": "Progetti"
+  },
+  "Projects, tickets and invoices — expand when you need them.": {
+    "fr": "Projets, tickets et factures — déplie quand tu en as besoin.",
+    "it": "Progetti, ticket e fatture — espandi quando ti servono."
+  },
+  "Promise": {
+    "fr": "Promesse",
+    "it": "Promessa"
+  },
+  "Promise added.": {
+    "fr": "Promesse ajoutée.",
+    "it": "Promessa aggiunta."
+  },
+  "Promise cancelled.": {
+    "fr": "Promesse annulée.",
+    "it": "Promessa annullata."
+  },
+  "Promise marked done.": {
+    "fr": "Promesse marquée terminée.",
+    "it": "Promessa segnata come fatta."
+  },
+  "Promise overdue": {
+    "fr": "Promesse en retard",
+    "it": "Promessa in ritardo"
+  },
+  "Promises": {
+    "fr": "Promesses",
+    "it": "Promesse"
+  },
+  "promises": {
+    "fr": "promesses",
+    "it": "promesse"
+  },
+  "Promises left": {
+    "fr": "Promesses restantes",
+    "it": "Promesse rimaste"
+  },
+  "Provide a valid email address.": {
+    "fr": "Indique une adresse e-mail valide.",
+    "it": "Indica un’e-mail valida."
+  },
+  "Provide a valid email or a phone number (at least 5 characters).": {
+    "fr": "Indique un e-mail valide ou un numéro de téléphone (au moins 5 caractères).",
+    "it": "Indica un’e-mail valida o un numero di telefono (almeno 5 caratteri)."
+  },
+  "Public calendar URL for agreement renewals. Rotate if the link leaks.": {
+    "fr": "URL d’agenda publique pour les renouvellements d’accords. Renouvelle le lien s’il fuit.",
+    "it": "URL calendario pubblica per i rinnovi degli accordi. Rinnova il link se esce."
+  },
+  "Public feeds & intake": {
+    "fr": "Flux publics et entrée",
+    "it": "Feed pubblici e ingresso"
+  },
+  "Push a stalled plan": {
+    "fr": "Débloquer un plan bloqué",
+    "it": "Sblocca un piano bloccato"
+  },
+  "Qualify opportunity": {
+    "fr": "Qualifier l’opportunité",
+    "it": "Qualifica opportunità"
+  },
+  "Queues": {
+    "fr": "Files d’attente",
+    "it": "Code di attesa"
+  },
+  "Quick filters": {
+    "fr": "Filtres rapides",
+    "it": "Filtri rapidi"
+  },
+  "Quick navigation": {
+    "fr": "Navigation rapide",
+    "it": "Navigazione rapida"
+  },
+  "Quick promises": {
+    "fr": "Promesses rapides",
+    "it": "Promesse rapide"
+  },
+  "Quick start": {
+    "fr": "Démarrage rapide",
+    "it": "Avvio rapido"
+  },
+  "Quote %s days old": {
+    "fr": "Devis vieux de %s jours",
+    "it": "Preventivo di %s giorni"
+  },
+  "Quote age": {
+    "fr": "Âge du devis",
+    "it": "Età del preventivo"
+  },
+  "Quote file": {
+    "fr": "Fichier devis",
+    "it": "File preventivo"
+  },
+  "Quote follow-up after (days)": {
+    "fr": "Suivi devis après (jours)",
+    "it": "Follow-up preventivo dopo (giorni)"
+  },
+  "Quote follow-up due": {
+    "fr": "Suivi devis dû",
+    "it": "Follow-up preventivo in scadenza"
+  },
+  "Quote PDF": {
+    "fr": "PDF devis",
+    "it": "PDF preventivo"
+  },
+  "Quote sent on": {
+    "fr": "Devis envoyé le",
+    "it": "Preventivo inviato il"
+  },
+  "Quoted": {
+    "fr": "Devisé",
+    "it": "Preventivato"
+  },
+  "Quoted deals without a follow-up show on Today after this many days.": {
+    "fr": "Les Deals devisés sans suivi apparaissent dans Aujourd’hui après ce nombre de jours.",
+    "it": "I Deal preventivati senza follow-up compaiono in Oggi dopo tanti giorni."
+  },
+  "Quotes and opportunities for this customer.": {
+    "fr": "Devis et opportunités pour ce client.",
+    "it": "Preventivi e opportunità per questo cliente."
+  },
+  "Quotes sitting too long show up on Today. Open the deal and follow up or close it.": {
+    "fr": "Les devis qui traînent apparaissent dans Aujourd’hui. Ouvre le Deal et relance ou clos.",
+    "it": "I preventivi che restano fermi compaiono in Oggi. Apri il Deal e fai follow-up o chiudi."
+  },
+  "Raw value": {
+    "fr": "Valeur brute",
+    "it": "Valore grezzo"
+  },
+  "Read-only from InvoiceCheck when linked.": {
+    "fr": "Lecture seule depuis InvoiceCheck quand c’est lié.",
+    "it": "Sola lettura da InvoiceCheck quando è collegato."
+  },
+  "Read-only from ProjectCheck when linked.": {
+    "fr": "Lecture seule depuis ProjectCheck quand c’est lié.",
+    "it": "Sola lettura da ProjectCheck quando è collegato."
+  },
+  "Read-only view. Open a company to inspect — editing is locked for viewers.": {
+    "fr": "Vue en lecture seule. Ouvre une entreprise pour inspecter — la modification est verrouillée pour les lecteurs.",
+    "it": "Vista in sola lettura. Apri un’azienda per ispezionare — la modifica è bloccata per i visualizzatori."
+  },
+  "Ready": {
+    "fr": "Prêt",
+    "it": "Pronto"
+  },
+  "Ready rows can be imported in one tap.": {
+    "fr": "Les lignes Prêt peuvent être importées en un appui.",
+    "it": "Le righe Pronto si possono importare con un tocco."
+  },
+  "Ready.": {
+    "fr": "Prêt.",
+    "it": "Pronto."
+  },
+  "Reason": {
+    "fr": "Raison",
+    "it": "Motivazione"
+  },
+  "Reason for manager override": {
+    "fr": "Raison de l’override manager",
+    "it": "Motivazione override manager"
+  },
+  "Reassign": {
+    "fr": "Réattribuer",
+    "it": "Riassegna"
+  },
+  "Reassign deals and promises with a typed confirm, or escalate when a manager must step in.": {
+    "fr": "Réattribue Deals et promesses avec une confirmation tapée, ou escalade quand un manager doit intervenir.",
+    "it": "Riassegna Deal e promesse con conferma digitata, oppure scala quando deve intervenire un manager."
+  },
+  "Reassign deals, accounts, and promises in one safe step.": {
+    "fr": "Réattribue Deals, comptes et promesses en une étape sûre.",
+    "it": "Riassegna Deal, account e promesse in un passo sicuro."
+  },
+  "Recent Mail hits for this company’s people, plus everything you logged in CRM.": {
+    "fr": "Résultats Mail récents pour les personnes de cette entreprise, plus tout ce que tu as enregistré dans le CRM.",
+    "it": "Risultati Mail recenti per le persone di questa azienda, più tutto ciò che hai registrato nel CRM."
+  },
+  "Recently paid agreements.": {
+    "fr": "Accords payés récemment.",
+    "it": "Accordi pagati di recente."
+  },
+  "Recommended": {
+    "fr": "Recommandé",
+    "it": "Consigliato"
+  },
+  "record": {
+    "fr": "enregistrement",
+    "it": "record"
+  },
+  "Reference": {
+    "fr": "Référence",
+    "it": "Riferimento"
+  },
+  "Refresh": {
+    "fr": "Actualiser",
+    "it": "Aggiorna"
+  },
+  "Related apps load here when available.": {
+    "fr": "Les apps liées se chargent ici quand elles sont disponibles.",
+    "it": "Le app collegate si caricano qui quando disponibili."
+  },
+  "Related mail": {
+    "fr": "Mail lié",
+    "it": "Mail correlata"
+  },
+  "Reminder hour": {
+    "fr": "Heure des rappels",
+    "it": "Ora dei promemoria"
+  },
+  "Reminders": {
+    "fr": "Rappels",
+    "it": "Promemoria"
+  },
+  "Reminders & digest": {
+    "fr": "Rappels et résumé",
+    "it": "Promemoria e riepilogo"
+  },
+  "Remote onboarding or a workshop so your team can roll out cleanly — billed as a service.": {
+    "fr": "Onboarding à distance ou atelier pour un déploiement propre — facturé comme service.",
+    "it": "Onboarding remoto o workshop per un rollout pulito — fatturato come servizio."
+  },
+  "Remove": {
+    "fr": "Retirer",
+    "it": "Rimuovi"
+  },
+  "Remove %s": {
+    "fr": "Retirer %s",
+    "it": "Rimuovi %s"
+  },
+  "Remove custom code": {
+    "fr": "Retirer le code perso",
+    "it": "Rimuovi codice personalizzato"
+  },
+  "Remove license": {
+    "fr": "Retirer la licence",
+    "it": "Rimuovi licenza"
+  },
+  "Remove member": {
+    "fr": "Retirer le membre",
+    "it": "Rimuovi membro"
+  },
+  "Remove mobile seat": {
+    "fr": "Retirer le siège mobile",
+    "it": "Rimuovi posto mobile"
+  },
+  "Remove mobile seat of %s": {
+    "fr": "Retirer le siège mobile de %s",
+    "it": "Rimuovi posto mobile di %s"
+  },
+  "Remove seat": {
+    "fr": "Retirer le siège",
+    "it": "Rimuovi posto"
+  },
+  "Removes the address-book link only. The contact stays in Contacts.": {
+    "fr": "Retire seulement le lien carnet d’adresses. Le contact reste dans Contacts.",
+    "it": "Rimuove solo il collegamento rubrica. Il contatto resta in Contatti."
+  },
+  "Removes the link only. Files stay in Nextcloud Files.": {
+    "fr": "Retire seulement le lien. Les fichiers restent dans Nextcloud Files.",
+    "it": "Rimuove solo il collegamento. I file restano in Nextcloud Files."
+  },
+  "Renew": {
+    "fr": "Renouveler",
+    "it": "Rinnova"
+  },
+  "Renew agreement": {
+    "fr": "Renouveler l’accord",
+    "it": "Rinnova accordo"
+  },
+  "Renew creates a new agreement one year out and closes this one. Money and reminders update.": {
+    "fr": "Renouveler crée un nouvel accord dans un an et clos celui-ci. Argent et rappels se mettent à jour.",
+    "it": "Rinnova crea un nuovo accordo tra un anno e chiude questo. Denaro e promemoria si aggiornano."
+  },
+  "Renew failed": {
+    "fr": "Échec du renouvellement",
+    "it": "Rinnovo non riuscito"
+  },
+  "Renew for one year": {
+    "fr": "Renouveler pour un an",
+    "it": "Rinnova per un anno"
+  },
+  "Renew for one year?": {
+    "fr": "Renouveler pour un an ?",
+    "it": "Rinnovare per un anno?"
+  },
+  "Renewal": {
+    "fr": "Renouvellement",
+    "it": "Rinnovo"
+  },
+  "Renewal dates feed Money and company glance — keep end dates accurate.": {
+    "fr": "Les dates de renouvellement alimentent Argent et l’aperçu entreprise — garde les dates de fin exactes.",
+    "it": "Le date di rinnovo alimentano Denaro e l’occhiata azienda — tieni le date di fine precise."
+  },
+  "Renewal in %s days": {
+    "fr": "Renouvellement dans %s jours",
+    "it": "Rinnovo tra %s giorni"
+  },
+  "Renewal reminder": {
+    "fr": "Rappel de renouvellement",
+    "it": "Promemoria rinnovo"
+  },
+  "Renewal reminder cadence (60/30/7/0/+7)": {
+    "fr": "Cadence des rappels de renouvellement (60/30/7/0/+7)",
+    "it": "Cadenza promemoria rinnovo (60/30/7/0/+7)"
+  },
+  "Renewal reminder sent": {
+    "fr": "Rappel de renouvellement envoyé",
+    "it": "Promemoria rinnovo inviato"
+  },
+  "Renewal reminder skipped": {
+    "fr": "Rappel de renouvellement ignoré",
+    "it": "Promemoria rinnovo saltato"
+  },
+  "Renewal soon": {
+    "fr": "Renouvellement bientôt",
+    "it": "Rinnovo presto"
+  },
+  "Renewals in the next 90 days": {
+    "fr": "Renouvellements dans les 90 prochains jours",
+    "it": "Rinnovi nei prossimi 90 giorni"
+  },
+  "Renewals next month": {
+    "fr": "Renouvellements le mois prochain",
+    "it": "Rinnovi il mese prossimo"
+  },
+  "Renewals soon": {
+    "fr": "Renouvellements bientôt",
+    "it": "Rinnovi presto"
+  },
+  "Renewals this month": {
+    "fr": "Renouvellements ce mois-ci",
+    "it": "Rinnovi questo mese"
+  },
+  "Renewals within 7 days": {
+    "fr": "Renouvellements sous 7 jours",
+    "it": "Rinnovi entro 7 giorni"
+  },
+  "Reopen": {
+    "fr": "Rouvrir",
+    "it": "Riapri"
+  },
+  "Reply to inquiry": {
+    "fr": "Répondre à la demande",
+    "it": "Rispondi alla richiesta"
+  },
+  "Request a commissioned feature": {
+    "fr": "Demander une fonctionnalité sur mesure",
+    "it": "Chiedi una funzione su commissione"
+  },
+  "Required": {
+    "fr": "Obligatoire",
+    "it": "Obbligatorio"
+  },
+  "Required for a new mailbox. When editing, leave blank to keep the saved password.": {
+    "fr": "Obligatoire pour une nouvelle boîte mail. En modification, laisse vide pour garder le mot de passe enregistré.",
+    "it": "Obbligatorio per una nuova casella. In modifica, lascia vuoto per mantenere la password salvata."
+  },
+  "Required when the reason is Other.": {
+    "fr": "Obligatoire quand la raison est Autre.",
+    "it": "Obbligatorio quando la motivazione è Altro."
+  },
+  "Required. Kept on the agreement record.": {
+    "fr": "Obligatoire. Conservé sur l’enregistrement de l’accord.",
+    "it": "Obbligatorio. Conservato sul record dell’accordo."
+  },
+  "Requirements": {
+    "fr": "Exigences",
+    "it": "Requisiti"
+  },
+  "Resolve": {
+    "fr": "Résoudre",
+    "it": "Risolvi"
+  },
+  "Resolve parallel edits": {
+    "fr": "Résoudre les éditions parallèles",
+    "it": "Risolvi modifiche parallele"
+  },
+  "Restricted — only allow-listed users and groups can open the app": {
+    "fr": "Restreint — seuls les utilisateurs et groupes autorisés peuvent ouvrir l’app",
+    "it": "Limitato — solo utenti e gruppi in elenco possono aprire l’app"
+  },
+  "Review": {
+    "fr": "Review",
+    "it": "Review"
+  },
+  "Review folder": {
+    "fr": "Dossier Review",
+    "it": "Cartella Review"
+  },
+  "Review folder linked.": {
+    "fr": "Dossier Review lié.",
+    "it": "Cartella Review collegata."
+  },
+  "Review folder linked: %s": {
+    "fr": "Dossier Review lié : %s",
+    "it": "Cartella Review collegata: %s"
+  },
+  "Review inbox": {
+    "fr": "Boîte Review",
+    "it": "Casella Review"
+  },
+  "Review inbox sources": {
+    "fr": "Sources de la boîte Review",
+    "it": "Fonti casella Review"
+  },
+  "Review item": {
+    "fr": "Élément Review",
+    "it": "Voce Review"
+  },
+  "Review item assigned": {
+    "fr": "Élément Review attribué",
+    "it": "Voce Review assegnata"
+  },
+  "Review source settings": {
+    "fr": "Réglages des sources Review",
+    "it": "Impostazioni fonti Review"
+  },
+  "Review sources": {
+    "fr": "Sources Review",
+    "it": "Fonti Review"
+  },
+  "Review sources saved.": {
+    "fr": "Sources Review enregistrées.",
+    "it": "Fonti Review salvate."
+  },
+  "Review unbilled hours": {
+    "fr": "Revoir les heures non facturées",
+    "it": "Rivedi ore non fatturate"
+  },
+  "Role": {
+    "fr": "Rôle",
+    "it": "Ruolo"
+  },
+  "Role for imported people": {
+    "fr": "Rôle pour les personnes importées",
+    "it": "Ruolo per le persone importate"
+  },
+  "Role in buying": {
+    "fr": "Rôle dans l’achat",
+    "it": "Ruolo nell’acquisto"
+  },
+  "Role in buying updated.": {
+    "fr": "Rôle dans l’achat mis à jour.",
+    "it": "Ruolo nell’acquisto aggiornato."
+  },
+  "Rotate": {
+    "fr": "Renouveler",
+    "it": "Rinnova"
+  },
+  "Rotate calendar feed URL": {
+    "fr": "Renouveler l’URL du flux d’agenda",
+    "it": "Rinnova URL feed calendario"
+  },
+  "Rotate failed": {
+    "fr": "Échec du renouvellement",
+    "it": "Rinnovo non riuscito"
+  },
+  "Rotate token": {
+    "fr": "Renouveler le jeton",
+    "it": "Rinnova token"
+  },
+  "Row": {
+    "fr": "Ligne",
+    "it": "Riga"
+  },
+  "Saturday": {
+    "fr": "Samedi",
+    "it": "Sabato"
+  },
+  "Save": {
+    "fr": "Enregistrer",
+    "it": "Salva"
+  },
+  "Save access control": {
+    "fr": "Enregistrer le contrôle d’accès",
+    "it": "Salva controllo accessi"
+  },
+  "Save catalogue changes": {
+    "fr": "Enregistrer les changements du catalogue",
+    "it": "Salva modifiche catalogo"
+  },
+  "Save cover": {
+    "fr": "Enregistrer la couverture",
+    "it": "Salva copertura"
+  },
+  "Save jobs": {
+    "fr": "Enregistrer les jobs",
+    "it": "Salva job"
+  },
+  "Save mailbox": {
+    "fr": "Enregistrer la boîte mail",
+    "it": "Salva casella"
+  },
+  "Save notes": {
+    "fr": "Enregistrer les notes",
+    "it": "Salva note"
+  },
+  "Save plan": {
+    "fr": "Enregistrer le plan",
+    "it": "Salva piano"
+  },
+  "Save preference": {
+    "fr": "Enregistrer la préférence",
+    "it": "Salva preferenza"
+  },
+  "Save review sources": {
+    "fr": "Enregistrer les sources Review",
+    "it": "Salva fonti Review"
+  },
+  "Save team settings": {
+    "fr": "Enregistrer les réglages d’équipe",
+    "it": "Salva impostazioni team"
+  },
+  "Say what you will finish. Change anything that is no longer realistic before you confirm.": {
+    "fr": "Dis ce que tu vas terminer. Change ce qui n’est plus réaliste avant de confirmer.",
+    "it": "Di’ cosa finirai. Cambia ciò che non è più realistico prima di confermare."
+  },
+  "Say why the agreement is cancelled — it stays on the record.": {
+    "fr": "Dis pourquoi l’accord est annulé — ça reste dans l’historique.",
+    "it": "Di’ perché l’accordo è annullato — resta nel record."
+  },
+  "Scan as teammate": {
+    "fr": "Scanner comme collègue",
+    "it": "Scansiona come collega"
+  },
+  "Schedule a call, reminder, or to-do. The due date uses your calendar picker.": {
+    "fr": "Planifie un appel, un rappel ou une tâche. La date d’échéance utilise ton sélecteur de calendrier.",
+    "it": "Pianifica una chiamata, un promemoria o un to-do. La data di scadenza usa il selettore calendario."
+  },
+  "Schedules a call for tomorrow": {
+    "fr": "Planifie un appel pour demain",
+    "it": "Pianifica una chiamata per domani"
+  },
+  "Search": {
+    "fr": "Chercher",
+    "it": "Cerca"
+  },
+  "Search and pick. Never type a raw user id.": {
+    "fr": "Cherche et choisis. Ne saisis jamais un id utilisateur brut.",
+    "it": "Cerca e scegli. Non digitare mai un id utente grezzo."
+  },
+  "Search by company name…": {
+    "fr": "Chercher par nom d’entreprise…",
+    "it": "Cerca per nome azienda…"
+  },
+  "Search by name": {
+    "fr": "Chercher par nom",
+    "it": "Cerca per nome"
+  },
+  "Search by name or login, then pick a colleague. Never type a raw user id.": {
+    "fr": "Cherche par nom ou login, puis choisis un collègue. Ne saisis jamais un id utilisateur brut.",
+    "it": "Cerca per nome o login, poi scegli un collega. Non digitare mai un id utente grezzo."
+  },
+  "Search by name or login…": {
+    "fr": "Chercher par nom ou login…",
+    "it": "Cerca per nome o login…"
+  },
+  "Search by name or pick a status. Changes apply as you type.": {
+    "fr": "Cherche par nom ou choisis un statut. Les changements s’appliquent pendant que tu tapes.",
+    "it": "Cerca per nome o scegli uno stato. Le modifiche si applicano mentre digiti."
+  },
+  "Search by name…": {
+    "fr": "Chercher par nom…",
+    "it": "Cerca per nome…"
+  },
+  "Search colleagues for a mobile seat": {
+    "fr": "Chercher des collègues pour un siège mobile",
+    "it": "Cerca colleghi per un posto mobile"
+  },
+  "Search folder by name": {
+    "fr": "Chercher un dossier par nom",
+    "it": "Cerca cartella per nome"
+  },
+  "Search groups…": {
+    "fr": "Chercher des groupes…",
+    "it": "Cerca gruppi…"
+  },
+  "Search or accept the suggestion, then Assign. Or mark No relation.": {
+    "fr": "Cherche ou accepte la suggestion, puis Attribuer. Ou marque Sans lien.",
+    "it": "Cerca o accetta il suggerimento, poi Assegna. Oppure indica Nessun legame."
+  },
+  "Search ProjectCheck customers": {
+    "fr": "Chercher des clients ProjectCheck",
+    "it": "Cerca clienti ProjectCheck"
+  },
+  "Search TicketCheck customers": {
+    "fr": "Chercher des clients TicketCheck",
+    "it": "Cerca clienti TicketCheck"
+  },
+  "Search users to add…": {
+    "fr": "Chercher des utilisateurs à ajouter…",
+    "it": "Cerca utenti da aggiungere…"
+  },
+  "Searching…": {
+    "fr": "Recherche…",
+    "it": "Ricerca…"
+  },
+  "Seat assigned.": {
+    "fr": "Siège attribué.",
+    "it": "Posto assegnato."
+  },
+  "Seat not found.": {
+    "fr": "Siège introuvable.",
+    "it": "Posto non trovato."
+  },
+  "Seat removed.": {
+    "fr": "Siège retiré.",
+    "it": "Posto rimosso."
+  },
+  "See how your customers are doing": {
+    "fr": "Vois comment vont tes clients",
+    "it": "Vedi come vanno i tuoi clienti"
+  },
+  "See talk": {
+    "fr": "Voir les échanges",
+    "it": "Vedi talk"
+  },
+  "See who needs help. Cover absences. Move work safely.": {
+    "fr": "Vois qui a besoin d’aide. Couvre les absences. Déplace le travail en sécurité.",
+    "it": "Vedi chi ha bisogno di aiuto. Copri le assenze. Sposta il lavoro in sicurezza."
+  },
+  "See workspace health at a glance — then fix what looks stuck.": {
+    "fr": "Vois la santé de l’équipe d’un coup d’œil — puis corrige ce qui semble bloqué.",
+    "it": "Vedi lo stato del team a colpo d’occhio — poi correggi ciò che sembra bloccato."
+  },
+  "Select 1–200 items to reassign.": {
+    "fr": "Sélectionne 1–200 éléments à réattribuer.",
+    "it": "Seleziona 1–200 elementi da riassegnare."
+  },
+  "Select a colleague from the directory first.": {
+    "fr": "Sélectionne d’abord un collègue dans l’annuaire.",
+    "it": "Seleziona prima un collega nella directory."
+  },
+  "Select a file": {
+    "fr": "Sélectionner un fichier",
+    "it": "Seleziona un file"
+  },
+  "Select a folder": {
+    "fr": "Sélectionner un dossier",
+    "it": "Seleziona una cartella"
+  },
+  "Select a workspace first.": {
+    "fr": "Sélectionne d’abord une équipe.",
+    "it": "Seleziona prima un team."
+  },
+  "Select attachment": {
+    "fr": "Sélectionner une pièce jointe",
+    "it": "Seleziona un allegato"
+  },
+  "Select quote PDF": {
+    "fr": "Sélectionner le PDF devis",
+    "it": "Seleziona PDF preventivo"
+  },
+  "Selected allowed users": {
+    "fr": "Utilisateurs autorisés sélectionnés",
+    "it": "Utenti consentiti selezionati"
+  },
+  "Selected app administrators": {
+    "fr": "Admins de l’app sélectionnés",
+    "it": "Admin app selezionati"
+  },
+  "Select…": {
+    "fr": "Sélectionner…",
+    "it": "Seleziona…"
+  },
+  "Send": {
+    "fr": "Envoyer",
+    "it": "Invia"
+  },
+  "Send a contact to Review": {
+    "fr": "Envoyer un contact vers Review",
+    "it": "Invia un contatto a Review"
+  },
+  "Send again": {
+    "fr": "Renvoyer",
+    "it": "Invia di nuovo"
+  },
+  "Send again?": {
+    "fr": "Renvoyer ?",
+    "it": "Inviare di nuovo?"
+  },
+  "Send as": {
+    "fr": "Envoyer en tant que",
+    "it": "Invia come"
+  },
+  "Send contact to Review": {
+    "fr": "Envoyer le contact vers Review",
+    "it": "Invia il contatto a Review"
+  },
+  "Send failed": {
+    "fr": "Échec de l’envoi",
+    "it": "Invio non riuscito"
+  },
+  "Send from shared mailbox": {
+    "fr": "Envoyer depuis la boîte mail partagée",
+    "it": "Invia dalla casella condivisa"
+  },
+  "Send from shared mailbox?": {
+    "fr": "Envoyer depuis la boîte mail partagée ?",
+    "it": "Inviare dalla casella condivisa?"
+  },
+  "Send materials": {
+    "fr": "Envoyer les documents",
+    "it": "Invia i materiali"
+  },
+  "Send rate limit reached for this workspace.": {
+    "fr": "Limite d’envoi atteinte pour cette équipe.",
+    "it": "Limite di invio raggiunto per questo team."
+  },
+  "Send rate limit reached for your user.": {
+    "fr": "Limite d’envoi atteinte pour ton utilisateur.",
+    "it": "Limite di invio raggiunto per il tuo utente."
+  },
+  "Send renewal quote": {
+    "fr": "Envoyer le devis de renouvellement",
+    "it": "Invia preventivo di rinnovo"
+  },
+  "Send to Review": {
+    "fr": "Envoyer vers Review",
+    "it": "Invia a Review"
+  },
+  "Send to Tasks": {
+    "fr": "Envoyer vers Tasks",
+    "it": "Invia a Tasks"
+  },
+  "Send to Tasks failed": {
+    "fr": "Échec de l’envoi vers Tasks",
+    "it": "Invio a Tasks non riuscito"
+  },
+  "Send welcome / onboarding mail": {
+    "fr": "Envoyer le mail de bienvenue / onboarding",
+    "it": "Invia mail di benvenuto / onboarding"
+  },
+  "Sends a short “This week” note to managers and members. The app-wide schedule must also be on under Reminders & digest.": {
+    "fr": "Envoie une courte note « Cette semaine » aux managers et membres. Le planning global de l’app doit aussi être actif sous Rappels et résumé.",
+    "it": "Invia una breve nota « Questa settimana » a manager e membri. La pianificazione globale dell’app deve essere attiva anche sotto Promemoria e riepilogo."
+  },
+  "Sent": {
+    "fr": "Envoyé",
+    "it": "Inviato"
+  },
+  "Sent / unpaid": {
+    "fr": "Envoyé / impayé",
+    "it": "Inviato / non pagato"
+  },
+  "Sent but not paid yet. Confirm the invoice still matches the agreement.": {
+    "fr": "Envoyé mais pas encore payé. Confirme que la facture correspond encore à l’accord.",
+    "it": "Inviato ma non ancora pagato. Conferma che la fattura corrisponde ancora all’accordo."
+  },
+  "Sent to Tasks": {
+    "fr": "Envoyé vers Tasks",
+    "it": "Inviato a Tasks"
+  },
+  "Sent to Tasks.": {
+    "fr": "Envoyé vers Tasks.",
+    "it": "Inviato a Tasks."
+  },
+  "Server settings (IMAP / SMTP)": {
+    "fr": "Réglages serveur (IMAP / SMTP)",
+    "it": "Impostazioni server (IMAP / SMTP)"
+  },
+  "Server-timezone schedules for renewal reminders and the weekly digest.": {
+    "fr": "Planifications selon le fuseau du serveur pour les rappels de renouvellement et le résumé hebdomadaire.",
+    "it": "Pianificazioni sul fuso del server per i promemoria di rinnovo e il riepilogo settimanale."
+  },
+  "Settings": {
+    "fr": "Réglages",
+    "it": "Impostazioni"
+  },
+  "Settings areas": {
+    "fr": "Zones de réglages",
+    "it": "Aree impostazioni"
+  },
+  "Settings pages": {
+    "fr": "Pages de réglages",
+    "it": "Pagine impostazioni"
+  },
+  "Setup & training": {
+    "fr": "Mise en place et formation",
+    "it": "Setup e formazione"
+  },
+  "Shared": {
+    "fr": "Partagé",
+    "it": "Condiviso"
+  },
+  "Shared mail": {
+    "fr": "Mail partagé",
+    "it": "Mail condivisa"
+  },
+  "Shared mail retention (days)": {
+    "fr": "Rétention du mail partagé (jours)",
+    "it": "Conservazione mail condivisa (giorni)"
+  },
+  "Shared mailbox": {
+    "fr": "Boîte mail partagée",
+    "it": "Casella condivisa"
+  },
+  "Shared mailbox items are visible to everyone in this workspace with Review access.": {
+    "fr": "Les éléments de la boîte mail partagée sont visibles pour tous dans cette équipe avec accès Review.",
+    "it": "Le voci della casella condivisa sono visibili a tutti in questo team con accesso Review."
+  },
+  "Shared mailbox password could not be decrypted. Re-save the mailbox credentials in Team & mailbox.": {
+    "fr": "Le mot de passe de la boîte mail partagée n’a pas pu être déchiffré. Réenregistre les identifiants sous Équipe et boîte mail.",
+    "it": "La password della casella condivisa non è stata decifrata. Risalva le credenziali sotto Team e casella."
+  },
+  "Shared mailbox powers Review mail. Keep credentials in Team & mailbox — never in chat.": {
+    "fr": "La boîte mail partagée alimente Review. Garde les identifiants sous Équipe et boîte mail — jamais dans le chat.",
+    "it": "La casella condivisa alimenta Review. Tieni le credenziali sotto Team e casella — mai in chat."
+  },
+  "Shared mailbox SMTP is configured but the password is missing. Re-save the mailbox credentials.": {
+    "fr": "Le SMTP de la boîte mail partagée est configuré mais le mot de passe manque. Réenregistre les identifiants.",
+    "it": "Lo SMTP della casella condivisa è configurato ma manca la password. Risalva le credenziali."
+  },
+  "Shared mailbox unmatched mail": {
+    "fr": "Mail non rattaché de la boîte partagée",
+    "it": "Mail non abbinata della casella condivisa"
+  },
+  "Shared mailbox: everyone on the team who can read mail can see messages you send from here.": {
+    "fr": "Boîte mail partagée : toute l’équipe qui peut lire le mail peut voir les messages que tu envoies d’ici.",
+    "it": "Casella condivisa: tutto il team che può leggere la mail può vedere i messaggi che invii da qui."
+  },
+  "Short address": {
+    "fr": "Adresse courte",
+    "it": "Indirizzo breve"
+  },
+  "Short follow-up note (at least 3 characters)": {
+    "fr": "Courte note de suivi (au moins 3 caractères)",
+    "it": "Breve nota di follow-up (almeno 3 caratteri)"
+  },
+  "Short note (optional)": {
+    "fr": "Courte note (facultatif)",
+    "it": "Breve nota (facoltativo)"
+  },
+  "Short notes are enough — next week’s you will thank you.": {
+    "fr": "De courtes notes suffisent — ton toi de la semaine prochaine te remerciera.",
+    "it": "Bastano note brevi — il tuo te della settimana prossima ti ringrazierà."
+  },
+  "Short reason": {
+    "fr": "Courte raison",
+    "it": "Breve motivazione"
+  },
+  "Show all money": {
+    "fr": "Montrer tout l’argent",
+    "it": "Mostra tutto il denaro"
+  },
+  "Show archived only": {
+    "fr": "Montrer seulement les archivés",
+    "it": "Mostra solo archiviati"
+  },
+  "Show Mail helpers on “Who wrote what”": {
+    "fr": "Afficher les aides Mail sur « Qui a écrit quoi »",
+    "it": "Mostra aiuti Mail su « Chi ha scritto cosa »"
+  },
+  "Show overdue, unpaid, paid, or agreements without an invoice state — applies instantly.": {
+    "fr": "Montre en retard, impayé, payé, ou accords sans état de facture — s’applique tout de suite.",
+    "it": "Mostra in ritardo, non pagato, pagato, o accordi senza stato fattura — si applica subito."
+  },
+  "Shown after a successful connection test. Enter folder paths the team should see.": {
+    "fr": "Affiché après un test de connexion réussi. Saisis les chemins de dossiers que l’équipe doit voir.",
+    "it": "Mostrato dopo un test di connessione riuscito. Inserisci i percorsi cartella che il team deve vedere."
+  },
+  "Shown on agreements": {
+    "fr": "Affiché sur les accords",
+    "it": "Mostrato sugli accordi"
+  },
+  "Sibling apps are read-only. Missing apps hide their panel without breaking pages.": {
+    "fr": "Les apps sœurs sont en lecture seule. Les apps manquantes masquent leur panneau sans casser les pages.",
+    "it": "Le app sorelle sono in sola lettura. Le app mancanti nascondono il pannello senza rompere le pagine."
+  },
+  "Skip": {
+    "fr": "Ignorer",
+    "it": "Salta"
+  },
+  "Skip date cannot be more than 7 days ahead.": {
+    "fr": "La date d’ignorance ne peut pas dépasser 7 jours.",
+    "it": "La data di skip non può superare 7 giorni."
+  },
+  "Skip to main content": {
+    "fr": "Aller au contenu principal",
+    "it": "Vai al contenuto principale"
+  },
+  "Skip to navigation": {
+    "fr": "Aller à la navigation",
+    "it": "Vai alla navigazione"
+  },
+  "Skipped": {
+    "fr": "Ignoré",
+    "it": "Saltato"
+  },
+  "SMTP host": {
+    "fr": "Hôte SMTP",
+    "it": "Host SMTP"
+  },
+  "SMTP port": {
+    "fr": "Port SMTP",
+    "it": "Porta SMTP"
+  },
+  "SMTP send failed — draft kept (id %s).": {
+    "fr": "Échec d’envoi SMTP — brouillon conservé (id %s).",
+    "it": "Invio SMTP non riuscito — bozza conservata (id %s)."
+  },
+  "Snooze at most 30 days.": {
+    "fr": "Reporter d’au plus 30 jours.",
+    "it": "Posticipa al massimo di 30 giorni."
+  },
+  "Snoozed": {
+    "fr": "Reporté",
+    "it": "Posticipato"
+  },
+  "Software by Design · Check apps": {
+    "fr": "Software by Design · apps Check",
+    "it": "Software by Design · app Check"
+  },
+  "Software by Design — open website in a new tab": {
+    "fr": "Software by Design — ouvrir le site dans un nouvel onglet",
+    "it": "Software by Design — apri il sito in una nuova scheda"
+  },
+  "Some names need a quick pick. Ready rows can still import now.": {
+    "fr": "Certains noms demandent un choix rapide. Les lignes Prêt peuvent quand même s’importer maintenant.",
+    "it": "Alcuni nomi richiedono una scelta rapida. Le righe Pronto si possono comunque importare ora."
+  },
+  "Some overview data could not be loaded.": {
+    "fr": "Certaines données d’aperçu n’ont pas pu être chargées.",
+    "it": "Alcuni dati della panoramica non sono stati caricati."
+  },
+  "Someone else changed this account plan. Reload and try again.": {
+    "fr": "Quelqu’un d’autre a modifié ce plan de compte. Recharge et réessaie.",
+    "it": "Qualcun altro ha modificato questo piano account. Ricarica e riprova."
+  },
+  "Someone else changed this review item. Reload and try again.": {
+    "fr": "Quelqu’un d’autre a modifié cet élément Review. Recharge et réessaie.",
+    "it": "Qualcun altro ha modificato questa voce Review. Ricarica e riprova."
+  },
+  "Someone else just claimed this deal. Reload and try again.": {
+    "fr": "Quelqu’un d’autre vient de prendre ce Deal. Recharge et réessaie.",
+    "it": "Qualcun altro ha appena preso in carico questo Deal. Ricarica e riprova."
+  },
+  "Someone else just updated this activity. Reload and try again.": {
+    "fr": "Quelqu’un d’autre vient de mettre à jour cette activité. Recharge et réessaie.",
+    "it": "Qualcun altro ha appena aggiornato questa attività. Ricarica e riprova."
+  },
+  "Someone else just updated this commitment. Reload and try again.": {
+    "fr": "Quelqu’un d’autre vient de mettre à jour cet engagement. Recharge et réessaie.",
+    "it": "Qualcun altro ha appena aggiornato questo impegno. Ricarica e riprova."
+  },
+  "Someone else just updated this deal. Reload and try again.": {
+    "fr": "Quelqu’un d’autre vient de mettre à jour ce Deal. Recharge et réessaie.",
+    "it": "Qualcun altro ha appena aggiornato questo Deal. Ricarica e riprova."
+  }
+}

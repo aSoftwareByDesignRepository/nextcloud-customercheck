@@ -491,7 +491,7 @@
       },
       { name: 'snippet', label: t('Short note (optional)'), type: 'textarea', advanced: true },
     );
-    const data = await promptFields(t('Log email'), fields);
+    const data = await promptFields(t('Log talk'), fields);
     if (!data) return;
     const personId = personOptions.length === 1
       ? parseInt(personOptions[0].value, 10)
@@ -559,7 +559,7 @@
         variant: 'danger',
         optionalCheckbox: true,
         optionalCheckboxChecked: true,
-        optionalCheckboxLabel: t('Also return their shared mail to Review (not deleted — you can assign it to another company). Mail already deleted in Review stays gone.'),
+        optionalCheckboxLabel: t('Put their shared mail back in Review'),
       });
       if (!ok || ok.confirmed === false) return;
       const returnMailToReview = !!(ok && ok.optionalChecked);
@@ -789,14 +789,15 @@
     const runwayText = runway.validUntil
       ? (formatDisplayDate(runway.validUntil) + (runway.daysLeft != null ? ' · ' + t('%s days left', [String(runway.daysLeft)]) : ''))
       : '—';
+    const nextMeta = last.summary
+      ? (t('Last talk') + ': ' + last.summary + (last.at ? ' · ' + formatDisplayDate(last.at) : ''))
+      : (nextTouch ? (t('Next touch') + ': ' + formatDisplayDate(nextTouch)) : '');
+    const moneyMeta = (billing.overdueCount ? (String(billing.overdueCount) + ' ' + t('overdue')) : '')
+      || (cov.gap ? (missingText || coverageLabel) : '');
     const rows = [
-      [t('Company'), dto.name || '—', ''],
       [t('Primary contact'), primary ? ((primary.name || '') + (primary.role ? ' · ' + primary.role : '')) : t('No primary person'), ''],
-      [t('Coverage'), coverageLabel, missingText],
-      [t('Next touch'), nextTouch ? formatDisplayDate(nextTouch) : t('Not scheduled'), ''],
-      [t('Last discussion'), last.summary ? last.summary : t('Nothing logged yet'), last.summary && last.at ? formatDisplayDate(last.at) : ''],
-      [t('Next action'), next.label || t('No urgent action'), ''],
-      [t('Money'), billingStateLabel(billing.state || 'unknown') + (billing.overdueCount ? ' · ' + billing.overdueCount + ' ' + t('overdue') : ''), ''],
+      [t('Next action'), next.label || t('No urgent action'), nextMeta],
+      [t('Money'), billingStateLabel(billing.state || 'unknown'), moneyMeta],
       [t('Renewal'), runwayText, ''],
     ];
     rows.forEach(function (row) {
@@ -1667,6 +1668,10 @@
   let commandCenterGeneration = 0;
   let accountPlanGeneration = 0;
   let promisesGeneration = 0;
+  /** Drops stale Talk mail-body paints when ArrowUp/Down races preview POSTs. */
+  let talkMailPreviewGeneration = 0;
+  /** Aborts in-flight Talk preview fetch when the operator moves to another row. */
+  let talkMailPreviewAbort = null;
   async function loadCommandCenter() {
     if (!companyId || !Api) return;
     const live = document.getElementById('crm-live-region');
@@ -1728,7 +1733,7 @@
             '<p class="crm-empty-state__text">' + escapeHtml(t('Nothing logged yet. Log an email or add an activity.')) + '</p>' +
             (canWrite
               ? '<div class="crm-empty-state__actions">' +
-                '<button type="button" class="crm-btn crm-btn--primary crm-btn--lg" data-crm-trigger="crm-log-email">' + escapeHtml(t('Log email')) + '</button> ' +
+                '<button type="button" class="crm-btn crm-btn--primary crm-btn--lg" data-crm-trigger="crm-log-email">' + escapeHtml(t('Log talk')) + '</button> ' +
                 '<button type="button" class="crm-btn crm-btn--secondary" data-crm-trigger="crm-add-activity">' + escapeHtml(t('Add to-do')) + '</button>' +
                 '</div>'
               : '') +
@@ -1748,11 +1753,13 @@
 
           function sortBtnHtml(col, label, sortKey, sortDir) {
             const active = sortKey === col;
-            const aria = active ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none';
             const arrow = !active ? '' : (sortDir === 'asc' ? ' ↑' : ' ↓');
+            const sortHint = active
+              ? (sortDir === 'asc' ? t('Sorted ascending') : t('Sorted descending'))
+              : t('Not sorted');
             return '<button type="button" class="crm-btn crm-btn--ghost crm-review-sort' + (active ? ' is-active' : '') + '" ' +
               'data-crm-talk-sort="' + escapeHtml(col) + '" aria-pressed="' + (active ? 'true' : 'false') + '" ' +
-              'aria-sort="' + aria + '">' + escapeHtml(label) + escapeHtml(arrow) + '</button>';
+              'aria-label="' + escapeHtml(label + ' — ' + sortHint) + '">' + escapeHtml(label) + escapeHtml(arrow) + '</button>';
           }
 
           const pane = document.createElement('div');
@@ -1761,15 +1768,14 @@
           thread.className = 'crm-mail-3pane__thread';
           const list = document.createElement('ul');
           list.className = 'crm-mail-thread crm-review-list';
-          list.setAttribute('role', 'listbox');
+          list.setAttribute('role', 'list');
           list.setAttribute('aria-label', t('Message list'));
           list.tabIndex = 0;
 
-          const detailLi = document.createElement('li');
-          detailLi.className = 'crm-review-detail-row';
-          detailLi.setAttribute('data-crm-talk-detail-row', '');
-          detailLi.setAttribute('role', 'presentation');
-          detailLi.hidden = true;
+          const detailHost = document.createElement('div');
+          detailHost.className = 'crm-mail-3pane__reader crm-review-detail-row';
+          detailHost.setAttribute('data-crm-talk-detail-row', '');
+          detailHost.hidden = true;
           const reader = document.createElement('section');
           reader.className = 'crm-review-detail crm-review-reader';
           reader.setAttribute('data-crm-talk-reader', '');
@@ -1778,8 +1784,8 @@
           reader.setAttribute('aria-live', 'polite');
           reader.tabIndex = -1;
           reader.innerHTML = '<div class="crm-mail-reader__empty crm-empty-state" role="status"><p class="crm-empty-state__text">' +
-            escapeHtml(t('Select a message to read and decide.')) + '</p></div>';
-          detailLi.appendChild(reader);
+            escapeHtml(t('Select a message to read.')) + '</p></div>';
+          detailHost.appendChild(reader);
 
           const models = items.map(function (item, idx) {
             const whenRaw = String(item.occurredAt || item.sentAt || '').trim();
@@ -1826,6 +1832,12 @@
           }
 
           function paintTalkReader(model) {
+            if (talkMailPreviewAbort) {
+              try { talkMailPreviewAbort.abort(); } catch (e) { /* ignore */ }
+            }
+            talkMailPreviewAbort = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+            const previewGen = ++talkMailPreviewGeneration;
+            const previewSignal = talkMailPreviewAbort ? talkMailPreviewAbort.signal : null;
             const item = model.item;
             const crmMailId = parseInt(String(item.crmMailId || '0'), 10) || 0;
             const fromLabel = model.from || feedKindLabel(item.kind);
@@ -1836,17 +1848,18 @@
 
             list.querySelectorAll('.crm-mail-thread-row').forEach(function (el) {
               const on = el.getAttribute('data-crm-feed-id') === model.id;
-              el.setAttribute('aria-selected', on ? 'true' : 'false');
+              el.setAttribute('aria-current', on ? 'true' : 'false');
               el.classList.toggle('is-selected', on);
               el.tabIndex = on ? 0 : -1;
             });
             const opt = list.querySelector('[data-crm-feed-id="' + model.id.replace(/"/g, '') + '"]');
             if (opt) {
-              list.setAttribute('aria-activedescendant', opt.id);
-              if (detailLi.parentNode !== list || opt.nextElementSibling !== detailLi) {
-                opt.after(detailLi);
+              detailHost.hidden = false;
+              try {
+                opt.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+              } catch (e) {
+                opt.scrollIntoView(true);
               }
-              detailLi.hidden = false;
             }
 
             let actionsHtml = '';
@@ -1890,6 +1903,12 @@
             const toggle = previewWrap.querySelector('[data-crm-mail-preview-toggle]');
             const replyBtn = previewWrap.querySelector('[data-crm-mail-reply]');
             const pre = previewWrap.querySelector('.crm-mail-preview__body');
+            function isStaleTalkPreview() {
+              return previewGen !== talkMailPreviewGeneration || !previewWrap.isConnected;
+            }
+            function isAbortError(err) {
+              return !!(err && (err.name === 'AbortError' || err.code === 20));
+            }
             async function openReplyCompose() {
               if (!replyBtn || replyBtn.getAttribute('aria-busy') === 'true') return;
               replyBtn.disabled = true;
@@ -1904,11 +1923,12 @@
                 if (thin) {
                   try {
                     // Hydrate once when Answer is first — richer quote in mailto.
-                    await Api.post('/workspaces/' + ws + '/mail/' + crmMailId + '/preview', {});
+                    await Api.post('/workspaces/' + ws + '/mail/' + crmMailId + '/preview', {}, previewSignal ? { signal: previewSignal } : undefined);
                     res = await Api.get('/workspaces/' + ws + '/mail/' + crmMailId + '/reply');
                     pack = (res && res.data) || res || {};
                   } catch (hydrateErr) { /* keep first pack */ }
                 }
+                if (isStaleTalkPreview()) return;
                 if (!pack.available) {
                   await C.alertDialog({ title: t('Cannot answer'), message: t('This message has no usable reply address.'), variant: 'warning' });
                   return;
@@ -1922,10 +1942,13 @@
                 if (/^mailto:/i.test(url)) window.location.href = url;
                 else window.open(url, '_blank', 'noopener,noreferrer');
               } catch (e) {
+                if (isAbortError(e) || isStaleTalkPreview()) return;
                 await C.alertDialog({ title: t('Cannot answer'), message: (e.payload && e.payload.message) || e.message || String(e), variant: 'danger' });
               } finally {
-                replyBtn.disabled = false;
-                replyBtn.removeAttribute('aria-busy');
+                if (replyBtn && previewWrap.isConnected) {
+                  replyBtn.disabled = false;
+                  replyBtn.removeAttribute('aria-busy');
+                }
               }
             }
             if (replyBtn) replyBtn.addEventListener('click', function () { void openReplyCompose(); });
@@ -1951,7 +1974,12 @@
                   const stack = document.querySelector('.crm-page-stack[data-company-id]');
                   const ws = stack ? parseInt(stack.getAttribute('data-workspace-id') || '0', 10) : 0;
                   if (!(ws > 0)) throw new Error(t('Workspace missing on this page.'));
-                  const res = await Api.post('/workspaces/' + ws + '/mail/' + crmMailId + '/preview', {});
+                  const res = await Api.post(
+                    '/workspaces/' + ws + '/mail/' + crmMailId + '/preview',
+                    {},
+                    previewSignal ? { signal: previewSignal } : undefined,
+                  );
+                  if (isStaleTalkPreview()) return;
                   const payload = (res && res.data) || res || {};
                   const textBody = payload.preview || '';
                   // Never use innerHTML — mail bodies are untrusted.
@@ -1963,14 +1991,17 @@
                   toggle.textContent = t('Hide message');
                   try { pre.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
                 } catch (e) {
+                  if (isAbortError(e) || isStaleTalkPreview()) return;
                   await C.alertDialog({
                     title: t('Could not load message'),
                     message: (e.payload && e.payload.message) || e.message || String(e),
                     variant: 'danger',
                   });
                 } finally {
-                  toggle.disabled = false;
-                  toggle.removeAttribute('aria-busy');
+                  if (toggle && previewWrap.isConnected) {
+                    toggle.disabled = false;
+                    toggle.removeAttribute('aria-busy');
+                  }
                 }
               });
               // Opening a row always loads the message — never require a second click.
@@ -1986,8 +2017,7 @@
               sortbar.innerHTML =
                 sortBtnHtml('sent', t('Sent'), sortKey, sortDir) +
                 sortBtnHtml('from', t('From'), sortKey, sortDir) +
-                sortBtnHtml('subject', t('Subject'), sortKey, sortDir) +
-                sortBtnHtml('status', t('Status'), sortKey, sortDir);
+                sortBtnHtml('subject', t('Subject'), sortKey, sortDir);
               sortbar.querySelectorAll('[data-crm-talk-sort]').forEach(function (btn) {
                 btn.addEventListener('click', function () {
                   const col = btn.getAttribute('data-crm-talk-sort') || 'sent';
@@ -2005,19 +2035,18 @@
             const selectedEl = list.querySelector('.crm-mail-thread-row.is-selected');
             const selectedId = selectedEl ? (selectedEl.getAttribute('data-crm-feed-id') || '') : '';
             list.querySelectorAll('.crm-mail-thread-row').forEach(function (el) { el.remove(); });
-            if (detailLi.parentNode === list) detailLi.remove();
-            detailLi.hidden = true;
+            detailHost.hidden = true;
             reader.innerHTML = '<div class="crm-mail-reader__empty crm-empty-state" role="status"><p class="crm-empty-state__text">' +
-              escapeHtml(t('Select a message to read and decide.')) + '</p></div>';
+              escapeHtml(t('Select a message to read.')) + '</p></div>';
 
             sortedModels().forEach(function (model) {
               const item = model.item;
               const li = document.createElement('li');
               li.className = 'crm-mail-thread-row crm-review-row crm-feed__item';
-              li.setAttribute('role', 'option');
+              li.setAttribute('role', 'listitem');
               li.id = 'crm-feed-opt-' + model.id.replace(/[^a-zA-Z0-9_-]/g, '_');
               li.setAttribute('data-crm-feed-id', model.id);
-              li.setAttribute('aria-selected', 'false');
+              li.setAttribute('aria-current', 'false');
               li.tabIndex = -1;
               const fromLabel = model.from || t('Unknown sender');
               const main = document.createElement('div');
@@ -2053,28 +2082,12 @@
               }
               li.appendChild(whenEl);
 
-              const openBtn = document.createElement('button');
-              openBtn.type = 'button';
-              openBtn.className = 'crm-btn crm-btn--ghost crm-btn--sm crm-review-open';
-              openBtn.setAttribute('data-crm-talk-open', model.id);
-              openBtn.setAttribute('aria-label', t('Open details: %s', [item.subject || fromLabel]));
-              openBtn.textContent = t('Open');
-              li.appendChild(openBtn);
-
               function openRow(ev) {
                 if (ev && ev.target && ev.target.closest && ev.target.closest('a, input')) return;
                 paintTalkReader(model);
                 try { li.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (e) { /* ignore */ }
               }
-              openBtn.addEventListener('click', function (ev) {
-                ev.preventDefault();
-                ev.stopPropagation();
-                openRow(ev);
-              });
-              li.addEventListener('click', function (ev) {
-                if (ev.target.closest && ev.target.closest('[data-crm-talk-open]')) return;
-                openRow(ev);
-              });
+              li.addEventListener('click', openRow);
               li.addEventListener('keydown', function (ev) {
                 if (ev.key !== 'Enter' && ev.key !== ' ') return;
                 if (ev.target.closest && ev.target.closest('button, a, input')) return;
@@ -2086,7 +2099,36 @@
                 paintTalkReader(model);
               }
             });
-            list.appendChild(detailLi);
+            const rows = list.querySelectorAll('.crm-mail-thread-row');
+            if (rows.length && !list.querySelector('.crm-mail-thread-row.is-selected')) {
+              rows[0].tabIndex = 0;
+            }
+          }
+
+          if (!list.getAttribute('data-crm-talk-kbd')) {
+            list.setAttribute('data-crm-talk-kbd', '1');
+            list.addEventListener('keydown', function (ev) {
+              if (ev.key !== 'ArrowDown' && ev.key !== 'ArrowUp' && ev.key !== 'Home' && ev.key !== 'End') {
+                return;
+              }
+              const rows = Array.from(list.querySelectorAll('.crm-mail-thread-row'));
+              if (!rows.length) return;
+              const active = document.activeElement && document.activeElement.closest
+                ? document.activeElement.closest('.crm-mail-thread-row')
+                : null;
+              let idx = active ? rows.indexOf(active) : -1;
+              if (ev.key === 'Home') idx = 0;
+              else if (ev.key === 'End') idx = rows.length - 1;
+              else if (ev.key === 'ArrowDown') idx = Math.min(rows.length - 1, Math.max(0, idx + 1));
+              else if (ev.key === 'ArrowUp') idx = Math.max(0, idx < 0 ? 0 : idx - 1);
+              ev.preventDefault();
+              const target = rows[idx];
+              if (!target) return;
+              rows.forEach(function (r) { r.tabIndex = -1; });
+              target.tabIndex = 0;
+              target.focus();
+              target.click();
+            });
           }
 
           const sortbar = document.createElement('div');
@@ -2096,6 +2138,7 @@
 
           thread.appendChild(list);
           pane.appendChild(thread);
+          pane.appendChild(detailHost);
           board.appendChild(toolbar);
           board.appendChild(sortbar);
           board.appendChild(pane);

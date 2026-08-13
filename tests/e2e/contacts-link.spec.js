@@ -26,8 +26,10 @@ test.describe('Contacts link (Command Center)', () => {
     await page.waitForLoadState('networkidle');
 
     await expect(page.locator('#crm-persons-table')).toBeVisible();
-    await expect(page.locator('#crm-persons-table thead')).toContainText(/Last touch|Letzter Kontakt/i);
-    await expect(page.locator('#crm-persons-table thead')).toContainText(/Address book|Adressbuch/i);
+    await expect(page.locator('#crm-persons-table thead th')).toHaveCount(3);
+    await expect(page.locator('#crm-persons-table .crm-person-more').first()).toBeVisible();
+    await page.locator('#crm-persons-table .crm-person-more > summary').first().click();
+    await expect(page.locator('#crm-persons-table .crm-person-more__body').first()).toContainText(/Last touch|Letzter Kontakt|Address book|Adressbuch/i);
     await expect(page.locator('#crm-persons-table tbody tr').first()).toContainText(/No touch yet|Noch kein Kontakt/i);
     await expect(page.locator('#crm-persons-table tbody tr').first()).toContainText(/Not linked|Nicht verknüpft/i);
     await expect(page.locator('#crm-persons-table [data-crm-remove-person]').first()).toBeVisible();

@@ -15,13 +15,16 @@ final class PersonsRowUxContractTest extends TestCase
 		$start = strpos($html, 'id="crm-persons-table"');
 		$end = strpos($html, 'id="crm-deals"', (int)$start);
 		$chunk = substr($html, (int)$start, (int)$end - (int)$start);
-		foreach (['Last touch', 'Address book', 'Role in buying', 'Action', 'Log talk', 'Not linked', 'Remove'] as $needle) {
+		foreach (['Action', 'Log talk', 'Not linked', 'Remove', 'Last touch', 'Address book', 'Role in buying'] as $needle) {
 			$this->assertStringContainsString("\$l->t('" . $needle . "')", $chunk, $needle);
 		}
+		$this->assertStringContainsString('crm-person-more', $chunk);
 		$this->assertStringContainsString('data-crm-remove-person', $chunk);
 		$this->assertStringContainsString('crm-persons-role', $chunk);
 		$this->assertStringContainsString('crm-btn--primary', $chunk);
 		$this->assertStringNotContainsString('crm-more-menu', $chunk);
+		$this->assertStringNotContainsString("\$l->t('Last touch')); ?></th>", $chunk);
+		$this->assertStringNotContainsString("\$l->t('Role in buying')); ?></th>", $chunk);
 	}
 
 	public function testCssPreventsTableMoreMenuAbsoluteScrollTrap(): void

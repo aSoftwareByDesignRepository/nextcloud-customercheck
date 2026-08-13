@@ -124,6 +124,48 @@ function bachus_simplicity_mutations(string $appRoot): array
 			'label' => 'review_search_field_layout_removed',
 			'filter' => 'BachusSimplicityUxContractTest::testReviewUsesProgressivePrimaryAndKindChips|ReviewInboxUxContractTest::testSharedMailPreviewAndReviewSearchWired',
 		],
+		[
+			'file' => $appRoot . '/js/pages/persona.js',
+			'from' => 'dealField +',
+			'to' => '/* dealField buried */ laterBlock + dealField +',
+			'label' => 'review_deal_field_order_broken',
+			'filter' => 'BachusExtremeSimplifyUxContractTest::testDealFieldLivesWithAssignNotInsideSnooze',
+		],
+		[
+			'file' => $appRoot . '/js/pages/persona.js',
+			'from' => 'crm-sr-only crm-review-open',
+			'to' => 'crm-btn crm-btn--ghost crm-btn--sm crm-review-open',
+			'label' => 'review_open_button_visible_again',
+			'filter' => 'BachusExtremeSimplifyUxContractTest::testReviewOpenIsScreenReaderOnlyAndStatusSortGone',
+		],
+		[
+			'file' => $appRoot . '/js/pages/persona.js',
+			'from' => "escapeHtml(t('Remove selected'))",
+			'to' => "escapeHtml(t('Delete / remove selected'))",
+			'label' => 'review_bulk_label_verbose_again',
+			'filter' => 'BachusExtremeSimplifyUxContractTest::testReviewOpenIsScreenReaderOnlyAndStatusSortGone',
+		],
+		[
+			'file' => $appRoot . '/templates/company-detail.php',
+			'from' => 'crm-person-more',
+			'to' => 'crm-person-dump',
+			'label' => 'people_roster_more_disclosure_removed',
+			'filter' => 'BachusExtremeSimplifyUxContractTest::testPeopleRosterIsThreeColumnsWithMoreDisclosure|ExtremeSimplicityUxContractTest|PersonsRowUxContractTest',
+		],
+		[
+			'file' => $appRoot . '/templates/settings/workspace-mailbox.php',
+			'from' => 'id="crm-ws-members-card"',
+			'to' => 'id="crm-ws-members-card-moved"',
+			'label' => 'mailbox_settings_members_card_id_broken',
+			'filter' => 'BachusExtremeSimplifyUxContractTest::testMailboxSettingsLeadWithMembersThenMailbox',
+		],
+		[
+			'file' => $appRoot . '/templates/today.php',
+			'from' => 'data-crm-complete-checklist="<?php p($checklistItemId); ?>"',
+			'to' => 'data-crm-noop="<?php p($checklistItemId); ?>"',
+			'label' => 'today_checklist_done_hook_removed',
+			'filter' => 'BachusExtremeSimplifyUxContractTest::testTodayChecklistDoneHasNoSiblingOpen',
+		],
 	];
 }
 

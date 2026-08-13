@@ -92,9 +92,11 @@ final class Company360PageContractTest extends TestCase
 		$this->assertStringContainsString('crm-review-board crm-communication-board', $js);
 		$this->assertStringContainsString('crm-review-sortbar', $js);
 		$this->assertStringContainsString('crm-mail-thread-row__when', $js);
-		$this->assertStringContainsString('crm-review-open', $js);
+		$this->assertStringContainsString('crm-mail-3pane__reader crm-review-detail-row', $js);
+		$this->assertStringNotContainsString('crm-btn--ghost crm-btn--sm crm-review-open', $js);
 		$this->assertStringContainsString('data-crm-talk-detail-row', $js);
-		$this->assertStringContainsString('opt.after(detailLi)', $js);
+		$this->assertStringContainsString('crm-mail-3pane__reader crm-review-detail-row', $js);
+		$this->assertStringNotContainsString('opt.after(detailLi)', $js);
 		$this->assertStringContainsString('escapeHtml(item.subject || \'\')', $js);
 		$this->assertStringContainsString('crm-empty-state__title', $js);
 		$this->assertStringContainsString('Never seed body text from list/feed JSON', $js);

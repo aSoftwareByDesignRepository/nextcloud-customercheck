@@ -1363,8 +1363,8 @@ $cases = [
 	],
 	[
 		'file' => $root . '/templates/company-detail.php',
-		'find' => "<?php if (!empty(\$_['canWrite'])): ?>\n\t\t\t\t<button type=\"button\" class=\"crm-btn crm-btn--primary\" id=\"crm-log-email\" data-crm-log-email><?php p(\$l->t('Log email')); ?></button>\n\t\t\t\t<button type=\"button\" class=\"crm-btn crm-btn--secondary\" id=\"crm-schedule-callback\" title=\"<?php p(\$l->t('Schedules a call for tomorrow')); ?>\"><?php p(\$l->t('Call tomorrow')); ?></button>\n\t\t\t\t<?php endif; ?>",
-		'replace' => "<button type=\"button\" class=\"crm-btn crm-btn--primary\" id=\"crm-log-email\" data-crm-log-email><?php p(\$l->t('Log email')); ?></button>\n\t\t\t\t<button type=\"button\" class=\"crm-btn crm-btn--secondary\" id=\"crm-schedule-callback\" title=\"<?php p(\$l->t('Schedules a call for tomorrow')); ?>\"><?php p(\$l->t('Call tomorrow')); ?></button>",
+		'find' => "<?php if (!empty(\$_['canWrite'])): ?>\n\t\t\t\t<button type=\"button\" class=\"crm-btn crm-btn--primary\" id=\"crm-log-email\" data-crm-log-email><?php p(\$l->t('Log talk')); ?></button>\n\t\t\t\t<button type=\"button\" class=\"crm-btn crm-btn--secondary\" id=\"crm-schedule-callback\" title=\"<?php p(\$l->t('Schedules a call for tomorrow')); ?>\"><?php p(\$l->t('Call tomorrow')); ?></button>\n\t\t\t\t<?php endif; ?>",
+		'replace' => "<button type=\"button\" class=\"crm-btn crm-btn--primary\" id=\"crm-log-email\" data-crm-log-email><?php p(\$l->t('Log talk')); ?></button>\n\t\t\t\t<button type=\"button\" class=\"crm-btn crm-btn--secondary\" id=\"crm-schedule-callback\" title=\"<?php p(\$l->t('Schedules a call for tomorrow')); ?>\"><?php p(\$l->t('Call tomorrow')); ?></button>",
 		'test' => 'WorkspaceAclSurfaceContractTest',
 		'label' => 'talked section log email ungated',
 	],

@@ -26,14 +26,15 @@ final class ContactsPeopleRosterContractTest extends TestCase
 		$this->assertStringContainsString("\$l->t('Address book')", $html);
 		$this->assertStringContainsString("\$l->t('Role in buying')", $html);
 		$this->assertStringContainsString("\$l->t('Log talk')", $html);
-		// Granny: never bury person controls in a More disclosure (scroll-trap).
+		// Granny: never bury person controls in a More *menu* scroll-trap (disclosure for extras is OK).
 		$personsStart = strpos($html, 'id="crm-persons-table"');
 		$personsEnd = strpos($html, 'id="crm-deals"', (int)$personsStart);
 		$this->assertNotFalse($personsStart);
 		$this->assertNotFalse($personsEnd);
 		$personsChunk = substr($html, (int)$personsStart, (int)$personsEnd - (int)$personsStart);
 		$this->assertStringNotContainsString('crm-more-menu', $personsChunk);
-		$this->assertStringNotContainsString("\$l->t('More')", $personsChunk);
+		$this->assertStringContainsString('crm-person-more', $personsChunk);
+		$this->assertStringNotContainsString("\$l->t('More'));", $personsChunk);
 	}
 
 	public function testAddPersonJsPersistsContactsUid(): void

@@ -25,7 +25,8 @@ export const SECTION_TAB_MAP = Object.freeze({
   'crm-projects': 'money',
   'crm-tickets': 'money',
   'crm-invoices': 'money',
-  // Identity lives in Money (cold merge) OR More (warm manage) — prefer DOM resolve.
+  // Identity may live in Money (cold merge) OR More (warm manage).
+  // SECTION_TAB_MAP is fallback only — resolveTabForElement(DOM panel) is authoritative.
   'crm-identity-links': 'more',
   'crm-account-plan': 'more',
   'crm-emails': 'more',

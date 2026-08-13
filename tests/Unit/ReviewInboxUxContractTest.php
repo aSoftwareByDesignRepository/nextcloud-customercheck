@@ -79,8 +79,11 @@ final class ReviewInboxUxContractTest extends TestCase
 		$this->assertStringContainsString('data-crm-review-reader', $js);
 		$this->assertStringContainsString('placeDetailUnderRow', $js);
 		$this->assertStringContainsString('crm-review-detail-row', $js);
-		$this->assertStringContainsString('row.after(detailTr)', $js);
+		$this->assertStringContainsString('crm-mail-3pane__reader crm-review-detail-row', $js);
+		$this->assertStringContainsString('board.detailRowEl.hidden = false', $js);
+		$this->assertStringNotContainsString('row.after(detailTr)', $js);
 		$this->assertStringNotContainsString("reader.scrollIntoView", $js);
+		$this->assertStringContainsString('row.scrollIntoView', $js);
 		$this->assertStringContainsString('crm-review-pick-company', $js);
 		$this->assertStringContainsString("t('Assign to a company')", $js);
 		$this->assertStringContainsString('crm-review-mail-tools', $js);
@@ -213,7 +216,8 @@ final class ReviewInboxUxContractTest extends TestCase
 		$company = (string)file_get_contents(dirname(__DIR__, 2) . '/js/pages/company-detail.js');
 		$this->assertStringContainsString('data-crm-mail-reply', $company);
 		$this->assertStringContainsString("/mail/' + crmMailId + '/reply", $company);
-		$this->assertStringContainsString("Api.post('/workspaces/' + ws + '/mail/' + crmMailId + '/preview', {})", $company);
+		$this->assertStringContainsString("Api.post('/workspaces/' + ws + '/mail/' + crmMailId + '/preview', {}", $company);
+		$this->assertStringContainsString('signal: previewSignal', $company);
 		$this->assertStringNotContainsString("Api.get('/workspaces/' + ws + '/mail/' + crmMailId + '/preview'", $company);
 		$this->assertStringContainsString('Hydrate once when Answer is first', $company);
 		$this->assertStringContainsString("t('Answer: %s'", $company);

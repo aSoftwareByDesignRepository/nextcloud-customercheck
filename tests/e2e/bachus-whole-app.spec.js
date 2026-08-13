@@ -174,7 +174,11 @@ test.describe('Bachus whole-app effortless flows', () => {
     await expect(page.locator('#crm-ws-limits-card')).toBeVisible();
     await expect(page.locator('#crm-ws-mailbox-card')).toBeVisible();
     await expect(page.locator('#crm-mailbox-form.crm-form--stack')).toBeVisible();
-    await expect(page.locator('#crm-mailbox-form fieldset.crm-fieldset')).toHaveCount(1);
+    // Bachus: primary Inbox fieldset + Mail servers under progressive disclosure.
+    await expect(page.locator('#crm-mailbox-form > fieldset.crm-fieldset')).toHaveCount(1);
+    await expect(page.locator('#crm-mailbox-servers')).toBeVisible();
+    await expect(page.locator('#crm-mailbox-servers')).not.toHaveAttribute('open', '');
+    await expect(page.locator('#crm-mailbox-form fieldset.crm-fieldset')).toHaveCount(2);
     await expect(page.locator('#crm-mailbox-save')).toBeDisabled();
     await expect(page.locator('#crm-mailbox-form')).toHaveAttribute('aria-busy', 'false', { timeout: 30000 });
     const settingsNav = page.locator('#crm-settings-pages');

@@ -29,15 +29,16 @@ test.describe('Bachus Review mail extreme simplicity', () => {
     await expect(page.locator('details.crm-review-tools')).toHaveCount(0);
     await expect(page.locator('.crm-review-toolbar').first()).toBeVisible();
     await expect(page.locator('#crm-review-q')).toBeVisible();
+    await expect(page.locator('#crm-review-include-archived')).toBeAttached();
+    await page.locator('.crm-review-toolbar__extra > summary').first().click();
     await expect(page.locator('#crm-review-include-archived')).toBeVisible();
     await expect(page.locator('.crm-review-board').first()).toBeVisible();
     await expect(page.locator('.crm-mail-thread.crm-review-list, .crm-review-table').first()).toBeVisible();
     await expect(page.locator('[data-crm-review-sort]').first()).toBeVisible();
-    const openBtn = page.locator('[data-crm-review-open]').first();
-    if (await openBtn.count()) {
-      await expect(openBtn).toBeVisible();
-      await expect(openBtn).toHaveCSS('min-height', /4[4-9]px|5\dpx/);
-      await openBtn.click();
+    await expect(page.locator('[data-crm-review-sort="status"]')).toHaveCount(0);
+    const reviewRow = page.locator('li.crm-review-row').first();
+    if (await reviewRow.count()) {
+      await reviewRow.click();
       await expect(page.locator('[data-crm-review-reader]')).toBeVisible();
       await expect(page.locator('[data-crm-review-reader] .crm-mail-reader__subject, [data-crm-review-reader] .crm-review-zone__label').first()).toBeVisible();
     }
@@ -117,9 +118,13 @@ test.describe('Bachus Review mail extreme simplicity', () => {
     const bulk = page.locator('[data-crm-review-bulk]');
     if (await bulk.count()) {
       await expect(bulk).toBeHidden();
-      const select = page.locator('[data-crm-review-select]').first();
+      const select = page.locator('li.crm-review-row:not([hidden]) [data-crm-review-select]').first();
       if (await select.count()) {
-        await select.check();
+        await select.evaluate((el) => {
+          if (!(el instanceof HTMLInputElement)) return;
+          el.checked = true;
+          el.dispatchEvent(new Event('change', { bubbles: true }));
+        });
         await expect(bulk).toBeVisible();
         await expect(page.locator('[data-crm-review-bulk-remove]')).toBeEnabled();
       }

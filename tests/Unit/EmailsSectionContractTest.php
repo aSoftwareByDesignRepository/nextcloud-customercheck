@@ -17,7 +17,7 @@ final class EmailsSectionContractTest extends TestCase
 		$this->assertStringContainsString('Logged messages', $src);
 		$this->assertStringNotContainsString('CRM email log', $src);
 		$this->assertStringContainsString('data-crm-trigger="crm-log-email"', $src);
-		$this->assertStringContainsString('Tap Log email under Talk', $src);
+		$this->assertStringContainsString('Tap Log talk under Talk', $src);
 		$this->assertStringContainsString('withLabel', $src);
 		$this->assertStringContainsString('directionLabel', $src);
 		$this->assertStringContainsString('sourceLabel', $src);

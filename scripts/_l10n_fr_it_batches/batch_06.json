@@ -1,0 +1,70 @@
+{
+  "Your customer registry.": {
+    "fr": "Ton registre clients.",
+    "it": "Il tuo registro clienti."
+  },
+  "Your daily list — pick one row and finish it.": {
+    "fr": "Ta liste du jour — choisis une ligne et termine-la.",
+    "it": "La tua lista di oggi — scegli una riga e finiscila."
+  },
+  "Your focus": {
+    "fr": "Ton focus",
+    "it": "Il tuo focus"
+  },
+  "Your follow-ups, contacts, and tasks. Open a row or mark Done — nothing else required.": {
+    "fr": "Tes suivis, contacts et tâches. Ouvre une ligne ou marque Terminé — rien d’autre n’est requis.",
+    "it": "I tuoi follow-up, contatti e task. Apri una riga o segna Fatto — non serve altro."
+  },
+  "Your IT must assign you a CustomerCheck Mobile seat.": {
+    "fr": "Ton IT doit t’attribuer un siège CustomerCheck Mobile.",
+    "it": "Il tuo IT deve assegnarti un posto CustomerCheck Mobile."
+  },
+  "Your organisation restricts CustomerCheck access. You are not on the allowed-users list and you are not a member of any allowed group.": {
+    "fr": "Ton organisation restreint l’accès à CustomerCheck. Tu n’es pas sur la liste des utilisateurs autorisés et tu n’es membre d’aucun groupe autorisé.",
+    "it": "La tua organizzazione limita l’accesso a CustomerCheck. Non sei nell’elenco utenti consentiti e non sei membro di nessun gruppo consentito."
+  },
+  "Your pipeline view preference can still be changed below.": {
+    "fr": "Ta préférence de vue pipeline peut encore être changée ci-dessous.",
+    "it": "La tua preferenza di vista pipeline può ancora essere cambiata sotto."
+  },
+  "Your preferences": {
+    "fr": "Tes préférences",
+    "it": "Le tue preferenze"
+  },
+  "Your promises for this week — and a check that last week’s were kept.": {
+    "fr": "Tes promesses pour cette semaine — et un contrôle que celles de la semaine dernière ont été tenues.",
+    "it": "Le tue promesse per questa settimana — e un controllo che quelle della scorsa settimana siano state mantenute."
+  },
+  "Your queues plus teammates who need help. Jump to a section, then take the one action in the row.": {
+    "fr": "Tes files plus les collègues qui ont besoin d’aide. Saute à une section, puis fais la seule action de la ligne.",
+    "it": "Le tue code più i colleghi che hanno bisogno di aiuto. Salta a una sezione, poi fai l’unica azione della riga."
+  },
+  "Your short memory of who you wrote — not a copy of your inbox.": {
+    "fr": "Ta courte mémoire de à qui tu as écrit — pas une copie de ta boîte.",
+    "it": "La tua breve memoria di a chi hai scritto — non una copia della casella."
+  },
+  "Your value for %s": {
+    "fr": "Ta valeur pour %s",
+    "it": "Il tuo valore per %s"
+  },
+  "Your week is full.": {
+    "fr": "Ta semaine est pleine.",
+    "it": "La tua settimana è piena."
+  },
+  "Your week is full. Finish or drop a promise first.": {
+    "fr": "Ta semaine est pleine. Termine ou abandonne d’abord une promesse.",
+    "it": "La tua settimana è piena. Prima finisci o abbandona una promessa."
+  },
+  "Your whole Files home is too broad. Open a specific folder (for example Contracts or the customer name), then click Choose.": {
+    "fr": "Tout ton Files d’accueil est trop large. Ouvre un dossier précis (par exemple Contrats ou le nom du client), puis clique sur Choisir.",
+    "it": "Tutta la home Files è troppo ampia. Apri una cartella specifica (ad esempio Contratti o il nome del cliente), poi clicca Scegli."
+  },
+  "Your whole Files home is too broad. Pick a specific folder.": {
+    "fr": "Tout ton Files d’accueil est trop large. Choisis un dossier précis.",
+    "it": "Tutta la home Files è troppo ampia. Scegli una cartella specifica."
+  },
+  "You’re clear — nice.": {
+    "fr": "Tu es à jour — super.",
+    "it": "Sei a posto — ottimo."
+  }
+}

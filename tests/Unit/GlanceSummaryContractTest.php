@@ -32,7 +32,9 @@ final class GlanceSummaryContractTest extends TestCase
 		$this->assertStringNotContainsString("t('Gap')", $js);
 		$this->assertStringContainsString("crm-callout--danger", $js);
 		$this->assertStringContainsString("t('Try again')", $js);
-		$this->assertStringContainsString("[t('Company'), dto.name || '—', '']", $js);
+		$this->assertStringContainsString("[t('Primary contact'),", $js);
+		$this->assertStringContainsString("[t('Next action'),", $js);
+		$this->assertStringNotContainsString("[t('Company'), dto.name || '—', '']", $js);
 	}
 
 	public function testBrowserBootstrapExposesBuildersAndSafeRender(): void
@@ -57,6 +59,10 @@ final class GlanceSummaryContractTest extends TestCase
 		$this->assertStringContainsString($needle, $boot);
 		$this->assertStringContainsString("t('%s days left'", $utils);
 		$this->assertStringContainsString("t('%s days left'", $boot);
+		$this->assertStringContainsString('function moneyGlanceTone', $utils);
+		$this->assertStringContainsString('function moneyGlanceTone', $boot);
+		$this->assertStringContainsString('moneyGlanceTone(billingState, !!coverageRaw.gap)', $utils);
+		$this->assertStringContainsString('moneyGlanceTone(billingState, !!coverageRaw.gap)', $boot);
 		$this->assertStringContainsString(
 			"['primary', 'success', 'warning', 'danger', 'neutral'].includes(tone)",
 			$utils,

@@ -8,6 +8,7 @@ import {
   buildGlanceSummaryTiles,
   coverageMissingLabel,
   coverageTileParts,
+  moneyGlanceTone,
   renewalTileParts,
   sanitizeGlanceTone,
 } from '../../js/utils/glance-summary.js';
@@ -39,6 +40,11 @@ describe('coverageMissingLabel / billing helpers', () => {
     expect(billingTone('attention')).toBe('warning');
     expect(billingTone('critical')).toBe('danger');
     expect(billingTone('')).toBe('neutral');
+    expect(moneyGlanceTone('ok', false)).toBe('success');
+    expect(moneyGlanceTone('ok', true)).toBe('warning');
+    expect(moneyGlanceTone('attention', true)).toBe('warning');
+    expect(moneyGlanceTone('critical', true)).toBe('danger');
+    expect(moneyGlanceTone('unknown', true)).toBe('warning');
   });
 
   it('sanitizes unknown tile tones', () => {
@@ -100,7 +106,7 @@ describe('renewalTileParts', () => {
 });
 
 describe('buildGlanceSummaryTiles', () => {
-  it('builds eight tiles with XSS-safe string values from a full DTO', () => {
+  it('builds four calm tiles without repeating the company name', () => {
     const tiles = buildGlanceSummaryTiles({
       name: '<Acme>',
       nextTouchOn: '2026-08-15',
@@ -112,25 +118,21 @@ describe('buildGlanceSummaryTiles', () => {
       runway: { validUntil: null },
     }, { t, formatDisplayDate });
 
-    expect(tiles).toHaveLength(8);
+    expect(tiles).toHaveLength(4);
     expect(tiles.map((x) => x.key)).toEqual([
-      'company', 'primary', 'coverage', 'nextTouch', 'lastDiscussion', 'nextAction', 'money', 'renewal',
+      'primary', 'nextAction', 'money', 'renewal',
     ]);
-    expect(tiles[0].value).toBe('<Acme>');
-    expect(tiles[0].tone).toBe('primary');
-    expect(tiles[1].value).toBe('Ada');
-    expect(tiles[1].meta).toBe('IT');
-    expect(tiles[2].value).toBe('Covered');
-    expect(tiles[3].value).toBe('D:2026-08-15');
-    expect(tiles[4].value).toBe('Reply to inquiry');
-    expect(tiles[4].meta).toBe('D:2026-08-08T02:00:00+00:00');
-    expect(tiles[5].value).toBe('Reply to inquiry');
-    expect(tiles[5].tone).toBe('primary');
-    expect(tiles[6].value).toBe('Unknown');
-    expect(tiles[7].value).toBe('—');
+    expect(tiles[0].value).toBe('Ada');
+    expect(tiles[0].meta).toBe('IT');
+    expect(tiles[1].value).toBe('Reply to inquiry');
+    expect(tiles[1].meta).toContain('Last talk');
+    expect(tiles[1].meta).toContain('Reply to inquiry');
+    expect(tiles[1].tone).toBe('primary');
+    expect(tiles[2].value).toBe('Unknown');
+    expect(tiles[3].value).toBe('—');
   });
 
-  it('flags missing primary, coverage gaps, unscheduled touch, and overdue money', () => {
+  it('folds coverage gaps into money meta and flags missing primary', () => {
     const tiles = buildGlanceSummaryTiles({
       name: '',
       coverage: { gap: true, missing: ['champion'] },
@@ -139,14 +141,12 @@ describe('buildGlanceSummaryTiles', () => {
     }, { t, formatDisplayDate });
 
     const byKey = Object.fromEntries(tiles.map((x) => [x.key, x]));
-    expect(byKey.company.value).toBe('—');
+    expect(byKey.company).toBeUndefined();
+    expect(byKey.coverage).toBeUndefined();
+    expect(byKey.nextTouch).toBeUndefined();
+    expect(byKey.lastDiscussion).toBeUndefined();
     expect(byKey.primary.value).toBe('No primary person');
     expect(byKey.primary.tone).toBe('warning');
-    expect(byKey.coverage.value).toBe('Needs links');
-    expect(byKey.coverage.meta).toBe('Champion');
-    expect(byKey.coverage.value).not.toBe('Gap');
-    expect(byKey.nextTouch.value).toBe('Not scheduled');
-    expect(byKey.nextTouch.tone).toBe('warning');
     expect(byKey.nextAction.value).toBe('No urgent action');
     expect(byKey.nextAction.tone).toBe('success');
     expect(byKey.money.value).toBe('Overdue');
@@ -154,8 +154,31 @@ describe('buildGlanceSummaryTiles', () => {
     expect(byKey.money.tone).toBe('danger');
   });
 
+  it('puts Needs links on money meta when there is no overdue count', () => {
+    const tiles = buildGlanceSummaryTiles({
+      coverage: { gap: true, missingLabels: ['Champion'] },
+      billing: { state: 'ok', overdueCount: 0 },
+      nextAction: {},
+    }, { t, formatDisplayDate });
+    const money = tiles.find((x) => x.key === 'money');
+    expect(money.meta).toBe('Needs links: Champion');
+    expect(money.tone).toBe('warning');
+    expect(money.value).toBe('Paid up');
+  });
+
+  it('keeps danger when overdue even if coverage also gaps', () => {
+    const tiles = buildGlanceSummaryTiles({
+      coverage: { gap: true, missing: ['champion'] },
+      billing: { state: 'critical', overdueCount: 1 },
+      nextAction: {},
+    }, { t, formatDisplayDate });
+    const money = tiles.find((x) => x.key === 'money');
+    expect(money.tone).toBe('danger');
+    expect(money.meta).toBe('1 overdue');
+  });
+
   it('survives null / non-object DTO without throwing', () => {
     expect(() => buildGlanceSummaryTiles(null, { t, formatDisplayDate })).not.toThrow();
-    expect(buildGlanceSummaryTiles(undefined, { t, formatDisplayDate })).toHaveLength(8);
+    expect(buildGlanceSummaryTiles(undefined, { t, formatDisplayDate })).toHaveLength(4);
   });
 });

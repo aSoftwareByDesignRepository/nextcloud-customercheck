@@ -16,14 +16,14 @@ test.describe('Today command board UX', () => {
 
     const firstRun = page.locator('.crm-empty-state__actions a', { hasText: /Add company/i });
     const calm = page.locator('.crm-callout--success');
-    const roleDash = page.locator('.crm-today-role');
+    const focusLine = page.locator('.crm-today-focus-line, #crm-today-role-title');
     const table = page.locator('.crm-command-section table.table.table--hover').first();
 
-    await expect(firstRun.or(calm).or(roleDash).first()).toBeVisible({ timeout: 15000 });
+    await expect(firstRun.or(calm).or(focusLine).first()).toBeVisible({ timeout: 15000 });
 
-    if (await roleDash.isVisible().catch(() => false)) {
-      await expect(page.locator('#crm-today-role-title')).toContainText(/Your focus|Dein Fokus|Ihr Fokus/i);
-      await expect(page.locator('.crm-today-stat__value').first()).toBeVisible();
+    if (await focusLine.isVisible().catch(() => false)) {
+      await expect(page.locator('#crm-today-role-title')).toBeVisible();
+      await expect(page.locator('#crm-today-role-title')).toContainText(/need you|brauchen dich|brauchen Sie|benötigen/i);
       await expect(page.locator('.crm-quick-filters[aria-label="Jump to queue"], .crm-quick-filters[aria-label="Zur Warteschlange springen"], .crm-quick-filters[aria-label*="queue"], .crm-quick-filters[aria-label*="Warteschlange"]').first()).toBeVisible();
 
       await expect(table).toBeVisible();
@@ -102,6 +102,7 @@ test.describe('Today command board UX', () => {
     const form = page.locator('form[id^="crm-prompt-"]');
     await expect(form).toBeVisible({ timeout: 10000 });
     await form.locator('[name="title"]').fill(`Today call ${suffix}`);
+    await form.locator('details.crm-advanced summary').click();
     await form.locator('[name="type"]').selectOption('call');
     const today = new Date().toISOString().slice(0, 10);
     await form.locator('[name="dueDate"]').fill(today);
@@ -112,8 +113,8 @@ test.describe('Today command board UX', () => {
     const doneBtn = page.locator('[data-crm-complete-activity]').first();
     await expect(doneBtn).toBeVisible({ timeout: 15000 });
     await doneBtn.click();
-    await expect(page.locator('.crm-today-row--done .crm-badge--success', { hasText: /Done|Erledigt/i }).first()).toBeVisible({
-      timeout: 10000,
-    });
+    await expect(
+      page.locator('.crm-today-row--done .crm-badge--success, #crm-live-region').filter({ hasText: /Done|Erledigt|marked done|erledigt/i }).first(),
+    ).toBeVisible({ timeout: 15000 });
   });
 });

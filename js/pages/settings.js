@@ -1490,6 +1490,10 @@
   }
 
   function focusMailboxServersIfIncomplete(payload) {
+    const servers = document.getElementById('crm-mailbox-servers');
+    if (servers && servers instanceof HTMLDetailsElement) {
+      servers.open = true;
+    }
     const host = document.getElementById('crm-mbox-imap-host');
     const smtp = document.getElementById('crm-mbox-smtp-host');
     const imap = String((payload && payload.imapHost) || '').trim();

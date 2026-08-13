@@ -80,7 +80,7 @@ final class EmailOverviewPresenter
 			],
 			[
 				'title' => $l10n->t('2. Log what matters'),
-				'text' => $l10n->t('When you write or receive something important, tap Log email — or use CRM compose helpers (renewal, delivery, Partner). Those appear here automatically.'),
+				'text' => $l10n->t('When you write or receive something important, tap Log talk — or use CRM compose helpers (renewal, delivery, Partner). Those appear here automatically.'),
 			],
 		];
 		if ($mode === 'manual_only') {

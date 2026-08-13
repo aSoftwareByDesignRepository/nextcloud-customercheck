@@ -14,7 +14,7 @@ test.describe('Simplified core UX journeys', () => {
     // Either first-run CTAs, calm empty, or suite attention tables — never a dead end.
     const firstRun = page.locator('.crm-empty-state__actions a', { hasText: /Add company/i });
     const calm = page.locator('.crm-callout--success');
-    const table = page.locator('.crm-command-section table.table, .crm-today-role');
+    const table = page.locator('.crm-command-section table.table, .crm-today-focus-line, #crm-today-role-title');
     await expect(firstRun.or(calm).or(table).first()).toBeVisible({ timeout: 15000 });
 
     await page.goto('/apps/customercheck/companies');
