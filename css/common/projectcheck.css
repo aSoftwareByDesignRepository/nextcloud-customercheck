@@ -21,7 +21,7 @@
 	gap: var(--crm-space-4, var(--space-4, 1rem));
 	padding: var(--crm-space-4, var(--space-4, 1rem));
 	border: 1px solid var(--color-border, var(--arbeitszeitcheck-color-border));
-	border-radius: var(--border-radius-large, 12px);
+	border-radius: var(--border-radius-large, var(--crm-radius-md));
 	background: var(--color-background-hover, var(--color-main-background));
 }
 
@@ -65,7 +65,7 @@
 .crm-projectcheck-picker-empty {
 	margin: 0;
 	padding: var(--space-3, 0.75rem);
-	border-radius: var(--border-radius, 8px);
+	border-radius: var(--border-radius, var(--crm-radius-sm));
 	border: 1px dashed var(--color-border);
 	background: var(--color-background-hover, var(--color-main-background));
 	color: var(--color-main-text);

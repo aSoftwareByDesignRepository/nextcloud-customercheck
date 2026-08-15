@@ -45,17 +45,17 @@ body {
   /* Semantic — from Nextcloud (tints mix INTO main-background so they survive every theme) */
   --arbeitszeitcheck-color-success: var(--color-success-text, var(--color-success));
   --arbeitszeitcheck-color-success-hover: var(--color-success-text, var(--color-success));
-  --arbeitszeitcheck-color-success-light: color-mix(in srgb, var(--color-success-text, var(--color-success, #22c55e)) 15%, var(--color-main-background));
+  --arbeitszeitcheck-color-success-light: color-mix(in srgb, var(--color-success-text, var(--color-success)) 15%, var(--color-main-background));
   --arbeitszeitcheck-color-success-dark: var(--color-success-text, var(--color-success));
 
   --arbeitszeitcheck-color-warning: var(--color-warning-text, var(--color-warning));
   --arbeitszeitcheck-color-warning-hover: var(--color-warning-text, var(--color-warning));
-  --arbeitszeitcheck-color-warning-light: color-mix(in srgb, var(--color-warning-text, var(--color-warning, #f59e0b)) 15%, var(--color-main-background));
+  --arbeitszeitcheck-color-warning-light: color-mix(in srgb, var(--color-warning-text, var(--color-warning)) 15%, var(--color-main-background));
   --arbeitszeitcheck-color-warning-dark: var(--color-warning-text, var(--color-warning));
 
   --arbeitszeitcheck-color-error: var(--color-error-text, var(--color-error));
   --arbeitszeitcheck-color-error-hover: var(--color-error-text, var(--color-error));
-  --arbeitszeitcheck-color-error-light: color-mix(in srgb, var(--color-error-text, var(--color-error, #ef4444)) 15%, var(--color-main-background));
+  --arbeitszeitcheck-color-error-light: color-mix(in srgb, var(--color-error-text, var(--color-error)) 15%, var(--color-main-background));
   --arbeitszeitcheck-color-error-dark: var(--color-error-text, var(--color-error));
 
   --arbeitszeitcheck-color-info: var(--color-primary-element);

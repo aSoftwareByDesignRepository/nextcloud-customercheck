@@ -38,11 +38,11 @@ final class DesignSystemAlignmentContractTest extends TestCase
 		$this->assertStringContainsString('--arbeitszeitcheck-color-primary: var(--color-primary-element);', $colors);
 		$this->assertStringNotContainsString('--arbeitszeitcheck-color-primary: var(--color-primary);', $colors);
 		$this->assertStringContainsString(
-			'--arbeitszeitcheck-color-success-light: color-mix(in srgb, var(--color-success-text, var(--color-success, #22c55e)) 15%, var(--color-main-background))',
+			'--arbeitszeitcheck-color-success-light: color-mix(in srgb, var(--color-success-text, var(--color-success)) 15%, var(--color-main-background))',
 			$colors,
 		);
 		$this->assertStringNotContainsString(
-			'--arbeitszeitcheck-color-success-light: color-mix(in srgb, var(--color-success, #22c55e) 15%, transparent)',
+			'--arbeitszeitcheck-color-success-light: color-mix(in srgb, var(--color-success) 15%, transparent)',
 			$colors,
 		);
 		$this->assertStringContainsString('--arbeitszeitcheck-color-button-danger: var(--crm-danger-fill', $colors);
@@ -223,11 +223,11 @@ final class DesignSystemAlignmentContractTest extends TestCase
 		$this->assertStringContainsString('dialog.crm-native-dialog .crm-advanced {', $app);
 		$this->assertStringContainsString('dialog.crm-native-dialog .crm-form-inline-error[hidden]', $app);
 		$this->assertStringContainsString(
-			'color-mix(in srgb, var(--color-success, #2d7a3e) 8%, var(--color-main-background))',
+			'color-mix(in srgb, var(--color-success) 8%, var(--color-main-background))',
 			$app,
 		);
 		$this->assertStringNotContainsString(
-			'color-mix(in srgb, var(--color-success, #2d7a3e) 8%, transparent)',
+			'color-mix(in srgb, var(--color-success) 8%, transparent)',
 			$app,
 		);
 		$notify = (string)file_get_contents($this->root . '/css/common/notification-surfaces.css');

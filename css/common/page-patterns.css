@@ -31,7 +31,7 @@
 
 #app-content.crm-app .crm-access-denied__hint {
 	margin: 0 0 var(--crm-space-4);
-	color: var(--color-text-maxcontrast, #666);
+	color: var(--crm-muted);
 	font-size: 0.95rem;
 	line-height: 1.45;
 }
@@ -99,7 +99,7 @@
 
 /* ── Filter panel (manager + compliance lists) ──────────────── */
 #app-content.crm-app .crm-filter-panel {
-	border-left: 4px solid var(--color-primary-element, #0082c9);
+	border-left: 4px solid var(--color-primary-element);
 	padding: 0;
 	overflow: hidden;
 }
@@ -234,8 +234,8 @@
 
 #app-content.crm-app .crm-filter-field__control .form-input[aria-invalid='true'],
 #app-content.crm-app .crm-filter-field__control .form-select[aria-invalid='true'] {
-	border-color: var(--color-error, #e9322d);
-	outline-color: var(--color-error-text, var(--color-error, #e9322d));
+	border-color: var(--color-error);
+	outline-color: var(--color-error-text, var(--color-error));
 }
 
 @media (max-width: 1200px) {
@@ -312,7 +312,7 @@
 	width: 1.25rem;
 	height: 1.25rem;
 	border: 2px solid var(--crm-border);
-	border-top-color: var(--color-primary-element, #0082c9);
+	border-top-color: var(--color-primary-element);
 	border-radius: 50%;
 	animation: azc-spin 0.8s linear infinite;
 }
@@ -338,7 +338,7 @@
 #arbeitszeitcheck-personal-settings .settings-hint {
 	max-width: 60ch;
 	line-height: var(--crm-line-base, 1.5);
-	color: var(--color-text-maxcontrast, var(--crm-muted, #666));
+	color: var(--crm-muted);
 }
 
 #arbeitszeitcheck-personal-settings .settings-subheading {
@@ -426,7 +426,7 @@
 
 #app-content.crm-app .table tbody tr:focus-within,
 #app-content.crm-app .grid-table tbody tr:focus-within {
-	outline: 2px solid var(--color-primary-element, #0082c9);
+	outline: 2px solid var(--color-primary-element);
 	outline-offset: -2px;
 }
 

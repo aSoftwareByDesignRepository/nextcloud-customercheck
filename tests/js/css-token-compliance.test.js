@@ -111,6 +111,22 @@ describe('CSS design-token compliance (no hardcoded colors)', () => {
     });
   }
 
+  it('feature CSS has zero hex (even as var fallbacks); only tokens.css may keep NC fallbacks', () => {
+    const offenders = [];
+    for (const file of files) {
+      const rel = relative(appRoot, file);
+      if (rel === 'css/common/tokens.css') continue;
+      const css = stripComments(readFileSync(file, 'utf8'));
+      for (const { value } of declarationValues(css)) {
+        const match = value.match(RAW_COLOR);
+        if (match) {
+          offenders.push(`${rel}: ${value.trim().slice(0, 100)} → ${match[0]}`);
+        }
+      }
+    }
+    expect(offenders, `Hex outside tokens.css:\n${offenders.join('\n')}`).toEqual([]);
+  });
+
   it('theme-bound tokens are defined on body (Nextcloud sets --color-* on body)', () => {
     const tokens = stripComments(readFileSync(join(cssRoot, 'common', 'tokens.css'), 'utf8'));
     const bodyBlocks = [...tokens.matchAll(/(^|\})\s*body\s*\{([\s\S]*?)\}/g)].map((m) => m[2]).join('\n');
@@ -130,6 +146,13 @@ describe('CSS design-token compliance (no hardcoded colors)', () => {
       '--crm-danger-fill',
       '--crm-danger-on-fill',
       '--crm-danger-ink',
+    ]) {
+      expect(bodyBlocks, `${token} must be defined inside body {}`).toContain(`${token}:`);
+    }
+    for (const token of [
+      '--crm-support-brand-plate',
+      '--crm-support-brand-ink',
+      '--crm-support-brand-muted',
     ]) {
       expect(bodyBlocks, `${token} must be defined inside body {}`).toContain(`${token}:`);
     }
@@ -182,6 +205,7 @@ describe('CSS design-token compliance (no hardcoded colors)', () => {
     expect(colors).not.toMatch(/--arbeitszeitcheck-color-primary:\s*var\(--color-primary\)\s*;/);
     expect(colors).toMatch(/--arbeitszeitcheck-color-success-light:[^;]*var\(--color-main-background\)/);
     expect(colors).not.toMatch(/--arbeitszeitcheck-color-success-light:[^;]*transparent/);
+    expect(colors).not.toMatch(/--arbeitszeitcheck-color-success-light:[^;]*#[0-9a-fA-F]{3,8}/);
     expect(colors).toMatch(/--arbeitszeitcheck-color-button-danger:\s*var\(--crm-danger-fill/);
     const a11y = stripComments(readFileSync(join(cssRoot, 'common', 'accessibility.css'), 'utf8'));
     expect(a11y).toContain('@media (prefers-contrast: more)');

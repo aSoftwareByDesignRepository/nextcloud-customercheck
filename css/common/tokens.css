@@ -77,6 +77,11 @@
 
 /* Theme-bound tokens — must follow body [data-theme-*] where NC defines --color-* */
 body {
+	/* Support-us brand surfaces — theme-adaptive (never fixed white ink) */
+	--crm-support-brand-plate: var(--crm-bg-card);
+	--crm-support-brand-ink: var(--crm-text);
+	--crm-support-brand-muted: var(--crm-muted);
+
 	/* Fixed overlays (panels, backdrops, mobile nav) sit below NC #header, not under the profile menu */
 	--crm-overlay-top: var(--header-height, 50px);
 	--crm-overlay-height: calc(100dvh - var(--header-height, 50px));

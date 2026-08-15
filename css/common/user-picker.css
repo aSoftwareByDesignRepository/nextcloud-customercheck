@@ -32,7 +32,7 @@ dialog.crm-native-dialog .user-picker__clear {
 	min-width: 44px;
 	min-height: 44px;
 	padding: 0 var(--space-2, 0.5rem);
-	border-radius: var(--border-radius, 6px);
+	border-radius: var(--border-radius, var(--crm-radius-sm));
 }
 
 #app-content-wrapper .user-picker__clear:focus-visible,
@@ -54,7 +54,7 @@ dialog.crm-native-dialog .user-picker__list {
 	list-style: none;
 	background: var(--arbeitszeitcheck-color-main-background, var(--color-main-background));
 	border: 1px solid var(--arbeitszeitcheck-color-border, var(--color-border));
-	border-radius: var(--border-radius, 6px);
+	border-radius: var(--border-radius, var(--crm-radius-sm));
 	/* Theme-bound shadow: derives from --color-main-text so it stays visible on dark themes */
 	box-shadow: var(--crm-shadow-md, 0 8px 24px color-mix(in srgb, var(--color-main-text) 12%, transparent));
 }

@@ -51,7 +51,7 @@
         var(--crm-nav-item-inset) + var(--crm-nav-padding-inline) + (var(--crm-nav-icon-size) / 2) - 1px
     );
     --crm-nav-item-inset: 0.5rem;
-    --crm-nav-item-radius: var(--crm-radius-md, var(--border-radius-large, 8px));
+    --crm-nav-item-radius: var(--crm-radius-md, var(--border-radius-large, var(--crm-radius-md)));
     --crm-nav-item-transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -81,7 +81,7 @@
     font-weight: 700;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    color: var(--color-text-maxcontrast, #767676);
+    color: var(--crm-muted);
     line-height: 1.3;
 }
 #app-navigation .nav-menu > .crm-nav__group:hover,

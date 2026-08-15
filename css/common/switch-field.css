@@ -27,7 +27,7 @@ dialog.crm-native-dialog .crm-switch-field__input {
 #app-content.crm-app .crm-switch-field__input:focus-visible + .crm-switch-field__label .crm-switch-field__track,
 .modal-backdrop .crm-switch-field__input:focus-visible + .crm-switch-field__label .crm-switch-field__track,
 dialog.crm-native-dialog .crm-switch-field__input:focus-visible + .crm-switch-field__label .crm-switch-field__track {
-	outline: 3px solid var(--color-primary-element, #0082c9);
+	outline: 3px solid var(--color-primary-element);
 	outline-offset: 2px;
 }
 
@@ -75,8 +75,8 @@ dialog.crm-native-dialog .crm-switch-field__track::after {
 #app-content.crm-app .crm-switch-field__input:checked + .crm-switch-field__label .crm-switch-field__track,
 .modal-backdrop .crm-switch-field__input:checked + .crm-switch-field__label .crm-switch-field__track,
 dialog.crm-native-dialog .crm-switch-field__input:checked + .crm-switch-field__label .crm-switch-field__track {
-	background: var(--color-primary-element, #0082c9);
-	border-color: var(--color-primary-element, #0082c9);
+	background: var(--color-primary-element);
+	border-color: var(--color-primary-element);
 }
 
 #app-content.crm-app .crm-switch-field__input:checked + .crm-switch-field__label .crm-switch-field__track::after,

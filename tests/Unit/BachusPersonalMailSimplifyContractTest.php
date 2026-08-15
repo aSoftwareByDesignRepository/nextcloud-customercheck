@@ -155,6 +155,14 @@ final class BachusPersonalMailSimplifyContractTest extends TestCase
 			'/@media \(max-width:\s*1023px\) \{\s*\n\s*#app-content\.crm-app \.crm-personal-mail-folders/',
 			$css,
 		);
+		$this->assertStringContainsString('var(--crm-muted)', $css);
+		$this->assertStringContainsString('var(--crm-bg-card)', $css);
+		$mailBlockStart = strpos($css, '/* Sales Inbox + personal mail settings');
+		$mailBlockEnd = strpos($css, '/* Sales Inbox: full-width list');
+		$this->assertNotFalse($mailBlockStart);
+		$this->assertNotFalse($mailBlockEnd);
+		$mailBlock = substr($css, $mailBlockStart, $mailBlockEnd - $mailBlockStart);
+		$this->assertDoesNotMatchRegularExpression('/#[0-9a-fA-F]{3,8}/', $mailBlock);
 	}
 
 	public function testResponsiveDesktopSacredDoesNotStackInBaseRules(): void

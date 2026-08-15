@@ -38,8 +38,8 @@
 .month-closure-badge {
 	--crm-bdg-ink: var(--color-main-text);
 	--crm-bdg-fill: var(--color-background-hover, var(--color-main-background));
-	--crm-bdg-edge: var(--color-border-maxcontrast, #7d7d7d);
-	--crm-bdg-dot: var(--color-border-maxcontrast, #7d7d7d);
+	--crm-bdg-edge: var(--color-border-maxcontrast, var(--crm-border-strong));
+	--crm-bdg-dot: var(--color-border-maxcontrast, var(--crm-border-strong));
 
 	display: inline-flex;
 	align-items: center;
@@ -105,9 +105,9 @@
 #app-content.crm-app .auto-break-toggle__status--on,
 .crm-projectcheck-connection__badge--on,
 .month-closure-badge--success {
-	--crm-bdg-ink: var(--color-success-text, var(--color-success, #286c39));
-	--crm-bdg-fill: color-mix(in srgb, var(--color-success, #2d7b41) var(--crm-bdg-fill-mix), var(--color-main-background));
-	--crm-bdg-edge: color-mix(in srgb, var(--crm-bdg-ink) var(--crm-bdg-edge-mix), var(--color-border-maxcontrast, #7d7d7d));
+	--crm-bdg-ink: var(--color-success-text, var(--color-success));
+	--crm-bdg-fill: color-mix(in srgb, var(--color-success) var(--crm-bdg-fill-mix), var(--color-main-background));
+	--crm-bdg-edge: color-mix(in srgb, var(--crm-bdg-ink) var(--crm-bdg-edge-mix), var(--color-border-maxcontrast, var(--crm-border-strong)));
 	--crm-bdg-dot: var(--crm-bdg-ink);
 }
 
@@ -125,9 +125,9 @@
 .dz-list-item .dz-badge[data-status="break"],
 .status-badge.break,
 .month-closure-badge--warning {
-	--crm-bdg-ink: var(--color-warning-text, var(--color-warning, #7f5900));
-	--crm-bdg-fill: color-mix(in srgb, var(--color-warning, #a37200) var(--crm-bdg-fill-mix), var(--color-main-background));
-	--crm-bdg-edge: color-mix(in srgb, var(--crm-bdg-ink) var(--crm-bdg-edge-mix), var(--color-border-maxcontrast, #7d7d7d));
+	--crm-bdg-ink: var(--color-warning-text, var(--color-warning));
+	--crm-bdg-fill: color-mix(in srgb, var(--color-warning) var(--crm-bdg-fill-mix), var(--color-main-background));
+	--crm-bdg-edge: color-mix(in srgb, var(--crm-bdg-ink) var(--crm-bdg-edge-mix), var(--color-border-maxcontrast, var(--crm-border-strong)));
 	--crm-bdg-dot: var(--crm-bdg-ink);
 }
 
@@ -140,9 +140,9 @@
 .crm-badge--error,
 .absence-type-badge.type-sick,
 .absence-type-badge.type-sick_leave {
-	--crm-bdg-ink: var(--color-error-text, var(--color-error, #c20505));
-	--crm-bdg-fill: color-mix(in srgb, var(--color-error, #db0606) var(--crm-bdg-fill-mix), var(--color-main-background));
-	--crm-bdg-edge: color-mix(in srgb, var(--crm-bdg-ink) var(--crm-bdg-edge-mix), var(--color-border-maxcontrast, #7d7d7d));
+	--crm-bdg-ink: var(--color-error-text, var(--color-error));
+	--crm-bdg-fill: color-mix(in srgb, var(--color-error) var(--crm-bdg-fill-mix), var(--color-main-background));
+	--crm-bdg-edge: color-mix(in srgb, var(--crm-bdg-ink) var(--crm-bdg-edge-mix), var(--color-border-maxcontrast, var(--crm-border-strong)));
 	--crm-bdg-dot: var(--crm-bdg-ink);
 }
 
@@ -164,9 +164,9 @@
 #app-content.crm-app--admin-holidays .admin-holidays-badge--statutory,
 .dz-status-badge[data-status="paused"],
 .dz-list-item .dz-badge[data-status="paused"] {
-	--crm-bdg-ink: var(--color-info-text, var(--color-info, #006499));
-	--crm-bdg-fill: color-mix(in srgb, var(--color-info, #0071ad) var(--crm-bdg-fill-mix), var(--color-main-background));
-	--crm-bdg-edge: color-mix(in srgb, var(--crm-bdg-ink) var(--crm-bdg-edge-mix), var(--color-border-maxcontrast, #7d7d7d));
+	--crm-bdg-ink: var(--color-info-text, var(--color-info));
+	--crm-bdg-fill: color-mix(in srgb, var(--color-info) var(--crm-bdg-fill-mix), var(--color-main-background));
+	--crm-bdg-edge: color-mix(in srgb, var(--crm-bdg-ink) var(--crm-bdg-edge-mix), var(--color-border-maxcontrast, var(--crm-border-strong)));
 	--crm-bdg-dot: var(--crm-bdg-ink);
 }
 
@@ -192,8 +192,8 @@
 .month-closure-badge--neutral {
 	--crm-bdg-fill: var(--color-background-hover, var(--color-main-background));
 	--crm-bdg-ink: var(--color-main-text);
-	--crm-bdg-edge: var(--color-border-maxcontrast, #7d7d7d);
-	--crm-bdg-dot: var(--color-border-maxcontrast, #7d7d7d);
+	--crm-bdg-edge: var(--color-border-maxcontrast, var(--crm-border-strong));
+	--crm-bdg-dot: var(--color-border-maxcontrast, var(--crm-border-strong));
 }
 
 /* ── Per-family geometry tweaks (colour comes from the tokens above) ── */
@@ -277,7 +277,7 @@
 	font-weight: 600;
 	line-height: 1.35;
 	border-radius: var(--border-radius-pill, 999px);
-	border: 1px solid var(--color-border-maxcontrast, #7d7d7d);
+	border: 1px solid var(--color-border-maxcontrast, var(--crm-border-strong));
 	background: var(--color-background-hover, var(--color-main-background));
 	color: var(--color-main-text);
 	box-sizing: border-box;
@@ -302,7 +302,7 @@
 	width: 1.75rem;
 	height: 1.75rem;
 	border-radius: 999px;
-	border: 1px solid var(--color-border-maxcontrast, #7d7d7d);
+	border: 1px solid var(--color-border-maxcontrast, var(--crm-border-strong));
 	font-weight: 700;
 	font-size: var(--crm-fs-sm, 0.875rem);
 	background: var(--color-background-hover, var(--color-main-background));
@@ -312,17 +312,17 @@
 
 .crm-reports-stepper__item--current .crm-reports-stepper__badge,
 .manager-mc-step--current .manager-mc-step__badge {
-	--crm-bdg-ink: var(--color-info-text, var(--color-info, #006499));
-	border-color: color-mix(in srgb, var(--crm-bdg-ink) 55%, var(--color-border-maxcontrast, #7d7d7d));
-	background: color-mix(in srgb, var(--color-info, #0071ad) 13%, var(--color-main-background));
+	--crm-bdg-ink: var(--color-info-text, var(--color-info));
+	border-color: color-mix(in srgb, var(--crm-bdg-ink) 55%, var(--color-border-maxcontrast, var(--crm-border-strong)));
+	background: color-mix(in srgb, var(--color-info) 13%, var(--color-main-background));
 	color: var(--crm-bdg-ink);
 }
 
 .crm-reports-stepper__item--done .crm-reports-stepper__badge,
 .manager-mc-step--done .manager-mc-step__badge {
-	--crm-bdg-ink: var(--color-success-text, var(--color-success, #286c39));
-	border-color: color-mix(in srgb, var(--crm-bdg-ink) 55%, var(--color-border-maxcontrast, #7d7d7d));
-	background: color-mix(in srgb, var(--color-success, #2d7b41) 13%, var(--color-main-background));
+	--crm-bdg-ink: var(--color-success-text, var(--color-success));
+	border-color: color-mix(in srgb, var(--crm-bdg-ink) 55%, var(--color-border-maxcontrast, var(--crm-border-strong)));
+	background: color-mix(in srgb, var(--color-success) 13%, var(--color-main-background));
 	color: var(--crm-bdg-ink);
 }
 

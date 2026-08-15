@@ -13,9 +13,9 @@ dialog.crm-native-dialog .crm-callout--info:not(.crm-semantic-panel),
 .modal-backdrop .inline-notice--info,
 dialog.crm-native-dialog .inline-notice--info,
 .toast--info {
-	border-color: var(--color-primary-element, #00679e);
+	border-color: var(--color-primary-element);
 	border-left-width: 5px;
-	border-left-color: var(--color-primary-element, #00679e);
+	border-left-color: var(--color-primary-element);
 	background: var(--crm-tint-info);
 }
 
@@ -30,9 +30,9 @@ dialog.crm-native-dialog .inline-notice--warning,
 #app-content.crm-app .alert--warning,
 .modal-backdrop .alert--warning,
 dialog.crm-native-dialog .alert--warning {
-	border-color: var(--color-warning-text, var(--color-warning, #a37200));
+	border-color: var(--color-warning-text, var(--color-warning));
 	border-left-width: 5px;
-	border-left-color: var(--color-warning-text, var(--color-warning, #a37200));
+	border-left-color: var(--color-warning-text, var(--color-warning));
 	background: var(--crm-tint-warning);
 }
 
@@ -44,9 +44,9 @@ dialog.crm-native-dialog .crm-callout--success:not(.crm-semantic-panel),
 #app-content.crm-app .alert--success,
 .modal-backdrop .alert--success,
 dialog.crm-native-dialog .alert--success {
-	border-color: var(--color-success-text, var(--color-success, #2d7b46));
+	border-color: var(--color-success-text, var(--color-success));
 	border-left-width: 5px;
-	border-left-color: var(--color-success-text, var(--color-success, #2d7b46));
+	border-left-color: var(--color-success-text, var(--color-success));
 	background: var(--crm-tint-success);
 }
 
@@ -62,9 +62,9 @@ dialog.crm-native-dialog .crm-callout--error:not(.crm-semantic-panel),
 #app-content.crm-app .alert--error,
 .modal-backdrop .alert--error,
 dialog.crm-native-dialog .alert--error {
-	border-color: var(--color-error-text, var(--color-error, #db0606));
+	border-color: var(--color-error-text, var(--color-error));
 	border-left-width: 5px;
-	border-left-color: var(--color-error-text, var(--color-error, #db0606));
+	border-left-color: var(--color-error-text, var(--color-error));
 	background: var(--crm-tint-danger);
 }
 
@@ -348,7 +348,7 @@ dialog.crm-native-dialog .inline-notice {
 	border: 2px solid var(--color-border, var(--crm-border));
 	border-radius: var(--crm-radius-md, 8px);
 	background: var(--color-main-background, var(--crm-bg));
-	box-shadow: var(--crm-shadow-sm, 0 1px 2px rgb(0 0 0 / 8%));
+	box-shadow: var(--crm-shadow-sm);
 	color: var(--color-main-text, var(--crm-text));
 }
 
@@ -537,7 +537,7 @@ dialog.crm-native-dialog .inline-notice__actions .crm-btn {
 .toast-close:hover,
 .toast-close:focus-visible {
 	opacity: 1;
-	outline: 2px solid var(--color-primary-element, #00679e);
+	outline: 2px solid var(--color-primary-element);
 	outline-offset: 2px;
 }
 

@@ -1743,7 +1743,7 @@ dialog.crm-dialog[open] {
 }
 
 .team-compliance-stat--clickable:focus-visible {
-  outline: 3px solid var(--color-primary-element, #0082c9);
+  outline: 3px solid var(--color-primary-element);
   outline-offset: 2px;
 }
 

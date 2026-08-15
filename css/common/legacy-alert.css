@@ -17,7 +17,7 @@ dialog.crm-native-dialog .alert,
 	border: 2px solid var(--color-border, var(--crm-border));
 	border-radius: var(--crm-radius-md, 8px);
 	background: var(--color-main-background, var(--crm-bg));
-	box-shadow: var(--crm-shadow-sm, 0 1px 2px rgb(0 0 0 / 8%));
+	box-shadow: var(--crm-shadow-sm);
 	color: var(--color-main-text, var(--crm-text));
 }
 

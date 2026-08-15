@@ -192,7 +192,7 @@ dialog.crm-native-dialog .crm-company-list__pick {
 	padding: 0.8rem var(--crm-space-4, 1rem);
 	text-align: left;
 	border: 0;
-	border-radius: var(--border-radius, 6px);
+	border-radius: var(--border-radius, var(--crm-radius-sm));
 	background: transparent;
 	color: var(--arbeitszeitcheck-color-main-text, var(--color-main-text));
 	font: inherit;

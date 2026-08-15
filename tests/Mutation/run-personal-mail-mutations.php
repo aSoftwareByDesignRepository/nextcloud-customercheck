@@ -500,6 +500,13 @@ $cases = [
 		'test' => 'BachusPersonalMailSimplifyContractTest::testCssGiantPersonalMailTargets',
 		'label' => 'folder_tablet_overflow_mq_removed',
 	],
+	[
+		'file' => $root . '/css/app.css',
+		'find' => '#app-content.crm-app .crm-sales-inbox__hint {',
+		'replace' => "#app-content.crm-app .crm-sales-inbox__hint {\n\tcolor: #666666;",
+		'test' => 'ThemeFeatureCssZeroHexContractTest::testFeatureStylesheetsContainNoHexLiterals',
+		'label' => 'mail_css_hardcodes_muted_hex',
+	],
 ];
 
 $failed = 0;
