@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.6.141 - 2026-08-15
+
+### l10n (native mail / CRM — Aristoteles)
+- Synced live `$l->t` / `t()` literals into catalogs (2858 keys; parity across en/de/da/es/fr/it/nb/nl/pl/sv/pt_BR)
+- Hand-translated mail-domain and CRM identity gaps (informal du/tu/je per `NATIVE-STYLE.md`) — no MT APIs
+- Fixed DE calques/grammar (`Churned`→Abgewandert, broken `Filtern du` / `lesen können`, Workspace/opt-in/Shared-Mailbox jargon)
+- Restored informal FR (tu) and NL (je) after vous/u MT leftovers; ES usted→tú on owner/plan copy
+- Added `l10n/GLOSSARY.md`; wired `check-l10n-native-quality.php` into `npm run check:l10n`
+- Contracts: `L10nNativeQualityContractTest` + hardened `L10nGermanCopyQualityTest`; mutation MSI **100%** (8/8) on `run-l10n-de-quality-mutations.php`
+- Regenerated `.js` catalogs and regional variants; parity + placeholder + DE + native + variant `--check` green
+
+### Test / contract hardenings (Assign rename drift)
+- Aligned Zeus/MailForward/GDPR/Timeline/health/roster contracts with Assign APIs (`selectedAssignIds`, `customerEmailForAssignSuggest`, `nextAssignOn`, …)
+- Full PHPUnit **unit** suite green: **1838** tests / **10440** assertions
+- `appinfo/version` kept in lockstep with `info.xml` (asset cache-buster)
+
 ## 1.6.140 - 2026-08-15
 
 ### Theme (Aristoteles — zero hex in feature CSS)

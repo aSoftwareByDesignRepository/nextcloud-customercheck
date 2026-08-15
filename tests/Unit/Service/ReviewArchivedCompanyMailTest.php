@@ -65,9 +65,9 @@ final class ReviewArchivedCompanyMailTest extends TestCase
 				$this->createMock(\OCA\CustomerCheck\Db\PersonMapper::class),
 				$this->createMock(\OCA\CustomerCheck\Service\WorkspaceService::class),
 			])
-			->onlyMethods(['returnSharedMailMessagesToReview'])
+			->onlyMethods(['returnSharedMailMessagesToAssign'])
 			->getMock();
-		$review->expects($this->once())->method('returnSharedMailMessagesToReview')->with(1, [77]);
+		$review->expects($this->once())->method('returnSharedMailMessagesToAssign')->with(1, [77]);
 
 		$this->assertSame(1, $review->reconcileArchivedCompanyMail(1));
 	}
@@ -127,9 +127,9 @@ final class ReviewArchivedCompanyMailTest extends TestCase
 				null,
 				$mailboxSync,
 			])
-			->onlyMethods(['returnSharedMailMessagesToReview'])
+			->onlyMethods(['returnSharedMailMessagesToAssign'])
 			->getMock();
-		$review->expects($this->once())->method('returnSharedMailMessagesToReview')->with(1, [21156]);
+		$review->expects($this->once())->method('returnSharedMailMessagesToAssign')->with(1, [21156]);
 
 		$this->assertSame(1, $review->reconcileMisfiledTeamForwards(1));
 	}

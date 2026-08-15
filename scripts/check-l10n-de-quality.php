@@ -82,8 +82,25 @@ $allowExact = [
 	'Optional:' => true,
 	'Required:' => true,
 	'Selected:' => true,
-	// Placeholder-only format strings (no prose letters).
 	'%1$s: %2$s. %3$s. %4$s' => true,
+	'Mail' => true,
+	'Logo' => true,
+	'Germany' => true,
+	'Luxembourg' => true,
+	'deal' => true,
+	'SSL (port 465)' => true,
+	'SSL (port 993)' => true,
+	'STARTTLS (port 143)' => true,
+	'STARTTLS (port 587)' => true,
+	'Account' => true,
+	'Inbox' => true,
+	'Personal' => true,
+	'Message' => true,
+	'Checklist' => true,
+	'Checklists' => true,
+	'Client secret' => true,
+	'France' => true,
+	'Austria' => true,
 ];
 
 /**

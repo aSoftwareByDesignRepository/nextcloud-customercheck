@@ -79,17 +79,17 @@ final class WorkspaceMoneyIsolationTest extends TestCase
 	public function testAccountPlanHealthDeterministic(): void
 	{
 		$this->assertSame('on_track', AccountPlanService::health([
-			'nextReviewOn' => '2099-01-01',
+			'nextAssignOn' => '2099-01-01',
 			'touchOverdue' => false,
 			'openCallbacks' => 0,
 			'renewalsHot' => false,
 		]));
 		$this->assertSame('stalled', AccountPlanService::health([
-			'nextReviewOn' => '2099-01-01',
+			'nextAssignOn' => '2099-01-01',
 			'touchOverdue' => true,
 		]));
 		$this->assertSame('at_risk', AccountPlanService::health([
-			'nextReviewOn' => '2020-01-01',
+			'nextAssignOn' => '2020-01-01',
 			'touchOverdue' => false,
 		]));
 		$this->assertSame('unknown', AccountPlanService::health([]));

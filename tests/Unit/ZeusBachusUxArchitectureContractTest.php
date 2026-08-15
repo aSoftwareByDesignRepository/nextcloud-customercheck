@@ -51,8 +51,8 @@ final class ZeusBachusUxArchitectureContractTest extends TestCase
 	public function testReviewBulkSelectionIgnoresHiddenRowsAndNeverFailOpensConfirm(): void
 	{
 		$js = (string)file_get_contents(dirname(__DIR__, 2) . '/js/pages/persona.js');
-		$this->assertStringContainsString('function selectedReviewIds', $js);
-		$sel = substr($js, (int)strpos($js, 'function selectedReviewIds'), 450);
+		$this->assertStringContainsString('function selectedAssignIds', $js);
+		$sel = substr($js, (int)strpos($js, 'function selectedAssignIds'), 450);
 		$this->assertStringContainsString('row.hidden', $sel);
 		$this->assertStringContainsString("closest('li.crm-review-row')", $sel);
 
@@ -105,8 +105,8 @@ final class ZeusBachusUxArchitectureContractTest extends TestCase
 
 		$submitAt = (int)strpos($js, "form.addEventListener('submit', async function (ev)");
 		$this->assertGreaterThan(0, $submitAt);
-		// Prefer the assign form submit (after wireReviewAssignForm), not brief confirm.
-		$assignWire = (int)strpos($js, 'function wireReviewAssignForm');
+		// Prefer the assign form submit (after wireAssignAssignForm), not brief confirm.
+		$assignWire = (int)strpos($js, 'function wireAssignAssignForm');
 		$this->assertGreaterThan(0, $assignWire);
 		$chunkStart = (int)strpos($js, "form.addEventListener('submit', async function (ev)", $assignWire);
 		$this->assertGreaterThan(0, $chunkStart);

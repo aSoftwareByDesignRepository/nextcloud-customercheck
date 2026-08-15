@@ -59,15 +59,15 @@ final class AccountPlanStatusValidationTest extends TestCase
 	public function testHealthOrderingPrefersAtRiskThenStalled(): void
 	{
 		$this->assertSame('at_risk', AccountPlanService::health([
-			'nextReviewOn' => '2099-01-01',
+			'nextAssignOn' => '2099-01-01',
 			'renewalsHot' => true,
 		]));
 		$this->assertSame('stalled', AccountPlanService::health([
-			'nextReviewOn' => '2099-01-01',
+			'nextAssignOn' => '2099-01-01',
 			'touchOverdue' => true,
 		]));
 		$this->assertSame('on_track', AccountPlanService::health([
-			'nextReviewOn' => '2099-01-01',
+			'nextAssignOn' => '2099-01-01',
 		]));
 		$this->assertSame('unknown', AccountPlanService::health([]));
 	}

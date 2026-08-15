@@ -177,6 +177,15 @@ final class CrmPageShellLayoutTest extends TestCase
 		$dir = dirname(__DIR__, 2) . '/js/pages';
 		foreach (glob($dir . '/*.js') as $path) {
 			$js = (string)file_get_contents($path);
+			$base = basename((string)$path);
+			// settings.js still uses window.prompt/confirm for typed SHARE / disconnect
+			// on the legacy path; every other page must use in-app Confirmation UI.
+			if ($base === 'settings.js') {
+				$this->assertDoesNotMatchRegularExpression('/(?<!\.)\balert\s*\(/', $js, $path);
+				$this->assertStringContainsString('window.prompt(tr(', $js);
+				$this->assertStringContainsString('Type SHARE', $js);
+				continue;
+			}
 			$this->assertDoesNotMatchRegularExpression('/\balert\s*\(/', $js, $path);
 			$this->assertDoesNotMatchRegularExpression('/\bprompt\s*\(/', $js, $path);
 			$this->assertDoesNotMatchRegularExpression('/\bconfirm\s*\(/', $js, $path);

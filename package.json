@@ -1,7 +1,7 @@
 {
     "name": "customercheck",
     "private": true,
-    "version": "1.6.140",
+    "version": "1.6.141",
     "type": "module",
     "description": "CustomerCheck Playwright / frontend tooling",
     "scripts": {
@@ -11,7 +11,7 @@
         "test:integration:php": "php vendor/bin/phpunit --testsuite integration",
         "test:mutation": "php tests/Mutation/run-critical-service-mutations.php && php tests/Mutation/run-single-org-mutations.php",
         "test:mutation:single-org": "php tests/Mutation/run-single-org-mutations.php",
-        "check:l10n": "php scripts/check-l10n-parity.php && php scripts/check-l10n-placeholders.php && php scripts/check-l10n-de-quality.php && php scripts/sync-l10n-variants.php --check",
+        "check:l10n": "php scripts/check-l10n-parity.php && php scripts/check-l10n-placeholders.php && php scripts/check-l10n-de-quality.php && php scripts/check-l10n-native-quality.php && php scripts/sync-l10n-variants.php --check",
         "l10n:js": "php scripts/rebuild-l10n-js.php",
         "l10n:variants": "php scripts/sync-l10n-variants.php && php scripts/rebuild-l10n-js.php",
         "test:mutation:l10n-de": "php tests/Mutation/run-l10n-de-quality-mutations.php",

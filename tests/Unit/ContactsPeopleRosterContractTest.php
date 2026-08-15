@@ -45,7 +45,7 @@ final class ContactsPeopleRosterContractTest extends TestCase
 		$this->assertStringContainsString('data-crm-unlink-contacts', $js);
 		$this->assertStringContainsString('data-crm-remove-person', $js);
 		$this->assertStringContainsString("Api.del('/persons/'", $js);
-		$this->assertStringContainsString('returnMailToReview', $js);
+		$this->assertStringContainsString('returnMailToAssign', $js);
 		$this->assertStringContainsString('optionalCheckbox', $js);
 		$this->assertStringContainsString("t('Remove this person?')", $js);
 		$this->assertStringContainsString("'/persons/'", $js);

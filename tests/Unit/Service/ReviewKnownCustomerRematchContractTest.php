@@ -133,11 +133,11 @@ final class ReviewKnownCustomerRematchContractTest extends TestCase
 	public function testReconcileUsesForwardHintsFromStoredOrPreview(): void
 	{
 		$src = (string)file_get_contents(dirname(__DIR__, 3) . '/lib/Service/ReviewService.php');
-		$this->assertStringContainsString('MailForwardLogic::customerEmailForReviewSuggest', $src);
+		$this->assertStringContainsString('MailForwardLogic::customerEmailForAssignSuggest', $src);
 		$this->assertStringContainsString('loadSharedMailRowsById', $src);
 		$this->assertStringContainsString('forward_from_hints', $src);
 		$forward = (string)file_get_contents(dirname(__DIR__, 3) . '/lib/Service/MailForwardLogic.php');
-		$this->assertStringContainsString('function customerEmailForReviewSuggest', $forward);
+		$this->assertStringContainsString('function customerEmailForAssignSuggest', $forward);
 	}
 
 	public function testIngestPersistsForwardFromHints(): void

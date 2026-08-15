@@ -15,15 +15,15 @@ final class GdprMailScrubContractTest extends TestCase
 	{
 		$src = (string)file_get_contents(dirname(__DIR__, 2) . '/lib/Service/CompanyService.php');
 		$erase = $this->extractMethod($src, 'gdprErase');
-		$this->assertStringContainsString('eraseReviewAndConflicts', $erase);
+		$this->assertStringContainsString('eraseAssignAndConflicts', $erase);
 		$this->assertStringContainsString('$agreementIds', $erase);
-		$method = $this->extractMethod($src, 'eraseReviewAndConflicts');
+		$method = $this->extractMethod($src, 'eraseAssignAndConflicts');
 		$this->assertStringContainsString('cancelOpenConflicts', $method);
 		$this->assertStringContainsString("'agreement'", $method);
 		$this->assertStringContainsString("update('crm_review_item')", $method);
 		$this->assertStringContainsString("set('source_ref'", $method);
 		$this->assertStringContainsString('[erased]', $method);
-		$this->assertStringContainsString('scrubReviewSuggestionsForCompany', $method);
+		$this->assertStringContainsString('scrubAssignSuggestionsForCompany', $method);
 		$cancel = $this->extractMethod($src, 'cancelOpenConflicts');
 		$this->assertStringContainsString("update('crm_edit_conflict')", $cancel);
 		$this->assertStringContainsString("'cancelled'", $cancel);

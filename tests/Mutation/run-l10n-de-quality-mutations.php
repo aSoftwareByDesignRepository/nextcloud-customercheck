@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /**
- * Mutation gauntlet: German UI copy quality (Advanced ≠ Fortschrittlich).
+ * Mutation gauntlet: German + mother-tongue l10n quality.
  *
  * Usage (Docker from nextcloud/):
  *   docker compose exec -u www-data nextcloud php /var/www/html/custom_apps/customercheck/tests/Mutation/run-l10n-de-quality-mutations.php
@@ -28,7 +28,7 @@ register_shutdown_function(static function () use ($lockFh, $lockPath): void {
 });
 
 /**
- * @return list<array{file:string,from:string,to:string,label:string}>
+ * @return list<array{file:string,from:string,to:string,label:string,filter:string}>
  */
 function l10n_de_quality_mutations(string $appRoot): array
 {
@@ -38,33 +38,65 @@ function l10n_de_quality_mutations(string $appRoot): array
 			'from' => '"Advanced": "Erweitert"',
 			'to' => '"Advanced": "Fortschrittlich"',
 			'label' => 'advanced_reverts_to_fortschrittlich',
+			'filter' => 'L10nGermanCopyQualityTest',
 		],
 		[
 			'file' => $appRoot . '/l10n/de.json',
 			'from' => '"Save": "Speichern"',
 			'to' => '"Save": "Sparen"',
 			'label' => 'save_reverts_to_sparen',
+			'filter' => 'L10nGermanCopyQualityTest',
+		],
+		[
+			'file' => $appRoot . '/l10n/de.json',
+			'from' => '"Churned": "Abgewandert"',
+			'to' => '"Churned": "Aufgewühlt"',
+			'label' => 'churned_reverts_to_aufgewuehlt',
+			'filter' => 'L10nGermanCopyQualityTest',
+		],
+		[
+			'file' => $appRoot . '/l10n/de.json',
+			'from' => '"Share with workspace": "Mit dem Arbeitsbereich teilen"',
+			'to' => '"Share with workspace": "Mit dem Workspace teilen"',
+			'label' => 'workspace_english_leaks_into_de',
+			'filter' => 'L10nGermanCopyQualityTest',
 		],
 		[
 			'file' => $appRoot . '/tests/fixtures/l10n-de-map.json',
 			'from' => '"Advanced": "Erweitert"',
 			'to' => '"Advanced": "Fortschrittlich"',
 			'label' => 'de_map_advanced_mt_calque',
+			'filter' => 'L10nGermanCopyQualityTest',
 		],
 		[
 			'file' => $appRoot . '/scripts/check-l10n-de-quality.php',
 			'from' => "'good' => 'Erweitert'",
 			'to' => "'good' => 'Fortschrittlich'",
 			'label' => 'quality_script_accepts_fortschrittlich_as_good',
+			'filter' => 'L10nGermanCopyQualityTest',
+		],
+		[
+			'file' => $appRoot . '/l10n/fr.json',
+			'from' => '"Calendar events (opt-in)": "Événements calendrier (facultatif)"',
+			'to' => '"Calendar events (opt-in)": "Événements calendrier (opt-in)"',
+			'label' => 'fr_opt_in_jargon_leaks',
+			'filter' => 'L10nNativeQualityContractTest',
+		],
+		[
+			'file' => $appRoot . '/l10n/nl.json',
+			'from' => '"Your preferences": "Jouw voorkeuren"',
+			'to' => '"Your preferences": "Uw voorkeuren"',
+			'label' => 'nl_formal_u_leaks',
+			'filter' => 'L10nNativeQualityContractTest',
 		],
 	];
 }
 
-function run_phpunit(string $phpunit, string $appRoot): int
+function run_phpunit(string $phpunit, string $appRoot, string $filter): int
 {
 	$cmd = escapeshellarg($phpunit)
 		. ' -c ' . escapeshellarg($appRoot . '/phpunit.xml')
-		. ' --filter L10nGermanCopyQualityTest';
+		. ' --filter ' . escapeshellarg($filter);
 	passthru($cmd, $code);
 
 	return (int) $code;
@@ -89,7 +121,7 @@ foreach ($mutations as $m) {
 		continue;
 	}
 	file_put_contents($m['file'], $mutated);
-	$code = run_phpunit($phpunit, $appRoot);
+	$code = run_phpunit($phpunit, $appRoot, $m['filter']);
 	file_put_contents($m['file'], $src);
 	if ($code === 0) {
 		fwrite(STDERR, "SURVIVED {$m['label']}\n");

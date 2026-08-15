@@ -286,7 +286,7 @@ To: Alexander Mäule
 
 gattinger@banss.at
 TEXT;
-		$email = MailForwardLogic::customerEmailForReviewSuggest(
+		$email = MailForwardLogic::customerEmailForAssignSuggest(
 			'alex@software-by-design.de',
 			$body,
 			null,
@@ -297,7 +297,7 @@ TEXT;
 
 	public function testCustomerEmailForReviewSuggestSuppressesTeamEnvelopeWithoutHints(): void
 	{
-		$this->assertSame('', MailForwardLogic::customerEmailForReviewSuggest(
+		$this->assertSame('', MailForwardLogic::customerEmailForAssignSuggest(
 			'alex@software-by-design.de',
 			null,
 			null,

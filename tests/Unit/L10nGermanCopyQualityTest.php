@@ -74,9 +74,59 @@ final class L10nGermanCopyQualityTest extends TestCase
 			}
 		}
 		$blob = implode("\n", $parts);
-		foreach (['Fortschrittlich', 'Armaturenbrett', 'Beladung'] as $bad) {
+		foreach ([
+			'Fortschrittlich',
+			'Armaturenbrett',
+			'Beladung',
+			'Aufgewühlt',
+			'Semmelbrösel',
+			'Shared-Mailbox',
+			'Shared Mailbox',
+			'Manager-Override',
+			'Manager override',
+			'opt-in',
+		] as $bad) {
 			self::assertStringNotContainsString($bad, $blob, "Banned calque still present: {$bad}");
 		}
+		self::assertStringNotContainsString('Workspace', $blob, 'English Workspace must not appear in DE msgstr');
+	}
+
+	public function testChurnedUsesAbgewandertNotAufgewuehlt(): void
+	{
+		$t = $this->deTranslations();
+		$map = $this->deMap();
+		self::assertSame('Abgewandert', $t['Churned']);
+		self::assertSame('Abgewandert', $map['Churned']);
+	}
+
+	public function testBrokenDuImperativeGrammarAbsent(): void
+	{
+		$t = $this->deTranslations();
+		$parts = [];
+		foreach ($t as $value) {
+			if (is_string($value)) {
+				$parts[] = $value;
+			}
+		}
+		$blob = implode("\n", $parts);
+		self::assertDoesNotMatchRegularExpression(
+			'/\b(?:Verbinden|Verknüpfen|Halten|Beschränken|Behalten|Filtern|Durchsuchen|Kündigen|Zeigen|Senden|Kopieren|Führen|Importieren|Entscheiden|Springen|Erledigen|Warten|Suchen|Korrigieren) du\b/u',
+			$blob,
+			'Broken infinitive+du imperatives must not appear'
+		);
+		self::assertDoesNotMatchRegularExpression(
+			'/\bdu (?:es )?lesen können\b/u',
+			$blob
+		);
+	}
+
+	public function testNativeQualityScriptPasses(): void
+	{
+		$script = dirname(__DIR__, 2) . '/scripts/check-l10n-native-quality.php';
+		self::assertFileExists($script);
+		$cmd = escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg($script);
+		exec($cmd . ' 2>&1', $out, $code);
+		self::assertSame(0, $code, implode("\n", $out));
 	}
 
 	public function testPdfLinkStringsUseNaturalGerman(): void
@@ -85,7 +135,7 @@ final class L10nGermanCopyQualityTest extends TestCase
 		$map = $this->deMap();
 		$pairs = [
 			'Link a PDF from Files (optional). We check you can read it.' =>
-				'Optional: PDF aus Dateien verknüpfen. Wir prüfen, ob du sie lesen kannst.',
+				'PDF aus Dateien verknüpfen (optional). Wir prüfen, dass du es lesen kannst.',
 			'Pick a PDF file you can read in Files.' =>
 				'Wähle eine PDF-Datei, die du in Dateien lesen kannst.',
 		];

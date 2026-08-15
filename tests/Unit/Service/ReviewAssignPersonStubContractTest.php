@@ -13,7 +13,7 @@ final class ReviewAssignPersonStubContractTest extends TestCase
 	{
 		$src = file_get_contents(dirname(__DIR__, 3) . '/lib/Service/ReviewService.php');
 		self::assertNotFalse($src);
-		self::assertStringContainsString('ensurePersonStubFromReview', $src);
+		self::assertStringContainsString('ensurePersonStubFromAssign', $src);
 		self::assertStringContainsString('contact_suggest', $src);
 		self::assertStringContainsString('$this->persons->create', $src);
 	}
