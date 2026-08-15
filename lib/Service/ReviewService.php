@@ -100,7 +100,12 @@ class ReviewService
 		}
 
 		$now = $this->timeFactory->getDateTime()->format('Y-m-d H:i:s');
+		$returned = 0;
 		foreach ($ids as $mailId) {
+			// Zeus MF: never resurrect Assign for mail already purged on the IMAP host.
+			if ($this->mailbox->isRemoteDeleted($workspaceId, $mailId)) {
+				continue;
+			}
 			$existing = null;
 			foreach (['shared_mail', 'personal_mail_shared_unmatched'] as $mailKind) {
 				$fp = $this->fingerprint($mailKind, $workspaceId, (string)$mailId);
@@ -126,15 +131,17 @@ class ReviewService
 						->where($qb->expr()->eq('id', $qb->createNamedParameter((int)$existing['id'], IQueryBuilder::PARAM_INT)))
 						->andWhere($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, IQueryBuilder::PARAM_INT)))
 						->executeStatement();
+					$returned++;
 				}
 				continue;
 			}
 			// No review row yet — syncSharedMail will create from open unmatched.
+			$returned++;
 		}
 
 		$this->promoteOpenSharedMail($workspaceId);
 
-		return count($ids);
+		return $returned;
 	}
 
 	/** @return ?array<string, mixed> */

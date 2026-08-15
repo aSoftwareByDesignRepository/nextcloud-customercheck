@@ -48,6 +48,8 @@ final class PersonalMailHardeningContractTest extends TestCase
 		$this->assertStringContainsString('personal_mail.test_blank_password_refused', $src);
 		$this->assertStringContainsString('function deleteIndexedMessageFromInbox', $src);
 		$this->assertStringContainsString('function markIndexedMessageSpamFromInbox', $src);
+		$this->assertStringContainsString('function finishInboxRemoteMutate', $src);
+		$this->assertStringContainsString('Best-effort compensate', $src);
 		$this->assertStringNotContainsString("str_starts_with(\$uidRaw, 'outbound:')", $src);
 	}
 

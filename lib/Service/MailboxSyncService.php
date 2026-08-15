@@ -1671,13 +1671,16 @@ class MailboxSyncService
 		$personalActor = $kind === MailAclLogic::KIND_PERSONAL ? $actorUid : null;
 		// Team Inbox mutate still rate-limits under the signed-in actor (SF-02).
 		$dialed = $this->deleteIndexedMessage($workspaceId, $messageId, $personalActor, $actorUid);
-		$this->mailboxes->markRemoteDeleted($workspaceId, $messageId);
-		$note = $dialed
-			? $this->l10n->t('Deleted from mailbox')
-			: $this->l10n->t('Removed from Assign (no live mail-server id yet)');
-		$closed = $this->mailboxes->closeOpenAssignForMailMessage($workspaceId, $messageId, $actorUid, $note);
 
-		return ['ok' => true, 'dialedRemote' => $dialed, 'assignClosed' => $closed];
+		return $this->finishInboxRemoteMutate(
+			$workspaceId,
+			$messageId,
+			$actorUid,
+			$dialed,
+			$dialed
+				? $this->l10n->t('Deleted from mailbox')
+				: $this->l10n->t('Removed from Assign (no live mail-server id yet)'),
+		);
 	}
 
 	/**
@@ -1702,13 +1705,46 @@ class MailboxSyncService
 		$kind = (string)($msg['mailboxKind'] ?? MailAclLogic::KIND_TEAM);
 		$personalActor = $kind === MailAclLogic::KIND_PERSONAL ? $actorUid : null;
 		$dialed = $this->moveIndexedMessageToJunk($workspaceId, $messageId, $personalActor, $actorUid);
-		$this->mailboxes->markRemoteDeleted($workspaceId, $messageId);
-		$note = $dialed
-			? $this->l10n->t('Marked as spam on mailbox')
-			: $this->l10n->t('Removed from Assign (no live mail-server id yet)');
-		$closed = $this->mailboxes->closeOpenAssignForMailMessage($workspaceId, $messageId, $actorUid, $note);
 
-		return ['ok' => true, 'dialedRemote' => $dialed, 'assignClosed' => $closed];
+		return $this->finishInboxRemoteMutate(
+			$workspaceId,
+			$messageId,
+			$actorUid,
+			$dialed,
+			$dialed
+				? $this->l10n->t('Marked as spam on mailbox')
+				: $this->l10n->t('Removed from Assign (no live mail-server id yet)'),
+		);
+	}
+
+	/**
+	 * Zeus MF: after IMAP (or CRM-only) succeed, CRM markRemoteDeleted must not leave a live
+	 * index if Assign close fails — mirror ReviewService discard compensate.
+	 *
+	 * @return array{ok: true, dialedRemote: bool, assignClosed: int}
+	 */
+	private function finishInboxRemoteMutate(
+		int $workspaceId,
+		int $messageId,
+		string $actorUid,
+		bool $dialedRemote,
+		string $note,
+	): array {
+		$closed = 0;
+		try {
+			$this->mailboxes->markRemoteDeleted($workspaceId, $messageId);
+			$closed = $this->mailboxes->closeOpenAssignForMailMessage($workspaceId, $messageId, $actorUid, $note);
+		} catch (\Throwable $e) {
+			// IMAP (or CRM-only gate) already succeeded — never leave triage open for a gone message.
+			try {
+				$this->mailboxes->markRemoteDeleted($workspaceId, $messageId);
+			} catch (\Throwable) {
+				// Best-effort compensate; original failure is the user-facing error.
+			}
+			throw $e;
+		}
+
+		return ['ok' => true, 'dialedRemote' => $dialedRemote, 'assignClosed' => $closed];
 	}
 
 	/**

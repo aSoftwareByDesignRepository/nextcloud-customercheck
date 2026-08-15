@@ -888,10 +888,26 @@ class MailSendService
 		string $rfcMessageId = '',
 	): void {
 		$mboxLock = $mailboxId > 0 ? 'crm_mbox_' . $mailboxId : '';
+		$heldMboxLock = false;
 		if ($mboxLock !== '') {
-			try {
-				$this->locking->acquireLock($mboxLock, ILockingProvider::LOCK_EXCLUSIVE);
-			} catch (\Throwable) {
+			// Zeus: brief retry so send→index does not race unlocked against sync/delete.
+			for ($attempt = 0; $attempt < 3; $attempt++) {
+				try {
+					$this->locking->acquireLock($mboxLock, ILockingProvider::LOCK_EXCLUSIVE);
+					$heldMboxLock = true;
+					break;
+				} catch (\Throwable) {
+					if ($attempt < 2) {
+						usleep(50_000 * ($attempt + 1));
+					}
+				}
+			}
+			if (!$heldMboxLock) {
+				$this->logger->warning('personal_mail.outbound_index_unlocked', [
+					'event' => 'personal_mail.outbound_index_unlocked',
+					'workspaceId' => $workspaceId,
+					'mailboxId' => $mailboxId,
+				]);
 				$mboxLock = '';
 			}
 		}

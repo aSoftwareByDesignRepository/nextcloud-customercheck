@@ -554,6 +554,8 @@ class MailboxService
 		$actor = trim($actor);
 		$note = mb_substr(trim($note), 0, 500);
 		$qb = $this->db->getQueryBuilder();
+		// Narrow candidates: source_ref JSON embeds mailMsgId (avoid full open-mail scan at scale).
+		$likeExact = '%"mailMsgId":' . $mailMsgId . '%';
 		$qb->select('id', 'source_ref')->from('crm_review_item')
 			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, IQueryBuilder::PARAM_INT)))
 			->andWhere($qb->expr()->in(
@@ -566,12 +568,14 @@ class MailboxService
 			->andWhere($qb->expr()->in(
 				'status',
 				$qb->createNamedParameter(['open', 'follow_up', 'snoozed'], IQueryBuilder::PARAM_STR_ARRAY),
-			));
+			))
+			->andWhere($qb->expr()->like('source_ref', $qb->createNamedParameter($likeExact)));
 		$r = $qb->executeQuery();
 		$ids = [];
 		while ($row = $r->fetch()) {
 			$ref = json_decode((string)($row['source_ref'] ?? ''), true);
 			$mid = is_array($ref) ? (int)($ref['mailMsgId'] ?? 0) : 0;
+			// Exact int match — LIKE can collide on prefix ids (12 vs 123).
 			if ($mid === $mailMsgId) {
 				$ids[] = (int)$row['id'];
 			}

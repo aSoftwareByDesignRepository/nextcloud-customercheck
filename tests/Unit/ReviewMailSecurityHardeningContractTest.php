@@ -29,6 +29,41 @@ final class ReviewMailSecurityHardeningContractTest extends TestCase
 		$this->assertStringContainsString('markRemoteDeleted', $afterCatch);
 	}
 
+	/** Zeus MF: Inbox delete/spam must compensate markRemoteDeleted if Assign close fails. */
+	public function testInboxMutateCompensatesRemoteDeleteAfterCrmFailure(): void
+	{
+		$sync = (string)file_get_contents(dirname(__DIR__, 2) . '/lib/Service/MailboxSyncService.php');
+		$this->assertStringContainsString('function finishInboxRemoteMutate', $sync);
+		$start = strpos($sync, 'function finishInboxRemoteMutate');
+		$this->assertNotFalse($start);
+		$chunk = substr($sync, (int)$start, 1800);
+		$this->assertStringContainsString('markRemoteDeleted', $chunk);
+		$this->assertStringContainsString('closeOpenAssignForMailMessage', $chunk);
+		$this->assertStringContainsString('Best-effort compensate', $chunk);
+		$catchPos = strpos($chunk, 'catch (\Throwable $e)');
+		$this->assertNotFalse($catchPos);
+		$afterCatch = substr($chunk, $catchPos);
+		$this->assertStringContainsString('markRemoteDeleted', $afterCatch);
+	}
+
+	/** Zeus MF: person-remove must not reopen Assign for IMAP-purged mail. */
+	public function testReturnSharedMailSkipsRemoteDeleted(): void
+	{
+		$svc = (string)file_get_contents(dirname(__DIR__, 2) . '/lib/Service/ReviewService.php');
+		$start = strpos($svc, 'function returnSharedMailMessagesToAssign');
+		$this->assertNotFalse($start);
+		$chunk = substr($svc, (int)$start, 2200);
+		$remotePos = strpos($chunk, 'isRemoteDeleted');
+		$updatePos = strpos($chunk, "->update('crm_review_item')");
+		$this->assertNotFalse($remotePos);
+		$this->assertNotFalse($updatePos);
+		$this->assertLessThan(
+			$updatePos,
+			$remotePos,
+			'remote_deleted must be checked before reopening Assign rows',
+		);
+	}
+
 	public function testReopenBlocksRemoteDeletedBeforeMutatingReview(): void
 	{
 		$svc = (string)file_get_contents(dirname(__DIR__, 2) . '/lib/Service/ReviewService.php');

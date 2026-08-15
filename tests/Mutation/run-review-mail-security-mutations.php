@@ -48,6 +48,20 @@ function review_mail_security_mutations(string $appRoot): array
 			'filter' => 'ReviewMailSecurityHardeningContractTest::testDiscardCompensatesRemoteDeleteAfterCrmConflict',
 		],
 		[
+			'file' => $appRoot . '/lib/Service/MailboxSyncService.php',
+			'from' => "} catch (\\Throwable \$e) {\n\t\t\t// IMAP (or CRM-only gate) already succeeded — never leave triage open for a gone message.\n\t\t\ttry {\n\t\t\t\t\$this->mailboxes->markRemoteDeleted(\$workspaceId, \$messageId);\n\t\t\t} catch (\\Throwable) {\n\t\t\t\t// Best-effort compensate; original failure is the user-facing error.\n\t\t\t}\n\t\t\tthrow \$e;\n\t\t}",
+			'to' => "} catch (\\Throwable \$e) {\n\t\t\t// mutated: skip Inbox compensate\n\t\t\tthrow \$e;\n\t\t}",
+			'label' => 'inbox_skips_remote_delete_compensate',
+			'filter' => 'ReviewMailSecurityHardeningContractTest::testInboxMutateCompensatesRemoteDeleteAfterCrmFailure',
+		],
+		[
+			'file' => $appRoot . '/lib/Service/ReviewService.php',
+			'from' => "// Zeus MF: never resurrect Assign for mail already purged on the IMAP host.\n\t\t\tif (\$this->mailbox->isRemoteDeleted(\$workspaceId, \$mailId)) {\n\t\t\t\tcontinue;\n\t\t\t}",
+			'to' => "// mutated: allow return of remote_deleted to Assign\n\t\t\t",
+			'label' => 'return_mail_allows_remote_deleted',
+			'filter' => 'ReviewMailSecurityHardeningContractTest::testReturnSharedMailSkipsRemoteDeleted',
+		],
+		[
 			'file' => $appRoot . '/lib/Service/ReviewService.php',
 			'from' => "if (\$mailId > 0 && \$this->mailbox->isRemoteDeleted(\$workspaceId, \$mailId)) {\n\t\t\t\tthrow ValidationException::field(\n\t\t\t\t\tConstants::ERR_VALIDATION,\n\t\t\t\t\t'status',\n\t\t\t\t\t\$this->l10n->t('This message was deleted from the shared mailbox and cannot be reopened.'),\n\t\t\t\t);\n\t\t\t}",
 			'to' => "// mutated: allow reopen of remote_deleted\n\t\t\t",
