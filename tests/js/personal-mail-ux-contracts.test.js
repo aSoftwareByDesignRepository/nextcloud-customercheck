@@ -429,7 +429,16 @@ describe('personal-mail settings UX contracts', () => {
     );
     expect(css).toContain('var(--crm-folder-depth, 0) * 1.75rem');
     expect(css).toContain('#crm-personal-mail-sync.crm-btn--lg');
-    expect(css).toContain('min-height: 52px');
+    expect(css).toContain('min-height: var(--crm-touch-lg)');
+    expect(css).toContain('var(--crm-muted)');
+    expect(css).toContain('var(--crm-bg-card)');
+    expect(css).toContain('var(--crm-border)');
+    // No hex fallbacks in the Sales Inbox / personal-mail Bachus block.
+    const mailBlock = css.slice(
+      css.indexOf('/* Sales Inbox + personal mail settings'),
+      css.indexOf('/* Sales Inbox: full-width list'),
+    );
+    expect(mailBlock).not.toMatch(/#[0-9a-fA-F]{3,8}/);
   });
 
   it('Talk/Review Answer uses hardened prepared-mail dialog', () => {

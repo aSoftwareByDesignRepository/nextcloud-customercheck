@@ -29,6 +29,8 @@ const PAGES = [
   '/apps/customercheck/activities',
   '/apps/customercheck/companies/new',
   '/apps/customercheck/support-us',
+  '/apps/customercheck/sales-inbox',
+  '/apps/customercheck/settings/my-email',
 ];
 
 /** Enable a user theme via the theming OCS API (CSRF-protected route). */

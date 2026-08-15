@@ -41,6 +41,8 @@ const PAGES = [
   { path: '/apps/customercheck/import', name: 'import' },
   { path: '/apps/customercheck/settings', name: 'settings' },
   { path: '/apps/customercheck/app-settings', name: 'app-settings' },
+  { path: '/apps/customercheck/sales-inbox', name: 'sales-inbox' },
+  { path: '/apps/customercheck/settings/my-email', name: 'my-email' },
   // support-us intentionally ships its own hero layout instead of the page stack
   { path: '/apps/customercheck/support-us', name: 'support-us', shell: '.crm-support-us-page' },
 ];

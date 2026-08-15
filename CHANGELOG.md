@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.6.139 - 2026-08-15
+
+### Theme / Responsive (Aristoteles — design-system × Nextcloud tokens)
+- Sales Inbox + My email CSS: map surfaces/ink/borders/radii/touch to `--crm-*` tokens (backed by NC `--color-*`); zero hex in that Bachus block
+- Touch targets use `--crm-touch` / `--crm-touch-lg` (44 / 48); type/spacing use `--crm-fs-*` / `--crm-space-*`
+- Theme-matrix + responsive-matrix include Sales Inbox and My email; personal-mail e2e axe under light/dark/high-contrast themes
+
 ## 1.6.138 - 2026-08-15
 
 ### Security (Aristoteles)

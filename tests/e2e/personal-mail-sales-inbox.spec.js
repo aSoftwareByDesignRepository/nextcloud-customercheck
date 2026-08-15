@@ -61,10 +61,62 @@ test.describe('Personal email sync / Sales Inbox', () => {
 
     const results = await new AxeBuilder({ page })
       .include('#crm-sales-inbox-root')
-      .disableRules(['color-contrast'])
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
       .analyze();
     expect(results.violations.filter((v) => v.impact === 'critical' || v.impact === 'serious')).toEqual([]);
   });
+
+  for (const theme of ['light', 'dark', 'light-highcontrast', 'dark-highcontrast']) {
+    test(`Sales Inbox + My email: axe WCAG 2.1 AA under theme ${theme}`, async ({ page }) => {
+      test.setTimeout(180000);
+      await login(page, credsFromEnv('ADMIN'));
+      const enable = async (id) => {
+        const status = await page.evaluate(async (themeId) => {
+          const token = document.head?.dataset?.requesttoken
+            // @ts-ignore
+            || (window.OC && window.OC.requestToken);
+          const res = await fetch(`${window.location.origin}/ocs/v2.php/apps/theming/api/v1/theme/${themeId}/enable`, {
+            method: 'PUT',
+            headers: { requesttoken: token || '', 'OCS-APIRequest': 'true' },
+          });
+          return res.status;
+        }, id);
+        expect(status, `enable ${id}`).toBe(200);
+        await page.reload({ waitUntil: 'domcontentloaded' });
+      };
+      const disable = async (id) => {
+        await page.evaluate(async (themeId) => {
+          const token = document.head?.dataset?.requesttoken
+            // @ts-ignore
+            || (window.OC && window.OC.requestToken);
+          await fetch(`${window.location.origin}/ocs/v2.php/apps/theming/api/v1/theme/${themeId}`, {
+            method: 'DELETE',
+            headers: { requesttoken: token || '', 'OCS-APIRequest': 'true' },
+          }).catch(() => {});
+        }, id);
+      };
+      try {
+        await enable(theme);
+        for (const path of ['/apps/customercheck/sales-inbox', '/apps/customercheck/settings/my-email']) {
+          await page.goto(path, { waitUntil: 'domcontentloaded' });
+          await page.waitForSelector('#crm-main-content', { timeout: 30000 });
+          const results = await new AxeBuilder({ page })
+            .include('#crm-main-content')
+            .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
+            .analyze();
+          const serious = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
+          expect(serious, `[${theme}] ${path}: ${JSON.stringify(serious, null, 2)}`).toEqual([]);
+          const overflowFree = await page.evaluate(() => {
+            const main = document.getElementById('crm-main-content');
+            return !!main && main.scrollWidth <= main.clientWidth + 2;
+          });
+          expect(overflowFree, `[${theme}] ${path} overflow`).toBe(true);
+        }
+      } finally {
+        await disable(theme).catch(() => {});
+      }
+    });
+  }
 
   test('My email settings: Bachus OAuth-first strip present', async ({ page }) => {
     await page.setViewportSize({ width: 1100, height: 900 });

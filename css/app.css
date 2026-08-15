@@ -5954,13 +5954,13 @@ dialog.crm-native-dialog label.crm-check {
 /* Sales Inbox + personal mail settings — Bachus simplicity */
 #app-content.crm-app .crm-sales-inbox__hint {
 	margin: 0 0 var(--crm-space-3, 0.75rem);
-	font-size: 1.05rem;
-	line-height: 1.4;
-	color: var(--color-text-maxcontrast, #666);
+	font-size: var(--crm-fs-md);
+	line-height: var(--crm-line-base);
+	color: var(--crm-muted);
 }
 #app-content.crm-app .crm-sales-inbox__hint--shared {
 	font-weight: 600;
-	color: var(--color-main-text, #222);
+	color: var(--crm-text);
 }
 #app-content.crm-app .crm-sales-inbox__alert {
 	margin-bottom: var(--crm-space-4, 1rem);
@@ -5979,18 +5979,18 @@ dialog.crm-native-dialog label.crm-check {
 #app-content.crm-app .crm-sales-inbox__tabs {
 	display: flex;
 	flex: 1 1 auto;
-	gap: 0.35rem;
+	gap: var(--crm-space-1);
 }
 #app-content.crm-app .crm-sales-inbox__tab {
 	flex: 1 1 0;
-	min-height: 48px;
+	min-height: var(--crm-touch-lg);
 	min-width: 5.5rem;
-	font-size: 1.05rem;
+	font-size: var(--crm-fs-md);
 	font-weight: 700;
 }
 #app-content.crm-app .crm-sales-inbox__actions .crm-btn,
 #app-content.crm-app .crm-sales-inbox__actions .crm-input--lg {
-	min-height: 44px;
+	min-height: var(--crm-touch);
 }
 #app-content.crm-app .crm-sales-inbox__list-tools {
 	display: flex;
@@ -5998,22 +5998,22 @@ dialog.crm-native-dialog label.crm-check {
 	gap: var(--crm-space-3, 0.75rem);
 	margin: 0 0 var(--crm-space-3, 0.75rem);
 	padding: var(--crm-space-3, 0.75rem);
-	border: 1px solid var(--color-border, #ddd);
+	border: 1px solid var(--crm-border);
 	border-bottom: none;
-	border-radius: var(--border-radius-large, 8px) var(--border-radius-large, 8px) 0 0;
-	background: var(--color-main-background, #fff);
+	border-radius: var(--crm-radius-md) var(--crm-radius-md) 0 0;
+	background: var(--crm-bg-card);
 }
 #app-content.crm-app .crm-sales-inbox__list-tools-search .crm-sales-compose__label,
 #app-content.crm-app .crm-sales-inbox__list-tools-filters .crm-sales-compose__label {
 	display: block;
 	margin: 0 0 var(--crm-space-1, 0.25rem);
 	font-weight: 700;
-	font-size: 0.95rem;
+	font-size: var(--crm-fs-sm);
 }
 #app-content.crm-app .crm-sales-inbox__list-tools-search .crm-input--lg {
 	width: 100%;
-	min-height: 48px;
-	font-size: 1.1rem;
+	min-height: var(--crm-touch-lg);
+	font-size: var(--crm-fs-lg);
 }
 #app-content.crm-app .crm-sales-inbox__list-tools-filters .crm-quick-filters {
 	display: flex;
@@ -6022,8 +6022,8 @@ dialog.crm-native-dialog label.crm-check {
 	gap: var(--crm-space-2, 0.5rem);
 }
 #app-content.crm-app .crm-sales-inbox__list-tools-filters .crm-btn--sm {
-	min-height: 44px;
-	padding-inline: 0.9rem;
+	min-height: var(--crm-touch);
+	padding-inline: var(--crm-space-3);
 	font-size: 1rem;
 	font-weight: 600;
 }
@@ -6034,11 +6034,11 @@ dialog.crm-native-dialog label.crm-check {
 	column-gap: var(--crm-space-3, 0.75rem);
 	align-items: center;
 	margin: 0 0 0;
-	padding: 0.55rem 1rem;
-	border: 1px solid var(--color-border, #ddd);
+	padding: var(--crm-space-2) var(--crm-space-4);
+	border: 1px solid var(--crm-border);
 	border-bottom: none;
-	border-radius: var(--border-radius-large, 8px) var(--border-radius-large, 8px) 0 0;
-	background: color-mix(in srgb, var(--color-background-dark, #f5f5f5) 55%, var(--color-main-background, #fff));
+	border-radius: var(--crm-radius-md) var(--crm-radius-md) 0 0;
+	background: color-mix(in srgb, var(--color-background-dark, var(--crm-bg-soft)) 55%, var(--crm-bg-card));
 	position: sticky;
 	top: 0;
 	z-index: 2;
@@ -6048,26 +6048,26 @@ dialog.crm-native-dialog label.crm-check {
 }
 #app-content.crm-app .crm-sales-inbox__col-head {
 	margin: 0;
-	padding: 0.35rem 0.25rem;
-	min-height: 44px;
+	padding: var(--crm-space-1) var(--crm-space-1);
+	min-height: var(--crm-touch);
 	border: 0;
 	background: transparent;
 	text-align: start;
-	font-size: 0.95rem;
+	font-size: var(--crm-fs-sm);
 	font-weight: 800;
 	letter-spacing: 0.01em;
-	color: var(--color-main-text, #222);
+	color: var(--crm-text);
 	cursor: pointer;
 }
 #app-content.crm-app .crm-sales-inbox__col-head--static {
 	cursor: default;
 	display: flex;
 	align-items: center;
-	color: var(--color-text-maxcontrast, #666);
+	color: var(--crm-muted);
 	font-weight: 700;
 }
 #app-content.crm-app .crm-sales-inbox__col-head.crm-sales-inbox__sort.is-active {
-	color: var(--color-primary-element, #0082c9);
+	color: var(--color-primary-element);
 	background: color-mix(in srgb, var(--color-primary-element) 10%, transparent);
 	border-radius: var(--border-radius, 4px);
 }
@@ -6076,8 +6076,8 @@ dialog.crm-native-dialog label.crm-check {
 	outline-offset: 2px;
 }
 #app-content.crm-app .crm-mail-thread.crm-sales-inbox__table {
-	border: 1px solid var(--color-border, #ddd);
-	border-radius: 0 0 var(--border-radius-large, 8px) var(--border-radius-large, 8px);
+	border: 1px solid var(--crm-border);
+	border-radius: 0 0 var(--crm-radius-md) var(--crm-radius-md);
 	/* Must stay visible: detail reader parks as a sibling <li> under the selected row. */
 	overflow: visible;
 }
@@ -6127,7 +6127,7 @@ dialog.crm-native-dialog label.crm-check {
 	flex-direction: row;
 	flex-wrap: wrap;
 	align-items: center;
-	gap: 0.35rem;
+	gap: var(--crm-space-1);
 }
 #app-content.crm-app .crm-sales-inbox__cell--when {
 	align-items: flex-end;
@@ -6153,11 +6153,11 @@ dialog.crm-native-dialog label.crm-check {
 		display: none;
 	}
 	#app-content.crm-app .crm-mail-thread.crm-sales-inbox__table {
-		border-radius: var(--border-radius-large, 8px);
+		border-radius: var(--crm-radius-md);
 	}
 	#app-content.crm-app .crm-sales-inbox__row {
 		grid-template-columns: 1fr !important;
-		row-gap: 0.35rem;
+		row-gap: var(--crm-space-1);
 	}
 	#app-content.crm-app .crm-sales-inbox__cell--when {
 		align-items: flex-start;
@@ -6168,7 +6168,7 @@ dialog.crm-native-dialog label.crm-check {
 		display: block;
 		font-size: 0.75rem;
 		font-weight: 700;
-		color: var(--color-text-maxcontrast, #666);
+		color: var(--crm-muted);
 		margin-bottom: 0.1rem;
 	}
 	#app-content.crm-app #crm-sales-inbox-quick-assign.crm-btn--lg {
@@ -6178,10 +6178,10 @@ dialog.crm-native-dialog label.crm-check {
 #app-content.crm-app .crm-sales-inbox__status {
 	margin: 0 0 var(--crm-space-2, 0.5rem);
 	min-height: 1.4em;
-	font-size: 1.05rem;
+	font-size: var(--crm-fs-md);
 	font-weight: 600;
 	line-height: 1.35;
-	color: var(--color-text-maxcontrast, #666);
+	color: var(--crm-muted);
 }
 #app-content.crm-app .crm-sales-inbox__status[hidden] {
 	display: none !important;
@@ -6199,23 +6199,23 @@ dialog.crm-native-dialog label.crm-check {
 	align-items: stretch;
 }
 #app-content.crm-app .crm-sales-inbox__actions-bar .crm-btn--lg {
-	min-height: 52px;
+	min-height: var(--crm-touch-lg);
 	font-weight: 700;
 }
 #app-content.crm-app .crm-mail-preview__body--pending {
 	min-height: 4rem;
 	display: flex;
 	align-items: center;
-	font-size: 1.1rem;
+	font-size: var(--crm-fs-lg);
 	font-weight: 650;
-	color: var(--color-text-maxcontrast, #666);
+	color: var(--crm-muted);
 }
 #app-content.crm-app .crm-sales-inbox__decide {
 	margin: var(--crm-space-4, 1rem) 0 0;
 	padding: var(--crm-space-4, 1rem);
-	border: 1px solid var(--color-border, #ddd);
-	border-radius: var(--border-radius-large, 8px);
-	background: color-mix(in srgb, var(--color-primary-element) 5%, var(--color-main-background, #fff));
+	border: 1px solid var(--crm-border);
+	border-radius: var(--crm-radius-md);
+	background: color-mix(in srgb, var(--color-primary-element) 5%, var(--crm-bg-card));
 	display: flex;
 	flex-direction: column;
 	gap: var(--crm-space-3, 0.75rem);
@@ -6234,9 +6234,9 @@ dialog.crm-native-dialog label.crm-check {
 }
 #app-content.crm-app .crm-sales-inbox__decide-lead {
 	margin: 0;
-	font-size: 1.05rem;
-	line-height: 1.4;
-	color: var(--color-text-maxcontrast, #666);
+	font-size: var(--crm-fs-md);
+	line-height: var(--crm-line-base);
+	color: var(--crm-muted);
 }
 #app-content.crm-app .crm-sales-inbox__suggest-card {
 	display: flex;
@@ -6245,9 +6245,9 @@ dialog.crm-native-dialog label.crm-check {
 	justify-content: space-between;
 	gap: var(--crm-space-3, 0.75rem);
 	padding: var(--crm-space-3, 0.75rem) var(--crm-space-4, 1rem);
-	border-radius: var(--border-radius-large, 8px);
-	border: 1px solid color-mix(in srgb, var(--color-primary-element) 28%, var(--color-border, #ddd));
-	background: var(--color-main-background, #fff);
+	border-radius: var(--crm-radius-md);
+	border: 1px solid color-mix(in srgb, var(--color-primary-element) 28%, var(--crm-border));
+	background: var(--crm-bg-card);
 	box-shadow: 0 1px 2px color-mix(in srgb, var(--color-main-text) 8%, transparent);
 }
 #app-content.crm-app .crm-sales-inbox__suggest-card[hidden] {
@@ -6263,7 +6263,7 @@ dialog.crm-native-dialog label.crm-check {
 	font-weight: 700;
 	letter-spacing: 0.04em;
 	text-transform: uppercase;
-	color: var(--color-text-maxcontrast, #666);
+	color: var(--crm-muted);
 }
 #app-content.crm-app .crm-sales-inbox__suggest-name {
 	margin: 0;
@@ -6274,12 +6274,12 @@ dialog.crm-native-dialog label.crm-check {
 }
 #app-content.crm-app .crm-sales-inbox__suggest-meta {
 	margin: 0.25rem 0 0;
-	font-size: 0.95rem;
-	color: var(--color-text-maxcontrast, #666);
+	font-size: var(--crm-fs-sm);
+	color: var(--crm-muted);
 }
 #app-content.crm-app .crm-sales-inbox__suggest-card #crm-sales-inbox-quick-assign {
 	flex: 0 0 auto;
-	min-height: 52px;
+	min-height: var(--crm-touch-lg);
 	min-width: 10rem;
 	font-weight: 800;
 }
@@ -6297,7 +6297,7 @@ dialog.crm-native-dialog label.crm-check {
 	font-weight: 700;
 	letter-spacing: 0.04em;
 	text-transform: uppercase;
-	color: var(--color-text-maxcontrast, #666);
+	color: var(--crm-muted);
 }
 #app-content.crm-app .crm-sales-inbox__alt-row {
 	display: flex;
@@ -6305,7 +6305,7 @@ dialog.crm-native-dialog label.crm-check {
 	gap: var(--crm-space-2, 0.5rem);
 }
 #app-content.crm-app .crm-sales-inbox__alt-chip {
-	min-height: 44px;
+	min-height: var(--crm-touch);
 	max-width: 100%;
 	font-weight: 650;
 	overflow: hidden;
@@ -6321,8 +6321,8 @@ dialog.crm-native-dialog label.crm-check {
 	max-width: 100%;
 }
 #app-content.crm-app .crm-sales-inbox__company-picker .crm-company-picker__filter {
-	min-height: 52px;
-	font-size: 1.1rem;
+	min-height: var(--crm-touch-lg);
+	font-size: var(--crm-fs-lg);
 	box-sizing: border-box;
 }
 #app-content.crm-app .crm-sales-inbox__company-picker .crm-company-list {
@@ -6336,17 +6336,17 @@ dialog.crm-native-dialog label.crm-check {
 	align-items: stretch;
 }
 #app-content.crm-app .crm-sales-inbox__assign-actions #crm-sales-inbox-assign-submit {
-	min-height: 52px;
+	min-height: var(--crm-touch-lg);
 	min-width: 8.5rem;
 	font-weight: 800;
 }
 #app-content.crm-app .crm-sales-inbox__assign-actions #crm-sales-inbox-no-relation {
-	min-height: 52px;
+	min-height: var(--crm-touch-lg);
 	font-weight: 600;
 }
 #app-content.crm-app .crm-sales-inbox__decide-ro {
 	margin: 0;
-	font-size: 1.05rem;
+	font-size: var(--crm-fs-md);
 }
 @media (max-width: 720px) {
 	#app-content.crm-app .crm-sales-inbox__suggest-card #crm-sales-inbox-quick-assign,
@@ -6362,32 +6362,32 @@ dialog.crm-native-dialog label.crm-check {
 #app-content.crm-app #crm-sales-inbox-quick-assign.crm-btn--lg,
 #app-content.crm-app #crm-sales-inbox-no-relation.crm-btn--lg,
 #app-content.crm-app #crm-sales-inbox-reconnect.crm-btn--lg {
-	min-height: 52px;
+	min-height: var(--crm-touch-lg);
 	min-width: 10rem;
-	font-size: 1.1rem;
+	font-size: var(--crm-fs-lg);
 	font-weight: 700;
 }
 /* Bachus: My email — OAuth first, giant primary actions */
 #app-content.crm-app #crm-personal-mail-oauth .crm-btn,
 #app-content.crm-app #crm-pm-dsgvo-wrap {
-	min-height: 48px;
+	min-height: var(--crm-touch-lg);
 }
 #app-content.crm-app #crm-personal-mail-oauth {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 0.5rem;
-	margin: 0.5rem 0 1rem;
+	gap: var(--crm-space-2);
+	margin: var(--crm-space-2) 0 var(--crm-space-4);
 }
 #app-content.crm-app #crm-personal-mail-oauth .crm-btn {
-	min-height: 52px;
-	font-size: 1.05rem;
+	min-height: var(--crm-touch-lg);
+	font-size: var(--crm-fs-md);
 	font-weight: 700;
 	flex: 1 1 12rem;
 }
 #app-content.crm-app #crm-personal-mail-connect.crm-btn--lg,
 #app-content.crm-app #crm-personal-mail-sync.crm-btn--lg {
-	min-height: 52px;
-	font-size: 1.1rem;
+	min-height: var(--crm-touch-lg);
+	font-size: var(--crm-fs-lg);
 	font-weight: 700;
 }
 /* Flat IMAP connect: one panel, no nested fieldset boxes */
@@ -6474,7 +6474,7 @@ dialog.crm-native-dialog label.crm-check {
 }
 #app-content.crm-app .crm-personal-mail-account__title {
 	margin: 0;
-	font-size: 1.05rem;
+	font-size: var(--crm-fs-md);
 }
 #app-content.crm-app .crm-personal-mail-account__email {
 	margin: 0;
@@ -6516,7 +6516,7 @@ dialog.crm-native-dialog label.crm-check {
 	#app-content.crm-app .crm-personal-mail-remove .crm-btn,
 	#app-content.crm-app .crm-signature-editor__actions .crm-btn {
 		width: 100%;
-		min-height: 44px;
+		min-height: var(--crm-touch);
 		box-sizing: border-box;
 	}
 	#app-content.crm-app .crm-personal-mail-panel,
@@ -6540,8 +6540,8 @@ dialog.crm-native-dialog label.crm-check {
 	justify-content: center;
 }
 #app-content.crm-app .crm-input--lg {
-	min-height: 48px;
-	font-size: 1.05rem;
+	min-height: var(--crm-touch-lg);
+	font-size: var(--crm-fs-md);
 }
 #app-content.crm-app .crm-mail-thread-row {
 	min-height: 3.5rem;
@@ -6549,7 +6549,7 @@ dialog.crm-native-dialog label.crm-check {
 	cursor: pointer;
 }
 #app-content.crm-app .crm-mail-thread-row:focus-visible {
-	outline: 3px solid var(--color-primary-element, #0082c9);
+	outline: 3px solid var(--color-primary-element);
 	outline-offset: 2px;
 }
 #app-content.crm-app .crm-sales-inbox__private {
@@ -6569,23 +6569,23 @@ dialog.crm-native-dialog label.crm-check {
 #app-content.crm-app .crm-rich-mail__toolbar {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 0.35rem;
+	gap: var(--crm-space-1);
 	padding: 0.35rem;
 	width: 100%;
 	max-width: 100%;
 	box-sizing: border-box;
 	border: 1px solid var(--crm-border, var(--color-border));
 	border-radius: var(--crm-radius, 8px);
-	background: var(--color-background-dark, var(--color-background-hover, #f5f5f5));
+	background: var(--color-background-dark, var(--color-background-hover, var(--crm-bg-soft)));
 }
 #app-content.crm-app .crm-rich-mail__toolbar .crm-btn,
 #app-content.crm-app .crm-rich-mail__tool {
 	/* px: Nextcloud root is often 15px — rem would shrink under WCAG 2.5.5 */
-	min-height: 44px;
-	min-width: 44px;
+	min-height: var(--crm-touch);
+	min-width: var(--crm-touch);
 	padding: 0.35rem 0.55rem;
 	font-weight: 700;
-	font-size: 0.95rem;
+	font-size: var(--crm-fs-sm);
 }
 #app-content.crm-app .crm-rich-mail__editor,
 #app-content.crm-app .crm-rich-mail__quote {
@@ -6604,11 +6604,11 @@ dialog.crm-native-dialog label.crm-check {
 	line-height: 1.5;
 	border: 1px solid var(--crm-border, var(--color-border));
 	border-radius: var(--crm-radius, 8px);
-	background: var(--color-main-background, #fff);
+	background: var(--crm-bg-card);
 }
 #app-content.crm-app .crm-rich-mail__editor:focus,
 #app-content.crm-app .crm-rich-mail__quote:focus {
-	outline: 2px solid var(--color-primary-element, #0082c9);
+	outline: 2px solid var(--color-primary-element);
 	outline-offset: 2px;
 }
 #app-content.crm-app .crm-rich-mail__quote-panel {
@@ -6623,18 +6623,18 @@ dialog.crm-native-dialog label.crm-check {
 	margin: 0 0 0.35rem;
 	font-size: 0.9rem;
 	font-weight: 700;
-	color: var(--color-text-maxcontrast, #666);
+	color: var(--crm-muted);
 }
 #app-content.crm-app .crm-rich-mail__quote {
 	min-height: 6rem;
 	max-height: min(28vh, 16rem);
 	padding: var(--crm-space-3, 0.75rem);
 	overflow: auto;
-	line-height: 1.45;
+	line-height: var(--crm-line-base)5;
 	border: 1px solid var(--crm-border, var(--color-border));
 	border-radius: var(--crm-radius, 8px);
-	background: var(--color-background-dark, #f7f7f7);
-	color: var(--color-text-maxcontrast, #444);
+	background: var(--color-background-dark, var(--crm-bg-soft));
+	color: var(--crm-muted);
 	overflow-wrap: anywhere;
 	word-break: break-word;
 }
@@ -6642,7 +6642,7 @@ dialog.crm-native-dialog label.crm-check {
 #app-content.crm-app .crm-rich-mail__quote .crm-mail-quote {
 	margin: 0;
 	padding: 0 0 0 0.75rem;
-	border-inline-start: 3px solid var(--color-primary-element, #0082c9);
+	border-inline-start: 3px solid var(--color-primary-element);
 }
 #app-content.crm-app .crm-rich-mail__quote p {
 	margin: 0 0 0.4rem;
@@ -6711,7 +6711,7 @@ dialog.crm-native-dialog label.crm-check {
 	width: 100%;
 }
 #app-content.crm-app .crm-signature-editor__actions .crm-btn {
-	min-height: 44px;
+	min-height: var(--crm-touch);
 }
 /* My email: signature mount + editor fill the card (contracts + granny-readable). */
 #app-content.crm-app #crm-ws-personal-mail-mine .crm-signature-editor__mount {
@@ -6749,7 +6749,7 @@ dialog.crm-native-dialog label.crm-check {
 	padding: var(--crm-space-4, 1rem);
 	border: 1px solid var(--crm-border, var(--color-border));
 	border-radius: var(--crm-radius, 10px);
-	background: var(--color-main-background, #fff);
+	background: var(--crm-bg-card);
 	box-shadow: var(--crm-shadow-sm, 0 1px 2px color-mix(in srgb, var(--color-main-text) 8%, transparent));
 	width: 100%;
 	max-width: 100%;
@@ -6777,8 +6777,8 @@ dialog.crm-native-dialog label.crm-check {
 	margin: 0;
 	max-width: 42rem;
 	font-size: 0.9rem;
-	line-height: 1.4;
-	color: var(--color-text-maxcontrast, #666);
+	line-height: var(--crm-line-base);
+	color: var(--crm-muted);
 }
 #app-content.crm-app .crm-sales-compose__fields {
 	display: flex;
@@ -6801,7 +6801,7 @@ dialog.crm-native-dialog label.crm-check {
 #app-content.crm-app .crm-sales-compose__field {
 	display: flex;
 	flex-direction: column;
-	gap: 0.35rem;
+	gap: var(--crm-space-1);
 	margin: 0;
 	width: 100%;
 	min-width: 0;
@@ -6811,7 +6811,7 @@ dialog.crm-native-dialog label.crm-check {
 	flex-wrap: wrap;
 	align-items: center;
 	justify-content: space-between;
-	gap: 0.35rem 0.75rem;
+	gap: var(--crm-space-1) 0.75rem;
 	min-height: 1.75rem;
 }
 #app-content.crm-app .crm-sales-compose__label {
@@ -6819,13 +6819,13 @@ dialog.crm-native-dialog label.crm-check {
 	font-size: 0.9rem;
 	font-weight: 600;
 	line-height: 1.3;
-	color: var(--color-main-text, #222);
+	color: var(--crm-text);
 }
 #app-content.crm-app .crm-sales-compose__field-hint {
 	margin: 0;
 	font-size: 0.85rem;
 	line-height: 1.35;
-	color: var(--color-text-maxcontrast, #666);
+	color: var(--crm-muted);
 }
 #app-content.crm-app .crm-sales-compose__cc-toggle {
 	margin: 0;
@@ -6840,7 +6840,7 @@ dialog.crm-native-dialog label.crm-check {
 	padding: var(--crm-space-2, 0.5rem) var(--crm-space-3, 0.75rem);
 	border: 1px solid var(--crm-border, var(--color-border));
 	border-radius: var(--crm-radius, 8px);
-	background: var(--color-background-dark, #f7f7f7);
+	background: var(--color-background-dark, var(--crm-bg-soft));
 }
 #app-content.crm-app .crm-sales-compose__body,
 #app-content.crm-app #crm-sales-compose-editor,
@@ -6868,9 +6868,9 @@ dialog.crm-native-dialog label.crm-check {
 }
 #app-content.crm-app .crm-sales-compose__attach-count {
 	margin: 0.35rem 0 0;
-	font-size: 0.95rem;
+	font-size: var(--crm-fs-sm);
 	font-weight: 600;
-	color: var(--color-text-maxcontrast, #666);
+	color: var(--crm-muted);
 }
 #app-content.crm-app .crm-sales-compose__attach-list {
 	margin: var(--crm-space-2, 0.5rem) 0 0;
@@ -6892,23 +6892,23 @@ dialog.crm-native-dialog label.crm-check {
 	margin: 0;
 	padding: 0.75rem 1rem;
 	border: 1px solid var(--crm-border, var(--color-border));
-	border-radius: var(--border-radius-large, 8px);
-	background: var(--color-main-background, #fff);
+	border-radius: var(--crm-radius-md);
+	background: var(--crm-bg-card);
 }
 #app-content.crm-app .crm-sales-compose__attach-name {
 	flex: 1 1 12rem;
 	min-width: 0;
-	font-size: 1.05rem;
+	font-size: var(--crm-fs-md);
 	font-weight: 650;
 	line-height: 1.3;
 	overflow-wrap: anywhere;
 }
 #app-content.crm-app .crm-sales-compose__attach-item .crm-btn {
 	flex: 0 0 auto;
-	min-height: 44px;
+	min-height: var(--crm-touch);
 }
 #app-content.crm-app #crm-sales-compose-attach-add.crm-btn--lg {
-	min-height: 48px;
+	min-height: var(--crm-touch-lg);
 	font-weight: 700;
 }
 #app-content.crm-app .crm-sales-compose .form-input,
@@ -6924,7 +6924,7 @@ dialog.crm-native-dialog label.crm-check {
 	border-top: 1px solid var(--crm-border, var(--color-border));
 	position: sticky;
 	bottom: 0;
-	background: var(--color-main-background, #fff);
+	background: var(--crm-bg-card);
 	gap: 0.75rem;
 	flex-wrap: wrap;
 }
@@ -6955,7 +6955,7 @@ dialog.crm-native-dialog label.crm-check {
 	}
 	#app-content.crm-app .crm-sales-inbox__tab {
 		min-width: 0;
-		min-height: 48px;
+		min-height: var(--crm-touch-lg);
 	}
 	#app-content.crm-app .crm-sales-inbox__actions,
 	#app-content.crm-app .crm-sales-inbox__actions-bar {
@@ -6967,7 +6967,7 @@ dialog.crm-native-dialog label.crm-check {
 	#app-content.crm-app .crm-sales-inbox__actions .crm-input--lg,
 	#app-content.crm-app .crm-sales-inbox__actions-bar .crm-btn {
 		width: 100%;
-		min-height: 44px;
+		min-height: var(--crm-touch);
 		box-sizing: border-box;
 	}
 	#app-content.crm-app .crm-sales-inbox__decide {
@@ -6975,8 +6975,8 @@ dialog.crm-native-dialog label.crm-check {
 	}
 	#app-content.crm-app .crm-sales-compose__cc-toggle {
 		/* WCAG 2.5.5 on mobile; desktop keeps compact 2rem toggle. */
-		min-height: 44px;
-		min-width: 44px;
+		min-height: var(--crm-touch);
+		min-width: var(--crm-touch);
 	}
 	#app-content.crm-app .crm-sales-compose__actions .crm-btn {
 		flex: 1 1 100%;
@@ -7016,7 +7016,7 @@ dialog.crm-native-dialog label.crm-check {
 }
 #app-content.crm-app .crm-personal-mail-folder--nested {
 	background: var(--crm-bg-soft, var(--color-background-dark, var(--color-main-background)));
-	border-inline-start: 3px solid var(--color-primary-element, #0082c9);
+	border-inline-start: 3px solid var(--color-primary-element);
 	border-bottom-color: color-mix(in srgb, var(--crm-border, var(--color-border)) 70%, transparent);
 }
 #app-content.crm-app .crm-personal-mail-folder__name {
@@ -7031,7 +7031,7 @@ dialog.crm-native-dialog label.crm-check {
 	display: inline-block;
 	margin-inline-end: 0.4rem;
 	font-weight: 700;
-	color: var(--color-primary-element, #0082c9);
+	color: var(--color-primary-element);
 	speak: never;
 }
 #app-content.crm-app .crm-personal-mail-folder__toggles {
@@ -7042,7 +7042,7 @@ dialog.crm-native-dialog label.crm-check {
 	justify-content: flex-end;
 }
 #app-content.crm-app .crm-personal-mail-folder .crm-check {
-	min-height: 44px;
+	min-height: var(--crm-touch);
 	align-items: center;
 	margin: 0;
 }
@@ -7050,7 +7050,7 @@ dialog.crm-native-dialog label.crm-check {
 	margin-top: var(--crm-space-3, 0.75rem);
 }
 #app-content.crm-app .crm-personal-mail-remove .crm-btn--danger {
-	min-height: 44px;
+	min-height: var(--crm-touch);
 }
 /* ≤640px (40rem): stack Sync/Share under folder name (phones). Desktop grid unchanged. */
 @media (max-width: 40rem) {

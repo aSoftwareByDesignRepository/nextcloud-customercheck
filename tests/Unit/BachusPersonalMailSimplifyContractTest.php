@@ -122,16 +122,16 @@ final class BachusPersonalMailSimplifyContractTest extends TestCase
 	{
 		$css = (string)file_get_contents($this->root . '/css/app.css');
 		$this->assertStringContainsString('#crm-personal-mail-oauth .crm-btn', $css);
-		$this->assertStringContainsString('min-height: 52px', $css);
+		$this->assertStringContainsString('min-height: var(--crm-touch-lg)', $css);
 		$this->assertStringContainsString('.crm-personal-mail-imap__body', $css);
 		$this->assertStringContainsString('.crm-personal-mail-servers', $css);
 		$this->assertStringContainsString('.crm-rich-mail__tool', $css);
 		$this->assertMatchesRegularExpression(
-			'/\.crm-rich-mail__tool\s*\{[^}]*min-height:\s*44px/',
+			'/\.crm-rich-mail__tool\s*\{[^}]*min-height:\s*var\(--crm-touch\)/',
 			$css,
 		);
 		$this->assertMatchesRegularExpression(
-			'/\.crm-personal-mail-folder \.crm-check\s*\{[^}]*min-height:\s*44px/',
+			'/\.crm-personal-mail-folder \.crm-check\s*\{[^}]*min-height:\s*var\(--crm-touch\)/',
 			$css,
 		);
 		$this->assertMatchesRegularExpression(

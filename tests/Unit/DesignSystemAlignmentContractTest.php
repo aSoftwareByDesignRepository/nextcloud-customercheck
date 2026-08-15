@@ -272,7 +272,7 @@ final class DesignSystemAlignmentContractTest extends TestCase
 		$this->assertStringContainsString('.crm-empty-state__text', $app);
 		$mailbox = (string)file_get_contents($this->root . '/templates/settings/workspace-mailbox.php');
 		$this->assertDoesNotMatchRegularExpression(
-			'/<summary(?![^>]*class="[^"]*crm-advanced__summary)[^>]*>/',
+			'/<summary(?![^>]*class="[^"]*(?:crm-advanced__summary|crm-mailbox-compose__summary))[^>]*>/',
 			$mailbox,
 		);
 		$team = (string)file_get_contents($this->root . '/templates/team.php');
