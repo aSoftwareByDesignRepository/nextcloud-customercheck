@@ -1,6 +1,6 @@
 <?php
 /**
- * Workspace Review inbox sources — first-class settings card (not buried under mailbox Advanced).
+ * Workspace Assign inbox sources — first-class settings card (not buried under mailbox Advanced).
  *
  * Scan actors use directory pickers (principle 11) — never raw username typing.
  *
@@ -10,8 +10,8 @@
 <section class="crm-card" id="crm-review-sources" aria-labelledby="crm-review-sources-title">
 	<header class="crm-card__header">
 		<div class="crm-card__header-text">
-			<h2 id="crm-review-sources-title" class="crm-card__title"><?php p($l->t('Review inbox sources')); ?></h2>
-			<p class="crm-card__lead"><?php p($l->t('Choose what lands in Review. Shared mail stays on; other sources need a DSGVO tick first.')); ?></p>
+			<h2 id="crm-review-sources-title" class="crm-card__title"><?php p($l->t('Assign inbox sources')); ?></h2>
+			<p class="crm-card__lead"><?php p($l->t('Choose what lands in Assign. Shared mail stays on; other sources need a DSGVO tick first.')); ?></p>
 		</div>
 	</header>
 	<div class="crm-card__body">
@@ -29,7 +29,7 @@
 				<?php
 				$crmPickerId = 'review-contacts-actor';
 				$crmPickerLabel = $l->t('Scan as teammate');
-				$crmPickerHelp = $l->t('Periodic scan needs a teammate login. Without it, use Send to Review only. Never type a raw user id.');
+				$crmPickerHelp = $l->t('Periodic scan needs a teammate login. Without it, use Send to Assign only. Never type a raw user id.');
 				include __DIR__ . '/../parts/directory-user-picker.php';
 				?>
 			</div>
@@ -39,8 +39,8 @@
 			</label>
 			<div class="crm-review-src-extra" data-review-extra="file">
 				<div class="form-group" id="crm-review-file-folder-group">
-					<span class="form-label" id="crm-review-file-folder-label"><?php p($l->t('Review folder')); ?></span>
-					<p class="form-help" id="crm-review-file-folder-help"><?php p($l->t('Browse Nextcloud and choose the folder Review should scan. Never type a raw folder file id.')); ?></p>
+					<span class="form-label" id="crm-review-file-folder-label"><?php p($l->t('Assign folder')); ?></span>
+					<p class="form-help" id="crm-review-file-folder-help"><?php p($l->t('Browse Nextcloud and choose the folder Assign should scan. Never type a raw folder file id.')); ?></p>
 					<input type="hidden" id="crm-review-file-folder" value="" autocomplete="off">
 					<input type="hidden" id="crm-review-file-folder-path" value="" autocomplete="off">
 					<p id="crm-review-file-folder-status" class="crm-muted" role="status" aria-live="polite" aria-labelledby="crm-review-file-folder-label"><?php p($l->t('No review folder selected.')); ?></p>
@@ -92,7 +92,7 @@
 				<input type="checkbox" id="crm-review-src-import" data-review-kind="import_anomaly">
 				<span><?php p($l->t('Import anomalies (country / ambiguous names)')); ?></span>
 			</label>
-			<p class="crm-muted"><?php p($l->t('Off by default. Turn on only after you confirm privacy for non-mail sources — unmatched import values appear in Review.')); ?></p>
+			<p class="crm-muted"><?php p($l->t('Off by default. Turn on only after you confirm privacy for non-mail sources — unmatched import values appear in Assign.')); ?></p>
 			<label class="crm-switch">
 				<input type="checkbox" id="crm-review-src-dsgvo" name="dsgvoAck" value="1">
 				<span><?php p($l->t('I confirm privacy disclosure for any newly enabled non-mail sources.')); ?></span>

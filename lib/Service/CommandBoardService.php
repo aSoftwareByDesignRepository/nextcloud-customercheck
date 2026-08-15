@@ -201,9 +201,9 @@ class CommandBoardService
 			try {
 				foreach ($this->plans->listForWorkspace($workspaceId) as $plan) {
 					$health = (string)($plan['health'] ?? '');
-					$review = $plan['nextReviewOn'] ?? null;
-					$dueReview = is_string($review) && $review !== '' && $review <= $today->format('Y-m-d');
-					if ($health === 'stalled' || $health === 'at_risk' || $dueReview) {
+					$review = $plan['nextAssignOn'] ?? null;
+					$dueAssign = is_string($review) && $review !== '' && $review <= $today->format('Y-m-d');
+					if ($health === 'stalled' || $health === 'at_risk' || $dueAssign) {
 						$healthLabel = $this->labels->planHealth($health !== '' ? $health : 'unknown');
 						$goal = (string)($plan['goal'] ?? $this->l10n->t('Account plan'));
 						$planItems[] = [
@@ -242,7 +242,7 @@ class CommandBoardService
 			if ($reviewOpen > 0) {
 				$sections[] = [
 					'id' => 'review_open',
-					'title' => $this->l10n->t('Review inbox'),
+					'title' => $this->l10n->t('Assign inbox'),
 					'items' => [[
 						'companyId' => null,
 						'companyName' => '',

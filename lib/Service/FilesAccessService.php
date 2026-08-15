@@ -219,6 +219,222 @@ class FilesAccessService
 		return $out;
 	}
 
+	/**
+	 * Stage a device upload into the actor's Files tree for outbound mail (MH-18 companion).
+	 * Stored under CustomerCheck/Mail Outbound/ so FAC-14 ACL is the same user folder.
+	 *
+	 * @return array{fileId: int, name: string, mime: string, size: int}
+	 * @throws ValidationException
+	 */
+	public function stageOutboundMailAttachment(
+		string $userId,
+		string $fileName,
+		string $mime,
+		string $binary,
+	): array {
+		$userId = trim($userId);
+		if ($userId === '') {
+			throw new ValidationException(
+				Constants::ERR_FILES_PERMISSION_DENIED,
+				$this->l10n->t('Sign in to attach a file.'),
+			);
+		}
+		$size = strlen($binary);
+		if ($size <= 0) {
+			throw new ValidationException(
+				Constants::ERR_ATTACHMENT_DENIED,
+				$this->l10n->t('The attachment is empty.'),
+			);
+		}
+		if ($size > Constants::MAIL_ATTACH_MAX_BYTES) {
+			throw new ValidationException(
+				Constants::ERR_ATTACHMENT_TOO_LARGE,
+				$this->l10n->t('Each attachment may be at most %s.', [
+					$this->humanBytes(Constants::MAIL_ATTACH_MAX_BYTES),
+				]),
+			);
+		}
+		$mime = strtolower(trim($mime));
+		if ($mime === '' || $mime === 'application/octet-stream') {
+			$mime = $this->guessMimeFromName($fileName);
+		}
+		if (!in_array($mime, Constants::MAIL_ATTACH_ALLOWED_MIMES, true)) {
+			throw new ValidationException(
+				Constants::ERR_ATTACHMENT_DENIED,
+				$this->l10n->t('Only PDF, PNG, JPEG or plain text attachments are allowed.'),
+			);
+		}
+		$safeName = $this->safeFilename($fileName);
+		try {
+			$userFolder = $this->rootFolder->getUserFolder($userId);
+			$root = $this->ensureFolder($userFolder, 'CustomerCheck');
+			$outbox = $this->ensureFolder($root, 'Mail Outbound');
+			if ($outbox->nodeExists($safeName)) {
+				$safeName = pathinfo($safeName, PATHINFO_FILENAME)
+					. '-' . substr(bin2hex(random_bytes(4)), 0, 8)
+					. (pathinfo($safeName, PATHINFO_EXTENSION) !== ''
+						? '.' . pathinfo($safeName, PATHINFO_EXTENSION)
+						: '');
+				$safeName = $this->safeFilename($safeName);
+			}
+			$file = $outbox->newFile($safeName, $binary);
+			$id = (int)$file->getId();
+			if ($id <= 0) {
+				throw new \RuntimeException('missing file id');
+			}
+
+			return [
+				'fileId' => $id,
+				'name' => (string)$file->getName(),
+				'mime' => $mime,
+				'size' => $size,
+			];
+		} catch (ValidationException $e) {
+			throw $e;
+		} catch (\Throwable) {
+			throw new ValidationException(
+				Constants::ERR_FILES_PERMISSION_DENIED,
+				$this->l10n->t('Could not store the attachment in your Files.'),
+			);
+		}
+	}
+
+	private function ensureFolder(Folder $parent, string $name): Folder
+	{
+		if ($parent->nodeExists($name)) {
+			$node = $parent->get($name);
+			if ($node instanceof Folder) {
+				return $node;
+			}
+			throw new ValidationException(
+				Constants::ERR_FILES_NOT_FOLDER,
+				$this->l10n->t('Could not prepare the mail attachment folder.'),
+			);
+		}
+		$created = $parent->newFolder($name);
+		if (!$created instanceof Folder) {
+			throw new ValidationException(
+				Constants::ERR_FILES_NOT_FOLDER,
+				$this->l10n->t('Could not prepare the mail attachment folder.'),
+			);
+		}
+
+		return $created;
+	}
+
+	/**
+	 * List attachable files under a path in the actor's Files (companion MH-18 Files picker).
+	 * Only returns non-folder files with MAIL_ATTACH_ALLOWED_MIMES. Path is relative to user root.
+	 *
+	 * @return array{path: string, parent: string|null, folders: list<array{name: string, path: string}>, files: list<array{id: int, name: string, mime: string, size: int, path: string}>}
+	 */
+	public function listAttachableMailFiles(string $userId, string $relativePath = '', int $limit = 100): array
+	{
+		$userId = trim($userId);
+		if ($userId === '') {
+			throw new ValidationException(
+				Constants::ERR_FILES_PERMISSION_DENIED,
+				$this->l10n->t('Sign in to browse Files.'),
+			);
+		}
+		$limit = max(1, min(200, $limit));
+		$relativePath = trim(str_replace('\\', '/', $relativePath), '/');
+		if (str_contains($relativePath, '..')) {
+			throw new ValidationException(
+				Constants::ERR_FILES_PERMISSION_DENIED,
+				$this->l10n->t('That folder path is not allowed.'),
+			);
+		}
+		try {
+			$userFolder = $this->rootFolder->getUserFolder($userId);
+			$folder = $relativePath === '' ? $userFolder : $userFolder->get($relativePath);
+		} catch (\Throwable) {
+			throw new ValidationException(
+				Constants::ERR_FILES_NOT_FOUND,
+				$this->l10n->t('That folder is gone or you cannot open it.'),
+			);
+		}
+		if (!$folder instanceof Folder) {
+			throw new ValidationException(
+				Constants::ERR_FILES_NOT_FOLDER,
+				$this->l10n->t('Pick a folder, not a file.'),
+			);
+		}
+		$folders = [];
+		$files = [];
+		try {
+			$children = $folder->getDirectoryListing();
+		} catch (\Throwable) {
+			$children = [];
+		}
+		foreach ($children as $node) {
+			if ($node instanceof Folder) {
+				if (count($folders) >= $limit) {
+					continue;
+				}
+				$name = (string)$node->getName();
+				$folders[] = [
+					'name' => $name,
+					'path' => ltrim(($relativePath !== '' ? $relativePath . '/' : '') . $name, '/'),
+				];
+				continue;
+			}
+			if (!$node instanceof File) {
+				continue;
+			}
+			if (count($files) >= $limit) {
+				continue;
+			}
+			$mime = strtolower(trim((string)$node->getMimetype()));
+			if (!in_array($mime, Constants::MAIL_ATTACH_ALLOWED_MIMES, true)) {
+				continue;
+			}
+			$size = (int)$node->getSize();
+			if ($size <= 0 || $size > Constants::MAIL_ATTACH_MAX_BYTES) {
+				continue;
+			}
+			$id = (int)$node->getId();
+			if ($id <= 0) {
+				continue;
+			}
+			$name = (string)$node->getName();
+			$files[] = [
+				'id' => $id,
+				'name' => $name,
+				'mime' => $mime,
+				'size' => $size,
+				'path' => ltrim(($relativePath !== '' ? $relativePath . '/' : '') . $name, '/'),
+			];
+		}
+		$parent = null;
+		if ($relativePath !== '') {
+			$parent = dirname($relativePath);
+			if ($parent === '.' || $parent === '/') {
+				$parent = '';
+			}
+		}
+
+		return [
+			'path' => $relativePath,
+			'parent' => $parent,
+			'folders' => $folders,
+			'files' => $files,
+		];
+	}
+
+	private function guessMimeFromName(string $name): string
+	{
+		$ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+
+		return match ($ext) {
+			'pdf' => 'application/pdf',
+			'png' => 'image/png',
+			'jpg', 'jpeg' => 'image/jpeg',
+			'txt' => 'text/plain',
+			default => 'application/octet-stream',
+		};
+	}
+
 	private function safeFilename(string $name): string
 	{
 		$name = str_replace(["\r", "\n", "\0"], '', $name);

@@ -16,6 +16,7 @@ final class SettingsSplitContractTest extends TestCase
 		$src = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/settings.php');
 		$this->assertStringContainsString('crm-settings-switch', $src);
 		$this->assertStringContainsString("'preferences' => 'preferences.php'", $src);
+		$this->assertStringContainsString("'my-email' => 'my-email.php'", $src);
 		$this->assertStringContainsString("'mailbox' => 'workspace-mailbox.php'", $src);
 		$this->assertStringContainsString("'integrations' => 'integrations.php'", $src);
 		$this->assertStringNotContainsString("'access'", $src);
@@ -32,6 +33,7 @@ final class SettingsSplitContractTest extends TestCase
 		$this->assertStringContainsString("'tokens' => 'tokens.php'", $src);
 		$this->assertStringContainsString("'license' => 'license.php'", $src);
 		$this->assertStringContainsString("'product-codes' => 'product-codes.php'", $src);
+		$this->assertStringContainsString("'personal-mail' => 'personal-mail.php'", $src);
 		$this->assertStringContainsString('crm-settings-switch', $src);
 		$this->assertStringNotContainsString('workspace-mailbox', $src);
 		$this->assertStringNotContainsString('preferences.php', $src);
@@ -57,6 +59,7 @@ final class SettingsSplitContractTest extends TestCase
 	{
 		$nav = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/common/navigation.php');
 		$this->assertStringContainsString('Team & mailbox', $nav);
+		$this->assertStringContainsString('My email', $nav);
 		$this->assertStringContainsString('App settings', $nav);
 		$this->assertStringContainsString("u('appSettings')", $nav);
 		$this->assertStringContainsString('$canManageNav', $nav);

@@ -82,6 +82,8 @@ final class SingleOrgModeContractTest extends TestCase
 		$circles = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/settings/circles-roll-call.php');
 		$tokens = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/settings/tokens.php');
 		$this->assertStringContainsString("\$l->t('Team & mailbox')", $nav);
+		$this->assertStringContainsString("\$l->t('My email')", $nav);
+		$this->assertStringContainsString('canManageWorkspaceNav', $nav);
 		$this->assertStringContainsString("\$l->t('Team & mailbox')", $settings);
 		$this->assertStringNotContainsString("\$l->t('Workspace')", $settings);
 		$this->assertStringContainsString("\$l->t('Loading team settings…')", $boot);

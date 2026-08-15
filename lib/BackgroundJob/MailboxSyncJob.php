@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 namespace OCA\CustomerCheck\BackgroundJob;
+use OCA\CustomerCheck\Constants;
 use OCA\CustomerCheck\Service\MailboxSyncService;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\BackgroundJob\TimedJob;
@@ -11,7 +12,7 @@ class MailboxSyncJob extends TimedJob
 	public function __construct(ITimeFactory $time, private readonly MailboxSyncService $sync)
 	{
 		parent::__construct($time);
-		$this->setInterval(900);
+		$this->setInterval(Constants::MAILBOX_SYNC_INTERVAL_SECONDS);
 	}
 
 	protected function run($argument): void

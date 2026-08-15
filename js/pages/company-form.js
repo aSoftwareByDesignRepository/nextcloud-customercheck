@@ -95,6 +95,10 @@
       slug: slug,
       status: document.getElementById('crm-company-status').value,
       lang: document.getElementById('crm-company-lang').value,
+      addrStreet: (document.getElementById('crm-company-street') || {}).value || '',
+      addrZip: (document.getElementById('crm-company-zip') || {}).value || '',
+      addrCity: (document.getElementById('crm-company-city') || {}).value || '',
+      country: (document.getElementById('crm-company-country') || {}).value || 'DE',
       notes: document.getElementById('crm-company-notes').value,
       accountOwnerUserId: (document.getElementById('crm-company-owner') || {}).value || '',
     };

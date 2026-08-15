@@ -161,6 +161,83 @@ class WebsiteOrderWebhookServiceTest extends TestCase
 		$this->assertSame(['todo', 'todo'], array_map(static fn (Activity $a) => $a->getType(), $this->activities));
 	}
 
+	public function testWebsiteShapedPayloadStoresStructuredStreetAddress(): void
+	{
+		$created = null;
+		$settings = $this->createMock(SettingsService::class);
+		$settings->method('tokenMatches')->willReturn(true);
+		$rate = $this->createMock(RateLimitService::class);
+		$rate->method('allow')->willReturn(true);
+		$company = new Company();
+		$company->setId(42);
+		$company->setSlug('muster-ag');
+		$company->setName('Muster AG');
+		$company->setWorkspaceId(1);
+		$companies = $this->createMock(CompanyService::class);
+		$companies->method('create')->willReturnCallback(function (array $input) use ($company, &$created) {
+			$created = $input;
+			return $company;
+		});
+		$companies->method('get')->willReturn($company);
+		$defaultWs = new \OCA\CustomerCheck\Db\Workspace();
+		$defaultWs->setId(1);
+		$workspaces = $this->createMock(WorkspaceService::class);
+		$workspaces->method('findDefault')->willReturn($defaultWs);
+		$slug = $this->createMock(SlugService::class);
+		$slug->method('suggestUnique')->willReturn('muster-ag');
+		$persons = $this->createMock(PersonMapper::class);
+		$persons->method('findByEmail')->willReturn([]);
+		$deals = $this->createMock(DealMapper::class);
+		$deals->method('findOpenByTitle')->willReturn([]);
+		$deals->method('insert')->willReturnCallback(function (Deal $deal): Deal {
+			$deal->setId(55);
+			return $deal;
+		});
+		$agreementService = $this->createMock(AgreementService::class);
+		$agreementService->method('create')->willReturn($this->createMock(\OCA\CustomerCheck\Db\Agreement::class));
+		$activities = $this->createMock(ActivityMapper::class);
+		$activities->method('insert')->willReturnCallback(static fn (Activity $a) => $a);
+		$time = $this->createMock(ITimeFactory::class);
+		$time->method('getDateTime')->willReturn(new \DateTime('2026-07-20 12:00:00'));
+		$l10n = $this->createMock(IL10N::class);
+		$l10n->method('t')->willReturnCallback(static fn (string $text): string => $text);
+
+		$service = new WebsiteOrderWebhookService(
+			$settings,
+			$rate,
+			$companies,
+			$workspaces,
+			$slug,
+			$this->createMock(PersonService::class),
+			$persons,
+			$deals,
+			$agreementService,
+			$activities,
+			$this->createMock(TimelineService::class),
+			$this->createMock(NotificationService::class),
+			$time,
+			$l10n,
+			$this->createMock(ILockingProvider::class),
+		);
+
+		$payload = $this->payload();
+		$payload['companyName'] = 'Muster AG';
+		$payload['streetAddress'] = 'Musterstraße 1';
+		$payload['addressLine2'] = 'c/o IT';
+		$payload['postalCode'] = '24837';
+		$payload['city'] = 'Schleswig';
+		$payload['country'] = 'Germany';
+		$payload['address'] = "Musterstraße 1\nc/o IT\n24837 Schleswig\nGermany";
+
+		$service->handle('token', '1.2.3.4', $payload);
+
+		$this->assertIsArray($created);
+		$this->assertSame("Musterstraße 1\nc/o IT", $created['addrStreet'] ?? null);
+		$this->assertSame('24837', $created['addrZip'] ?? null);
+		$this->assertSame('Schleswig', $created['addrCity'] ?? null);
+		$this->assertSame('DE', $created['country'] ?? null);
+	}
+
 	public function testRepostReturnsExistingDealWithoutCreatingDuplicates(): void
 	{
 		$service = $this->service();
@@ -170,6 +247,21 @@ class WebsiteOrderWebhookServiceTest extends TestCase
 		$this->assertSame($first, $second);
 		$this->assertCount(1, $this->agreements);
 		$this->assertCount(2, $this->activities);
+	}
+
+	public function testOrderLockKeyFitsFileLocksColumn(): void
+	{
+		$key = WebsiteOrderWebhookService::orderLockKey('abc');
+		$this->assertSame(64, strlen($key));
+		$this->assertMatchesRegularExpression('/^[a-f0-9]{64}$/', $key);
+		$this->assertNotSame(
+			WebsiteOrderWebhookService::orderLockKey('abc'),
+			WebsiteOrderWebhookService::orderLockKey('abcd'),
+		);
+		// Legacy key was >64 and truncated in oc_file_locks — must never ship again.
+		$legacy = 'customercheck:website-order:' . hash('sha256', 'abc');
+		$this->assertGreaterThan(64, strlen($legacy));
+		$this->assertSame(64, strlen(WebsiteOrderWebhookService::orderLockKey('abc')));
 	}
 
 	public function testPcAndCucOrdersCreateSeparateLicenseAgreements(): void

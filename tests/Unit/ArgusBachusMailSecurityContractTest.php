@@ -70,14 +70,21 @@ final class ArgusBachusMailSecurityContractTest extends TestCase
 		$this->assertStringContainsString("'mail.read'", $viewerBlock[1]);
 	}
 
-	public function testMailPreviewBodiesStayTextContentOnly(): void
+	public function testMailPreviewBodiesUseSanitizedHtmlOrPlainText(): void
 	{
 		$persona = (string)file_get_contents(dirname(__DIR__, 2) . '/js/pages/persona.js');
 		$company = (string)file_get_contents(dirname(__DIR__, 2) . '/js/pages/company-detail.js');
+		$sales = (string)file_get_contents(dirname(__DIR__, 2) . '/js/pages/sales-inbox.js');
+		// Persona surfaces stay plain-text (no HTML hole).
 		$this->assertStringContainsString('pre.textContent = bodyText', $persona);
 		$this->assertStringContainsString('Never use innerHTML', $persona);
-		$this->assertStringContainsString('pre.textContent = textBody', $company);
-		$this->assertStringContainsString('Never use innerHTML', $company);
+		// FAC-16: Talk + Sales Inbox may render server-sanitized bodyHtml only.
+		$this->assertStringContainsString('bodyEl.innerHTML = bodyHtml', $company);
+		$this->assertStringContainsString('FAC-16', $company);
+		$this->assertStringContainsString('bodyEl.innerHTML = bodyHtml', $sales);
+		$this->assertStringContainsString('htmlSanitize->sanitize', (string)file_get_contents(
+			dirname(__DIR__, 2) . '/lib/Service/MailboxService.php',
+		));
 	}
 
 	public function testMailPreviewAbortControllerCancelsPriorFetch(): void

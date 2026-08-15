@@ -13,18 +13,30 @@ use OCA\CustomerCheck\Db\DealMapper;
 use OCA\CustomerCheck\Db\PersonMapper;
 use OCA\CustomerCheck\Exception\ValidationException;
 use OCA\CustomerCheck\Support\DateMath;
+use OCA\CustomerCheck\Support\PostalAddressParser;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\IL10N;
 use OCP\Lock\ILockingProvider;
+use OCP\Lock\LockedException;
 
 /**
  * Public website order intake (§14.4 order path).
  *
  * A stable order id is represented by an open deal title. This makes retries
  * safe without relying on client-side delivery guarantees.
+ *
+ * Lock keys MUST stay ≤64 characters: Nextcloud `file_locks`.`key` truncates
+ * longer values, so releaseLock misses the row and exclusive locks stick until TTL.
  */
 class WebsiteOrderWebhookService
 {
+	/** @internal exposed for unit tests / mutation anchors */
+	public static function orderLockKey(string $orderId): string
+	{
+		// Exactly 64 hex chars — fits file_locks.key without truncation.
+		return hash('sha256', 'customercheck:website-order|' . $orderId);
+	}
+
 	public function __construct(
 		private readonly SettingsService $settings,
 		private readonly RateLimitService $rateLimit,
@@ -81,30 +93,43 @@ class WebsiteOrderWebhookService
 			throw new ValidationException(Constants::ERR_HOOK_VALIDATION, $this->l10n->t('Please correct the highlighted fields.'), $fields);
 		}
 
-		$lockKey = 'customercheck:website-order:' . hash('sha256', $orderId);
-		$this->locking->acquireLock($lockKey, ILockingProvider::LOCK_EXCLUSIVE);
-		try {
-			$dealTitle = 'Website order ' . $orderId;
-			// Title idempotency is scoped to the default workspace — never reclaim
-			// an open deal from another book that happens to share the same order id.
-			$defaultWs = $this->workspaces->findDefault();
-			$orderWorkspaceId = $defaultWs !== null ? (int)$defaultWs->getId() : 0;
-			$existingDeals = $orderWorkspaceId > 0
-				? $this->dealMapper->findOpenByTitle($dealTitle, $orderWorkspaceId)
-				: [];
-			if ($existingDeals !== []) {
-				$deal = $existingDeals[0];
-				$company = $this->companyService->get((int)$deal->getCompanyId());
+		$dealTitle = 'Website order ' . $orderId;
+		// Title idempotency is scoped to the default workspace — never reclaim
+		// an open deal from another book that happens to share the same order id.
+		$defaultWs = $this->workspaces->findDefault();
+		$orderWorkspaceId = $defaultWs !== null ? (int)$defaultWs->getId() : 0;
 
-				return [
-					'companyId' => (int)$company->getId(),
-					'dealId' => (int)$deal->getId(),
-					'slug' => (string)$company->getSlug(),
-				];
+		// Cheap retry path: no lock needed when the deal already exists.
+		$existing = $this->existingOrderResult($dealTitle, $orderWorkspaceId);
+		if ($existing !== null) {
+			return $existing;
+		}
+
+		$lockKey = self::orderLockKey($orderId);
+		$acquired = false;
+		try {
+			try {
+				$this->locking->acquireLock($lockKey, ILockingProvider::LOCK_EXCLUSIVE);
+				$acquired = true;
+			} catch (LockedException) {
+				$waited = $this->waitForExistingOrder($dealTitle, $orderWorkspaceId);
+				if ($waited !== null) {
+					return $waited;
+				}
+				throw ValidationException::field(
+					Constants::ERR_HOOK_RATE_LIMITED,
+					'rate',
+					$this->l10n->t('Too many requests. Try again later.'),
+				);
+			}
+
+			$existing = $this->existingOrderResult($dealTitle, $orderWorkspaceId);
+			if ($existing !== null) {
+				return $existing;
 			}
 
 			$now = $this->timeFactory->getDateTime();
-			$company = $this->findOrCreateCompany($companyName, $email, $phone, $contactName, $lang);
+			$company = $this->findOrCreateCompany($companyName, $email, $phone, $contactName, $lang, $payload);
 			$deal = new Deal();
 			$deal->setCompanyId((int)$company->getId());
 			$deal->setTitle($dealTitle);
@@ -145,20 +170,62 @@ class WebsiteOrderWebhookService
 
 			return ['companyId' => (int)$company->getId(), 'dealId' => (int)$deal->getId(), 'slug' => (string)$company->getSlug()];
 		} finally {
-			$this->locking->releaseLock($lockKey, ILockingProvider::LOCK_EXCLUSIVE);
+			if ($acquired) {
+				$this->locking->releaseLock($lockKey, ILockingProvider::LOCK_EXCLUSIVE);
+			}
 		}
 	}
 
-	private function findOrCreateCompany(string $companyName, string $email, string $phone, string $contactName, string $lang): Company
+	/**
+	 * @return array{companyId:int,dealId:int,slug:string}|null
+	 */
+	private function existingOrderResult(string $dealTitle, int $orderWorkspaceId): ?array
+	{
+		if ($orderWorkspaceId <= 0) {
+			return null;
+		}
+		$existingDeals = $this->dealMapper->findOpenByTitle($dealTitle, $orderWorkspaceId);
+		if ($existingDeals === []) {
+			return null;
+		}
+		$deal = $existingDeals[0];
+		$company = $this->companyService->get((int)$deal->getCompanyId());
+
+		return [
+			'companyId' => (int)$company->getId(),
+			'dealId' => (int)$deal->getId(),
+			'slug' => (string)$company->getSlug(),
+		];
+	}
+
+	/**
+	 * @return array{companyId:int,dealId:int,slug:string}|null
+	 */
+	private function waitForExistingOrder(string $dealTitle, int $orderWorkspaceId): ?array
+	{
+		for ($i = 0; $i < 8; $i++) {
+			$hit = $this->existingOrderResult($dealTitle, $orderWorkspaceId);
+			if ($hit !== null) {
+				return $hit;
+			}
+			usleep(50_000);
+		}
+
+		return $this->existingOrderResult($dealTitle, $orderWorkspaceId);
+	}
+
+	private function findOrCreateCompany(string $companyName, string $email, string $phone, string $contactName, string $lang, array $payload): Company
 	{
 		$defaultWs = $this->workspaces->findDefault();
 		$workspaceId = $defaultWs !== null ? (int)$defaultWs->getId() : 0;
+		$address = PostalAddressParser::fromImportPayload($payload);
 		$matches = $workspaceId > 0
 			? $this->personMapper->findByEmail($email, $workspaceId)
 			: [];
 		foreach ($matches as $person) {
 			$company = $this->companyService->get((int)$person->getCompanyId());
 			if (!$company->isArchived()) {
+				$this->fillEmptyAddressFields($company, $address);
 				return $company;
 			}
 		}
@@ -172,6 +239,18 @@ class WebsiteOrderWebhookService
 		if ($workspaceId > 0) {
 			$create['workspaceId'] = $workspaceId;
 		}
+		if ($address['addrStreet'] !== null) {
+			$create['addrStreet'] = $address['addrStreet'];
+		}
+		if ($address['addrZip'] !== null) {
+			$create['addrZip'] = $address['addrZip'];
+		}
+		if ($address['addrCity'] !== null) {
+			$create['addrCity'] = $address['addrCity'];
+		}
+		if ($address['country'] !== null) {
+			$create['country'] = $address['country'];
+		}
 		$company = $this->companyService->create($create, 'webhook');
 		$this->personService->create((int)$company->getId(), [
 			'name' => $contactName !== '' ? $contactName : $companyName,
@@ -181,6 +260,37 @@ class WebsiteOrderWebhookService
 		], 'webhook');
 
 		return $company;
+	}
+
+	/**
+	 * @param array{addrStreet:?string,addrZip:?string,addrCity:?string,country:?string,parsed:bool} $address
+	 */
+	private function fillEmptyAddressFields(Company $company, array $address): void
+	{
+		$patch = [];
+		if (trim((string)($company->getAddrStreet() ?? '')) === '' && $address['addrStreet'] !== null) {
+			$patch['addrStreet'] = $address['addrStreet'];
+		}
+		if (trim((string)($company->getAddrZip() ?? '')) === '' && $address['addrZip'] !== null) {
+			$patch['addrZip'] = $address['addrZip'];
+		}
+		if (trim((string)($company->getAddrCity() ?? '')) === '' && $address['addrCity'] !== null) {
+			$patch['addrCity'] = $address['addrCity'];
+		}
+		// Never override an explicit non-default country silently; only fill when still default DE and payload has another.
+		if ($address['country'] !== null
+			&& $address['country'] !== 'DE'
+			&& strtoupper((string)$company->getCountry()) === 'DE') {
+			$patch['country'] = $address['country'];
+		}
+		if ($patch === []) {
+			return;
+		}
+		try {
+			$this->companyService->update((int)$company->getId(), $patch, 'webhook', null, false, true);
+		} catch (\Throwable) {
+			// Best-effort enrichment on idempotent order retries — never fail the order.
+		}
 	}
 
 	private function createTodo(Company $company, Deal $deal, string $title, \DateTimeInterface $now): void

@@ -4,11 +4,15 @@ declare(strict_types=1);
 
 namespace OCA\CustomerCheck\Tests\Unit\Service;
 
+use OCA\CustomerCheck\Service\HtmlSanitizeService;
 use OCA\CustomerCheck\Exception\NotFoundException;
 use OCA\CustomerCheck\Service\EmailTouchService;
 use OCA\CustomerCheck\Service\FilesAccessService;
 use OCA\CustomerCheck\Service\MailboxService;
+use OCA\CustomerCheck\Service\MailboxAuthService;
+use Psr\Log\LoggerInterface;
 use OCA\CustomerCheck\Service\MailSendService;
+use OCA\CustomerCheck\Service\WorkspaceService;
 use OCA\CustomerCheck\Service\RateLimitService;
 use OCA\CustomerCheck\Service\TimelineService;
 use OCP\AppFramework\Utility\ITimeFactory;
@@ -29,26 +33,43 @@ final class MailSendServiceCompanyAclTest extends TestCase
 {
 	public function testSendRejectsCompanyOutsideWorkspaceBeforeRateLimit(): void
 	{
-		$result = $this->createMock(\OCP\DB\IResult::class);
-		$result->method('fetch')->willReturn(false);
-		$result->expects($this->once())->method('closeCursor');
+		$mailboxRow = [
+			'id' => 9,
+			'workspace_id' => 1,
+			'kind' => 'team',
+			'owner_user_id' => null,
+			'email_address' => 'support@example.com',
+			'label' => 'Support',
+			'smtp_host' => '',
+			'secret_enc' => '',
+			'signature_html' => '',
+			'signature_plain' => '',
+		];
+
+		$mailboxResult = $this->createMock(\OCP\DB\IResult::class);
+		$mailboxResult->method('fetch')->willReturn($mailboxRow);
+		$mailboxResult->method('closeCursor');
+
+		$companyResult = $this->createMock(\OCP\DB\IResult::class);
+		$companyResult->method('fetch')->willReturn(false);
+		$companyResult->expects($this->once())->method('closeCursor');
 
 		$expr = $this->createMock(IExpressionBuilder::class);
 		$expr->method('eq')->willReturn('eq');
 
-		$select = $this->createMock(IQueryBuilder::class);
-		$select->method('expr')->willReturn($expr);
-		$select->method('select')->willReturnSelf();
-		$select->method('from')->willReturnSelf();
-		$select->method('where')->willReturnSelf();
-		$select->method('andWhere')->willReturnSelf();
-		$select->method('setMaxResults')->willReturnSelf();
-		$select->method('createNamedParameter')->willReturn('p');
-		$select->expects($this->once())->method('executeQuery')->willReturn($result);
+		$qb = $this->createMock(IQueryBuilder::class);
+		$qb->method('expr')->willReturn($expr);
+		$qb->method('select')->willReturnSelf();
+		$qb->method('from')->willReturnSelf();
+		$qb->method('where')->willReturnSelf();
+		$qb->method('andWhere')->willReturnSelf();
+		$qb->method('setMaxResults')->willReturnSelf();
+		$qb->method('createNamedParameter')->willReturn('p');
+		$qb->method('executeQuery')->willReturnOnConsecutiveCalls($mailboxResult, $companyResult);
 
 		$db = $this->createMock(IDBConnection::class);
 		$db->method('tableExists')->willReturn(true);
-		$db->method('getQueryBuilder')->willReturn($select);
+		$db->method('getQueryBuilder')->willReturn($qb);
 
 		$rate = $this->createMock(RateLimitService::class);
 		$rate->expects($this->never())->method('allow');
@@ -69,6 +90,10 @@ final class MailSendServiceCompanyAclTest extends TestCase
 			$this->createMock(ITimeFactory::class),
 			$this->createMock(IURLGenerator::class),
 			$l10n,
+			new HtmlSanitizeService(),
+			$this->createMock(MailboxAuthService::class),
+			$this->createMock(LoggerInterface::class),
+			$this->createMock(WorkspaceService::class),
 		);
 
 		$this->expectException(NotFoundException::class);
@@ -85,12 +110,11 @@ final class MailSendServiceCompanyAclTest extends TestCase
 	public function testSendWithoutCompanyIdSkipsCompanyLookup(): void
 	{
 		$db = $this->createMock(IDBConnection::class);
+		// Empty idempotency is rejected before mailbox load — no getQueryBuilder.
 		$db->expects($this->never())->method('getQueryBuilder');
 
 		$rate = $this->createMock(RateLimitService::class);
-		$rate->expects($this->once())
-			->method('allow')
-			->willReturn(false);
+		$rate->expects($this->never())->method('allow');
 
 		$l10n = $this->createMock(IL10N::class);
 		$l10n->method('t')->willReturnCallback(static fn (string $s): string => $s);
@@ -108,6 +132,10 @@ final class MailSendServiceCompanyAclTest extends TestCase
 			$this->createMock(ITimeFactory::class),
 			$this->createMock(IURLGenerator::class),
 			$l10n,
+			new HtmlSanitizeService(),
+			$this->createMock(MailboxAuthService::class),
+			$this->createMock(LoggerInterface::class),
+			$this->createMock(WorkspaceService::class),
 		);
 
 		try {
@@ -116,11 +144,11 @@ final class MailSendServiceCompanyAclTest extends TestCase
 				'to' => 'ada@example.com',
 				'subject' => 'Hi',
 				'body' => 'Body',
-				'idempotencyKey' => 'no-company',
+				'idempotencyKey' => '',
 			], 'ae', true);
-			$this->fail('Expected rate-limit ValidationException');
+			$this->fail('Expected ValidationException');
 		} catch (\OCA\CustomerCheck\Exception\ValidationException $e) {
-			$this->assertSame(\OCA\CustomerCheck\Constants::ERR_RATE_LIMITED, $e->getErrorCode());
+			$this->assertArrayHasKey('idempotencyKey', $e->getFields());
 		}
 	}
 }

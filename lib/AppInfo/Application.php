@@ -296,6 +296,7 @@ class Application extends App implements IBootstrap
 		$context->registerService(\OCA\CustomerCheck\BackgroundJob\MailRetentionPurgeJob::class, fn ($c) => new \OCA\CustomerCheck\BackgroundJob\MailRetentionPurgeJob(
 			$c->get(\OCP\AppFramework\Utility\ITimeFactory::class),
 			$c->get(\OCA\CustomerCheck\Service\MailboxSyncService::class),
+			$c->get(\OCA\CustomerCheck\Service\MailDraftService::class),
 		));
 		$context->registerService(\OCA\CustomerCheck\BackgroundJob\PersonaMaintenanceJob::class, fn ($c) => new \OCA\CustomerCheck\BackgroundJob\PersonaMaintenanceJob(
 			$c->get(\OCP\AppFramework\Utility\ITimeFactory::class),

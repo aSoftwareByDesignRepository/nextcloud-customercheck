@@ -29,7 +29,7 @@ class SeedPlayReviewerCommand extends Command
 			->setName('customercheck:seed-play-reviewer')
 			->setDescription('LOCAL ONLY — install golden CUC2 + assign a named mobile seat (requires vendor key override).')
 			->addOption('uid', null, InputOption::VALUE_REQUIRED, 'User id to receive the seat', 'play-reviewer')
-			->addOption('display-name', null, InputOption::VALUE_REQUIRED, 'Display name when creating the user', 'Play Reviewer')
+			->addOption('display-name', null, InputOption::VALUE_REQUIRED, 'Display name when creating the user', 'Play Assigner')
 			->addOption('password', null, InputOption::VALUE_REQUIRED, 'Password when creating the user (printed once if omitted)')
 			->addOption('i-understand-local-only', null, InputOption::VALUE_NONE, 'Required acknowledgement');
 	}

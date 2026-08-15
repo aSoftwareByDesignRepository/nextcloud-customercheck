@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OCA\CustomerCheck\Db;
 
 use OCP\AppFramework\Db\DoesNotExistException;
+use OCP\AppFramework\Db\Entity;
 use OCP\AppFramework\Db\QBMapper;
 use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\IDBConnection;
@@ -101,12 +102,43 @@ class PersonMapper extends QBMapper
 		$qb->select('p.*')
 			->from($this->getTableName(), 'p')
 			->innerJoin('p', 'crm_company', 'c', $qb->expr()->eq('p.company_id', 'c.id'))
-			->where($qb->expr()->eq($qb->func()->lower('p.email'), $qb->createNamedParameter($email)))
+			->where($qb->expr()->eq(
+				$qb->func()->lower($qb->func()->trim('p.email')),
+				$qb->createNamedParameter($email),
+			))
 			->andWhere($qb->expr()->eq('c.workspace_id', $qb->createNamedParameter($workspaceId, IQueryBuilder::PARAM_INT)))
 			->andWhere($qb->expr()->isNull('c.archived_at'))
 			->setMaxResults(50);
 
 		return $this->findEntities($qb);
+	}
+
+	public function insert(Entity $entity): Entity
+	{
+		if ($entity instanceof Person) {
+			$entity->setEmail(self::normalizeStoredEmail($entity->getEmail()));
+		}
+
+		return parent::insert($entity);
+	}
+
+	public function update(Entity $entity): Entity
+	{
+		if ($entity instanceof Person) {
+			$entity->setEmail(self::normalizeStoredEmail($entity->getEmail()));
+		}
+
+		return parent::update($entity);
+	}
+
+	private static function normalizeStoredEmail(?string $email): ?string
+	{
+		if ($email === null) {
+			return null;
+		}
+		$email = mb_strtolower(trim(str_replace("\xc2\xa0", ' ', $email)));
+
+		return $email === '' ? null : $email;
 	}
 
 	/**

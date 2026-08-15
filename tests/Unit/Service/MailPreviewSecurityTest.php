@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace OCA\CustomerCheck\Tests\Unit\Service;
 
 use OCA\CustomerCheck\Constants;
+use OCA\CustomerCheck\Exception\NotFoundException;
 use OCA\CustomerCheck\Exception\ValidationException;
 use OCA\CustomerCheck\Service\MailboxService;
+use OCA\CustomerCheck\Service\MailboxAuthService;
 use OCA\CustomerCheck\Service\MailboxSyncService;
 use OCA\CustomerCheck\Service\NotificationService;
 use OCA\CustomerCheck\Service\RateLimitService;
@@ -62,6 +64,7 @@ final class MailPreviewSecurityTest extends TestCase
 			$this->createMock(LoggerInterface::class),
 			$this->l10n(),
 			$rate,
+			$this->createMock(MailboxAuthService::class),
 		);
 
 		try {
@@ -106,6 +109,7 @@ final class MailPreviewSecurityTest extends TestCase
 			$this->createMock(LoggerInterface::class),
 			$this->l10n(),
 			$rate,
+			$this->createMock(MailboxAuthService::class),
 		);
 
 		try {
@@ -146,6 +150,7 @@ final class MailPreviewSecurityTest extends TestCase
 			$this->createMock(LoggerInterface::class),
 			$this->l10n(),
 			$rate,
+			$this->createMock(MailboxAuthService::class),
 		);
 
 		$this->expectException(ValidationException::class);
@@ -198,6 +203,7 @@ final class MailPreviewSecurityTest extends TestCase
 			$this->createMock(LoggerInterface::class),
 			$this->l10n(),
 			$rate,
+			$this->createMock(MailboxAuthService::class),
 		);
 
 		$out = $svc->previewIndexedMessage(1, 9, 'alex');
@@ -235,6 +241,7 @@ final class MailPreviewSecurityTest extends TestCase
 			$this->createMock(LoggerInterface::class),
 			$this->l10n(),
 			$rate,
+			$this->createMock(MailboxAuthService::class),
 		);
 
 		try {
@@ -258,6 +265,10 @@ final class MailPreviewSecurityTest extends TestCase
 			'from' => 'Ada <ada@acme.example>',
 			'preview' => 'Body line',
 			'triageStatus' => 'open',
+			'visibility' => 'shared',
+			'ownerUserId' => 'alex',
+			'companyId' => null,
+			'mailboxKind' => 'team',
 		]);
 		$locks = $this->createMock(ILockingProvider::class);
 		$locks->expects($this->never())->method('acquireLock');
@@ -275,14 +286,92 @@ final class MailPreviewSecurityTest extends TestCase
 			$this->createMock(LoggerInterface::class),
 			$this->l10n(),
 			$rate,
+			$this->createMock(MailboxAuthService::class),
 		);
 
-		$out = $svc->replyComposeIndexedMessage(1, 9);
+		$out = $svc->replyComposeIndexedMessage(1, 9, 'alex', true, true);
 		$this->assertTrue($out['available']);
 		$this->assertSame('ada@acme.example', $out['to']);
 		$this->assertSame('Re: Hello', $out['subject']);
 		$this->assertStringStartsWith('mailto:', $out['mailtoUrl']);
 		$this->assertStringContainsString('> Body line', $out['bodyText']);
+		$this->assertSame(3, $out['mailboxId']);
+		$this->assertArrayNotHasKey('companyId', $out);
+		$this->assertSame('shared', $out['visibility']);
+		$this->assertSame('team', $out['mailboxKind']);
+	}
+
+	public function testReplyComposeIncludesMatchedCompanyId(): void
+	{
+		$mailboxes = $this->createMock(MailboxService::class);
+		$mailboxes->method('findMessageForPreview')->willReturn([
+			'id' => 9,
+			'mailboxId' => 3,
+			'folderId' => 1,
+			'folderPath' => 'INBOX',
+			'messageUid' => '42',
+			'subject' => 'Hello',
+			'from' => 'Ada <ada@acme.example>',
+			'preview' => 'Body line',
+			'triageStatus' => 'matched',
+			'visibility' => 'shared',
+			'ownerUserId' => 'alex',
+			'companyId' => 42,
+			'mailboxKind' => 'team',
+		]);
+		$svc = new MailboxSyncService(
+			$this->createMock(IDBConnection::class),
+			$this->createMock(ICrypto::class),
+			$mailboxes,
+			$this->createMock(WorkspaceService::class),
+			$this->createMock(NotificationService::class),
+			$this->createMock(ILockingProvider::class),
+			$this->createMock(ITimeFactory::class),
+			$this->createMock(LoggerInterface::class),
+			$this->l10n(),
+			$this->createMock(RateLimitService::class),
+			$this->createMock(MailboxAuthService::class),
+		);
+
+		$out = $svc->replyComposeIndexedMessage(1, 9, 'alex', true, true);
+		$this->assertTrue($out['available']);
+		$this->assertSame(42, $out['companyId']);
+		$this->assertSame(3, $out['mailboxId']);
+	}
+
+	public function testReplyComposeDeniesPrivatePersonalForTeammate(): void
+	{
+		$mailboxes = $this->createMock(MailboxService::class);
+		$mailboxes->method('findMessageForPreview')->willReturn([
+			'id' => 9,
+			'mailboxId' => 3,
+			'folderId' => 1,
+			'folderPath' => 'INBOX',
+			'messageUid' => '42',
+			'subject' => 'Secret',
+			'from' => 'Ada <ada@acme.example>',
+			'preview' => 'Private body',
+			'triageStatus' => 'open',
+			'visibility' => 'private',
+			'ownerUserId' => 'alex',
+			'companyId' => null,
+			'mailboxKind' => 'personal',
+		]);
+		$svc = new MailboxSyncService(
+			$this->createMock(IDBConnection::class),
+			$this->createMock(ICrypto::class),
+			$mailboxes,
+			$this->createMock(WorkspaceService::class),
+			$this->createMock(NotificationService::class),
+			$this->createMock(ILockingProvider::class),
+			$this->createMock(ITimeFactory::class),
+			$this->createMock(LoggerInterface::class),
+			$this->l10n(),
+			$this->createMock(RateLimitService::class),
+			$this->createMock(MailboxAuthService::class),
+		);
+		$this->expectException(NotFoundException::class);
+		$svc->replyComposeIndexedMessage(1, 9, 'teammate', true, true);
 	}
 
 	public function testCachedPreviewIncludesReplyPack(): void
@@ -297,6 +386,50 @@ final class MailPreviewSecurityTest extends TestCase
 			'subject' => 'Hi',
 			'from' => 'a@b.c',
 			'preview' => 'Cached body',
+			'triageStatus' => 'open',
+			'visibility' => 'shared',
+			'ownerUserId' => 'alex',
+			'companyId' => 1,
+			'mailboxKind' => 'team',
+		]);
+		$locks = $this->createMock(ILockingProvider::class);
+		$locks->expects($this->never())->method('acquireLock');
+		$rate = $this->createMock(RateLimitService::class);
+		$rate->expects($this->never())->method('allow');
+
+		$svc = new MailboxSyncService(
+			$this->createMock(IDBConnection::class),
+			$this->createMock(ICrypto::class),
+			$mailboxes,
+			$this->createMock(WorkspaceService::class),
+			$this->createMock(NotificationService::class),
+			$locks,
+			$this->createMock(ITimeFactory::class),
+			$this->createMock(LoggerInterface::class),
+			$this->l10n(),
+			$rate,
+			$this->createMock(MailboxAuthService::class),
+		);
+
+		$out = $svc->previewIndexedMessage(1, 9, 'alex');
+		$this->assertTrue($out['cached']);
+		$this->assertArrayHasKey('reply', $out);
+		$this->assertTrue($out['reply']['available']);
+		$this->assertSame('a@b.c', $out['reply']['to']);
+	}
+
+	public function testCachedPreviewWithInvalidUtf8StillJsonEncodes(): void
+	{
+		$mailboxes = $this->createMock(MailboxService::class);
+		$mailboxes->method('findMessageForPreview')->willReturn([
+			'id' => 9,
+			'mailboxId' => 3,
+			'folderId' => 1,
+			'folderPath' => 'INBOX',
+			'messageUid' => '42',
+			'subject' => "Betreff \xB1",
+			'from' => 'a@b.c',
+			'preview' => "Body with \xB1\xB2 garbage",
 			'triageStatus' => 'open',
 		]);
 		$locks = $this->createMock(ILockingProvider::class);
@@ -315,13 +448,42 @@ final class MailPreviewSecurityTest extends TestCase
 			$this->createMock(LoggerInterface::class),
 			$this->l10n(),
 			$rate,
+			$this->createMock(MailboxAuthService::class),
 		);
 
 		$out = $svc->previewIndexedMessage(1, 9, 'alex');
-		$this->assertTrue($out['cached']);
-		$this->assertArrayHasKey('reply', $out);
-		$this->assertTrue($out['reply']['available']);
-		$this->assertSame('a@b.c', $out['reply']['to']);
+		$this->assertTrue(mb_check_encoding($out['preview'], 'UTF-8'));
+		$this->assertTrue(mb_check_encoding($out['subject'], 'UTF-8'));
+		$json = json_encode(['success' => true, 'data' => $out], JSON_THROW_ON_ERROR | JSON_HEX_TAG);
+		$this->assertIsString($json);
+		$this->assertStringContainsString('Body with', $out['preview']);
+	}
+
+	public function testApiResponsesUseUtf8SubstituteEncodeFlag(): void
+	{
+		$trait = (string)file_get_contents(dirname(__DIR__, 3) . '/lib/Controller/ApiControllerTrait.php');
+		$this->assertSame(
+			2,
+			substr_count($trait, 'JSON_INVALID_UTF8_SUBSTITUTE'),
+			'ok() and fail() must both pass JSON_INVALID_UTF8_SUBSTITUTE to JSONResponse',
+		);
+		$okPos = strpos($trait, 'function ok(');
+		$failPos = strpos($trait, 'function fail(');
+		$fromThrowablePos = strpos($trait, 'function fromThrowable(');
+		$this->assertNotFalse($okPos);
+		$this->assertNotFalse($failPos);
+		$this->assertNotFalse($fromThrowablePos);
+		$okSlice = substr($trait, $okPos, $failPos - $okPos);
+		$failSlice = substr($trait, $failPos, $fromThrowablePos - $failPos);
+		$this->assertStringContainsString('JSON_INVALID_UTF8_SUBSTITUTE', $okSlice);
+		$this->assertStringContainsString('JSON_INVALID_UTF8_SUBSTITUTE', $failSlice);
+		$sync = (string)file_get_contents(dirname(__DIR__, 3) . '/lib/Service/MailboxSyncService.php');
+		$this->assertStringContainsString('MailPreviewText::ensureUtf8', $sync);
+		$this->assertStringContainsString("\$payload['preview'] = MailPreviewText::toPlainPreview((string)(\$payload['preview'] ?? ''));", $sync);
+		$previewText = (string)file_get_contents(dirname(__DIR__, 3) . '/lib/Support/MailPreviewText.php');
+		$this->assertStringContainsString('function ensureUtf8', $previewText);
+		$this->assertStringContainsString('function stripMimeDebris', $previewText);
+		$this->assertStringContainsString('UTF-8//IGNORE', $previewText);
 	}
 
 	public function testArchitecturePreviewSharesSyncLockKey(): void
@@ -336,7 +498,7 @@ final class MailPreviewSecurityTest extends TestCase
 		$this->assertStringNotContainsString('crm_mail_del_', $sync);
 		$deleteStart = strpos($sync, 'function deleteIndexedMessage(int $workspaceId, int $messageId)');
 		$this->assertNotFalse($deleteStart);
-		$deleteChunk = substr($sync, (int)$deleteStart, 2800);
+		$deleteChunk = substr($sync, (int)$deleteStart, 4500);
 		$this->assertStringContainsString("\$lockKey = 'crm_mbox_' . \$mailboxId;", $deleteChunk);
 		$this->assertStringContainsString('Mailbox is busy (sync or another preview)', $deleteChunk);
 		$this->assertStringContainsString('Double-check cache under lock', $sync);

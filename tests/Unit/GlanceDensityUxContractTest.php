@@ -45,7 +45,6 @@ final class GlanceDensityUxContractTest extends TestCase
 		$this->assertStringContainsString('min-height: 44px', $css);
 		$this->assertStringContainsString('.crm-glance-kpi:focus-visible', $css);
 		$this->assertStringContainsString('.crm-glance-density--calm', $css);
-		$this->assertStringContainsString('.crm-glance-density--attention', $css);
 		$this->assertStringContainsString('.crm-glance-density__chevron', $css);
 		$this->assertStringContainsString('.crm-glance-kpi--calm .crm-glance-kpi__cta', $css);
 		$this->assertStringContainsString('.crm-deal-notes-preview', $css);

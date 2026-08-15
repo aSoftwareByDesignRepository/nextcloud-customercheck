@@ -337,6 +337,8 @@ final class WorkspaceAclSurfaceContractTest extends TestCase
 	{
 		$src = (string)file_get_contents($this->root . '/lib/Service/WebsiteOrderWebhookService.php');
 		$this->assertStringContainsString('findOpenByTitle($dealTitle, $orderWorkspaceId)', $src);
+		$this->assertStringContainsString("hash('sha256', 'customercheck:website-order|' . \$orderId)", $src);
+		$this->assertStringNotContainsString("'customercheck:website-order:' . hash('sha256'", $src);
 		$mapper = (string)file_get_contents($this->root . '/lib/Db/DealMapper.php');
 		$this->assertStringContainsString('function findOpenByTitle(string $title, int $workspaceId)', $mapper);
 		$this->assertStringContainsString('if ($workspaceId <= 0)', $mapper);

@@ -49,6 +49,7 @@ class AccountPlanService
 			$out[] = $this->hydrate($row);
 		}
 		$r->closeCursor();
+		$this->sortPlansForBoard($out);
 		return $out;
 	}
 
@@ -86,9 +87,11 @@ class AccountPlanService
 		}
 		$owner = trim((string)($data['ownerUserId'] ?? $actor));
 		$horizon = trim((string)($data['horizon'] ?? ''));
-		$nextReview = trim((string)($data['nextReviewOn'] ?? ''));
+		$nextAssign = trim((string)($data['nextAssignOn'] ?? ''));
 		$now = $this->timeFactory->getDateTime()->format('Y-m-d H:i:s');
-		$status = (string)($data['status'] ?? 'active');
+		$status = $this->normalizePlanStatus(
+			array_key_exists('status', $data) ? (string)$data['status'] : 'active',
+		);
 		$clientStamp = array_key_exists('updatedAt', $data) ? (string)$data['updatedAt'] : null;
 
 		$this->db->beginTransaction();
@@ -113,14 +116,14 @@ class AccountPlanService
 					$priority,
 					$owner,
 					$horizon,
-					$nextReview,
+					$nextAssign,
 					$status,
 					$now,
 					(string)$existing['updatedAt'],
 				);
 			} else {
 				try {
-					$this->insertPlanRow($companyId, $ws, $goal, $priority, $owner, $horizon, $nextReview, $now);
+					$this->insertPlanRow($companyId, $ws, $goal, $priority, $owner, $horizon, $nextAssign, $status, $now);
 				} catch (DbException $e) {
 					if ($e->getReason() !== DbException::REASON_UNIQUE_CONSTRAINT_VIOLATION) {
 						throw $e;
@@ -141,7 +144,7 @@ class AccountPlanService
 						$priority,
 						$owner,
 						$horizon,
-						$nextReview,
+						$nextAssign,
 						$status,
 						$now,
 						!empty($existing['updatedAt']) ? (string)$existing['updatedAt'] : null,
@@ -165,7 +168,7 @@ class AccountPlanService
 		string $priority,
 		string $owner,
 		string $horizon,
-		string $nextReview,
+		string $nextAssign,
 		string $status,
 		string $now,
 		?string $expectedUpdatedAt = null,
@@ -176,7 +179,7 @@ class AccountPlanService
 			->set('priority', $qb->createNamedParameter($priority))
 			->set('owner_user_id', $qb->createNamedParameter($owner !== '' ? $owner : null))
 			->set('horizon', $qb->createNamedParameter($horizon !== '' ? $horizon : null))
-			->set('next_review_on', $qb->createNamedParameter($nextReview !== '' ? $nextReview : null))
+			->set('next_review_on', $qb->createNamedParameter($nextAssign !== '' ? $nextAssign : null))
 			->set('status', $qb->createNamedParameter($status))
 			->set('updated_at', $qb->createNamedParameter($now))
 			->where($qb->expr()->eq('id', $qb->createNamedParameter($planId)));
@@ -206,7 +209,8 @@ class AccountPlanService
 		string $priority,
 		string $owner,
 		string $horizon,
-		string $nextReview,
+		string $nextAssign,
+		string $status,
 		string $now,
 	): void {
 		$ins = $this->db->getQueryBuilder();
@@ -217,11 +221,67 @@ class AccountPlanService
 			'goal' => $ins->createNamedParameter($goal !== '' ? $goal : null),
 			'priority' => $ins->createNamedParameter($priority),
 			'owner_user_id' => $ins->createNamedParameter($owner !== '' ? $owner : null),
-			'status' => $ins->createNamedParameter('active'),
-			'next_review_on' => $ins->createNamedParameter($nextReview !== '' ? $nextReview : null),
+			'status' => $ins->createNamedParameter($status),
+			'next_review_on' => $ins->createNamedParameter($nextAssign !== '' ? $nextAssign : null),
 			'created_at' => $ins->createNamedParameter($now),
 			'updated_at' => $ins->createNamedParameter($now),
 		])->executeStatement();
+	}
+
+	private function normalizePlanStatus(string $raw): string
+	{
+		$status = strtolower(trim($raw));
+		if ($status === '') {
+			$status = 'active';
+		}
+		if (!in_array($status, ['active', 'paused', 'done'], true)) {
+			throw ValidationException::field(
+				Constants::ERR_VALIDATION,
+				'status',
+				$this->l10n->t('Unknown plan status.'),
+			);
+		}
+		return $status;
+	}
+
+	/**
+	 * Strategy board order: needs attention first, then priority, then review date, then name.
+	 *
+	 * @param list<array<string, mixed>> $plans
+	 */
+	private function sortPlansForBoard(array &$plans): void
+	{
+		usort($plans, static function (array $a, array $b): int {
+			$healthRank = static function (array $p): int {
+				return match ((string)($p['health'] ?? '')) {
+					'at_risk' => 0,
+					'stalled' => 1,
+					'unknown' => 2,
+					'on_track' => 3,
+					default => 4,
+				};
+			};
+			$ha = $healthRank($a);
+			$hb = $healthRank($b);
+			if ($ha !== $hb) {
+				return $ha <=> $hb;
+			}
+			$pa = (string)($a['priority'] ?? 'p2');
+			$pb = (string)($b['priority'] ?? 'p2');
+			if ($pa !== $pb) {
+				return $pa <=> $pb;
+			}
+			$ra = (string)($a['nextAssignOn'] ?? '');
+			$rb = (string)($b['nextAssignOn'] ?? '');
+			if ($ra !== '' && $rb !== '' && $ra !== $rb) {
+				return $ra <=> $rb;
+			}
+			if ($ra !== $rb) {
+				// Dated reviews before undated.
+				return $ra === '' ? 1 : -1;
+			}
+			return strcasecmp((string)($a['companyName'] ?? ''), (string)($b['companyName'] ?? ''));
+		});
 	}
 
 	/**
@@ -309,7 +369,7 @@ class AccountPlanService
 	 * Deterministic plan health — product §5.8.
 	 *
 	 * @param array{
-	 *   nextReviewOn?: ?string,
+	 *   nextAssignOn?: ?string,
 	 *   touchOverdue?: bool,
 	 *   openCallbacks?: int,
 	 *   renewalsHot?: bool
@@ -318,7 +378,7 @@ class AccountPlanService
 	public static function health(array $signals): string
 	{
 		$today = (new \DateTimeImmutable('today'))->format('Y-m-d');
-		$review = $signals['nextReviewOn'] ?? null;
+		$review = $signals['nextAssignOn'] ?? null;
 		$reviewOverdue = is_string($review) && $review !== '' && $review < $today;
 		if (!empty($signals['renewalsHot']) || $reviewOverdue || (int)($signals['openCallbacks'] ?? 0) > 0) {
 			return 'at_risk';
@@ -347,11 +407,20 @@ class AccountPlanService
 		} catch (\Throwable) {
 		}
 		$health = self::health([
-			'nextReviewOn' => $row['next_review_on'] ?? null,
+			'nextAssignOn' => $row['next_review_on'] ?? null,
 			'touchOverdue' => $touchOverdue,
 			'openCallbacks' => $this->countOpenCallbacksOverdue($companyId),
 			'renewalsHot' => $this->hasRenewalHot($companyId),
 		]);
+		$priority = (string)$row['priority'];
+		$status = (string)$row['status'];
+		$mapSteps = $this->mapSteps($planId);
+		$openMoves = 0;
+		foreach ($mapSteps as $step) {
+			if (($step['status'] ?? '') === 'open') {
+				$openMoves++;
+			}
+		}
 		return [
 			'id' => $planId,
 			'companyId' => $companyId,
@@ -359,16 +428,19 @@ class AccountPlanService
 			'workspaceId' => (int)$row['workspace_id'],
 			'horizon' => $row['horizon'] ?? null,
 			'goal' => $row['goal'] ?? null,
-			'priority' => (string)$row['priority'],
+			'priority' => $priority,
+			'priorityLabel' => $this->labels->planPriority($priority),
 			'ownerUserId' => $row['owner_user_id'] ?? null,
-			'status' => (string)$row['status'],
-			'nextReviewOn' => $row['next_review_on'] ?? null,
+			'status' => $status,
+			'statusLabel' => $this->labels->planStatus($status),
+			'nextAssignOn' => $row['next_review_on'] ?? null,
 			'updatedAt' => isset($row['updated_at']) && $row['updated_at'] !== null && (string)$row['updated_at'] !== ''
 				? OptimisticLock::format(new \DateTimeImmutable((string)$row['updated_at']))
 				: null,
 			'health' => $health,
 			'healthLabel' => $this->labels->planHealth($health),
-			'mapSteps' => $this->mapSteps($planId),
+			'openMoves' => $openMoves,
+			'mapSteps' => $mapSteps,
 			'milestones' => $this->milestones($planId),
 		];
 	}

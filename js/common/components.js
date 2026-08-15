@@ -856,7 +856,10 @@ const CustomerCheckComponents = {
         let ok = true;
         if (requireCheckbox && ackBox && !ackBox.checked) ok = false;
         if (requireReason && reasonField && reasonField.value.trim().length < 3) ok = false;
-        if (requireTypedConfirm && typedField && typedField.value.trim() !== typedConfirmPhrase) ok = false;
+        if (requireTypedConfirm && typedField
+          && typedField.value.trim().toUpperCase() !== String(typedConfirmPhrase).trim().toUpperCase()) {
+          ok = false;
+        }
         if (confirmBtn) confirmBtn.disabled = !ok;
       };
 

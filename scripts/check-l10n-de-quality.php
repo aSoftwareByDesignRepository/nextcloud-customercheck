@@ -48,6 +48,14 @@ $allowExact = [
 	'Deals' => true,
 	'Board' => true,
 	'Lead' => true,
+	'Leads' => true,
+	'Microsoft' => true,
+	'Sync' => true,
+	'Underline' => true,
+	'Italic' => true,
+	'Bold' => true,
+	'Google' => true,
+	'Liechtenstein' => true,
 	'Partner' => true,
 	'Check Partner' => true,
 	'Auto' => true,
@@ -95,6 +103,10 @@ $glossary = [
 		'good' => 'Abbrechen',
 		'banned' => ['Stornieren'],
 	],
+	'Churned' => [
+		'good' => 'Abgewandert',
+		'banned' => ['Aufgewühlt', 'Abgewechselt', 'Churned'],
+	],
 ];
 
 /** Substrings that must never appear in any German msgstr. */
@@ -106,6 +118,20 @@ $bannedSubstrings = [
 	'Appweiter',
 	'Allowlist',
 	'Kundencheck noch heute',
+	'Aufgewühlt',
+];
+
+/**
+ * Regexes for broken machine-translation grammar (wrong imperative + du, haben/hast).
+ * @var list<string>
+ */
+$bannedPatterns = [
+	'/\b(?:Verbinden|Verknüpfen|Halten|Beschränken|Behalten|Filtern|Durchsuchen|Kündigen|Zeigen|Senden|Kopieren|Führen|Importieren|Entscheiden|Springen|Erledigen|Warten|Suchen|Korrigieren) du\b/u',
+	'/\bdu (?:es )?lesen können\b/u',
+	'/\bdu [^"]{0,80}?\b(?:angenommen|protokolliert|geschrieben|gewählt) haben\b/u',
+	'/\bwenn du [^"]{0,40}\bbenötigen\b/u',
+	'/\bdamit du [^"]{0,40}\bwissen,/u',
+	'/\bwenn du absichtlich [^"]{0,40}\bwollen\b/u',
 ];
 
 /**
@@ -120,6 +146,7 @@ $allowFormalSieKeys = [
 
 $failures = [];
 $bannedHits = [];
+$patternHits = [];
 $glossaryHits = [];
 $formalHits = [];
 
@@ -146,6 +173,11 @@ foreach ($de['translations'] as $key => $value) {
 	foreach ($bannedSubstrings as $bad) {
 		if (str_contains($value, $bad)) {
 			$bannedHits[] = [$key, $value, $bad];
+		}
+	}
+	foreach ($bannedPatterns as $pattern) {
+		if (preg_match($pattern, $value) === 1) {
+			$patternHits[] = [$key, $value, $pattern];
 		}
 	}
 
@@ -189,6 +221,13 @@ if ($bannedHits !== []) {
 		fwrite(STDERR, "  - contains \"{$bad}\": {$value}\n");
 	}
 }
+if ($patternHits !== []) {
+	$ok = false;
+	fwrite(STDERR, "Broken German grammar patterns still present (" . count($patternHits) . "):\n");
+	foreach ($patternHits as [$key, $value, $pattern]) {
+		fwrite(STDERR, "  - matches {$pattern}: {$value}\n");
+	}
+}
 if ($formalHits !== []) {
 	$ok = false;
 	fwrite(STDERR, "Formal Sie-address still present (" . count($formalHits) . ") — use consistent du:\n");
@@ -209,5 +248,5 @@ if (!$ok) {
 	exit(1);
 }
 
-echo 'l10n DE quality OK (' . count($de['translations']) . " keys; glossary locked; no banned calques; consistent du; no leftover English prose).\n";
+echo 'l10n DE quality OK (' . count($de['translations']) . " keys; glossary locked; no banned calques; no broken du-grammar; consistent du; no leftover English prose).\n";
 exit(0);

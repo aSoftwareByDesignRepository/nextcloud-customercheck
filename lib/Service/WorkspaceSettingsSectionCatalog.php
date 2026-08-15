@@ -17,6 +17,7 @@ final class WorkspaceSettingsSectionCatalog
 
 	/** @var list<string> */
 	public const SECTIONS = [
+		'my-email',
 		'mailbox',
 		'preferences',
 		'checklists',
@@ -31,6 +32,10 @@ final class WorkspaceSettingsSectionCatalog
 	 * @var array<string, string>
 	 */
 	public const LEGACY_ANCHORS = [
+		'section-my-email' => 'my-email',
+		'section-my-email-heading' => 'my-email',
+		'crm-ws-personal-mail-mine' => 'my-email',
+		'crm-ws-personal-mail-mine-title' => 'my-email',
 		'section-workspace-mailbox' => 'mailbox',
 		'section-workspace-mailbox-heading' => 'mailbox',
 		'crm-ws-current' => 'mailbox',
@@ -64,7 +69,7 @@ final class WorkspaceSettingsSectionCatalog
 	public function isVisible(string $section, bool $canManageWorkspace): bool
 	{
 		return match ($section) {
-			'preferences', 'integrations' => true,
+			'my-email', 'preferences', 'integrations' => true,
 			'mailbox', 'checklists', 'review-sources', 'circles' => $canManageWorkspace,
 			default => false,
 		};
@@ -72,8 +77,12 @@ final class WorkspaceSettingsSectionCatalog
 
 	public function defaultSection(bool $canManageWorkspace): string
 	{
+		// Managers land on team mailbox; members on their personal inbox setup.
 		if ($canManageWorkspace && $this->isVisible('mailbox', true)) {
 			return 'mailbox';
+		}
+		if ($this->isVisible('my-email', $canManageWorkspace)) {
+			return 'my-email';
 		}
 
 		return self::DEFAULT_SECTION;
@@ -82,10 +91,11 @@ final class WorkspaceSettingsSectionCatalog
 	public function label(IL10N $l, string $section): string
 	{
 		return match ($section) {
+			'my-email' => $l->t('My email'),
 			'mailbox' => $l->t('Team & mailbox'),
 			'preferences' => $l->t('Your preferences'),
 			'checklists' => $l->t('Checklist templates'),
-			'review-sources' => $l->t('Review inbox sources'),
+			'review-sources' => $l->t('Assign inbox sources'),
 			'circles' => $l->t('Weekly promise check'),
 			'integrations' => $l->t('Integrations'),
 			default => $l->t('Team & mailbox'),
@@ -95,10 +105,11 @@ final class WorkspaceSettingsSectionCatalog
 	public function navLabel(IL10N $l, string $section): string
 	{
 		return match ($section) {
-			'mailbox' => $l->t('Mailbox'),
+			'my-email' => $l->t('My email'),
+			'mailbox' => $l->t('Team mailbox'),
 			'preferences' => $l->t('Preferences'),
 			'checklists' => $l->t('Checklists'),
-			'review-sources' => $l->t('Review sources'),
+			'review-sources' => $l->t('Assign sources'),
 			'circles' => $l->t('Promises'),
 			'integrations' => $l->t('Integrations'),
 			default => $l->t('Settings'),
@@ -108,10 +119,11 @@ final class WorkspaceSettingsSectionCatalog
 	public function help(IL10N $l, string $section): string
 	{
 		return match ($section) {
-			'mailbox' => $l->t('Members, shared mailbox, and weekly limits for your team.'),
+			'my-email' => $l->t('Connect your personal mailbox, pick folders to sync, and edit your signature.'),
+			'mailbox' => $l->t('Members, shared mailbox, personal email sync policy, and weekly limits for your team.'),
 			'preferences' => $l->t('How deals look for you.'),
 			'checklists' => $l->t('Reusable step lists for any deal — licenses, services, hardware, mixed carts. Make once, use on every order.'),
-			'review-sources' => $l->t('Which inboxes and folders feed Review.'),
+			'review-sources' => $l->t('Which inboxes and folders feed Assign.'),
 			'circles' => $l->t('Who owes a weekly promise check.'),
 			'integrations' => $l->t('Linked Check apps and how they show on companies.'),
 			default => $l->t('Preferences, members, mailbox, and integrations.'),

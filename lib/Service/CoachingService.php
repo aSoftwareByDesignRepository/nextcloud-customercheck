@@ -7,6 +7,7 @@ namespace OCA\CustomerCheck\Service;
 use OCA\CustomerCheck\Constants;
 use OCA\CustomerCheck\Exception\ValidationException;
 use OCP\AppFramework\Utility\ITimeFactory;
+use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\IDBConnection;
 use OCP\IL10N;
 use OCP\Lock\ILockingProvider;
@@ -369,16 +370,15 @@ class CoachingService
 			return [];
 		}
 		$qb = $this->db->getQueryBuilder();
-		$params = [];
-		foreach ($dealIds as $i => $id) {
-			$params[] = $qb->createNamedParameter($id, null, 'did' . $i);
-		}
 		$qb->select('d.id')
 			->from('crm_deal', 'd')
 			->innerJoin('d', 'crm_company', 'c', $qb->expr()->eq('d.company_id', 'c.id'))
 			->where($qb->expr()->eq('c.workspace_id', $qb->createNamedParameter($workspaceId)))
 			->andWhere($qb->expr()->eq('d.owner_user_id', $qb->createNamedParameter($from)))
-			->andWhere($qb->expr()->in('d.id', $params));
+			->andWhere($qb->expr()->in(
+				'd.id',
+				$qb->createNamedParameter($dealIds, IQueryBuilder::PARAM_INT_ARRAY),
+			));
 		$r = $qb->executeQuery();
 		$ids = [];
 		while ($row = $r->fetch()) {
@@ -406,15 +406,14 @@ class CoachingService
 			return [];
 		}
 		$qb = $this->db->getQueryBuilder();
-		$params = [];
-		foreach ($ids as $i => $id) {
-			$params[] = $qb->createNamedParameter($id, null, 'rid' . $i);
-		}
 		$qb->select('id')
 			->from($table)
 			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId)))
 			->andWhere($qb->expr()->eq($ownerCol, $qb->createNamedParameter($from)))
-			->andWhere($qb->expr()->in('id', $params));
+			->andWhere($qb->expr()->in(
+				'id',
+				$qb->createNamedParameter($ids, IQueryBuilder::PARAM_INT_ARRAY),
+			));
 		$r = $qb->executeQuery();
 		$out = [];
 		while ($row = $r->fetch()) {
@@ -458,11 +457,10 @@ class CoachingService
 				$qb->andWhere($qb->expr()->eq('status', $qb->createNamedParameter($statusEq)));
 			}
 			if ($statusIn !== null && $statusIn !== []) {
-				$params = [];
-				foreach ($statusIn as $i => $st) {
-					$params[] = $qb->createNamedParameter($st, null, 'st' . $i);
-				}
-				$qb->andWhere($qb->expr()->in('status', $params));
+				$qb->andWhere($qb->expr()->in(
+					'status',
+					$qb->createNamedParameter($statusIn, IQueryBuilder::PARAM_STR_ARRAY),
+				));
 			}
 		}
 		$qb->setMaxResults(Constants::BULK_REASSIGN_MAX);

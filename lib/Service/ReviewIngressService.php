@@ -12,7 +12,7 @@ use OCP\Files\IRootFolder;
 use OCP\IL10N;
 
 /**
- * Opt-in Review source ingress — GNQ §5.2.
+ * Opt-in Assign source ingress — GNQ §5.2.
  *
  * Hard rules: no personal IMAP; no whole-FS crawl; Contacts scan only when
  * enabled + DSGVO + workspace-member scanActor. File/Calendar/Tasks use the
@@ -76,7 +76,7 @@ class ReviewIngressService
 	}
 
 	/**
-	 * Periodic Contacts → Review for ORG/email candidates without a person link (GNQ §5.2).
+	 * Periodic Contacts → Assign for ORG/email candidates without a person link (GNQ §5.2).
 	 *
 	 * @param array<string, mixed> $cfg
 	 */
@@ -332,7 +332,7 @@ class ReviewIngressService
 	}
 
 	/**
-	 * First usable ATTENDEE mailto for Review match scoring (GNQ §8.2 calendar edge).
+	 * First usable ATTENDEE mailto for Assign match scoring (GNQ §8.2 calendar edge).
 	 * Skips ORGANIZER when another attendee exists.
 	 *
 	 * @param array<string, mixed> $hit

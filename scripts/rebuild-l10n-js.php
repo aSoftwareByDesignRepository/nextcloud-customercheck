@@ -11,7 +11,7 @@ declare(strict_types=1);
  * Usage: php scripts/rebuild-l10n-js.php
  */
 $base = dirname(__DIR__) . '/l10n';
-$locales = ['en', 'de', 'da', 'es', 'fr', 'it', 'nb', 'nl', 'pl', 'sv'];
+$locales = ['en', 'de', 'da', 'es', 'fr', 'it', 'nb', 'nl', 'pl', 'sv', 'pt_BR'];
 // Regional variants (see scripts/sync-l10n-variants.php) — required so e.g. de_DE
 // does not silently fall back to English while the rest of Nextcloud stays German.
 $locales = array_merge($locales, ['en_GB', 'de_DE', 'es_EC', 'es_MX']);

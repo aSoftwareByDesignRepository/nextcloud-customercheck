@@ -4,12 +4,16 @@ declare(strict_types=1);
 
 namespace OCA\CustomerCheck\Tests\Unit\Service;
 
+use OCA\CustomerCheck\Service\HtmlSanitizeService;
 use OCA\CustomerCheck\Constants;
 use OCA\CustomerCheck\Exception\ValidationException;
 use OCA\CustomerCheck\Service\EmailTouchService;
 use OCA\CustomerCheck\Service\FilesAccessService;
 use OCA\CustomerCheck\Service\MailboxService;
+use OCA\CustomerCheck\Service\MailboxAuthService;
+use Psr\Log\LoggerInterface;
 use OCA\CustomerCheck\Service\MailSendService;
+use OCA\CustomerCheck\Service\WorkspaceService;
 use OCA\CustomerCheck\Service\RateLimitService;
 use OCA\CustomerCheck\Service\TimelineService;
 use OCP\AppFramework\Utility\ITimeFactory;
@@ -28,7 +32,22 @@ final class MailSendServiceTest extends TestCase
 {
 	public function testDeniedWithoutCapability(): void
 	{
-		$svc = $this->service();
+		$db = $this->createMock(IDBConnection::class);
+		$db->method('tableExists')->willReturn(true);
+		$db->method('getQueryBuilder')->willReturn($this->selectQbReturning([
+			'id' => 1,
+			'workspace_id' => 1,
+			'kind' => 'team',
+			'owner_user_id' => null,
+			'email_address' => 'support@example.com',
+			'label' => 'Support',
+			'smtp_host' => '',
+			'secret_enc' => '',
+			'signature_html' => '',
+			'signature_plain' => '',
+		]));
+
+		$svc = $this->service($db);
 		$this->expectException(ValidationException::class);
 		$svc->send(1, [
 			'mailboxId' => 1,
@@ -42,42 +61,33 @@ final class MailSendServiceTest extends TestCase
 	public function testReplaySkipsRateLimitAndDoesNotResend(): void
 	{
 		$db = $this->createMock(IDBConnection::class);
-		$db->method('tableExists')->willReturnCallback(static fn (string $t): bool => $t === 'crm_mail_dft');
+		$db->method('tableExists')->willReturnCallback(static fn (string $t): bool => $t === 'crm_mail_dft' || $t === 'crm_mailbox');
 
-		$selectQb = new class {
-			public function select(...$a): self { return $this; }
-			public function from(...$a): self { return $this; }
-			public function where(...$a): self { return $this; }
-			public function andWhere(...$a): self { return $this; }
-			public function setMaxResults(...$a): self { return $this; }
-			public function expr(): object
-			{
-				return new class {
-					public function eq(...$a): string { return 'eq'; }
-				};
+		$calls = 0;
+		$db->method('getQueryBuilder')->willReturnCallback(function () use (&$calls) {
+			$calls++;
+			if ($calls === 1) {
+				return $this->selectQbReturning([
+					'id' => 9,
+					'workspace_id' => 3,
+					'kind' => 'team',
+					'email_address' => 'shared@example.com',
+					'label' => 'Shared',
+					'smtp_host' => '',
+					'secret_enc' => '',
+					'signature_html' => '',
+					'signature_plain' => '',
+				]);
 			}
-			public function createNamedParameter(...$a): string { return '?'; }
-			public function executeQuery(): object
-			{
-				return new class {
-					private bool $done = false;
-					public function fetch(): array|false
-					{
-						if ($this->done) {
-							return false;
-						}
-						$this->done = true;
-						return [
-							'to_addrs' => 'ada@example.com',
-							'subject' => 'Hi',
-							'updated_at' => '2026-08-01 10:00:00',
-						];
-					}
-					public function closeCursor(): void {}
-				};
-			}
-		};
-		$db->method('getQueryBuilder')->willReturn($selectQb);
+
+			return $this->selectQbReturning([
+				'id' => 42,
+				'to_addrs' => 'ada@example.com',
+				'subject' => 'Hi',
+				'updated_at' => '2026-08-01 10:00:00',
+				'smtp_acked' => 1,
+			]);
+		});
 
 		$rate = $this->createMock(RateLimitService::class);
 		$rate->expects($this->never())->method('allow');
@@ -109,7 +119,10 @@ final class MailSendServiceTest extends TestCase
 		$rate = $this->createMock(RateLimitService::class);
 		$rate->expects($this->never())->method('allow');
 
-		$svc = $this->service(null, $rate);
+		$db = $this->createMock(IDBConnection::class);
+		$db->expects($this->never())->method('getQueryBuilder');
+
+		$svc = $this->service($db, $rate);
 		try {
 			$svc->send(1, [
 				'mailboxId' => 1,
@@ -127,28 +140,25 @@ final class MailSendServiceTest extends TestCase
 	{
 		$db = $this->createMock(IDBConnection::class);
 		$db->method('tableExists')->willReturn(true);
-		$selectQb = new class {
-			public function select(...$a): self { return $this; }
-			public function from(...$a): self { return $this; }
-			public function where(...$a): self { return $this; }
-			public function andWhere(...$a): self { return $this; }
-			public function setMaxResults(...$a): self { return $this; }
-			public function expr(): object
-			{
-				return new class {
-					public function eq(...$a): string { return 'eq'; }
-				};
+		$calls = 0;
+		$db->method('getQueryBuilder')->willReturnCallback(function () use (&$calls) {
+			$calls++;
+			if ($calls === 1) {
+				return $this->selectQbReturning([
+					'id' => 9,
+					'workspace_id' => 3,
+					'kind' => 'team',
+					'email_address' => 'shared@example.com',
+					'label' => 'Shared',
+					'smtp_host' => '',
+					'secret_enc' => '',
+					'signature_html' => '',
+					'signature_plain' => '',
+				]);
 			}
-			public function createNamedParameter(...$a): string { return '?'; }
-			public function executeQuery(): object
-			{
-				return new class {
-					public function fetch(): array|false { return false; }
-					public function closeCursor(): void {}
-				};
-			}
-		};
-		$db->method('getQueryBuilder')->willReturn($selectQb);
+
+			return $this->selectQbReturning(false);
+		});
 
 		$rate = $this->createMock(RateLimitService::class);
 		$rate->expects($this->once())
@@ -175,6 +185,37 @@ final class MailSendServiceTest extends TestCase
 		}
 	}
 
+	/**
+	 * @param array<string, mixed>|false $row
+	 */
+	private function selectQbReturning(array|false $row): object
+	{
+		return new class ($row) {
+			public function __construct(private array|false $row) {}
+			public function select(...$a): self { return $this; }
+			public function from(...$a): self { return $this; }
+			public function where(...$a): self { return $this; }
+			public function andWhere(...$a): self { return $this; }
+			public function setMaxResults(...$a): self { return $this; }
+			public function expr(): object
+			{
+				return new class {
+					public function eq(...$a): string { return 'eq'; }
+				};
+			}
+			public function createNamedParameter(...$a): string { return '?'; }
+			public function executeQuery(): object
+			{
+				$row = $this->row;
+				return new class ($row) {
+					public function __construct(private array|false $row) {}
+					public function fetch(): array|false { return $this->row; }
+					public function closeCursor(): void {}
+				};
+			}
+		};
+	}
+
 	private function service(
 		?IDBConnection $db = null,
 		?RateLimitService $rate = null,
@@ -196,6 +237,10 @@ final class MailSendServiceTest extends TestCase
 			$this->createMock(ITimeFactory::class),
 			$this->createMock(IURLGenerator::class),
 			$l10n,
+			new HtmlSanitizeService(),
+			$this->createMock(MailboxAuthService::class),
+			$this->createMock(LoggerInterface::class),
+			$this->createMock(WorkspaceService::class),
 		);
 	}
 }

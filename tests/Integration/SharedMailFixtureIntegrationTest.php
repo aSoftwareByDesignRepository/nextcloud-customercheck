@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OCA\CustomerCheck\Tests\Integration;
 
 use OCA\CustomerCheck\Exception\ValidationException;
+use OCA\CustomerCheck\Service\MailForwardLogic;
 use OCA\CustomerCheck\Service\MailMatchLogic;
 use OCA\CustomerCheck\Support\SharedMailboxSmtpClient;
 use PHPUnit\Framework\TestCase;
@@ -75,6 +76,82 @@ final class SharedMailFixtureIntegrationTest extends TestCase
 		$r = MailMatchLogic::match(null, 'ceo@shared.example', $persons);
 		$this->assertSame('unmatched', $r['how']);
 		$this->assertNull($r['companyId']);
+	}
+
+	public function testCcYourselfDoesNotFanOutOrAutoAttachViaTeamFrom(): void
+	{
+		$persons = [
+			['companyId' => 10, 'email' => 'buyer@acme.example'],
+			['companyId' => 20, 'email' => 'alex@office.example'],
+		];
+		$r = MailMatchLogic::match(
+			null,
+			'alex@office.example',
+			$persons,
+			['alex@office.example', 'team@office.example'],
+			['buyer@acme.example', 'team@office.example'],
+		);
+		$this->assertSame('recipient_email', $r['how']);
+		$this->assertSame(10, $r['companyId'], 'Unique To customer files; shared CC is ignored');
+	}
+
+	public function testAmbiguousExactPersonEmailDoesNotGuessCompany(): void
+	{
+		$persons = [
+			['companyId' => 1, 'email' => 'dup@acme.example'],
+			['companyId' => 2, 'email' => 'dup@acme.example'],
+		];
+		$r = MailMatchLogic::match(null, 'dup@acme.example', $persons);
+		$this->assertSame('ambiguous', $r['how']);
+		$this->assertNull($r['companyId']);
+	}
+
+	public function testTwoCustomersOnThreadStayInReview(): void
+	{
+		$persons = [
+			['companyId' => 1, 'email' => 'a@one.example'],
+			['companyId' => 2, 'email' => 'b@two.example'],
+		];
+		$r = MailMatchLogic::match(
+			null,
+			'alex@office.example',
+			$persons,
+			['alex@office.example', 'team@office.example'],
+			['a@one.example', 'b@two.example', 'team@office.example'],
+		);
+		$this->assertSame('ambiguous', $r['how']);
+		$this->assertNull($r['companyId']);
+	}
+
+	public function testForwardToSharedInboxFilesOriginalSender(): void
+	{
+		$persons = [['companyId' => 44, 'email' => 'buyer@acme.example']];
+		$r = MailMatchLogic::match(
+			null,
+			'alex@office.example',
+			$persons,
+			['alex@office.example', 'team@office.example'],
+			['team@office.example'],
+			['buyer@acme.example'],
+		);
+		$this->assertSame('forward_from', $r['how']);
+		$this->assertSame(44, $r['companyId']);
+	}
+
+	public function testRedirectViaReplyToFilesOriginalSender(): void
+	{
+		$persons = [['companyId' => 44, 'email' => 'buyer@acme.example']];
+		$hints = MailForwardLogic::hintsFromRedirectHeaders(null, 'buyer@acme.example');
+		$r = MailMatchLogic::match(
+			null,
+			'alex@office.example',
+			$persons,
+			['alex@office.example', 'team@office.example'],
+			['team@office.example'],
+			$hints,
+		);
+		$this->assertSame('forward_from', $r['how']);
+		$this->assertSame(44, $r['companyId']);
 	}
 
 	public function testExplicitCompanyIdWinsOverPersonEmail(): void

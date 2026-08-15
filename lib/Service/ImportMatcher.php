@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace OCA\CustomerCheck\Service;
 
-use OCA\CustomerCheck\Constants;
 use OCA\CustomerCheck\Db\Company;
 use OCA\CustomerCheck\Db\CompanyMapper;
 use OCA\CustomerCheck\Db\PersonMapper;
@@ -60,11 +59,18 @@ class ImportMatcher
 
 		$candidates = [];
 		$seen = [];
+		// Explicit slug exists but is not linkable (archived or other workspace).
+		// Never suggest it for create — global slug uniqueness would throw SLUG_TAKEN.
+		$slugBlockedForCreate = false;
 
 		if ($slug !== '' && SlugService::isValid($slug)) {
 			$bySlug = $this->companyMapper->findBySlug($slug);
-			if ($bySlug !== null && (int)($bySlug->getWorkspaceId() ?? 0) === $ws) {
-				$this->addCandidate($candidates, $seen, $bySlug, 'slug');
+			if ($bySlug !== null) {
+				if ((int)($bySlug->getWorkspaceId() ?? 0) === $ws && !$bySlug->isArchived()) {
+					$this->addCandidate($candidates, $seen, $bySlug, 'slug');
+				} else {
+					$slugBlockedForCreate = true;
+				}
 			}
 		}
 
@@ -89,9 +95,9 @@ class ImportMatcher
 			}
 		}
 
-		$suggestedSlug = $slug !== '' && SlugService::isValid($slug)
+		$suggestedSlug = ($slug !== '' && SlugService::isValid($slug) && !$slugBlockedForCreate)
 			? $slug
-			: $this->slugService->suggestUnique($name !== '' ? $name : 'company');
+			: $this->slugService->suggestUnique($name !== '' ? $name : ($slug !== '' ? $slug : 'company'));
 
 		if ($candidates === []) {
 			return [
@@ -131,6 +137,9 @@ class ImportMatcher
 	 */
 	private function addCandidate(array &$candidates, array &$seen, Company $company, string $via): void
 	{
+		if ($company->isArchived()) {
+			return;
+		}
 		$id = (int)$company->getId();
 		if (isset($seen[$id])) {
 			return;

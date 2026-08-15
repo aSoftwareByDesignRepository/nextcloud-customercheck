@@ -94,7 +94,8 @@ test.describe('CustomerCheck extreme simplicity journeys', () => {
     expect(options.join(' ')).toMatch(/Lead/i);
     expect(options.join(' ')).toMatch(/Active|Aktiv/i);
     expect(options.join(' ')).toMatch(/Paused|Pausiert/i);
-    expect(options.join(' ')).toMatch(/Churned|Aufgewühlt|Abgewandert/i);
+    expect(options.join(' ')).toMatch(/Churned|Abgewandert/i);
+    expect(options.join(' ')).not.toMatch(/Aufgewühlt|Abgewechselt/i);
   });
 
   test('company 360 and today pass axe serious/critical', async ({ page }) => {

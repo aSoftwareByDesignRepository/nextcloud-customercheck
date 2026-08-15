@@ -1747,6 +1747,7 @@
         "Remove this mailbox?": "Remove this mailbox?",
         "Remove this person?": "Remove this person?",
         "Removed from Review": "Removed from Review",
+        "Removed from Assign (no live mail-server id yet)": "Removed from Assign (no live mail-server id yet)",
         "Removed “%s”.": "Removed “%s”.",
         "Removed “%s”. %s mail item(s) returned to Review.": "Removed “%s”. %s mail item(s) returned to Review.",
         "Removes the address-book link only. The contact stays in Contacts.": "Removes the address-book link only. The contact stays in Contacts.",

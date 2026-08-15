@@ -99,6 +99,27 @@ final class SharedMailboxSmtpClientTest extends TestCase
 		$this->assertStringEndsWith("\r\n.", $payload);
 	}
 
+	public function testBuildDataPayloadIncludesMessageId(): void
+	{
+		$payload = SharedMailboxSmtpClient::buildDataPayload([
+			'from' => 'a@b.c',
+			'fromName' => 'Ada',
+			'to' => 'x@y.z',
+			'subject' => 'Hi',
+			'body' => 'Body',
+			'messageId' => '<fixed-id@b.c>',
+		]);
+		$this->assertStringContainsString('Message-ID: <fixed-id@b.c>', $payload);
+		$auto = SharedMailboxSmtpClient::buildDataPayload([
+			'from' => 'ae@example.com',
+			'to' => 'x@y.z',
+			'subject' => 'Hi',
+			'body' => 'Body',
+		]);
+		$this->assertMatchesRegularExpression('/Message-ID: <[a-f0-9]+\.[a-f0-9]+@example\.com>/i', $auto);
+		$this->assertSame('<abc@x.y>', SharedMailboxSmtpClient::normalizeMessageId('abc@x.y'));
+	}
+
 	public function testBuildDataPayloadMultipartWithAttachment(): void
 	{
 		$payload = SharedMailboxSmtpClient::buildDataPayload([
@@ -117,5 +138,42 @@ final class SharedMailboxSmtpClientTest extends TestCase
 		$this->assertStringContainsString('Content-Disposition: attachment; filename="quote.pdf"', $payload);
 		$this->assertStringContainsString(base64_encode('%PDF-1.4'), $payload);
 		$this->assertStringContainsString('Content-Transfer-Encoding: base64', $payload);
+	}
+
+	public function testBuildDataPayloadMultipartAlternativeWhenHtml(): void
+	{
+		$payload = SharedMailboxSmtpClient::buildDataPayload([
+			'from' => 'a@b.c',
+			'fromName' => 'Ada',
+			'to' => 'x@y.z',
+			'subject' => 'Hi',
+			'body' => 'Plain twin',
+			'bodyHtml' => '<p>Hello <strong>HTML</strong></p>',
+		]);
+		$this->assertStringContainsString('multipart/alternative', $payload);
+		$this->assertStringContainsString('Content-Type: text/plain; charset=UTF-8', $payload);
+		$this->assertStringContainsString('Content-Type: text/html; charset=UTF-8', $payload);
+		$this->assertStringContainsString('Plain twin', $payload);
+		$this->assertStringContainsString('<p>Hello <strong>HTML</strong></p>', $payload);
+		$this->assertStringNotContainsString('multipart/mixed', $payload);
+	}
+
+	public function testBuildDataPayloadMixedWrapsAlternativeWithAttachment(): void
+	{
+		$payload = SharedMailboxSmtpClient::buildDataPayload([
+			'from' => 'a@b.c',
+			'to' => 'x@y.z',
+			'subject' => 'Quote',
+			'body' => 'See attached',
+			'bodyHtml' => '<p>See attached</p>',
+			'attachments' => [[
+				'filename' => 'quote.pdf',
+				'mime' => 'application/pdf',
+				'data' => '%PDF-1.4',
+			]],
+		]);
+		$this->assertStringContainsString('multipart/mixed', $payload);
+		$this->assertStringContainsString('multipart/alternative', $payload);
+		$this->assertStringContainsString('Content-Disposition: attachment; filename="quote.pdf"', $payload);
 	}
 }

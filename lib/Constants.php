@@ -230,7 +230,7 @@ final class Constants
 	/** Max bulk reassign rows (§13.5). */
 	public const BULK_REASSIGN_MAX = 200;
 
-	/** Max Review inbox items removable in one discard-bulk request. */
+	/** Max Assign inbox items removable in one discard-bulk request. */
 	public const REVIEW_DISCARD_BULK_MAX = 100;
 
 	/** Max open escalations per workspace (§13.3). */
@@ -238,9 +238,45 @@ final class Constants
 
 	/** Max shared mailboxes / folders (§14.1). */
 	public const MAILBOX_MAX_PER_WS = 3;
+	/** Max folders persisted / sync-enabled per mailbox (spec NFR). */
 	public const MAILBOX_MAX_FOLDERS = 20;
+	/**
+	 * Max folders returned from IMAP LIST for discovery / picker.
+	 * Higher than MAILBOX_MAX_FOLDERS so new subfolders stay visible when the
+	 * mailbox has many system folders — user still saves ≤ MAILBOX_MAX_FOLDERS.
+	 */
+	public const MAILBOX_LIST_FOLDERS_MAX = 200;
+	/** Soft cap personal accounts per user per workspace (schema allows more). */
+	public const PERSONAL_MAIL_MAX_PER_USER = 1;
 	public const MAILBOX_SYNC_CAP = 500;
+	/** Alias used by live-probe / OAuth sync — must equal MAILBOX_SYNC_CAP. */
+	public const MAIL_SYNC_MAX_MESSAGES = self::MAILBOX_SYNC_CAP;
+	/** Background IMAP ingest interval (MailboxSyncJob TimedJob). */
+	public const MAILBOX_SYNC_INTERVAL_SECONDS = 900;
+	/** Open unmatched mail promoted into Assign per list/sync page. */
+	public const REVIEW_SHARED_MAIL_SYNC_PAGE = 200;
+	/** Soft ceiling of open mail rows promoted in one Assign wake (DoS guard). */
+	public const REVIEW_SHARED_MAIL_SYNC_MAX = 2000;
 	public const MAIL_PREVIEW_MAX_BYTES = 51200;
+	/** Max stored plain body per message after sanitize (spec §NFR body size — 200 KiB). */
+	public const MAIL_BODY_PLAIN_MAX_BYTES = 204800;
+	/** Max stored HTML body per message after sanitize (spec §NFR — 512 KiB). */
+	public const MAIL_BODY_HTML_MAX_BYTES = 524288;
+	/** @deprecated Prefer MAIL_BODY_HTML_MAX_BYTES / MAIL_BODY_PLAIN_MAX_BYTES */
+	public const MAIL_BODY_MAX_BYTES = self::MAIL_BODY_HTML_MAX_BYTES;
+	/** Max bytes of plain text peeked when detecting forwarded original From. */
+	public const MAIL_FORWARD_BODY_PEEK_BYTES = 8192;
+	/** Cap body probes per mailbox sync run (DoS / IMAP load). */
+	public const MAIL_FORWARD_BODY_PROBE_CAP = 40;
+	/**
+	 * Cap full-body (plain) fetches per mailbox sync (MH-05 / Q7).
+	 * Bounded so Sync now stays HTTP-fast and IMAP-friendly.
+	 */
+	public const MAIL_SYNC_BODY_FETCH_CAP = 40;
+	/** Cap IMAP repair probes during manual Sync now (keep HTTP fast). */
+	public const MAIL_SYNC_POST_REPAIR_CAP = 40;
+	/** DB-only forward-hint backfill from stored preview per post-sync pass. */
+	public const MAIL_SYNC_HINT_BACKFILL_CAP = 500;
 	/** On-demand IMAP body preview rate limits (DoS / mailbox lockout protection). */
 	public const MAIL_PREVIEW_USER_LIMIT = 30;
 	public const MAIL_PREVIEW_USER_WINDOW = 3600;
@@ -259,6 +295,29 @@ final class Constants
 	public const MAIL_SEND_USER_WINDOW = 3600;
 	public const MAIL_SEND_WS_LIMIT = 200;
 	public const MAIL_SEND_WS_WINDOW = 3600;
+
+	/** Personal mail sync-now / OAuth connect (spec §9). */
+	public const PERSONAL_MAIL_SYNC_USER_LIMIT = 10;
+	public const PERSONAL_MAIL_SYNC_USER_WINDOW = 3600;
+	public const PERSONAL_MAIL_OAUTH_USER_LIMIT = 20;
+	public const PERSONAL_MAIL_OAUTH_USER_WINDOW = 3600;
+	/** IMAP/app-password personal connect attempts per user (hour). */
+	public const PERSONAL_MAIL_IMAP_CONNECT_USER_LIMIT = 20;
+	public const PERSONAL_MAIL_IMAP_CONNECT_USER_WINDOW = 3600;
+
+	/**
+	 * Cron IMAP dial backoff after transient sync failure (SF-02).
+	 * Cooldown = min(MAX, BASE * 2^min(streak-1, EXP_CAP)).
+	 */
+	public const MAIL_SYNC_DIAL_BACKOFF_BASE_SECONDS = 60;
+	public const MAIL_SYNC_DIAL_BACKOFF_MAX_SECONDS = 3600;
+	public const MAIL_SYNC_DIAL_BACKOFF_EXP_CAP = 6;
+
+	/** Failed SMTP drafts (idempotency_key IS NULL) — SF-04. */
+	public const MAIL_FAILED_DRAFT_TTL_DAYS = 90;
+	/** Unacked send claims older than this are abandoned — SF-04. */
+	public const MAIL_HOLLOW_CLAIM_TTL_HOURS = 24;
+	public const MAIL_DRAFT_PURGE_BATCH = 200;
 
 	/** Shared SMTP Files attachments (§14.3 / §18.4). */
 	public const MAIL_ATTACH_MAX_COUNT = 5;
@@ -361,6 +420,7 @@ final class Constants
 	public const ERR_EMAIL_INVALID = 'EMAIL_INVALID';
 	public const ERR_INVOICE_PAID_AMBIGUOUS = 'INVOICE_PAID_AMBIGUOUS';
 	public const ERR_ACCESS_DENIED = 'ACCESS_DENIED';
+	public const ERR_NOT_AUTHENTICATED = 'NOT_AUTHENTICATED';
 	public const ERR_RATE_LIMITED = 'RATE_LIMITED';
 	public const ERR_NOT_FOUND = 'NOT_FOUND';
 	public const ERR_VALIDATION = 'VALIDATION';
@@ -380,8 +440,6 @@ final class Constants
 	public const ERR_FILES_NOT_FOUND = 'FILES_NOT_FOUND';
 	public const ERR_FILES_NOT_FOLDER = 'FILES_NOT_FOLDER';
 	public const ERR_FILES_NOT_FILE = 'FILES_NOT_FILE';
-	public const ERR_ATTACHMENT_TOO_LARGE = 'ATTACHMENT_TOO_LARGE';
-	public const ERR_ATTACHMENT_DENIED = 'ATTACHMENT_DENIED';
 	public const ERR_TASKS_PUSH_FAILED = 'TASKS_PUSH_FAILED';
 	public const ERR_TASKS_UNAVAILABLE = 'TASKS_UNAVAILABLE';
 	public const ERR_CONTACTS_UNAVAILABLE = 'CONTACTS_UNAVAILABLE';
@@ -396,7 +454,7 @@ final class Constants
 		'today', 'pulse', 'brief', 'my-accounts', 'team', 'companies',
 		'company-detail', 'company-form', 'prepare-meeting', 'strategy',
 		'pipeline', 'agreements', 'agreement-form', 'money', 'activities',
-		'mail-triage', 'review', 'conflicts', 'import', 'settings', 'support-us', 'access-denied',
+		'mail-triage', 'sales-inbox', 'review', 'conflicts', 'import', 'settings', 'support-us', 'access-denied',
 		'workload',
 	];
 
@@ -413,7 +471,17 @@ final class Constants
 	public const ERR_SKIP_TOO_FAR = 'SKIP_TOO_FAR';
 	public const ERR_LOSS_CODE_REQUIRED = 'LOSS_CODE_REQUIRED';
 	public const ERR_MAILBOX_LIMIT = 'MAILBOX_LIMIT';
-	public const ERR_MAIL_SEND_DENIED = 'MAIL_SEND_DENIED';
+	/** Spec §9 / FAC-08 — send-as denied (also historical MAIL_SEND_DENIED). */
+	public const ERR_MAIL_SEND_FORBIDDEN = 'MAIL_SEND_FORBIDDEN';
+	/** @deprecated Prefer ERR_MAIL_SEND_FORBIDDEN */
+	public const ERR_MAIL_SEND_DENIED = self::ERR_MAIL_SEND_FORBIDDEN;
+	public const ERR_MAIL_BODY_TOO_LARGE = 'MAIL_BODY_TOO_LARGE';
+	public const ERR_MAIL_ATTACH_LIMIT = 'MAIL_ATTACH_LIMIT';
+	public const ERR_MAIL_ATTACH_FORBIDDEN = 'MAIL_ATTACH_FORBIDDEN';
+	/** @deprecated Prefer ERR_MAIL_ATTACH_LIMIT */
+	public const ERR_ATTACHMENT_TOO_LARGE = self::ERR_MAIL_ATTACH_LIMIT;
+	/** @deprecated Prefer ERR_MAIL_ATTACH_FORBIDDEN */
+	public const ERR_ATTACHMENT_DENIED = self::ERR_MAIL_ATTACH_FORBIDDEN;
 	public const ERR_ESCALATION_LIMIT = 'ESCALATION_LIMIT';
 	public const ERR_FORECAST_AS_CASH = 'FORECAST_AS_CASH';
 	public const ERR_DEAL_NOT_IN_COMPANY = 'DEAL_NOT_IN_COMPANY';

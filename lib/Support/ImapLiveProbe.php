@@ -33,10 +33,12 @@ final class ImapLiveProbe
 		string $username,
 		string $password,
 		float $timeoutSeconds = 12.0,
+		string $authMode = 'password',
 	): array {
 		$host = ImapConnection::normalizeHost($host);
 		$user = ImapConnection::normalizeUsername($username);
 		$port = $port > 0 ? $port : 993;
+		$authMode = strtolower(trim($authMode)) === 'xoauth2' ? 'xoauth2' : 'password';
 		if ($host === '' || $user === '' || $password === '') {
 			return [
 				'ok' => false,
@@ -81,23 +83,9 @@ final class ImapLiveProbe
 				];
 			}
 
-			$tag = 'A001';
-			$cmd = $tag . ' LOGIN ' . self::quoteAtom($user) . ' ' . self::quoteAtom($password) . "\r\n";
-			fwrite($fp, $cmd);
-			$response = self::readUntilTagged($fp, $tag);
-			$upper = strtoupper($response);
-
-			// Some hosts disable clear LOGIN and require AUTHENTICATE PLAIN.
-			if (str_contains($upper, 'LOGIN') && (str_contains($upper, 'DISABLED') || str_contains($upper, 'NOT SUPPORTED'))) {
-				$tag = 'A010';
-				$plain = base64_encode("\0" . $user . "\0" . $password);
-				fwrite($fp, $tag . ' AUTHENTICATE PLAIN ' . $plain . "\r\n");
-				$response = self::readUntilTagged($fp, $tag);
-				$upper = strtoupper($response);
-			}
-
-			$sanitized = ImapConnection::sanitizeError($response);
-			if (str_contains($upper, $tag . ' OK')) {
+			$auth = self::authenticateAfterGreeting($fp, $user, $password, $authMode);
+			$sanitized = ImapConnection::sanitizeError((string)($auth['response'] ?? ''));
+			if (!empty($auth['ok'])) {
 				$folders = self::listFoldersAfterLogin($fp);
 				// Logout best-effort; ignore result.
 				fwrite($fp, "A099 LOGOUT\r\n");
@@ -113,6 +101,7 @@ final class ImapLiveProbe
 			}
 
 			$reason = ImapConnection::classifyError($sanitized);
+			$upper = strtoupper($sanitized);
 			if ($reason === 'unknown' && (
 				str_contains($upper, ' NO ')
 				|| str_contains($upper, 'AUTHENTICATIONFAILED')
@@ -121,13 +110,16 @@ final class ImapLiveProbe
 			)) {
 				$reason = 'auth';
 			}
+			if (($auth['reason'] ?? '') === 'auth') {
+				$reason = 'auth';
+			}
 
 			return [
 				'ok' => false,
 				'reachable' => true,
 				'greeting' => ImapConnection::sanitizeError($greeting),
-				'reason' => $reason === 'network' ? 'auth' : $reason,
-				'detail' => $sanitized,
+				'reason' => $reason === 'network' ? 'auth' : ($reason !== 'unknown' ? $reason : 'auth'),
+				'detail' => $sanitized !== '' ? $sanitized : (string)($auth['reason'] ?? 'auth'),
 				'folders' => [],
 			];
 		} finally {
@@ -138,11 +130,16 @@ final class ImapLiveProbe
 	/**
 	 * Parse RFC822 header block into CRM ingest fields (pure — unit tested).
 	 *
-	 * @return array{from: string, subject: string, sentAt: ?string, messageId: ?string}
+	 * @return array{from: string, to: list<string>, cc: list<string>, replyTo: ?string, resentFrom: ?string, xOriginalFrom: ?string, subject: string, sentAt: ?string, messageId: ?string}
 	 */
 	public static function parseRfc822Headers(string $raw): array
 	{
 		$from = '';
+		$to = [];
+		$cc = [];
+		$replyTo = null;
+		$resentFrom = null;
+		$xOriginalFrom = null;
 		$subject = '';
 		$date = '';
 		$messageId = null;
@@ -155,6 +152,16 @@ final class ImapLiveProbe
 			}
 			if (preg_match('/^From:\s*(.+)$/i', $line, $m) === 1) {
 				$from = self::extractEmailAddress($m[1]);
+			} elseif (preg_match('/^To:\s*(.+)$/i', $line, $m) === 1) {
+				$to = self::extractEmailAddresses($m[1]);
+			} elseif (preg_match('/^Cc:\s*(.+)$/i', $line, $m) === 1) {
+				$cc = self::extractEmailAddresses($m[1]);
+			} elseif (preg_match('/^Reply-To:\s*(.+)$/i', $line, $m) === 1) {
+				$replyTo = self::extractEmailAddress($m[1]);
+			} elseif (preg_match('/^Resent-From:\s*(.+)$/i', $line, $m) === 1) {
+				$resentFrom = self::extractEmailAddress($m[1]);
+			} elseif (preg_match('/^X-Original-From:\s*(.+)$/i', $line, $m) === 1) {
+				$xOriginalFrom = self::extractEmailAddress($m[1]);
 			} elseif (preg_match('/^Subject:\s*(.+)$/i', $line, $m) === 1) {
 				$subject = MimeHeader::decode(trim($m[1]));
 			} elseif (preg_match('/^Date:\s*(.+)$/i', $line, $m) === 1) {
@@ -173,6 +180,11 @@ final class ImapLiveProbe
 
 		return [
 			'from' => $from,
+			'to' => $to,
+			'cc' => $cc,
+			'replyTo' => ($replyTo !== null && $replyTo !== '' && str_contains($replyTo, '@')) ? $replyTo : null,
+			'resentFrom' => ($resentFrom !== null && $resentFrom !== '' && str_contains($resentFrom, '@')) ? $resentFrom : null,
+			'xOriginalFrom' => ($xOriginalFrom !== null && $xOriginalFrom !== '' && str_contains($xOriginalFrom, '@')) ? $xOriginalFrom : null,
 			'subject' => $subject,
 			'sentAt' => $sentAt,
 			'messageId' => $messageId,
@@ -196,6 +208,31 @@ final class ImapLiveProbe
 	}
 
 	/**
+	 * Extract every mailbox@host from a To/Cc header value.
+	 *
+	 * @return list<string>
+	 */
+	public static function extractEmailAddresses(string $raw): array
+	{
+		$raw = trim($raw);
+		if ($raw === '') {
+			return [];
+		}
+		$out = [];
+		if (preg_match_all('/[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}/i', $raw, $m) === false) {
+			return [];
+		}
+		foreach ($m[0] as $addr) {
+			$email = strtolower(trim((string)$addr));
+			if ($email !== '') {
+				$out[$email] = true;
+			}
+		}
+
+		return array_keys($out);
+	}
+
+	/**
 	 * Parse EXISTS count from SELECT untagged lines (pure).
 	 *
 	 * @param list<string> $lines
@@ -216,7 +253,7 @@ final class ImapLiveProbe
 	 * Parse FETCH responses that include UID + header literal/body (pure).
 	 *
 	 * @param list<string> $lines
-	 * @return list<array{uid: string, from: string, subject: string, sentAt: ?string, messageId: ?string}>
+	 * @return list<array{uid: string, from: string, to: list<string>, cc: list<string>, replyTo: ?string, resentFrom: ?string, xOriginalFrom: ?string, subject: string, sentAt: ?string, messageId: ?string}>
 	 */
 	public static function parseFetchHeaderResponses(array $lines): array
 	{
@@ -263,6 +300,11 @@ final class ImapLiveProbe
 			$out[] = [
 				'uid' => $uid !== '0' ? $uid : (string)(count($out) + 1),
 				'from' => $parsed['from'],
+				'to' => $parsed['to'],
+				'cc' => $parsed['cc'],
+				'replyTo' => $parsed['replyTo'],
+				'resentFrom' => $parsed['resentFrom'],
+				'xOriginalFrom' => $parsed['xOriginalFrom'],
 				'subject' => $parsed['subject'],
 				'sentAt' => $parsed['sentAt'],
 				'messageId' => $parsed['messageId'],
@@ -273,13 +315,66 @@ final class ImapLiveProbe
 	}
 
 	/**
+	 * IMAP AUTH after greeting — LOGIN / AUTHENTICATE PLAIN / AUTHENTICATE XOAUTH2.
+	 *
+	 * @param resource $fp
+	 * @return array{ok: bool, response: string, reason: string}
+	 */
+	public static function authenticateAfterGreeting($fp, string $user, string $secret, string $authMode = 'password'): array
+	{
+		$user = ImapConnection::normalizeUsername($user);
+		if ($authMode === 'xoauth2') {
+			$tag = 'X001';
+			$sasl = \OCA\CustomerCheck\Service\MailboxAuthService::xoauth2Sasl($user, $secret);
+			fwrite($fp, $tag . ' AUTHENTICATE XOAUTH2 ' . $sasl . "\r\n");
+			$response = self::readUntilTagged($fp, $tag);
+			$upper = strtoupper($response);
+			if (str_contains($upper, $tag . ' OK') || preg_match('/\bOK\b/', $upper) === 1) {
+				return ['ok' => true, 'response' => $response, 'reason' => 'ok'];
+			}
+
+			return [
+				'ok' => false,
+				'response' => $response,
+				'reason' => (str_contains($upper, 'NO') || str_contains($upper, 'AUTHENTICATIONFAILED')) ? 'auth' : 'protocol',
+			];
+		}
+
+		$tag = 'S001';
+		fwrite($fp, $tag . ' LOGIN ' . self::quoteAtom($user) . ' ' . self::quoteAtom($secret) . "\r\n");
+		$response = self::readUntilTagged($fp, $tag);
+		$upper = strtoupper($response);
+		if (str_contains($upper, $tag . ' OK')) {
+			return ['ok' => true, 'response' => $response, 'reason' => 'ok'];
+		}
+		if (str_contains($upper, 'LOGIN') && (str_contains($upper, 'DISABLED') || str_contains($upper, 'NOT SUPPORTED'))) {
+			$tag = 'S010';
+			$plain = base64_encode("\0" . $user . "\0" . $secret);
+			fwrite($fp, $tag . ' AUTHENTICATE PLAIN ' . $plain . "\r\n");
+			$response = self::readUntilTagged($fp, $tag);
+			$upper = strtoupper($response);
+			if (str_contains($upper, $tag . ' OK')) {
+				return ['ok' => true, 'response' => $response, 'reason' => 'ok'];
+			}
+		}
+
+		return [
+			'ok' => false,
+			'response' => $response,
+			'reason' => (str_contains($upper, 'NO') || str_contains($upper, 'AUTHENTICATIONFAILED') || str_contains($upper, 'LOGIN'))
+				? 'auth'
+				: 'protocol',
+		];
+	}
+
+	/**
 	 * Login + SELECT + FETCH recent headers for one folder (no php-imap).
 	 *
 	 * @return array{
 	 *   ok: bool,
 	 *   reason: 'ok'|'auth'|'network'|'protocol'|'unknown',
 	 *   detail: string,
-	 *   messages: list<array{uid: string, from: string, subject: string, sentAt: ?string, messageId: ?string, snippet: string, direction: string}>
+	 *   messages: list<array{uid: string, from: string, to: list<string>, cc: list<string>, resentFrom: ?string, xOriginalFrom: ?string, subject: string, sentAt: ?string, messageId: ?string, snippet: string, direction: string}>
 	 * }
 	 */
 	public static function fetchRecentMessages(
@@ -290,10 +385,11 @@ final class ImapLiveProbe
 		string $folder,
 		int $limit = 500,
 		float $timeoutSeconds = 20.0,
+		string $authMode = 'password',
 	): array {
 		$host = ImapConnection::normalizeHost($host);
 		$user = ImapConnection::normalizeUsername($username);
-		$folder = trim($folder) !== '' ? trim($folder) : 'INBOX';
+		$folder = ImapConnection::folderToWire(trim($folder) !== '' ? trim($folder) : 'INBOX');
 		$port = $port > 0 ? $port : 993;
 		$limit = max(1, min(500, $limit));
 		if ($host === '' || $user === '' || $password === '') {
@@ -337,20 +433,10 @@ final class ImapLiveProbe
 				];
 			}
 
-			$tag = 'S001';
-			fwrite($fp, $tag . ' LOGIN ' . self::quoteAtom($user) . ' ' . self::quoteAtom($password) . "\r\n");
-			$response = self::readUntilTagged($fp, $tag);
-			$upper = strtoupper($response);
-			if (str_contains($upper, 'LOGIN') && (str_contains($upper, 'DISABLED') || str_contains($upper, 'NOT SUPPORTED'))) {
-				$tag = 'S010';
-				$plain = base64_encode("\0" . $user . "\0" . $password);
-				fwrite($fp, $tag . ' AUTHENTICATE PLAIN ' . $plain . "\r\n");
-				$response = self::readUntilTagged($fp, $tag);
-				$upper = strtoupper($response);
-			}
-			if (!str_contains($upper, $tag . ' OK')) {
-				$sanitized = ImapConnection::sanitizeError($response);
-				$reason = ImapConnection::classifyError($sanitized);
+			$auth = self::authenticateAfterGreeting($fp, $user, $password, $authMode);
+			if (!$auth['ok']) {
+				$sanitized = ImapConnection::sanitizeError($auth['response']);
+				$reason = $auth['reason'] === 'auth' ? 'auth' : ImapConnection::classifyError($sanitized);
 				if ($reason === 'unknown') {
 					$reason = 'auth';
 				}
@@ -392,7 +478,7 @@ final class ImapLiveProbe
 			$start = max(1, $exists - $limit + 1);
 			$tag = 'S030';
 			$cmd = $tag . ' FETCH ' . $start . ':' . $exists
-				. ' (UID BODY.PEEK[HEADER.FIELDS (FROM SUBJECT DATE MESSAGE-ID)])' . "\r\n";
+				. ' (UID BODY.PEEK[HEADER.FIELDS (FROM TO CC REPLY-TO RESENT-FROM X-ORIGINAL-FROM SUBJECT DATE MESSAGE-ID)])' . "\r\n";
 			fwrite($fp, $cmd);
 			$fetchLines = self::readFetchLinesUntilTagged($fp, $tag);
 			$parsed = self::parseFetchHeaderResponses($fetchLines);
@@ -401,6 +487,11 @@ final class ImapLiveProbe
 				$messages[] = [
 					'uid' => $msg['uid'],
 					'from' => $msg['from'],
+					'to' => $msg['to'],
+					'cc' => $msg['cc'],
+					'replyTo' => $msg['replyTo'] ?? null,
+					'resentFrom' => $msg['resentFrom'],
+					'xOriginalFrom' => $msg['xOriginalFrom'],
 					'subject' => $msg['subject'],
 					'snippet' => mb_substr($msg['subject'], 0, 200),
 					'sentAt' => $msg['sentAt'],
@@ -419,6 +510,334 @@ final class ImapLiveProbe
 	}
 
 	/**
+	 * Peek capped plain-text prefixes for specific UIDs (one IMAP session).
+	 * Used to recover original From from forwarded bodies without full preview.
+	 *
+	 * @param list<string> $uids
+	 * @return array<string, string> uid => plain text prefix
+	 */
+	public static function peekTextPrefixesForUids(
+		string $host,
+		int $port,
+		string $username,
+		string $password,
+		string $folder,
+		array $uids,
+		int $maxBytes = Constants::MAIL_FORWARD_BODY_PEEK_BYTES,
+		float $timeoutSeconds = 20.0,
+		string $authMode = 'password',
+	): array {
+		$host = ImapConnection::normalizeHost($host);
+		$user = ImapConnection::normalizeUsername($username);
+		$folder = ImapConnection::folderToWire(trim($folder) !== '' ? trim($folder) : 'INBOX');
+		$port = $port > 0 ? $port : 993;
+		$maxBytes = max(512, min(Constants::MAIL_BODY_PLAIN_MAX_BYTES, $maxBytes));
+		$authMode = strtolower(trim($authMode)) === 'xoauth2' ? 'xoauth2' : 'password';
+		$cleanUids = [];
+		foreach ($uids as $uid) {
+			$u = trim((string)$uid);
+			if ($u !== '' && preg_match('/^\d+$/', $u) === 1) {
+				$cleanUids[$u] = true;
+			}
+		}
+		$cleanUids = array_keys($cleanUids);
+		if ($host === '' || $user === '' || $password === '' || $cleanUids === []) {
+			return [];
+		}
+
+		$remote = 'ssl://' . $host . ':' . $port;
+		$errno = 0;
+		$errstr = '';
+		$fp = @stream_socket_client(
+			$remote,
+			$errno,
+			$errstr,
+			max(1.0, $timeoutSeconds),
+			STREAM_CLIENT_CONNECT,
+		);
+		if ($fp === false) {
+			return [];
+		}
+		stream_set_timeout($fp, (int)max(1, (int)ceil($timeoutSeconds)));
+		$out = [];
+		try {
+			$greeting = self::readLine($fp);
+			if ($greeting === '' || !str_starts_with(strtoupper(ltrim($greeting)), '* OK')) {
+				return [];
+			}
+			$auth = self::authenticateAfterGreeting($fp, $user, $password, $authMode);
+			if (!$auth['ok']) {
+				return [];
+			}
+			$tag = 'F020';
+			fwrite($fp, $tag . ' SELECT ' . self::quoteAtom($folder) . "\r\n");
+			$selectLines = self::readLinesUntilTagged($fp, $tag);
+			$selectOk = false;
+			foreach ($selectLines as $line) {
+				if (str_starts_with(strtoupper($line), strtoupper($tag) . ' OK')) {
+					$selectOk = true;
+					break;
+				}
+			}
+			if (!$selectOk) {
+				return [];
+			}
+			$i = 0;
+			foreach ($cleanUids as $uid) {
+				$i++;
+				$tag = 'F' . str_pad((string)(30 + $i), 3, '0', STR_PAD_LEFT);
+				$octet = $maxBytes;
+				$cmd = $tag . ' UID FETCH ' . $uid
+					. ' (BODY.PEEK[TEXT]<0.' . $octet . '>)' . "\r\n";
+				fwrite($fp, $cmd);
+				$lines = self::readFetchLinesUntilTagged($fp, $tag, $maxBytes + 2048);
+				$raw = self::parseFetchBodyLiteral($lines);
+				if ($raw === '') {
+					$tag2 = 'G' . str_pad((string)(30 + $i), 3, '0', STR_PAD_LEFT);
+					fwrite($fp, $tag2 . ' UID FETCH ' . $uid . ' (BODY.PEEK[1]<0.' . $octet . '>)' . "\r\n");
+					$lines = self::readFetchLinesUntilTagged($fp, $tag2, $maxBytes + 2048);
+					$raw = self::parseFetchBodyLiteral($lines);
+				}
+				if ($raw !== '') {
+					$out[$uid] = MailPreviewText::toPlainPreview($raw, $maxBytes);
+				}
+			}
+			fwrite($fp, "F099 LOGOUT\r\n");
+			self::readUntilTagged($fp, 'F099');
+		} finally {
+			fclose($fp);
+		}
+
+		return $out;
+	}
+
+	/**
+	 * Peek capped plain + HTML bodies for UIDs (MH-05 / OAuth live-probe path).
+	 *
+	 * @param list<string> $uids
+	 * @return array<string, array{plain: string, html: string}>
+	 */
+	public static function peekBodiesForUids(
+		string $host,
+		int $port,
+		string $username,
+		string $password,
+		string $folder,
+		array $uids,
+		int $maxBytes = Constants::MAIL_BODY_PLAIN_MAX_BYTES,
+		float $timeoutSeconds = 20.0,
+		string $authMode = 'password',
+	): array {
+		$host = ImapConnection::normalizeHost($host);
+		$user = ImapConnection::normalizeUsername($username);
+		$folder = ImapConnection::folderToWire(trim($folder) !== '' ? trim($folder) : 'INBOX');
+		$port = $port > 0 ? $port : 993;
+		$maxBytes = max(512, min(Constants::MAIL_BODY_PLAIN_MAX_BYTES, $maxBytes));
+		$htmlMax = Constants::MAIL_BODY_HTML_MAX_BYTES;
+		$authMode = strtolower(trim($authMode)) === 'xoauth2' ? 'xoauth2' : 'password';
+		$cleanUids = [];
+		foreach ($uids as $uid) {
+			$u = trim((string)$uid);
+			if ($u !== '' && preg_match('/^\d+$/', $u) === 1) {
+				$cleanUids[$u] = true;
+			}
+		}
+		$cleanUids = array_keys($cleanUids);
+		if ($host === '' || $user === '' || $password === '' || $cleanUids === []) {
+			return [];
+		}
+
+		$remote = 'ssl://' . $host . ':' . $port;
+		$errno = 0;
+		$errstr = '';
+		$fp = @stream_socket_client(
+			$remote,
+			$errno,
+			$errstr,
+			max(1.0, $timeoutSeconds),
+			STREAM_CLIENT_CONNECT,
+		);
+		if ($fp === false) {
+			return [];
+		}
+		stream_set_timeout($fp, (int)max(1, (int)ceil($timeoutSeconds)));
+		$out = [];
+		try {
+			$greeting = self::readLine($fp);
+			if ($greeting === '' || !str_starts_with(strtoupper(ltrim($greeting)), '* OK')) {
+				return [];
+			}
+			$auth = self::authenticateAfterGreeting($fp, $user, $password, $authMode);
+			if (!$auth['ok']) {
+				return [];
+			}
+			$tag = 'B020';
+			fwrite($fp, $tag . ' SELECT ' . self::quoteAtom($folder) . "\r\n");
+			$selectLines = self::readLinesUntilTagged($fp, $tag);
+			$selectOk = false;
+			foreach ($selectLines as $line) {
+				if (str_starts_with(strtoupper($line), strtoupper($tag) . ' OK')) {
+					$selectOk = true;
+					break;
+				}
+			}
+			if (!$selectOk) {
+				return [];
+			}
+			$i = 0;
+			foreach ($cleanUids as $uid) {
+				$i++;
+				$plain = '';
+				$html = '';
+				$octet = $maxBytes;
+				$tag = 'B' . str_pad((string)(30 + $i), 3, '0', STR_PAD_LEFT);
+				fwrite($fp, $tag . ' UID FETCH ' . $uid . ' (BODY.PEEK[TEXT]<0.' . $octet . '>)' . "\r\n");
+				$lines = self::readFetchLinesUntilTagged($fp, $tag, $maxBytes + 2048);
+				$raw = self::parseFetchBodyLiteral($lines);
+				if ($raw === '') {
+					$tag2 = 'C' . str_pad((string)(30 + $i), 3, '0', STR_PAD_LEFT);
+					fwrite($fp, $tag2 . ' UID FETCH ' . $uid . ' (BODY.PEEK[1]<0.' . $octet . '>)' . "\r\n");
+					$lines = self::readFetchLinesUntilTagged($fp, $tag2, $maxBytes + 2048);
+					$raw = self::parseFetchBodyLiteral($lines);
+				}
+				if ($raw !== '') {
+					if (preg_match('/<(?:html|body|div|p|br|table)\b/i', $raw) === 1) {
+						$html = strlen($raw) > $htmlMax ? substr($raw, 0, $htmlMax) : $raw;
+					}
+					$plain = MailPreviewText::toPlainPreview($raw, $maxBytes);
+				}
+				// Multipart/alternative: part 2 often HTML when part 1 was plain.
+				if ($html === '') {
+					$tag3 = 'D' . str_pad((string)(30 + $i), 3, '0', STR_PAD_LEFT);
+					fwrite($fp, $tag3 . ' UID FETCH ' . $uid . ' (BODY.PEEK[2]<0.' . min($htmlMax, $octet * 2) . '>)' . "\r\n");
+					$lines = self::readFetchLinesUntilTagged($fp, $tag3, $htmlMax + 2048);
+					$raw2 = self::parseFetchBodyLiteral($lines);
+					if ($raw2 !== '' && preg_match('/<(?:html|body|div|p|br|table)\b/i', $raw2) === 1) {
+						$html = strlen($raw2) > $htmlMax ? substr($raw2, 0, $htmlMax) : $raw2;
+					}
+				}
+				if ($html === '') {
+					$tag4 = 'E' . str_pad((string)(30 + $i), 3, '0', STR_PAD_LEFT);
+					fwrite($fp, $tag4 . ' UID FETCH ' . $uid . ' (BODY.PEEK[1.2]<0.' . min($htmlMax, $octet * 2) . '>)' . "\r\n");
+					$lines = self::readFetchLinesUntilTagged($fp, $tag4, $htmlMax + 2048);
+					$raw12 = self::parseFetchBodyLiteral($lines);
+					if ($raw12 !== '' && preg_match('/<(?:html|body|div|p|br|table)\b/i', $raw12) === 1) {
+						$html = strlen($raw12) > $htmlMax ? substr($raw12, 0, $htmlMax) : $raw12;
+					}
+				}
+				if ($plain !== '' || $html !== '') {
+					$out[$uid] = ['plain' => $plain, 'html' => $html];
+				}
+			}
+			fwrite($fp, "B099 LOGOUT\r\n");
+			self::readUntilTagged($fp, 'B099');
+		} finally {
+			fclose($fp);
+		}
+
+		return $out;
+	}
+
+	/**
+	 * Fetch RFC822 header fields for specific UIDs (one IMAP session).
+	 *
+	 * @param list<string> $uids
+	 * @return array<string, array{from: string, to: list<string>, cc: list<string>, resentFrom: ?string, xOriginalFrom: ?string}>
+	 */
+	public static function fetchUidHeadersForUids(
+		string $host,
+		int $port,
+		string $username,
+		string $password,
+		string $folder,
+		array $uids,
+		float $timeoutSeconds = 20.0,
+	): array {
+		$host = ImapConnection::normalizeHost($host);
+		$user = ImapConnection::normalizeUsername($username);
+		$folder = ImapConnection::folderToWire(trim($folder) !== '' ? trim($folder) : 'INBOX');
+		$port = $port > 0 ? $port : 993;
+		$cleanUids = [];
+		foreach ($uids as $uid) {
+			$u = trim((string)$uid);
+			if ($u !== '' && preg_match('/^\d+$/', $u) === 1) {
+				$cleanUids[$u] = true;
+			}
+		}
+		$cleanUids = array_keys($cleanUids);
+		if ($host === '' || $user === '' || $password === '' || $cleanUids === []) {
+			return [];
+		}
+
+		$remote = 'ssl://' . $host . ':' . $port;
+		$errno = 0;
+		$errstr = '';
+		$fp = @stream_socket_client(
+			$remote,
+			$errno,
+			$errstr,
+			max(1.0, $timeoutSeconds),
+			STREAM_CLIENT_CONNECT,
+		);
+		if ($fp === false) {
+			return [];
+		}
+		stream_set_timeout($fp, (int)max(1, (int)ceil($timeoutSeconds)));
+		$out = [];
+		try {
+			$greeting = self::readLine($fp);
+			if ($greeting === '' || !str_starts_with(strtoupper(ltrim($greeting)), '* OK')) {
+				return [];
+			}
+			$tag = 'H001';
+			fwrite($fp, $tag . ' LOGIN ' . self::quoteAtom($user) . ' ' . self::quoteAtom($password) . "\r\n");
+			$response = self::readUntilTagged($fp, $tag);
+			if (!str_contains(strtoupper($response), ' OK')) {
+				return [];
+			}
+			$tag = 'H020';
+			fwrite($fp, $tag . ' SELECT ' . self::quoteAtom($folder) . "\r\n");
+			$selectLines = self::readLinesUntilTagged($fp, $tag);
+			$selectOk = false;
+			foreach ($selectLines as $line) {
+				if (str_starts_with(strtoupper($line), strtoupper($tag) . ' OK')) {
+					$selectOk = true;
+					break;
+				}
+			}
+			if (!$selectOk) {
+				return [];
+			}
+			$i = 0;
+			foreach ($cleanUids as $uid) {
+				$i++;
+				$tag = 'H' . str_pad((string)(30 + $i), 3, '0', STR_PAD_LEFT);
+				$cmd = $tag . ' UID FETCH ' . $uid
+					. ' (UID BODY.PEEK[HEADER.FIELDS (FROM TO CC REPLY-TO RESENT-FROM X-ORIGINAL-FROM SUBJECT DATE MESSAGE-ID)])' . "\r\n";
+				fwrite($fp, $cmd);
+				$lines = self::readFetchLinesUntilTagged($fp, $tag);
+				foreach (self::parseFetchHeaderResponses($lines) as $parsed) {
+					$key = (string)($parsed['uid'] ?? $uid);
+					$out[$key] = [
+						'from' => (string)($parsed['from'] ?? ''),
+						'to' => isset($parsed['to']) && is_array($parsed['to']) ? $parsed['to'] : [],
+						'cc' => isset($parsed['cc']) && is_array($parsed['cc']) ? $parsed['cc'] : [],
+						'replyTo' => isset($parsed['replyTo']) ? (string)$parsed['replyTo'] : null,
+						'resentFrom' => isset($parsed['resentFrom']) ? (string)$parsed['resentFrom'] : null,
+						'xOriginalFrom' => isset($parsed['xOriginalFrom']) ? (string)$parsed['xOriginalFrom'] : null,
+					];
+				}
+			}
+			fwrite($fp, "H099 LOGOUT\r\n");
+			self::readUntilTagged($fp, 'H099');
+		} finally {
+			fclose($fp);
+		}
+
+		return $out;
+	}
+
+	/**
 	 * Delete one message by UID (STORE \Deleted + EXPUNGE). Idempotent when UID is gone.
 	 *
 	 * @return array{ok: bool, reason: string, detail: string, alreadyGone: bool}
@@ -434,7 +853,7 @@ final class ImapLiveProbe
 	): array {
 		$host = ImapConnection::normalizeHost($host);
 		$user = ImapConnection::normalizeUsername($username);
-		$folder = trim($folder) !== '' ? trim($folder) : 'INBOX';
+		$folder = ImapConnection::folderToWire(trim($folder) !== '' ? trim($folder) : 'INBOX');
 		$uid = trim($uid);
 		$port = $port > 0 ? $port : 993;
 		if ($host === '' || $user === '' || $password === '' || $uid === '' || !preg_match('/^\d+$/', $uid)) {
@@ -628,13 +1047,16 @@ final class ImapLiveProbe
 		string $uid,
 		int $maxBytes = Constants::MAIL_PREVIEW_MAX_BYTES,
 		float $timeoutSeconds = 20.0,
+		string $authMode = 'password',
 	): array {
 		$host = ImapConnection::normalizeHost($host);
 		$user = ImapConnection::normalizeUsername($username);
-		$folder = trim($folder) !== '' ? trim($folder) : 'INBOX';
+		$folder = ImapConnection::folderToWire(trim($folder) !== '' ? trim($folder) : 'INBOX');
 		$uid = trim($uid);
 		$port = $port > 0 ? $port : 993;
-		$maxBytes = max(512, min(Constants::MAIL_PREVIEW_MAX_BYTES, $maxBytes));
+		// Allow full-body peeks for MH-05 open/preview backfill (still hard-capped).
+		$maxBytes = max(512, min(Constants::MAIL_BODY_PLAIN_MAX_BYTES, $maxBytes));
+		$authMode = strtolower(trim($authMode)) === 'xoauth2' ? 'xoauth2' : 'password';
 		if ($host === '' || $user === '' || $password === '' || $uid === '' || !preg_match('/^\d+$/', $uid)) {
 			return [
 				'ok' => false,
@@ -680,28 +1102,12 @@ final class ImapLiveProbe
 				];
 			}
 
-			$tag = 'P001';
-			fwrite($fp, $tag . ' LOGIN ' . self::quoteAtom($user) . ' ' . self::quoteAtom($password) . "\r\n");
-			$response = self::readUntilTagged($fp, $tag);
-			$upper = strtoupper($response);
-			if (str_contains($upper, 'LOGIN') && (str_contains($upper, 'DISABLED') || str_contains($upper, 'NOT SUPPORTED'))) {
-				$tag = 'P010';
-				$plain = base64_encode("\0" . $user . "\0" . $password);
-				fwrite($fp, $tag . ' AUTHENTICATE PLAIN ' . $plain . "\r\n");
-				$response = self::readUntilTagged($fp, $tag);
-				$upper = strtoupper($response);
-			}
-			if (!str_contains($upper, $tag . ' OK')) {
-				$sanitized = ImapConnection::sanitizeError($response);
-				$reason = ImapConnection::classifyError($sanitized);
-				if ($reason === 'unknown') {
-					$reason = 'auth';
-				}
-
+			$auth = self::authenticateAfterGreeting($fp, $user, $password, $authMode);
+			if (!$auth['ok']) {
 				return [
 					'ok' => false,
-					'reason' => $reason === 'network' ? 'auth' : $reason,
-					'detail' => $sanitized,
+					'reason' => $auth['reason'] !== '' ? $auth['reason'] : 'auth',
+					'detail' => $auth['detail'],
 					'text' => '',
 					'truncated' => false,
 				];
@@ -870,45 +1276,303 @@ final class ImapLiveProbe
 	}
 
 	/**
-	 * Parse IMAP LIST untagged lines into folder paths (pure — unit tested).
+	 * Parse IMAP LIST untagged lines into UTF-8 folder paths (pure — unit tested).
+	 * Skips \\Noselect parents by default (cannot SELECT / sync).
 	 *
 	 * @param list<string> $lines
 	 * @return list<string>
 	 */
-	public static function parseListLines(array $lines, int $max = 20): array
+	public static function parseListLines(array $lines, int $max = 0, bool $selectableOnly = true): array
+	{
+		if ($max <= 0) {
+			$max = Constants::MAILBOX_LIST_FOLDERS_MAX;
+		}
+		$out = [];
+		foreach (self::parseListEntries($lines, $max, $selectableOnly) as $entry) {
+			$out[] = $entry['name'];
+		}
+
+		return $out;
+	}
+
+	/**
+	 * Parse IMAP LIST lines into UTF-8 name + flags (SPECIAL-USE aware).
+	 * Names are Normalized from Modified UTF-7 so umlauts are human-readable.
+	 *
+	 * @param list<string> $lines
+	 * @return list<array{name: string, flags: list<string>, selectable: bool, delimiter: string}>
+	 */
+	public static function parseListEntries(array $lines, int $max = 50, bool $selectableOnly = false): array
 	{
 		$out = [];
+		$seen = [];
 		foreach ($lines as $line) {
 			$line = trim((string)$line);
 			if ($line === '' || !preg_match('/^\* LIST\b/i', $line)) {
 				continue;
 			}
-			// * LIST (\HasNoChildren) "/" INBOX
+			// * LIST (\HasNoChildren \Junk) "/" Junk
 			// * LIST () "/" "Sent Items"
-			if (preg_match('/^\* LIST\s+\([^)]*\)\s+(\S+)\s+(.+)$/i', $line, $m) !== 1) {
+			// * LIST (\HasNoChildren) "/" "INBOX/&AOQ-rger"
+			if (preg_match('/^\* LIST\s+\(([^)]*)\)\s+(\S+)\s+(.+)$/i', $line, $m) !== 1) {
 				continue;
 			}
-			$name = trim($m[2]);
+			$flagRaw = trim($m[1]);
+			$flags = $flagRaw === '' ? [] : (preg_split('/\s+/', $flagRaw) ?: []);
+			$flags = array_values(array_filter(array_map('strval', $flags), static fn (string $f): bool => $f !== ''));
+			$delimiterRaw = trim($m[2]);
+			if ($delimiterRaw !== '' && $delimiterRaw[0] === '"' && str_ends_with($delimiterRaw, '"')) {
+				$delimiterRaw = stripcslashes(substr($delimiterRaw, 1, -1));
+			}
+			$delimiter = $delimiterRaw !== '' ? $delimiterRaw : '/';
+			$name = trim($m[3]);
 			if ($name !== '' && $name[0] === '"' && str_ends_with($name, '"')) {
 				$name = stripcslashes(substr($name, 1, -1));
 			}
-			$name = trim($name);
-			if ($name === '' || in_array($name, $out, true)) {
+			$name = ImapConnection::normalizeFolderPath($name);
+			if ($name === '' || !ImapConnection::isSafeImapFolder($name)) {
 				continue;
 			}
-			$out[] = $name;
+			$selectable = true;
+			foreach ($flags as $flag) {
+				if (strcasecmp($flag, '\\Noselect') === 0 || strcasecmp($flag, '\\Nonexistent') === 0) {
+					$selectable = false;
+					break;
+				}
+			}
+			if ($selectableOnly && !$selectable) {
+				continue;
+			}
+			$key = ImapUtf7::folderKey($name);
+			if ($key === '' || isset($seen[$key])) {
+				continue;
+			}
+			$seen[$key] = true;
+			$out[] = [
+				'name' => $name,
+				'flags' => $flags,
+				'selectable' => $selectable,
+				'delimiter' => $delimiter,
+			];
 			if (count($out) >= $max) {
 				break;
 			}
 		}
+
 		return $out;
+	}
+
+	/**
+	 * Move one UID into the server Junk/Spam folder (LIST discover + UID MOVE, else COPY+delete).
+	 *
+	 * @return array{ok: bool, reason: string, detail: string, junkFolder: string, alreadyGone: bool}
+	 */
+	public static function moveUidToJunk(
+		string $host,
+		int $port,
+		string $username,
+		string $password,
+		string $folder,
+		string $uid,
+		float $timeoutSeconds = 25.0,
+	): array {
+		$host = ImapConnection::normalizeHost($host);
+		$user = ImapConnection::normalizeUsername($username);
+		$folder = ImapConnection::folderToWire(trim($folder) !== '' ? trim($folder) : 'INBOX');
+		$uid = trim($uid);
+		$port = $port > 0 ? $port : 993;
+		$empty = static fn (string $reason, string $detail, bool $gone = false): array => [
+			'ok' => false,
+			'reason' => $reason,
+			'detail' => $detail,
+			'junkFolder' => '',
+			'alreadyGone' => $gone,
+		];
+		if ($host === '' || $user === '' || $password === '' || $uid === '' || !preg_match('/^\d+$/', $uid)) {
+			return $empty('unknown', 'host, username, password and numeric uid are required');
+		}
+		if (!ImapConnection::isSafeImapFolder($folder)) {
+			return $empty('protocol', 'unsafe source folder');
+		}
+
+		$remote = 'ssl://' . $host . ':' . $port;
+		$errno = 0;
+		$errstr = '';
+		$fp = @stream_socket_client(
+			$remote,
+			$errno,
+			$errstr,
+			max(1.0, $timeoutSeconds),
+			STREAM_CLIENT_CONNECT,
+		);
+		if ($fp === false) {
+			$detail = ImapConnection::sanitizeError($errstr !== '' ? $errstr : ('connect errno ' . $errno));
+
+			return $empty('network', $detail !== '' ? $detail : 'TLS connect failed');
+		}
+
+		stream_set_timeout($fp, (int)max(1, (int)ceil($timeoutSeconds)));
+		try {
+			$greeting = self::readLine($fp);
+			if ($greeting === '' || !str_starts_with(strtoupper(ltrim($greeting)), '* OK')) {
+				return $empty('protocol', 'Unexpected IMAP greeting: ' . ImapConnection::sanitizeError($greeting));
+			}
+
+			$tag = 'J001';
+			fwrite($fp, $tag . ' LOGIN ' . self::quoteAtom($user) . ' ' . self::quoteAtom($password) . "\r\n");
+			$response = self::readUntilTagged($fp, $tag);
+			$upper = strtoupper($response);
+			if (str_contains($upper, 'LOGIN') && (str_contains($upper, 'DISABLED') || str_contains($upper, 'NOT SUPPORTED'))) {
+				$tag = 'J010';
+				$plain = base64_encode("\0" . $user . "\0" . $password);
+				fwrite($fp, $tag . ' AUTHENTICATE PLAIN ' . $plain . "\r\n");
+				$response = self::readUntilTagged($fp, $tag);
+				$upper = strtoupper($response);
+			}
+			if (!str_contains($upper, $tag . ' OK')) {
+				$sanitized = ImapConnection::sanitizeError($response);
+				$reason = ImapConnection::classifyError($sanitized);
+				if ($reason === 'unknown') {
+					$reason = 'auth';
+				}
+
+				return $empty($reason === 'network' ? 'auth' : $reason, $sanitized);
+			}
+
+			$entries = self::parseListEntries(self::listFolderLinesAfterLogin($fp), 80);
+			$junk = ImapConnection::pickJunkFolder($entries);
+			if ($junk === null || !ImapConnection::isSafeImapFolder($junk)) {
+				return $empty('protocol', 'No Junk/Spam folder on this mailbox');
+			}
+			if (strcasecmp($junk, $folder) === 0) {
+				fwrite($fp, "J099 LOGOUT\r\n");
+				self::readUntilTagged($fp, 'J099');
+
+				return [
+					'ok' => true,
+					'reason' => 'ok',
+					'detail' => '',
+					'junkFolder' => $junk,
+					'alreadyGone' => false,
+				];
+			}
+
+			$tag = 'J020';
+			fwrite($fp, $tag . ' SELECT ' . self::quoteAtom($folder) . "\r\n");
+			$selectLines = self::readLinesUntilTagged($fp, $tag);
+			$selectOk = false;
+			foreach ($selectLines as $line) {
+				if (str_starts_with(strtoupper($line), strtoupper($tag) . ' OK')) {
+					$selectOk = true;
+					break;
+				}
+			}
+			if (!$selectOk) {
+				return $empty('protocol', 'SELECT failed for folder ' . ImapConnection::sanitizeError($folder));
+			}
+
+			$tag = 'J030';
+			fwrite($fp, $tag . ' UID FETCH ' . $uid . " (UID)\r\n");
+			$fetchLines = self::readLinesUntilTagged($fp, $tag);
+			$seen = false;
+			foreach ($fetchLines as $line) {
+				if (preg_match('/\bUID\s+' . preg_quote($uid, '/') . '\b/i', $line) === 1) {
+					$seen = true;
+					break;
+				}
+			}
+			$fetchOk = false;
+			foreach ($fetchLines as $line) {
+				if (str_starts_with(strtoupper($line), strtoupper($tag) . ' OK')) {
+					$fetchOk = true;
+					break;
+				}
+			}
+			if ($fetchOk && !$seen) {
+				fwrite($fp, "J099 LOGOUT\r\n");
+				self::readUntilTagged($fp, 'J099');
+
+				return [
+					'ok' => true,
+					'reason' => 'ok',
+					'detail' => '',
+					'junkFolder' => $junk,
+					'alreadyGone' => true,
+				];
+			}
+
+			$tag = 'J040';
+			fwrite($fp, $tag . ' UID MOVE ' . $uid . ' ' . self::quoteAtom($junk) . "\r\n");
+			$moveLines = self::readLinesUntilTagged($fp, $tag);
+			$moveOk = false;
+			foreach ($moveLines as $line) {
+				if (str_starts_with(strtoupper($line), strtoupper($tag) . ' OK')) {
+					$moveOk = true;
+					break;
+				}
+			}
+			if (!$moveOk) {
+				$tag = 'J050';
+				fwrite($fp, $tag . ' UID COPY ' . $uid . ' ' . self::quoteAtom($junk) . "\r\n");
+				$copyLines = self::readLinesUntilTagged($fp, $tag);
+				$copyOk = false;
+				foreach ($copyLines as $line) {
+					if (str_starts_with(strtoupper($line), strtoupper($tag) . ' OK')) {
+						$copyOk = true;
+						break;
+					}
+				}
+				if (!$copyOk) {
+					return $empty('protocol', 'UID MOVE/COPY to Junk failed for uid ' . $uid);
+				}
+				$tag = 'J060';
+				fwrite($fp, $tag . ' UID STORE ' . $uid . " +FLAGS.SILENT (\\Deleted)\r\n");
+				$storeLines = self::readLinesUntilTagged($fp, $tag);
+				$storeOk = false;
+				foreach ($storeLines as $line) {
+					if (str_starts_with(strtoupper($line), strtoupper($tag) . ' OK')) {
+						$storeOk = true;
+						break;
+					}
+				}
+				if (!$storeOk) {
+					return $empty('protocol', 'UID STORE \\Deleted failed after COPY for uid ' . $uid);
+				}
+				$tag = 'J070';
+				fwrite($fp, $tag . " EXPUNGE\r\n");
+				$expungeLines = self::readLinesUntilTagged($fp, $tag);
+				$expungeOk = false;
+				foreach ($expungeLines as $line) {
+					if (str_starts_with(strtoupper($line), strtoupper($tag) . ' OK')) {
+						$expungeOk = true;
+						break;
+					}
+				}
+				if (!$expungeOk) {
+					return $empty('protocol', 'EXPUNGE failed after COPY to Junk');
+				}
+			}
+
+			fwrite($fp, "J099 LOGOUT\r\n");
+			self::readUntilTagged($fp, 'J099');
+
+			return [
+				'ok' => true,
+				'reason' => 'ok',
+				'detail' => '',
+				'junkFolder' => $junk,
+				'alreadyGone' => false,
+			];
+		} finally {
+			fclose($fp);
+		}
 	}
 
 	/**
 	 * @param resource $fp
 	 * @return list<string>
 	 */
-	private static function listFoldersAfterLogin($fp): array
+	private static function listFolderLinesAfterLogin($fp): array
 	{
 		$tag = 'A050';
 		fwrite($fp, $tag . " LIST \"\" \"*\"\r\n");
@@ -928,7 +1592,21 @@ final class ImapLiveProbe
 				break;
 			}
 		}
-		$folders = self::parseListLines($lines);
+
+		return $lines;
+	}
+
+	/**
+	 * @param resource $fp
+	 * @return list<string>
+	 */
+	private static function listFoldersAfterLogin($fp): array
+	{
+		$folders = self::parseListLines(
+			self::listFolderLinesAfterLogin($fp),
+			Constants::MAILBOX_LIST_FOLDERS_MAX,
+			true,
+		);
 		return $folders !== [] ? $folders : ['INBOX'];
 	}
 

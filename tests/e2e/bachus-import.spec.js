@@ -92,6 +92,62 @@ test.describe('Bachus Import effortless journey', () => {
     await axeMain(page);
   });
 
+  test('website-order JSON expands two agreements and imports without row errors', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await login(page, credsFromEnv('ADMIN'));
+    await page.goto('/apps/customercheck/import');
+    await page.waitForSelector('#crm-import-paste-details', { timeout: 30000 });
+    await page.locator('#crm-import-paste-details').evaluate((el) => { el.open = true; });
+
+    const suffix = Date.now().toString(36);
+    const company = `Website Order ${suffix}`;
+    const payload = JSON.stringify({
+      orderId: `wo-${suffix}`,
+      source: 'website-order',
+      lang: 'de',
+      companyName: company,
+      contactName: `Contact ${suffix}`,
+      email: `wo-${suffix}@example.test`,
+      startsAt: '2026-08-01',
+      validUntil: '2027-08-01',
+      totalCents: 4500,
+      agreements: [
+        {
+          productCode: 'azc',
+          label: 'ArbeitszeitCheck Mobile',
+          seats: 5,
+          devices: 0,
+          amountCents: 2000,
+          startsAt: '2026-08-01',
+          validUntil: '2027-08-01',
+        },
+        {
+          productCode: 'pc',
+          label: 'ProjectCheck Mobile',
+          seats: 5,
+          devices: 0,
+          amountCents: 2500,
+          startsAt: '2026-08-01',
+          validUntil: '2027-08-01',
+        },
+      ],
+      tasks: [{ type: 'todo', title: 'Issue licence key(s)', dueOffsetDays: 0 }],
+    });
+    await page.locator('#crm-import-csv').fill(payload);
+    await page.locator('#crm-import-scan').click();
+
+    await expect(page.locator('#crm-import-review')).toBeVisible({ timeout: 30000 });
+    await expect(page.locator('#crm-import-table')).toContainText(company);
+    await expect(page.locator('#crm-import-table')).toContainText(/azc|ArbeitszeitCheck/i);
+    await expect(page.locator('#crm-import-stat-ready')).toHaveText('2');
+    await expect(page.locator('#crm-import-accept-unambiguous')).toBeEnabled();
+    await page.locator('#crm-import-accept-unambiguous').click();
+    await expect(page.locator('#crm-import-summary')).toBeVisible({ timeout: 30000 });
+    await expect(page.locator('#crm-import-summary-body')).toContainText(/Added|Hinzugefügt|agreement|Vereinbarung|Updated/i);
+    await expect(page.locator('#crm-import-summary-body')).not.toContainText(/row error/i);
+    await axeMain(page);
+  });
+
   test('sales-log CSV header with contactEmail previews', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await login(page, credsFromEnv('ADMIN'));

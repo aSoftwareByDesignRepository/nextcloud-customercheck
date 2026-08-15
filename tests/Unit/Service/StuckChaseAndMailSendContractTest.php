@@ -60,10 +60,14 @@ final class StuckChaseAndMailSendContractTest extends TestCase
 		$assets = (string)file_get_contents(dirname(__DIR__, 3) . '/lib/Service/FrontEndAssetService.php');
 		$this->assertStringContainsString("common/shared-mail-send", $assets);
 
-		foreach (['company-detail.js', 'agreements.js', 'money.js'] as $page) {
+		foreach (['company-detail.js', 'agreements.js', 'money.js', 'persona.js'] as $page) {
 			$js = (string)file_get_contents(dirname(__DIR__, 3) . '/js/pages/' . $page);
 			$this->assertStringContainsString('CustomerCheckSharedMail', $js, $page);
 		}
+		$this->assertStringContainsString('replyMode', $common);
+		$this->assertStringContainsString('Send from connected account', $common);
+		$this->assertStringContainsString('queryInDialog', $common);
+		$this->assertStringContainsString('elevatingPrivate', $common);
 	}
 
 	public function testClaimEndpointWired(): void

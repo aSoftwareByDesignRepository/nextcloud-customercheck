@@ -31,7 +31,7 @@ final class AppSettingsSectionCatalogTest extends TestCase
 		$sections = AppSettingsSectionCatalog::SECTIONS;
 		self::assertSame($sections, array_values(array_unique($sections)));
 		self::assertSame(
-			['access', 'jobs', 'tokens', 'license', 'product-codes'],
+			['access', 'jobs', 'tokens', 'license', 'product-codes', 'personal-mail'],
 			$sections,
 		);
 	}

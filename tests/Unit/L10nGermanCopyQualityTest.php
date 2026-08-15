@@ -79,6 +79,22 @@ final class L10nGermanCopyQualityTest extends TestCase
 		}
 	}
 
+	public function testPdfLinkStringsUseNaturalGerman(): void
+	{
+		$t = $this->deTranslations();
+		$map = $this->deMap();
+		$pairs = [
+			'Link a PDF from Files (optional). We check you can read it.' =>
+				'Optional: PDF aus Dateien verknüpfen. Wir prüfen, ob du sie lesen kannst.',
+			'Pick a PDF file you can read in Files.' =>
+				'Wähle eine PDF-Datei, die du in Dateien lesen kannst.',
+		];
+		foreach ($pairs as $key => $want) {
+			self::assertSame($want, $t[$key], "de.json {$key}");
+			self::assertSame($want, $map[$key], "de-map {$key}");
+		}
+	}
+
 	public function testDeQualityScriptPasses(): void
 	{
 		$script = dirname(__DIR__, 2) . '/scripts/check-l10n-de-quality.php';
@@ -86,6 +102,28 @@ final class L10nGermanCopyQualityTest extends TestCase
 		$cmd = escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg($script);
 		exec($cmd . ' 2>&1', $out, $code);
 		self::assertSame(0, $code, implode("\n", $out));
+	}
+
+	public function testReviewSpamAndBulkDeleteStringsTranslatedInGerman(): void
+	{
+		$t = $this->deTranslations();
+		$map = $this->deMap();
+		$pairs = [
+			'Mark as spam' => 'Als Spam markieren',
+			'Delete selected' => 'Ausgewählte löschen',
+			'Delete forever' => 'Endgültig löschen',
+			'Clear selection' => 'Auswahl löschen',
+			'Marked as spam.' => 'Als Spam markiert.',
+			'Select messages to delete or mark as spam' => 'Nachrichten zum Löschen oder als Spam markieren auswählen',
+			'Could not delete the selected messages.' => 'Die ausgewählten Nachrichten konnten nicht gelöscht werden.',
+			'Could not mark the selected messages as spam.' => 'Die ausgewählten Nachrichten konnten nicht als Spam markiert werden.',
+			'Only shared-mailbox messages can be marked as spam.' => 'Nur Nachrichten aus dem gemeinsamen Postfach können als Spam markiert werden.',
+			'This mailbox has no Spam/Junk folder. Delete the message instead.' => 'Dieses Postfach hat keinen Spam-/Junk-Ordner. Lösche die Nachricht stattdessen.',
+		];
+		foreach ($pairs as $key => $want) {
+			self::assertSame($want, $t[$key], "de.json {$key}");
+			self::assertSame($want, $map[$key], "de-map {$key}");
+		}
 	}
 
 	public function testSecondaryLocalesRejectKnownSaveSenseErrors(): void

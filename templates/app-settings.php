@@ -62,6 +62,7 @@ include __DIR__ . '/common/page-start.php';
 		'tokens' => 'tokens.php',
 		'license' => 'license.php',
 		'product-codes' => 'product-codes.php',
+		'personal-mail' => 'personal-mail.php',
 	];
 	$crmRequestedSection = (string) ($_['settingsSection'] ?? '');
 	include __DIR__ . '/parts/app-settings-nav.php';

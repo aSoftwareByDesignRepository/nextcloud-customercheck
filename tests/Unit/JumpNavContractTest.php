@@ -53,7 +53,7 @@ final class JumpNavContractTest extends TestCase
 	public function testFocusScriptIsRegisteredForCompanyDetail(): void
 	{
 		$controller = (string)file_get_contents(dirname(__DIR__, 2) . '/lib/Controller/PageController.php');
-		$this->assertStringContainsString("registerFrontEndAssets('pages/company-detail', null, ['common/identity-links'], ['common/company360-focus', 'common/folder-picker', 'common/glance-summary', 'common/company360-present', 'common/deal-checklist-ux', 'pages/persona'])", $controller);
+		$this->assertStringContainsString("registerFrontEndAssets('pages/company-detail', null, ['common/identity-links'], ['common/company360-focus', 'common/folder-picker', 'common/glance-summary', 'common/company360-present', 'common/deal-checklist-ux', 'common/mail-sync-now', 'common/rich-mail-composer', 'common/shared-mail-send', 'pages/persona'])", $controller);
 		$js = (string)file_get_contents(dirname(__DIR__, 2) . '/js/common/company360-focus.js');
 		$this->assertStringContainsString('aria-selected', $js);
 		$this->assertStringContainsString('hashchange', $js);

@@ -9,107 +9,40 @@ import { login, credsFromEnv } from './helpers/auth.js';
 test.describe('Bachus extreme simplicity journeys', () => {
   test.skip(!process.env.NC_ADMIN_USER, 'Requires NC_ADMIN_USER / NC_ADMIN_PASS');
 
-  test('Review: single disclosure, kind chips, visible search toolbar', async ({ page }) => {
+  test('Unassigned: unified Inbox chrome, search, list/reader decide zone', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await login(page, credsFromEnv('ADMIN'));
-    await page.goto('/apps/customercheck/review');
-    await page.waitForSelector('[data-crm-persona-mount="review"]', { timeout: 30000 });
-    await page.waitForFunction(() => {
-      const mount = document.querySelector('[data-crm-persona-mount="review"]');
-      return mount && mount.getAttribute('aria-busy') !== 'true';
-    }, null, { timeout: 30000 });
+    await page.goto('/apps/customercheck/sales-inbox?tab=unmatched');
+    await expect(page.locator('#crm-sales-inbox-root[data-crm-inbox-unified="1"]')).toBeVisible({ timeout: 30000 });
+    await expect(page.locator('#crm-sales-tab-unmatched')).toHaveAttribute('aria-selected', 'true');
+    await expect(page.locator('#crm-sales-inbox-panel')).toBeVisible();
+    await expect(page.locator('[data-crm-persona-mount="review"]')).toHaveCount(0);
 
-    await expect(page.locator('#crm-review-disclosure')).toHaveCount(1);
-    await expect(page.locator('#crm-review-board-title')).toHaveCount(0);
-    const chips = page.locator('[data-crm-persona-mount="review"] .crm-quick-filters button');
-    await expect(chips.first()).toBeVisible();
-    await expect(chips).toHaveCount(7);
+    await expect(page.locator('#crm-sales-inbox-search-wrap')).toHaveCount(0);
+    await expect(page.locator('#crm-sales-inbox-disclosure')).toBeVisible();
+    await expect(page.locator('#crm-sales-inbox-list-tools')).toBeVisible();
+    await expect(page.locator('#crm-sales-inbox-q')).toBeVisible();
+    await expect(page.locator('#crm-sales-inbox-mail-filters')).toBeVisible();
+    await expect(page.locator('#crm-sales-inbox-empty, #crm-sales-inbox-list .crm-mail-thread-row').first()).toBeVisible({ timeout: 20000 });
+    if (await page.locator('#crm-sales-inbox-list .crm-mail-thread-row').count()) {
+      await expect(page.locator('#crm-sales-inbox-cols')).toBeVisible();
+      await expect(page.locator('[data-crm-inbox-sort="sent"]')).toHaveAttribute('aria-pressed', 'true');
+    }
+    await expect(page.locator('#crm-sales-inbox-list')).toBeVisible();
 
-    // Search toolbar + Thunderbird list/reader (not a card dump of actions).
-    const toolbar = page.locator('[data-crm-persona-mount="review"] .crm-review-toolbar').first();
-    await expect(toolbar).toBeVisible();
-    await expect(page.locator('[data-crm-persona-mount="review"] details.crm-review-tools')).toHaveCount(0);
-    await expect(page.locator('#crm-review-q')).toBeVisible();
-    await expect(page.locator('#crm-review-include-archived')).toBeAttached();
-    await page.locator('[data-crm-persona-mount="review"] .crm-review-toolbar__extra > summary').click();
-    await expect(page.locator('#crm-review-include-archived')).toBeVisible();
-    await expect(page.locator('[data-crm-persona-mount="review"] .crm-review-board').first()).toBeVisible();
-    await expect(page.locator('[data-crm-persona-mount="review"] .crm-mail-thread, [data-crm-persona-mount="review"] .crm-review-table').first()).toBeVisible();
-    await expect(page.locator('[data-crm-review-sort]').first()).toBeVisible();
-    await expect(page.locator('[data-crm-review-sort="status"]')).toHaveCount(0);
-    const reviewRow = page.locator('[data-crm-persona-mount="review"] li.crm-review-row').first();
+    const reviewRow = page.locator('#crm-sales-inbox-list .crm-mail-thread-row').first();
     if (await reviewRow.count()) {
       await reviewRow.click();
-      await expect(page.locator('[data-crm-review-reader] .crm-mail-reader__subject, [data-crm-review-reader] .crm-review-zone__label').first()).toBeVisible();
-      const dealMore = page.locator('[data-crm-review-reader] details.crm-review-deal-more').first();
-      const dealField = page.locator('[data-crm-review-reader] .crm-review-deal-field').first();
-      if (await dealMore.count()) {
-        await dealMore.locator('summary').click();
-        await expect(dealField).toBeVisible();
-        const later = page.locator('[data-crm-review-reader] details.crm-review-more').first();
-        if (await later.count()) {
-          await expect(later.locator('[data-crm-review-deal]')).toHaveCount(0);
-        }
-      } else if (await dealField.count()) {
-        await expect(dealField).toBeVisible();
-      }
-    }
-
-    // Kind chip filters without dead end (EN or DE labels).
-    const sharedChip = chips.filter({ hasText: /Shared mail|Gemeinsame|Freigegebene|Shared/i }).first();
-    if (await sharedChip.count()) {
-      await sharedChip.click();
-      await page.waitForFunction(() => {
-        const mount = document.querySelector('[data-crm-persona-mount="review"]');
-        return mount && mount.getAttribute('aria-busy') !== 'true';
-      }, null, { timeout: 30000 });
-      await expect(page.locator('#crm-review-disclosure')).toBeVisible();
-    } else {
-      await chips.first().click();
-      await page.waitForFunction(() => {
-        const mount = document.querySelector('[data-crm-persona-mount="review"]');
-        return mount && mount.getAttribute('aria-busy') !== 'true';
-      }, null, { timeout: 30000 });
-    }
-
-    const assignRow = page.locator('[data-crm-review-reader] form.crm-review-assign').first();
-    if (await assignRow.count()) {
-      await expect(assignRow.locator('.crm-review-primary')).toBeVisible();
-      await expect(page.locator('li.crm-review-row, tr.crm-review-row').first()).toBeVisible();
-      const autoPreview = page.locator('[data-crm-mail-preview][data-crm-mail-auto-open] [data-crm-mail-preview-toggle]').first();
-      if (await autoPreview.count()) {
-        await expect(autoPreview).toHaveAttribute('aria-expanded', 'true', { timeout: 20000 });
-      }
-      const quick = assignRow.locator('[data-crm-review-quick-assign]');
-      if (await quick.count()) {
-        await expect(quick).toBeVisible();
-        await expect(quick).toContainText(/Assign to|Zuordnen zu/i);
-        await expect(assignRow.locator('details.crm-review-pick-other')).not.toHaveAttribute('open', '');
-      } else {
-        const pick = assignRow.locator('.crm-review-pick-company');
-        await expect(pick).toBeVisible();
-        await expect(assignRow.locator('details.crm-review-pick-company')).toHaveCount(0);
-        await expect(assignRow.locator('button[type="submit"]')).toContainText(/Assign|Zuordnen/i);
-      }
-      await expect(assignRow.locator('[data-crm-review-none]')).toBeVisible();
-      await expect(assignRow.locator('[data-crm-review-discard]')).toBeVisible();
-      const more = assignRow.locator('details.crm-review-more').first();
-      await expect(more).toBeVisible();
-      await expect(more).not.toHaveAttribute('open', '');
-      await more.locator('summary').click();
-      await expect(assignRow.locator('[data-crm-review-snooze="7d"]')).toBeVisible();
-      await expect(assignRow.locator('[data-crm-review-followup]')).toHaveCount(0);
-    } else {
-      await expect(page.locator('.crm-empty-state a[href*="settings"]')).toBeVisible();
-    }
-
-    const bulk = page.locator('[data-crm-review-bulk]');
-    if (await bulk.count()) {
-      await expect(bulk).toBeHidden();
+      await expect(page.locator('#crm-sales-inbox-reader')).toBeVisible();
+      await expect(page.locator('#crm-sales-inbox-open-assign')).toBeVisible({ timeout: 20000 });
+      await expect(page.locator('#crm-sales-inbox-reply')).toBeVisible();
+      await page.locator('#crm-sales-inbox-open-assign').click();
+      await expect(page.locator('#crm-sales-inbox-decide')).toBeVisible({ timeout: 20000 });
+      await expect(page.locator('#crm-sales-inbox-assign-form, #crm-sales-inbox-decide-ro').first()).toBeVisible();
     }
 
     const results = await new AxeBuilder({ page })
-      .include('#crm-main-content')
+      .include('#crm-sales-inbox-root')
       .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
       .analyze();
     const serious = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');

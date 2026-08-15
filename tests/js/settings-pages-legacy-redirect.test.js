@@ -24,6 +24,7 @@ function loadLegacy(relative, exportName) {
 }
 
 const SECTION_URLS = {
+	'my-email': '/apps/customercheck/settings/my-email',
 	mailbox: '/apps/customercheck/settings/mailbox',
 	preferences: '/apps/customercheck/settings/preferences',
 	'review-sources': '/apps/customercheck/settings/review-sources',
@@ -37,6 +38,7 @@ const APP_SECTION_URLS = {
 	tokens: '/apps/customercheck/app-settings/tokens',
 	license: '/apps/customercheck/app-settings/license',
 	'product-codes': '/apps/customercheck/app-settings/product-codes',
+	'personal-mail': '/apps/customercheck/app-settings/personal-mail',
 };
 
 function docStub({ section = 'mailbox', urls = { settingsSections: SECTION_URLS }, attr = 'data-crm-settings-section' } = {}) {

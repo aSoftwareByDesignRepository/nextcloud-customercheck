@@ -6,36 +6,110 @@
 $filterQ = (string)($_['filterQ'] ?? '');
 $filterStatus = (string)($_['filterStatus'] ?? '');
 $filterArchived = !empty($_['filterArchived']);
+$workspaceId = (int)($_['workspaceId'] ?? 0);
 $statuses = ['lead', 'active', 'paused', 'churned'];
 $labels = $_['labels'] ?? null;
 $companiesUrl = $urlGenerator->linkToRoute('customercheck.page.companies');
+$crmCompaniesHref = static function (array $extra = []) use ($companiesUrl, $workspaceId): string {
+	$query = $extra;
+	if ($workspaceId > 0) {
+		$query['workspaceId'] = $workspaceId;
+	}
+	$query = array_filter(
+		$query,
+		static fn ($v) => $v !== null && $v !== '' && $v !== false,
+	);
+	return $query === [] ? $companiesUrl : ($companiesUrl . '?' . http_build_query($query));
+};
+$filterPanelOpen = ($filterStatus !== '' || $filterArchived);
 include __DIR__ . '/common/page-start.php';
 ?>
 <div class="crm-page-actions-source header-actions" hidden>
 	<?php if (!empty($_['canWrite'])): ?>
 	<a class="crm-btn crm-btn--primary" href="<?php p($_['urls']['companyNew'] ?? '#'); ?>"><?php p($l->t('Add company')); ?></a>
 	<?php endif; ?>
-	<button type="button" class="crm-btn crm-btn--secondary" id="crm-companies-filter-toggle" aria-expanded="<?php p(($filterQ !== '' || $filterStatus !== '' || $filterArchived) ? 'true' : 'false'); ?>" aria-controls="crm-companies-filter"><?php p($l->t('More filters')); ?></button>
+	<button type="button" class="crm-btn crm-btn--secondary" id="crm-companies-filter-toggle" aria-expanded="<?php p($filterPanelOpen ? 'true' : 'false'); ?>" aria-controls="crm-companies-filter"><?php p($l->t('More filters')); ?></button>
 </div>
 <div class="crm-page-stack">
 	<nav class="crm-quick-filters" aria-label="<?php p($l->t('Quick filters')); ?>">
-		<a class="crm-quick-filter<?php if ($filterStatus === '' && !$filterArchived && $filterQ === ''): ?> is-active<?php endif; ?>" href="<?php p($companiesUrl); ?>"<?php if ($filterStatus === '' && !$filterArchived && $filterQ === ''): ?> aria-current="page"<?php endif; ?>><?php p($l->t('All')); ?></a>
-		<a class="crm-quick-filter<?php if ($filterStatus === 'active' && !$filterArchived): ?> is-active<?php endif; ?>" href="<?php p($companiesUrl); ?>?status=active"<?php if ($filterStatus === 'active' && !$filterArchived): ?> aria-current="page"<?php endif; ?>><?php p($l->t('Active')); ?></a>
-		<a class="crm-quick-filter<?php if ($filterStatus === 'lead' && !$filterArchived): ?> is-active<?php endif; ?>" href="<?php p($companiesUrl); ?>?status=lead"<?php if ($filterStatus === 'lead' && !$filterArchived): ?> aria-current="page"<?php endif; ?>><?php p($l->t('Leads')); ?></a>
-		<a class="crm-quick-filter<?php if ($filterArchived): ?> is-active<?php endif; ?>" href="<?php p($companiesUrl); ?>?archived=1"<?php if ($filterArchived): ?> aria-current="page"<?php endif; ?>><?php p($l->t('Archived')); ?></a>
+		<a class="crm-quick-filter<?php if ($filterStatus === '' && !$filterArchived): ?> is-active<?php endif; ?>" href="<?php p($crmCompaniesHref($filterQ !== '' ? ['q' => $filterQ] : [])); ?>"<?php if ($filterStatus === '' && !$filterArchived): ?> aria-current="page"<?php endif; ?>><?php p($l->t('All')); ?></a>
+		<a class="crm-quick-filter<?php if ($filterStatus === 'active' && !$filterArchived): ?> is-active<?php endif; ?>" href="<?php p($crmCompaniesHref(array_filter(['status' => 'active', 'q' => $filterQ !== '' ? $filterQ : null]))); ?>"<?php if ($filterStatus === 'active' && !$filterArchived): ?> aria-current="page"<?php endif; ?>><?php p($l->t('Active')); ?></a>
+		<a class="crm-quick-filter<?php if ($filterStatus === 'lead' && !$filterArchived): ?> is-active<?php endif; ?>" href="<?php p($crmCompaniesHref(array_filter(['status' => 'lead', 'q' => $filterQ !== '' ? $filterQ : null]))); ?>"<?php if ($filterStatus === 'lead' && !$filterArchived): ?> aria-current="page"<?php endif; ?>><?php p($l->t('Leads')); ?></a>
+		<a class="crm-quick-filter<?php if ($filterArchived): ?> is-active<?php endif; ?>" href="<?php p($crmCompaniesHref(array_filter(['archived' => '1', 'q' => $filterQ !== '' ? $filterQ : null]))); ?>"<?php if ($filterArchived): ?> aria-current="page"<?php endif; ?>><?php p($l->t('Archived')); ?></a>
 	</nav>
-	<section id="crm-companies-filter" class="crm-card crm-filter-panel" <?php if ($filterQ === '' && $filterStatus === '' && !$filterArchived): ?>hidden<?php endif; ?> aria-labelledby="crm-companies-filter-title">
+
+	<form method="get" class="crm-companies-search" action="<?php p($companiesUrl); ?>" data-crm-live-filter role="search" aria-labelledby="crm-companies-search-title" novalidate>
+		<?php if ($workspaceId > 0): ?>
+		<input type="hidden" name="workspaceId" value="<?php p((string)$workspaceId); ?>" />
+		<?php endif; ?>
+		<?php if ($filterStatus !== ''): ?>
+		<input type="hidden" name="status" value="<?php p($filterStatus); ?>" />
+		<?php endif; ?>
+		<?php if ($filterArchived): ?>
+		<input type="hidden" name="archived" value="1" />
+		<?php endif; ?>
+		<h2 id="crm-companies-search-title" class="visually-hidden"><?php p($l->t('Search companies')); ?></h2>
+		<label for="crm-companies-q" class="form-label"><?php p($l->t('Search')); ?></label>
+		<div class="crm-companies-search__row">
+			<input
+				id="crm-companies-q"
+				name="q"
+				type="search"
+				class="form-input crm-input crm-companies-search__input"
+				value="<?php p($filterQ); ?>"
+				placeholder="<?php p($l->t('Name, contact, owner, status, callback…')); ?>"
+				autocomplete="off"
+				maxlength="100"
+				enterkeyhint="search"
+				aria-describedby="crm-companies-q-hint"
+			/>
+			<button type="submit" class="crm-btn crm-btn--secondary"><?php p($l->t('Search')); ?></button>
+			<?php if ($filterQ !== '' || $filterStatus !== '' || $filterArchived): ?>
+			<a class="crm-btn crm-btn--ghost" href="<?php p($crmCompaniesHref()); ?>"><?php p($l->t('Clear')); ?></a>
+			<?php endif; ?>
+		</div>
+		<p class="crm-companies-search__hint" id="crm-companies-q-hint"><?php p($l->t('Finds company name, people, owner, status, open callbacks, and recent talk.')); ?></p>
+	</form>
+
+	<?php
+	$duplicateNameKeys = is_array($_['duplicateNameKeys'] ?? null) ? $_['duplicateNameKeys'] : [];
+	$duplicateNameCount = count($duplicateNameKeys);
+	if (!$filterArchived && $duplicateNameCount > 0):
+	?>
+	<section class="crm-callout crm-callout--warning crm-semantic-panel crm-semantic-panel--warning" role="status" aria-labelledby="crm-companies-dup-title">
+		<div class="crm-callout__body">
+			<p class="crm-callout__title" id="crm-companies-dup-title"><?php
+				p($l->n(
+					'%n company name appears more than once',
+					'%n company names appear more than once',
+					$duplicateNameCount
+				));
+			?></p>
+			<p class="crm-callout__text"><?php
+				if (!empty($_['canDelete'])) {
+					p($l->t('Open a twin, then choose Merge into… to keep one company and archive the other. People, deals, and history move to the company you keep.'));
+				} else {
+					p($l->t('Ask someone with delete permission to open a twin and use Merge into… so one company remains.'));
+				}
+			?></p>
+		</div>
+	</section>
+	<?php endif; ?>
+
+	<section id="crm-companies-filter" class="crm-card crm-filter-panel" <?php if (!$filterPanelOpen): ?>hidden<?php endif; ?> aria-labelledby="crm-companies-filter-title">
 		<header class="crm-filter-panel__head">
 			<h2 id="crm-companies-filter-title"><?php p($l->t('Filter companies')); ?></h2>
-			<p class="crm-filter-panel__intro"><?php p($l->t('Search by name or pick a status. Changes apply as you type.')); ?></p>
+			<p class="crm-filter-panel__intro"><?php p($l->t('Narrow by status or archived. Changes apply as you pick.')); ?></p>
 		</header>
 		<div class="crm-filter-panel__body">
 			<form method="get" class="crm-filter-panel__form form" action="<?php p($companiesUrl); ?>" data-crm-live-filter novalidate>
+				<?php if ($workspaceId > 0): ?>
+				<input type="hidden" name="workspaceId" value="<?php p((string)$workspaceId); ?>" />
+				<?php endif; ?>
+				<?php if ($filterQ !== ''): ?>
+				<input type="hidden" name="q" value="<?php p($filterQ); ?>" />
+				<?php endif; ?>
 				<div class="crm-filter-grid" role="group">
-					<div class="crm-filter-field">
-						<label for="crm-filter-q" class="form-label"><?php p($l->t('Search')); ?></label>
-						<input id="crm-filter-q" name="q" type="search" class="form-input crm-input" value="<?php p($filterQ); ?>" placeholder="<?php p($l->t('Company name')); ?>" autocomplete="off" />
-					</div>
 					<div class="crm-filter-field">
 						<label for="crm-filter-status" class="form-label"><?php p($l->t('Status')); ?></label>
 						<select id="crm-filter-status" name="status" class="form-select crm-input">
@@ -56,14 +130,20 @@ include __DIR__ . '/common/page-start.php';
 					</div>
 					<div class="crm-filter-field crm-filter-field--actions">
 						<button type="submit" class="crm-btn crm-btn--secondary" id="btn-apply-filter"><?php p($l->t('Refresh')); ?></button>
-						<a class="crm-btn crm-btn--ghost" id="btn-clear-filter" href="<?php p($companiesUrl); ?>"><?php p($l->t('Clear')); ?></a>
+						<a class="crm-btn crm-btn--ghost" id="btn-clear-filter" href="<?php p($crmCompaniesHref()); ?>"><?php p($l->t('Clear')); ?></a>
 					</div>
 				</div>
 			</form>
 		</div>
 	</section>
 	<section class="crm-card">
-		<header class="crm-card__header"><h2 class="crm-card__title"><?php p($filterArchived ? $l->t('Archived companies') : $l->t('All companies')); ?></h2></header>
+		<header class="crm-card__header"><h2 class="crm-card__title"><?php
+			if ($filterQ !== '') {
+				p($l->t('Search results'));
+			} else {
+				p($filterArchived ? $l->t('Archived companies') : $l->t('All companies'));
+			}
+		?></h2></header>
 		<div class="crm-card__body">
 			<div class="table-container crm-table--responsive">
 				<table class="table table--hover">
@@ -105,6 +185,10 @@ include __DIR__ . '/common/page-start.php';
 								$crmCompanyLinkLabel = (string)$c->getName();
 								include __DIR__ . '/common/crm-company-link.php';
 								if (!empty($h['inConversation'])): ?> <span class="crm-badge crm-badge--info"><?php p($l->t('In conversation')); ?></span><?php endif;
+								$nameKey = \OCA\CustomerCheck\Support\CompanyDuplicateLogic::nameKey((string)$c->getName());
+								if ($nameKey !== '' && isset($duplicateNameKeys[$nameKey])): ?>
+									<span class="crm-badge crm-badge--warning" title="<?php p($l->t('Another active company uses this name — open Merge into… on the company page.')); ?>"><?php p($l->t('Same name')); ?></span>
+								<?php endif;
 							?></td>
 							<td data-label="<?php p($l->t('Owner')); ?>">
 								<?php if ($ownerLabel !== ''): ?>
@@ -136,6 +220,13 @@ include __DIR__ . '/common/page-start.php';
 					<?php if (($_['companies'] ?? []) === []): ?>
 						<tr><td class="crm-table-empty" colspan="8">
 							<div class="crm-empty-state" role="status">
+								<?php if ($filterQ !== '' || $filterStatus !== '' || $filterArchived): ?>
+								<h3 class="crm-empty-state__title"><?php p($l->t('No companies match')); ?></h3>
+								<p class="crm-empty-state__text"><?php p($l->t('Try another word, or clear the search.')); ?></p>
+								<div class="crm-empty-state__actions">
+									<a class="crm-btn crm-btn--primary crm-btn--lg" href="<?php p($crmCompaniesHref()); ?>"><?php p($l->t('Clear')); ?></a>
+								</div>
+								<?php else: ?>
 								<h3 class="crm-empty-state__title"><?php p($l->t('No companies yet')); ?></h3>
 								<p class="crm-empty-state__text"><?php p($l->t('Add a company or import a list. ProjectCheck and InvoiceCheck are optional — CustomerCheck works alone.')); ?></p>
 								<div class="crm-empty-state__actions">
@@ -144,6 +235,7 @@ include __DIR__ . '/common/page-start.php';
 									<a class="crm-btn crm-btn--secondary" href="<?php p($_['urls']['import'] ?? '#'); ?>"><?php p($l->t('Import')); ?></a>
 									<?php endif; ?>
 								</div>
+								<?php endif; ?>
 							</div>
 						</td></tr>
 					<?php endif; ?>

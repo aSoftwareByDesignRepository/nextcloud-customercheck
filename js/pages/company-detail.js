@@ -172,7 +172,10 @@
           return html;
         }
         if (f.type === 'textarea') {
-          html += '<textarea class="crm-input form-input" id="' + id + '-' + fname + '" name="' + fname + '" rows="3"' +
+          // rows: default 3; callers may pass 2 for short multi-line titles (granny-readable, not a tiny strip).
+          const rowsRaw = parseInt(String(f.rows != null ? f.rows : 3), 10);
+          const rows = Number.isFinite(rowsRaw) && rowsRaw >= 2 ? Math.min(rowsRaw, 12) : 3;
+          html += '<textarea class="crm-input form-input form-textarea" id="' + id + '-' + fname + '" name="' + fname + '" rows="' + rows + '"' +
             (f.maxlength !== undefined ? ' maxlength="' + escapeHtml(String(f.maxlength)) + '"' : '') +
             (f.required ? ' required' : '') + '>' +
             (f.value ? escapeHtml(String(f.value)) : '') + '</textarea>';
@@ -312,6 +315,22 @@
         resolve(data);
       });
     });
+  }
+
+  /** Local calendar YYYY-MM-DD — never toISOString (UTC day shift). */
+  function localYmd(d) {
+    const x = d instanceof Date ? d : new Date();
+    const y = x.getFullYear();
+    const m = String(x.getMonth() + 1).padStart(2, '0');
+    const day = String(x.getDate()).padStart(2, '0');
+    return y + '-' + m + '-' + day;
+  }
+
+  function utcYmd(d) {
+    const y = d.getUTCFullYear();
+    const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(d.getUTCDate()).padStart(2, '0');
+    return y + '-' + m + '-' + day;
   }
 
   function formatDisplayDate(iso) {
@@ -559,21 +578,21 @@
         variant: 'danger',
         optionalCheckbox: true,
         optionalCheckboxChecked: true,
-        optionalCheckboxLabel: t('Put their shared mail back in Review'),
+        optionalCheckboxLabel: t('Put their shared mail back in Assign'),
       });
       if (!ok || ok.confirmed === false) return;
-      const returnMailToReview = !!(ok && ok.optionalChecked);
+      const returnMailToAssign = !!(ok && ok.optionalChecked);
       try {
         const updatedAt = row ? (row.getAttribute('data-updated-at') || '') : '';
-        const res = await Api.del('/persons/' + personId, { updatedAt, returnMailToReview });
+        const res = await Api.del('/persons/' + personId, { updatedAt, returnMailToAssign });
         const data = (res && res.data) ? res.data : res;
-        const mailN = data && data.mailReturnedToReview ? parseInt(data.mailReturnedToReview, 10) : 0;
+        const mailN = data && data.mailReturnedToAssign ? parseInt(data.mailReturnedToAssign, 10) : 0;
         const live = document.getElementById('crm-live-region');
         if (live) {
           if (mailN > 0) {
             live.textContent = personName
-              ? t('Removed “%s”. %s mail item(s) returned to Review.', [personName, String(mailN)])
-              : t('Person removed. %s mail item(s) returned to Review.', [String(mailN)]);
+              ? t('Removed “%s”. %s mail item(s) returned to Assign.', [personName, String(mailN)])
+              : t('Person removed. %s mail item(s) returned to Assign.', [String(mailN)]);
           } else {
             live.textContent = personName
               ? t('Removed “%s”.', [personName])
@@ -829,9 +848,17 @@
   const addActivity = document.getElementById('crm-add-activity');
   if (addActivity) {
     addActivity.addEventListener('click', async () => {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = localYmd();
       const data = await promptFields(t('Add to-do'), [
-        { name: 'title', label: t('What should you remember?'), required: true, hint: t('Example: Call Anna about renewal.') },
+        {
+          name: 'title',
+          label: t('What should you remember?'),
+          type: 'textarea',
+          rows: 2,
+          required: true,
+          maxlength: 255,
+          hint: t('Example: Call Anna about renewal.'),
+        },
         { name: 'dueDate', label: t('Due date'), type: 'date', required: true, value: today },
         {
           name: 'type',
@@ -1342,7 +1369,7 @@
   });
 
   async function openLogHours(agreementId) {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = localYmd();
     const data = await promptFields(t('Log hours'), [
       { name: 'entryDate', label: t('Date'), type: 'date', required: true, value: today },
       {
@@ -1353,7 +1380,15 @@
         value: '60',
         hint: t('Steps of 15 minutes. Default is one hour.'),
       },
-      { name: 'topic', label: t('Topic'), required: true },
+      {
+        name: 'topic',
+        label: t('Topic'),
+        type: 'textarea',
+        rows: 2,
+        required: true,
+        maxlength: 255,
+        hint: t('What did you work on? A short sentence is fine.'),
+      },
     ]);
     if (!data) return;
     if (!data.entryDate) data.entryDate = today;
@@ -1552,16 +1587,16 @@
     if (!isoDate) {
       const d = new Date();
       d.setFullYear(d.getFullYear() + years);
-      return d.toISOString().slice(0, 10);
+      return localYmd(d);
     }
     const parts = String(isoDate).split('-').map((n) => parseInt(n, 10));
     if (parts.length !== 3 || parts.some((n) => !Number.isFinite(n))) {
       const d = new Date();
       d.setFullYear(d.getFullYear() + years);
-      return d.toISOString().slice(0, 10);
+      return localYmd(d);
     }
     const d = new Date(Date.UTC(parts[0] + years, parts[1] - 1, parts[2]));
-    return d.toISOString().slice(0, 10);
+    return utcYmd(d);
   }
 
   function paintHydrateFailure(targetId, loadingLabel) {
@@ -1750,6 +1785,57 @@
           toolbar.className = 'crm-review-board__toolbar';
           toolbar.innerHTML = '<p class="crm-muted crm-review-board__hint" role="note">' +
             escapeHtml(t('Open a row to read the message.')) + '</p>';
+          const syncSlot = document.createElement('div');
+          syncSlot.setAttribute('data-crm-company-mail-sync', '');
+          syncSlot.hidden = true;
+          toolbar.appendChild(syncSlot);
+
+          function mountCompanyMailSync() {
+            if (!window.CustomerCheckMailSync || !Api) {
+              return;
+            }
+            const wsId = root ? parseInt(root.getAttribute('data-workspace-id') || '0', 10) : 0;
+            if (!wsId) {
+              return;
+            }
+            Api.get('/workspaces/' + wsId + '/mailboxes').then(function (res) {
+              if (generation !== commandCenterGeneration) {
+                return;
+              }
+              const boxes = (res.data && res.data.items) || res.items || [];
+              const summary = {
+                mailboxCount: boxes.length,
+                lastSyncAt: null,
+                backgroundIntervalMinutes: window.CustomerCheckMailSync.BACKGROUND_MINUTES || 15,
+              };
+              boxes.forEach(function (box) {
+                const at = box && box.lastSyncAt ? String(box.lastSyncAt) : '';
+                if (at && (!summary.lastSyncAt || at > summary.lastSyncAt)) {
+                  summary.lastSyncAt = at;
+                }
+              });
+              window.CustomerCheckMailSync.mountBar(syncSlot, {
+                t: t,
+                summary: summary,
+                canSync: shellCan('write'),
+                workspaceId: wsId,
+                apiPost: function (path, body) {
+                  return Api.post(path, body).then(function (r) {
+                    return (r && r.data) || r;
+                  });
+                },
+                announce: function (msg) {
+                  if (live) live.textContent = msg;
+                },
+                onSynced: function () {
+                  return loadCommandCenter();
+                },
+              });
+            }).catch(function () {
+              syncSlot.hidden = true;
+            });
+          }
+          mountCompanyMailSync();
 
           function sortBtnHtml(col, label, sortKey, sortDir) {
             const active = sortKey === col;
@@ -1772,9 +1858,11 @@
           list.setAttribute('aria-label', t('Message list'));
           list.tabIndex = 0;
 
-          const detailHost = document.createElement('div');
+          const detailHost = document.createElement('li');
           detailHost.className = 'crm-mail-3pane__reader crm-review-detail-row';
           detailHost.setAttribute('data-crm-talk-detail-row', '');
+          detailHost.setAttribute('role', 'listitem');
+          detailHost.setAttribute('aria-label', t('Details'));
           detailHost.hidden = true;
           const reader = document.createElement('section');
           reader.className = 'crm-review-detail crm-review-reader';
@@ -1787,22 +1875,66 @@
             escapeHtml(t('Select a message to read.')) + '</p></div>';
           detailHost.appendChild(reader);
 
+          const talkSection = document.getElementById('crm-communication');
+          const persistedTalkQ = talkSection
+            ? String(talkSection.getAttribute('data-crm-talk-q') || '')
+            : '';
+
           const models = items.map(function (item, idx) {
             const whenRaw = String(item.occurredAt || item.sentAt || '').trim();
             const whenTs = whenRaw
-              ? (new Date(/T|\s\d{1,2}:/.test(whenRaw) ? whenRaw : (whenRaw + 'T12:00:00')).getTime() || 0)
+              ? (function () {
+                const normalized = /T/.test(whenRaw)
+                  ? whenRaw
+                  : (/^\d{4}-\d{2}-\d{2}\s+\d{1,2}:/.test(whenRaw)
+                    ? whenRaw.replace(' ', 'T')
+                    : (whenRaw + 'T12:00:00'));
+                return new Date(normalized).getTime() || 0;
+              }())
               : 0;
+            const from = String(item.from || item.personName || feedKindLabel(item.kind) || '');
+            const subject = String(item.subject || '');
+            const status = feedKindLabel(item.kind);
+            const snippet = String(item.snippet || '');
+            const whenLabel = whenRaw ? formatDisplayDate(whenRaw) : '';
+            const haystack = [from, subject, snippet, status, whenRaw, whenLabel, String(item.title || '')]
+              .join('\n')
+              .toLowerCase();
             return {
               item: item,
               idx: idx,
               id: String(item.id || ('feed-' + idx)),
-              from: String(item.from || item.personName || feedKindLabel(item.kind) || ''),
-              subject: String(item.subject || ''),
-              status: feedKindLabel(item.kind),
+              from: from,
+              subject: subject,
+              status: status,
               whenRaw: whenRaw,
               whenTs: whenTs,
+              haystack: haystack,
             };
           });
+
+          function currentTalkQuery() {
+            const el = board.querySelector('#crm-talk-q');
+            return el ? String(el.value || '').trim() : '';
+          }
+
+          function persistTalkQuery(q) {
+            const next = String(q || '').trim();
+            if (!talkSection) return;
+            if (next) talkSection.setAttribute('data-crm-talk-q', next);
+            else talkSection.removeAttribute('data-crm-talk-q');
+          }
+
+          function talkMatchesQuery(model, q) {
+            const needle = String(q || '').trim().toLowerCase();
+            if (!needle) return true;
+            // Every whitespace-separated token must match (from/subject/date/snippet).
+            const tokens = needle.split(/\s+/).filter(Boolean);
+            if (!tokens.length) return true;
+            return tokens.every(function (tok) {
+              return model.haystack.indexOf(tok) !== -1;
+            });
+          }
 
           function sortedModels() {
             const key = board.getAttribute('data-crm-talk-sort') || 'sent';
@@ -1831,6 +1963,35 @@
             });
           }
 
+          function visibleTalkModels() {
+            const q = currentTalkQuery();
+            return sortedModels().filter(function (m) {
+              return talkMatchesQuery(m, q);
+            });
+          }
+
+          function closeTalkReader(focusRow) {
+            if (talkMailPreviewAbort) {
+              try { talkMailPreviewAbort.abort(); } catch (e) { /* ignore */ }
+              talkMailPreviewAbort = null;
+            }
+            talkMailPreviewGeneration += 1;
+            list.querySelectorAll('.crm-mail-thread-row').forEach(function (el) {
+              el.setAttribute('aria-current', 'false');
+              el.classList.remove('is-selected');
+              el.tabIndex = -1;
+            });
+            detailHost.hidden = true;
+            reader.innerHTML = '<div class="crm-mail-reader__empty crm-empty-state" role="status"><p class="crm-empty-state__text">' +
+              escapeHtml(t('Select a message to read.')) + '</p></div>';
+            const focus = focusRow && focusRow.isConnected
+              ? focusRow
+              : list.querySelector('.crm-mail-thread-row');
+            if (focus) {
+              focus.tabIndex = 0;
+            }
+          }
+
           function paintTalkReader(model) {
             if (talkMailPreviewAbort) {
               try { talkMailPreviewAbort.abort(); } catch (e) { /* ignore */ }
@@ -1855,6 +2016,9 @@
             const opt = list.querySelector('[data-crm-feed-id="' + model.id.replace(/"/g, '') + '"]');
             if (opt) {
               detailHost.hidden = false;
+              if (detailHost.parentNode !== list || opt.nextElementSibling !== detailHost) {
+                opt.after(detailHost);
+              }
               try {
                 opt.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
               } catch (e) {
@@ -1870,14 +2034,18 @@
                 '<div class="crm-mail-preview__actions crm-inline-actions crm-review-mail-tools">' +
                 '<button type="button" class="crm-btn crm-btn--secondary" data-crm-mail-preview-toggle ' +
                 'aria-expanded="false" aria-controls="' + escapeHtml(bodyId) + '" ' +
-                'title="' + escapeHtml(t('Plain text only — attachments stay in the mailbox.')) + '">' +
+                'title="' + escapeHtml(t('Shows the readable message. Formatting is sanitized on the server.')) + '">' +
                 escapeHtml(t('Show message')) + '</button>' +
+                '<button type="button" class="crm-btn crm-btn--secondary" data-crm-mail-copy ' +
+                'aria-label="' + escapeHtml(t('Copy message')) + '" ' +
+                'title="' + escapeHtml(t('Copy the readable message text to the clipboard.')) + '">' +
+                escapeHtml(t('Copy message')) + '</button>' +
                 '<button type="button" class="crm-btn crm-btn--primary" data-crm-mail-reply ' +
                 'aria-label="' + escapeHtml(t('Answer: %s', [String(item.subject || item.title || t('Shared mail'))])) + '" ' +
-                'title="' + escapeHtml(t('Opens your mail program with To and subject filled in. CustomerCheck does not send the email.')) + '">' +
+                'title="' + escapeHtml(t('Reply from your connected personal or team email, or open your mail program.')) + '">' +
                 escapeHtml(t('Answer')) + '</button></div>' +
-                '<pre class="crm-mail-preview__body" id="' + escapeHtml(bodyId) + '" role="region" aria-label="' +
-                escapeHtml(t('Message text')) + '" tabindex="0" hidden></pre></div>';
+                '<div class="crm-mail-preview__body" id="' + escapeHtml(bodyId) + '" role="article" aria-label="' +
+                escapeHtml(t('Message text')) + '" tabindex="0" hidden></div></div>';
             } else if (item.snippet) {
               actionsHtml = '<p class="crm-muted">' + escapeHtml(String(item.snippet)) + '</p>';
             }
@@ -1902,12 +2070,80 @@
             if (!previewWrap) return;
             const toggle = previewWrap.querySelector('[data-crm-mail-preview-toggle]');
             const replyBtn = previewWrap.querySelector('[data-crm-mail-reply]');
-            const pre = previewWrap.querySelector('.crm-mail-preview__body');
+            const copyBtn = previewWrap.querySelector('[data-crm-mail-copy]');
+            const bodyEl = previewWrap.querySelector('.crm-mail-preview__body');
             function isStaleTalkPreview() {
               return previewGen !== talkMailPreviewGeneration || !previewWrap.isConnected;
             }
             function isAbortError(err) {
               return !!(err && (err.name === 'AbortError' || err.code === 20));
+            }
+            async function loadTalkPreviewBody() {
+              if (!bodyEl || !toggle) return false;
+              if (bodyEl.getAttribute('data-loaded') === '1') {
+                bodyEl.hidden = false;
+                toggle.setAttribute('aria-expanded', 'true');
+                toggle.textContent = t('Hide message');
+                return true;
+              }
+              if (toggle.getAttribute('aria-busy') === 'true') return false;
+              toggle.disabled = true;
+              toggle.setAttribute('aria-busy', 'true');
+              try {
+                const stack = document.querySelector('.crm-page-stack[data-company-id]');
+                const ws = stack ? parseInt(stack.getAttribute('data-workspace-id') || '0', 10) : 0;
+                if (!(ws > 0)) throw new Error(t('Workspace missing on this page.'));
+                const res = await Api.post(
+                  '/workspaces/' + ws + '/mail/' + crmMailId + '/preview',
+                  {},
+                  previewSignal ? { signal: previewSignal } : undefined,
+                );
+                if (isStaleTalkPreview()) return false;
+                const payload = (res && res.data) || res || {};
+                const bodyHtml = payload.bodyHtml ? String(payload.bodyHtml) : '';
+                const textBody = payload.preview || '';
+                // FAC-16: only render server-sanitized HTML; never invent markup client-side.
+                if (bodyHtml !== '') {
+                  bodyEl.innerHTML = bodyHtml;
+                  bodyEl.classList.add('crm-mail-preview__body--html');
+                  bodyEl.classList.remove('crm-mail-preview__body--plain');
+                } else {
+                  bodyEl.classList.remove('crm-mail-preview__body--html');
+                  bodyEl.classList.add('crm-mail-preview__body--plain');
+                  bodyEl.textContent = textBody !== '' ? textBody : t('No message text could be loaded.');
+                }
+                if (payload.truncated) {
+                  const note = document.createElement('p');
+                  note.className = 'crm-muted';
+                  note.textContent = t('(Preview truncated)');
+                  bodyEl.appendChild(note);
+                }
+                bodyEl.setAttribute('data-loaded', '1');
+                bodyEl.hidden = false;
+                toggle.setAttribute('aria-expanded', 'true');
+                toggle.textContent = t('Hide message');
+                return true;
+              } catch (e) {
+                if (isAbortError(e) || isStaleTalkPreview()) return false;
+                const errMsg = (e.payload && e.payload.message) || e.message || String(e);
+                bodyEl.textContent = errMsg;
+                bodyEl.hidden = false;
+                bodyEl.removeAttribute('data-loaded');
+                bodyEl.setAttribute('role', 'alert');
+                toggle.setAttribute('aria-expanded', 'false');
+                toggle.textContent = t('Show message');
+                await C.alertDialog({
+                  title: t('Could not load message'),
+                  message: errMsg,
+                  variant: 'danger',
+                });
+                return false;
+              } finally {
+                if (toggle && previewWrap.isConnected) {
+                  toggle.disabled = false;
+                  toggle.removeAttribute('aria-busy');
+                }
+              }
             }
             async function openReplyCompose() {
               if (!replyBtn || replyBtn.getAttribute('aria-busy') === 'true') return;
@@ -1922,7 +2158,7 @@
                 const thin = !pack.available || String(pack.bodyText || '').length < 40;
                 if (thin) {
                   try {
-                    // Hydrate once when Answer is first — richer quote in mailto.
+                    // Hydrate once when Answer is first — richer quote for in-app send.
                     await Api.post('/workspaces/' + ws + '/mail/' + crmMailId + '/preview', {}, previewSignal ? { signal: previewSignal } : undefined);
                     res = await Api.get('/workspaces/' + ws + '/mail/' + crmMailId + '/reply');
                     pack = (res && res.data) || res || {};
@@ -1931,6 +2167,16 @@
                 if (isStaleTalkPreview()) return;
                 if (!pack.available) {
                   await C.alertDialog({ title: t('Cannot answer'), message: t('This message has no usable reply address.'), variant: 'warning' });
+                  return;
+                }
+                const SharedMail = window.CustomerCheckSharedMail;
+                if (SharedMail && typeof SharedMail.offerPreparedMail === 'function') {
+                  await SharedMail.offerPreparedMail(pack, {
+                    companyId: companyId || parseInt(String(pack.companyId || 0), 10) || 0,
+                    title: t('Answer'),
+                    replyMode: true,
+                    mailboxId: parseInt(String(pack.mailboxId || item.mailboxId || 0), 10) || 0,
+                  });
                   return;
                 }
                 const rawUrl = pack.mailAppUrl || pack.mailtoUrl || '';
@@ -1952,60 +2198,69 @@
               }
             }
             if (replyBtn) replyBtn.addEventListener('click', function () { void openReplyCompose(); });
-            if (toggle && pre) {
+            if (copyBtn && bodyEl) {
+              copyBtn.addEventListener('click', async function () {
+                const ok = await loadTalkPreviewBody();
+                if (!ok) return;
+                const text = String(bodyEl.textContent || '').trim();
+                if (!text) {
+                  await C.alertDialog({
+                    title: t('Copy message'),
+                    message: t('No message text could be loaded.'),
+                    variant: 'warning',
+                  });
+                  return;
+                }
+                const live = document.getElementById('crm-live-region');
+                try {
+                  await navigator.clipboard.writeText(text);
+                  if (live) live.textContent = t('Copied to clipboard.');
+                  copyBtn.textContent = t('Copied');
+                  setTimeout(function () {
+                    if (copyBtn.isConnected) copyBtn.textContent = t('Copy message');
+                  }, 1600);
+                } catch (e) {
+                  try {
+                    const range = document.createRange();
+                    range.selectNodeContents(bodyEl);
+                    const sel = window.getSelection();
+                    if (sel) {
+                      sel.removeAllRanges();
+                      sel.addRange(range);
+                    }
+                    bodyEl.focus({ preventScroll: true });
+                  } catch (e2) { /* ignore */ }
+                  await C.alertDialog({
+                    title: t('Copy message'),
+                    message: t('Clipboard access was denied. Select the message text and copy it.'),
+                    variant: 'warning',
+                  });
+                }
+              });
+            }
+            if (toggle && bodyEl) {
               toggle.addEventListener('click', async function () {
                 if (toggle.getAttribute('aria-busy') === 'true') return;
-                if (!pre.hidden && pre.textContent) {
-                  pre.hidden = true;
+                if (!bodyEl.hidden && bodyEl.getAttribute('data-loaded') === '1') {
+                  bodyEl.hidden = true;
                   toggle.setAttribute('aria-expanded', 'false');
                   toggle.textContent = t('Show message');
                   return;
                 }
-                if (pre.getAttribute('data-loaded') === '1') {
-                  pre.hidden = false;
+                if (bodyEl.getAttribute('data-loaded') === '1') {
+                  bodyEl.hidden = false;
                   toggle.setAttribute('aria-expanded', 'true');
                   toggle.textContent = t('Hide message');
-                  try { pre.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+                  try { bodyEl.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
                   return;
                 }
-                toggle.disabled = true;
-                toggle.setAttribute('aria-busy', 'true');
-                try {
-                  const stack = document.querySelector('.crm-page-stack[data-company-id]');
-                  const ws = stack ? parseInt(stack.getAttribute('data-workspace-id') || '0', 10) : 0;
-                  if (!(ws > 0)) throw new Error(t('Workspace missing on this page.'));
-                  const res = await Api.post(
-                    '/workspaces/' + ws + '/mail/' + crmMailId + '/preview',
-                    {},
-                    previewSignal ? { signal: previewSignal } : undefined,
-                  );
-                  if (isStaleTalkPreview()) return;
-                  const payload = (res && res.data) || res || {};
-                  const textBody = payload.preview || '';
-                  // Never use innerHTML — mail bodies are untrusted.
-                  pre.textContent = textBody !== '' ? textBody : t('No message text could be loaded.');
-                  if (payload.truncated) pre.textContent += '\n\n' + t('(Preview truncated)');
-                  pre.setAttribute('data-loaded', '1');
-                  pre.hidden = false;
-                  toggle.setAttribute('aria-expanded', 'true');
-                  toggle.textContent = t('Hide message');
-                  try { pre.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
-                } catch (e) {
-                  if (isAbortError(e) || isStaleTalkPreview()) return;
-                  await C.alertDialog({
-                    title: t('Could not load message'),
-                    message: (e.payload && e.payload.message) || e.message || String(e),
-                    variant: 'danger',
-                  });
-                } finally {
-                  if (toggle && previewWrap.isConnected) {
-                    toggle.disabled = false;
-                    toggle.removeAttribute('aria-busy');
-                  }
+                const ok = await loadTalkPreviewBody();
+                if (ok) {
+                  try { bodyEl.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
                 }
               });
               // Opening a row always loads the message — never require a second click.
-              toggle.click();
+              void loadTalkPreviewBody();
             }
           }
 
@@ -2015,7 +2270,7 @@
             const sortbar = board.querySelector('.crm-review-sortbar');
             if (sortbar) {
               sortbar.innerHTML =
-                sortBtnHtml('sent', t('Sent'), sortKey, sortDir) +
+                sortBtnHtml('sent', t('Date'), sortKey, sortDir) +
                 sortBtnHtml('from', t('From'), sortKey, sortDir) +
                 sortBtnHtml('subject', t('Subject'), sortKey, sortDir);
               sortbar.querySelectorAll('[data-crm-talk-sort]').forEach(function (btn) {
@@ -2035,11 +2290,40 @@
             const selectedEl = list.querySelector('.crm-mail-thread-row.is-selected');
             const selectedId = selectedEl ? (selectedEl.getAttribute('data-crm-feed-id') || '') : '';
             list.querySelectorAll('.crm-mail-thread-row').forEach(function (el) { el.remove(); });
+            const emptyMatch = list.querySelector('[data-crm-talk-empty-search]');
+            if (emptyMatch) emptyMatch.remove();
             detailHost.hidden = true;
             reader.innerHTML = '<div class="crm-mail-reader__empty crm-empty-state" role="status"><p class="crm-empty-state__text">' +
               escapeHtml(t('Select a message to read.')) + '</p></div>';
 
-            sortedModels().forEach(function (model) {
+            const visible = visibleTalkModels();
+            const countEl = board.querySelector('[data-crm-talk-count]');
+            const qNow = currentTalkQuery();
+            if (countEl) {
+              if (!qNow) {
+                countEl.hidden = true;
+                countEl.textContent = '';
+              } else {
+                countEl.hidden = false;
+                countEl.textContent = t('Showing %1$s of %2$s messages', [
+                  String(visible.length),
+                  String(models.length),
+                ]);
+              }
+            }
+            if (!visible.length) {
+              const emptyLi = document.createElement('li');
+              emptyLi.className = 'crm-communication-search-empty';
+              emptyLi.setAttribute('data-crm-talk-empty-search', '1');
+              emptyLi.setAttribute('role', 'status');
+              emptyLi.innerHTML = '<div class="crm-empty-state">' +
+                '<p class="crm-empty-state__text">' + escapeHtml(t('No messages match this search')) + '</p>' +
+                '</div>';
+              list.insertBefore(emptyLi, detailHost);
+              return;
+            }
+
+            visible.forEach(function (model) {
               const item = model.item;
               const li = document.createElement('li');
               li.className = 'crm-mail-thread-row crm-review-row crm-feed__item';
@@ -2083,7 +2367,12 @@
               li.appendChild(whenEl);
 
               function openRow(ev) {
-                if (ev && ev.target && ev.target.closest && ev.target.closest('a, input')) return;
+                if (ev && ev.target && ev.target.closest && ev.target.closest('a, input, button')) return;
+                // Second click / Enter on the open row collapses the reader (accordion).
+                if (li.classList.contains('is-selected')) {
+                  closeTalkReader(li);
+                  return;
+                }
                 paintTalkReader(model);
                 try { li.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (e) { /* ignore */ }
               }
@@ -2136,10 +2425,51 @@
           sortbar.setAttribute('role', 'toolbar');
           sortbar.setAttribute('aria-label', t('Sort'));
 
+          const searchHost = document.createElement('div');
+          searchHost.className = 'crm-review-toolbar crm-communication-search';
+          searchHost.setAttribute('role', 'search');
+          searchHost.setAttribute('aria-label', t('Search messages'));
+          searchHost.innerHTML =
+            '<form class="crm-form crm-review-search" data-crm-talk-search="1">' +
+            '<div class="crm-review-search__field">' +
+            '<label class="form-label" for="crm-talk-q">' + escapeHtml(t('Search messages')) + '</label>' +
+            '<input type="search" id="crm-talk-q" class="form-input crm-input" autocomplete="off" ' +
+            'placeholder="' + escapeHtml(t('From, subject, date, or snippet…')) + '" ' +
+            'value="' + escapeHtml(persistedTalkQ) + '" />' +
+            '</div>' +
+            '<div class="crm-review-search__actions">' +
+            '<button type="submit" class="crm-btn crm-btn--primary">' + escapeHtml(t('Search')) + '</button>' +
+            '</div>' +
+            '</form>' +
+            '<p class="crm-muted crm-review-count" data-crm-talk-count role="status" aria-live="polite" hidden></p>';
+
+          const talkSearchForm = searchHost.querySelector('form[data-crm-talk-search]');
+          const talkSearchInput = searchHost.querySelector('#crm-talk-q');
+          let talkSearchTimer = null;
+          function applyTalkSearchFromInput() {
+            const nextQ = talkSearchInput ? String(talkSearchInput.value || '').trim() : '';
+            persistTalkQuery(nextQ);
+            renderTalkRows();
+          }
+          if (talkSearchForm) {
+            talkSearchForm.addEventListener('submit', function (ev) {
+              ev.preventDefault();
+              if (talkSearchTimer) window.clearTimeout(talkSearchTimer);
+              applyTalkSearchFromInput();
+            });
+          }
+          if (talkSearchInput) {
+            talkSearchInput.addEventListener('input', function () {
+              if (talkSearchTimer) window.clearTimeout(talkSearchTimer);
+              talkSearchTimer = window.setTimeout(applyTalkSearchFromInput, 280);
+            });
+          }
+
           thread.appendChild(list);
+          list.appendChild(detailHost);
           pane.appendChild(thread);
-          pane.appendChild(detailHost);
           board.appendChild(toolbar);
+          board.appendChild(searchHost);
           board.appendChild(sortbar);
           board.appendChild(pane);
           feedEl.innerHTML = '';
@@ -2421,7 +2751,7 @@
     callbackBtn.addEventListener('click', async () => {
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
-      const ymd = tomorrow.toISOString().slice(0, 10);
+      const ymd = localYmd(tomorrow);
       callbackBtn.disabled = true;
       try {
         await Api.post('/companies/' + companyId + '/callbacks', {
@@ -2445,9 +2775,16 @@
     newTaskBtn.addEventListener('click', async () => {
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
-      const ymd = tomorrow.toISOString().slice(0, 10);
+      const ymd = localYmd(tomorrow);
       const data = await promptFields(t('New task'), [
-        { name: 'title', label: t('What needs doing?'), type: 'text', required: true },
+        {
+          name: 'title',
+          label: t('What needs doing?'),
+          type: 'textarea',
+          rows: 2,
+          required: true,
+          maxlength: 255,
+        },
         { name: 'dueDate', label: t('Due date'), type: 'date', required: true, value: ymd },
         {
           name: 'type',
@@ -2527,7 +2864,7 @@
         html += '<div><dt>' + escapeHtml(t('Goal')) + '</dt><dd>' + escapeHtml(plan.goal || '—') + '</dd></div>';
         html += '<div><dt>' + escapeHtml(t('Priority')) + '</dt><dd>' + escapeHtml(priorityLabel(plan.priority || 'p2')) + '</dd></div>';
         html += '<div><dt>' + escapeHtml(t('Plan owner')) + '</dt><dd>' + escapeHtml(plan.ownerUserId || '—') + '</dd></div>';
-        html += '<div><dt>' + escapeHtml(t('Next review')) + '</dt><dd>' + escapeHtml(plan.nextReviewOn || '—') + '</dd></div>';
+        html += '<div><dt>' + escapeHtml(t('Next review')) + '</dt><dd>' + escapeHtml(plan.nextAssignOn || '—') + '</dd></div>';
         if (plan.healthLabel || plan.health) {
           html += '<div><dt>' + escapeHtml(t('Health')) + '</dt><dd><span class="crm-badge">' + escapeHtml(plan.healthLabel || plan.health) + '</span></dd></div>';
         }
@@ -2564,7 +2901,7 @@
       html += '<input type="hidden" id="crm-plan-owner" name="ownerUserId" value="" />';
       html += '</div><p class="crm-muted">' + escapeHtml(t('Search by name or login, then pick a colleague. Never type a raw user id.')) + '</p></div>';
       html += '<div class="form-group"><label class="form-label" for="crm-plan-review">' + escapeHtml(t('Next review')) + '</label>';
-      html += '<input class="crm-input form-input" id="crm-plan-review" name="nextReviewOn" type="date" value="' + escapeHtml(plan.nextReviewOn || '') + '" /></div>';
+      html += '<input class="crm-input form-input" id="crm-plan-review" name="nextAssignOn" type="date" value="' + escapeHtml(plan.nextAssignOn || '') + '" /></div>';
       html += '</div></details>';
       html += '<div class="crm-form-actions"><button type="submit" class="crm-btn crm-btn--primary crm-btn--lg">' + escapeHtml(t('Save plan')) + '</button></div></form>';
       html += renderMoves(mapSteps, true);
@@ -2676,7 +3013,7 @@
               goal: form.elements.goal.value,
               priority: form.elements.priority.value,
               ownerUserId: ownerHidden ? ownerHidden.value : '',
-              nextReviewOn: form.elements.nextReviewOn.value,
+              nextAssignOn: form.elements.nextAssignOn.value,
               status: plan.status || 'active',
               updatedAt: form.getAttribute('data-plan-updated-at') || plan.updatedAt || '',
             });
@@ -2850,9 +3187,17 @@
   const addPromiseBtn = document.getElementById('crm-add-promise');
   if (addPromiseBtn) {
     addPromiseBtn.addEventListener('click', async () => {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = localYmd();
       const data = await promptFields(t('Told the customer'), [
-        { name: 'title', label: t('Title'), required: true },
+        {
+          name: 'title',
+          label: t('What did you tell them?'),
+          type: 'textarea',
+          rows: 3,
+          required: true,
+          maxlength: 255,
+          hint: t('Write it in plain words — a short sentence is enough.'),
+        },
         { name: 'dueOn', label: t('Due date'), type: 'date', value: today, required: true },
       ]);
       if (!data) return;

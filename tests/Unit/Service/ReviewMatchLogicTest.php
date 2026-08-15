@@ -25,6 +25,19 @@ final class ReviewMatchLogicTest extends TestCase
 		$this->assertSame('Acme', $r[0]['companyName']);
 	}
 
+	public function testExactPersonEmailFromDisplayHeaderScores100(): void
+	{
+		$companies = [[
+			'id' => 3,
+			'name' => 'Acme',
+			'emails' => ['ada@acme.test'],
+			'domains' => ['acme.test'],
+		]];
+		$r = ReviewMatchLogic::suggest('Ada Lovelace <ada@acme.test>', null, $companies);
+		$this->assertSame(100, $r[0]['score']);
+		$this->assertSame('person_email_exact', $r[0]['reasonCode']);
+	}
+
 	public function testDomainUniqueScores95(): void
 	{
 		$companies = [[

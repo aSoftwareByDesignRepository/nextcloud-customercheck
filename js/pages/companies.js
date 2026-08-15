@@ -13,4 +13,14 @@
       toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
     });
   }
+
+  // Granny focus: land in the always-visible search when the page has no deep hash.
+  const searchInput = document.getElementById('crm-companies-q');
+  if (searchInput && !window.location.hash && document.activeElement === document.body) {
+    try {
+      searchInput.focus({ preventScroll: true });
+    } catch (e) {
+      searchInput.focus();
+    }
+  }
 })();

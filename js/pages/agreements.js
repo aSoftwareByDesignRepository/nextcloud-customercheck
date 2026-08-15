@@ -18,6 +18,14 @@
   function escapeHtml(s) {
     return String(s || '').replace(/[<>&"]/g, (ch) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[ch]));
   }
+  /** Local calendar YYYY-MM-DD — never toISOString (UTC day shift). */
+  function localYmd(d) {
+    const x = d instanceof Date ? d : new Date();
+    const y = x.getFullYear();
+    const m = String(x.getMonth() + 1).padStart(2, '0');
+    const day = String(x.getDate()).padStart(2, '0');
+    return y + '-' + m + '-' + day;
+  }
   if (C && C.init) { C.init(); }
 
   const toggle = document.getElementById('crm-agreements-filter-toggle');
@@ -37,7 +45,7 @@
   async function openLogHours(agreementId) {
     if (!C || !Api) return;
     const id = 'crm-hours-' + Date.now();
-    const today = new Date().toISOString().slice(0, 10);
+    const today = localYmd();
     C.openDialog({
       id: id,
       title: t('Log hours'),

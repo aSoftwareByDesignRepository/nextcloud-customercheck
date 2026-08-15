@@ -12,6 +12,10 @@
 	'use strict';
 
 	const ANCHOR_SECTIONS = Object.freeze({
+		'section-my-email': 'my-email',
+		'section-my-email-heading': 'my-email',
+		'crm-ws-personal-mail-mine': 'my-email',
+		'crm-ws-personal-mail-mine-title': 'my-email',
 		'section-workspace-mailbox': 'mailbox',
 		'section-workspace-mailbox-heading': 'mailbox',
 		'crm-ws-current': 'mailbox',

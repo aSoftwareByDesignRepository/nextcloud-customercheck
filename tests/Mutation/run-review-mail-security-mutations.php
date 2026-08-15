@@ -56,15 +56,43 @@ function review_mail_security_mutations(string $appRoot): array
 		],
 		[
 			'file' => $appRoot . '/lib/Controller/PersonApiController.php',
-			'from' => "// Delete first (optimistic lock) so a conflict cannot leave mail unmatched while the person remains.\n\t\t\t\$this->persons->delete(\$id, \$ctx['uid'], \$this->updatedAtPrecondition(\$body));\n\n\t\t\tif (\$returnMail) {\n\t\t\t\t\$this->emailTouches->clearPersonId(\$id);\n\t\t\t\tif (\$email !== '' && \$workspaceId > 0) {\n\t\t\t\t\t\$mailIds = \$this->mailbox->unmatchByCompanyAndFrom(\$workspaceId, \$companyId, \$email);\n\t\t\t\t\tif (\$mailIds !== []) {\n\t\t\t\t\t\t\$this->review->returnSharedMailMessagesToReview(\$workspaceId, \$mailIds);\n\t\t\t\t\t\t\$mailReturned = count(\$mailIds);\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}",
-			'to' => "if (\$returnMail) {\n\t\t\t\t\$this->emailTouches->clearPersonId(\$id);\n\t\t\t\tif (\$email !== '' && \$workspaceId > 0) {\n\t\t\t\t\t\$mailIds = \$this->mailbox->unmatchByCompanyAndFrom(\$workspaceId, \$companyId, \$email);\n\t\t\t\t\tif (\$mailIds !== []) {\n\t\t\t\t\t\t\$this->review->returnSharedMailMessagesToReview(\$workspaceId, \$mailIds);\n\t\t\t\t\t\t\$mailReturned = count(\$mailIds);\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t\t\$this->persons->delete(\$id, \$ctx['uid'], \$this->updatedAtPrecondition(\$body));",
+			'from' => <<<'FROM'
+			// Delete first (optimistic lock) so a conflict cannot leave mail unmatched while the person remains.
+			$this->persons->delete($id, $ctx['uid'], $this->updatedAtPrecondition($body));
+
+			if ($returnMail) {
+				$this->emailTouches->clearPersonId($id);
+				if ($email !== '' && $workspaceId > 0) {
+					$mailIds = $this->mailbox->unmatchByCompanyAndFrom($workspaceId, $companyId, $email);
+					if ($mailIds !== []) {
+						$this->review->returnSharedMailMessagesToAssign($workspaceId, $mailIds);
+						$mailReturned = count($mailIds);
+					}
+				}
+			}
+FROM
+			,
+			'to' => <<<'TO'
+			if ($returnMail) {
+				$this->emailTouches->clearPersonId($id);
+				if ($email !== '' && $workspaceId > 0) {
+					$mailIds = $this->mailbox->unmatchByCompanyAndFrom($workspaceId, $companyId, $email);
+					if ($mailIds !== []) {
+						$this->review->returnSharedMailMessagesToAssign($workspaceId, $mailIds);
+						$mailReturned = count($mailIds);
+					}
+				}
+			}
+			$this->persons->delete($id, $ctx['uid'], $this->updatedAtPrecondition($body));
+TO
+			,
 			'label' => 'person_unmatch_before_delete',
 			'filter' => 'ReviewMailSecurityHardeningContractTest::testPersonDestroyDeletesBeforeUnmatchingMail|PersonRemoveReturnMailContractTest',
 		],
 		[
-			'file' => $appRoot . '/lib/Service/ReviewService.php',
-			'from' => "\$fetchLimit = \$dateOnlyQuery ? max(\$limit, min(500, \$limit * 5)) : \$limit;",
-			'to' => "\$fetchLimit = \$limit;",
+			'file' => $appRoot . '/lib/Support/ReviewSharedMailTriage.php',
+			'from' => "\t\tif (\$dateOnlyQuery) {\n\t\t\treturn max(\$limit, min(500, max(\$limit * 5, 200)));\n\t\t}",
+			'to' => "\t\tif (\$dateOnlyQuery) {\n\t\t\treturn \$limit;\n\t\t}",
 			'label' => 'date_query_loses_wide_fetch',
 			'filter' => 'ReviewMailSecurityHardeningContractTest::testListItemsWidensDateFetchAndSortsBySent',
 		],
@@ -76,11 +104,57 @@ function review_mail_security_mutations(string $appRoot): array
 			'filter' => 'ReviewMailSecurityHardeningContractTest::testListItemsWidensDateFetchAndSortsBySent',
 		],
 		[
-			'file' => $appRoot . '/lib/Service/MailboxService.php',
-			'from' => "->andWhere(\$qb->expr()->neq('triage_status', \$qb->createNamedParameter('remote_deleted')))",
-			'to' => "->andWhere(\$qb->expr()->in('triage_status', \$qb->createNamedParameter(['open', 'discarded'], IQueryBuilder::PARAM_STR_ARRAY)))",
-			'label' => 'mark_remote_deleted_skips_matched',
-			'filter' => 'ReviewMailSecurityHardeningContractTest::testMarkRemoteDeletedClearsMatchAndSkipsAlreadyPurged',
+			'file' => $appRoot . '/lib/Service/ReviewService.php',
+			'from' => "if (\$discarded < 1 && \$failed > 0) {\n\t\t\t\$first = \$errors[0]['message'] ?? \$this->l10n->t('Could not delete the selected messages.');\n\t\t\tthrow new ValidationException(Constants::ERR_VALIDATION, \$first);\n\t\t}",
+			'to' => "// mutated: silent all-fail bulk discard\n\t\t",
+			'label' => 'discard_bulk_silent_all_fail',
+			'filter' => 'ReviewDiscardBulkTest::testBulkAllImapFailuresSurfaceAsValidationError',
+		],
+		[
+			'file' => $appRoot . '/lib/Support/ImapConnection.php',
+			'from' => "return strcasecmp(\$name, 'INBOX') !== 0;",
+			'to' => 'return true;',
+			'label' => 'pick_junk_allows_inbox',
+			'filter' => 'ImapJunkFolderPickTest::testNeverReturnsInboxOrUnsafe',
+		],
+		[
+			'file' => $appRoot . '/lib/Service/ReviewService.php',
+			'from' => "if (\$discarded < 1 && \$failed > 0) {\n\t\t\t\$first = \$errors[0]['message'] ?? \$this->l10n->t('Could not mark the selected messages as spam.');\n\t\t\tthrow new ValidationException(Constants::ERR_VALIDATION, \$first);\n\t\t}",
+			'to' => "// mutated: silent all-fail bulk mark-spam\n\t\t",
+			'label' => 'mark_spam_bulk_silent_all_fail',
+			'filter' => 'ReviewMarkSpamBulkTest::testBulkAllImapFailuresSurfaceAsValidationError',
+		],
+		[
+			'file' => $appRoot . '/lib/Service/ReviewService.php',
+			'from' => '$repaired = $this->mailbox->backfillForwardHintsFromPreview(
+			$workspaceId,
+			$this->matchExcludeEmails($workspaceId),
+			Constants::MAIL_SYNC_HINT_BACKFILL_CAP,
+		);',
+			'to' => '$repaired = 0; // mutated: skip preview hint backfill',
+			'label' => 'sync_skips_preview_hint_backfill',
+			'filter' => 'MailRepairRematchTest::testContractPostMailboxSyncBackfillsHintsBeforeRematch|MailRepairRematchTest::testThunderbirdPreviewBackfillYieldsForwardFromMatch',
+		],
+		[
+			'file' => $appRoot . '/lib/Service/ReviewService.php',
+			'from' => "\$filed = \$this->reconcileKnownSharedMail(\$workspaceId);\n\t\t\$promoted = \$this->promoteOpenSharedMail(\$workspaceId);",
+			'to' => "// mutated: skip rematch of known customers\n\t\t\$filed = 0;\n\t\t\$promoted = \$this->promoteOpenSharedMail(\$workspaceId);",
+			'label' => 'sync_skips_known_customer_rematch',
+			'filter' => 'ReviewKnownCustomerRematchContractTest::testSyncSharedMailRematchesBeforeEnqueue',
+		],
+		[
+			'file' => $appRoot . '/lib/Service/ReviewService.php',
+			'from' => "\$pageSize = 5000;\n\t\tdo {\n\t\t\t\$batch = \$this->companyMapper->search(\$filters, \$pageSize, \$offset);",
+			'to' => "\$pageSize = 5000;\n\t\t// mutated: hard-cap catalog at first page only\n\t\t\$companies = \$this->companyMapper->search(\$filters, 500, 0);\n\t\tif (false) do {\n\t\t\t\$batch = \$this->companyMapper->search(\$filters, \$pageSize, \$offset);",
+			'label' => 'catalog_reverts_to_500_cap',
+			'filter' => 'ReviewKnownCustomerRematchContractTest::testSuggestionCatalogNoLongerHardCapsAt500Companies',
+		],
+		[
+			'file' => $appRoot . '/lib/Service/MailMatchLogic.php',
+			'from' => "public static function normalizeFromAddress(string \$fromAddress): string\n\t{\n\t\t\$fromAddress = trim(str_replace(\"\\xc2\\xa0\", ' ', \$fromAddress));\n\t\tif (\$fromAddress === '') {\n\t\t\treturn '';\n\t\t}\n\t\tif (preg_match('/<([^<>@\\s]+@[^<>@\\s]+)>/', \$fromAddress, \$m) === 1) {\n\t\t\treturn strtolower(trim(\$m[1]));\n\t\t}\n\t\tif (str_contains(\$fromAddress, '@') && !str_contains(\$fromAddress, ' ')) {\n\t\t\treturn strtolower(\$fromAddress);\n\t\t}\n\t\tif (preg_match('/[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}/i', \$fromAddress, \$m) === 1) {\n\t\t\treturn strtolower(trim(\$m[0]));\n\t\t}\n\n\t\treturn strtolower(\$fromAddress);\n\t}",
+			'to' => "public static function normalizeFromAddress(string \$fromAddress): string\n\t{\n\t\t// mutated: no display-name / angle-bracket extraction\n\t\treturn strtolower(trim(\$fromAddress));\n\t}",
+			'label' => 'from_header_angle_brackets_ignored',
+			'filter' => 'MailMatchLogicTest::testExactPersonMatchFromDisplayNameHeader|ReviewKnownCustomerRematchContractTest::testDisplayNameFromHeadersNormalizeForExactMatch',
 		],
 	];
 }
@@ -124,7 +198,7 @@ $failed = 0;
 $killed = 0;
 $survived = [];
 
-$baseline = 'ReviewMailSecurityHardeningContractTest|MailPreviewSecurityTest::testArchitecturePreviewSharesSyncLockKey|PersonRemoveReturnMailContractTest|ReviewSentAtLogicTest';
+$baseline = 'ReviewMailSecurityHardeningContractTest|MailPreviewSecurityTest::testArchitecturePreviewSharesSyncLockKey|PersonRemoveReturnMailContractTest|ReviewSentAtLogicTest|ReviewDiscardBulkTest|ReviewMarkSpamBulkTest|ImapJunkFolderPickTest';
 echo "BASELINE {$baseline}\n";
 if (run_phpunit($phpunit, $appRoot, $baseline) !== 0) {
 	fwrite(STDERR, "BASELINE FAIL — refusing mutations while suite is red\n");

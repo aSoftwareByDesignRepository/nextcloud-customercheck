@@ -15,8 +15,9 @@ final class BachusSimplicityUxContractTest extends TestCase
 		$this->assertStringContainsString('crm-review-primary', $js);
 		$this->assertStringContainsString('crm-quick-filters', $js);
 		$this->assertStringContainsString("t('Remind me later')", $js);
-		$this->assertStringContainsString("t('Delete mail')", $js);
-		$this->assertStringContainsString("t('Remove from Review')", $js);
+		$this->assertStringContainsString("t('Delete forever')", $js);
+		$this->assertStringContainsString("t('Mark as spam')", $js);
+		$this->assertStringContainsString("t('Remove from Assign')", $js);
 		$this->assertStringContainsString("t('Link it to a company, mark it unrelated, or remove it from this inbox.')", $js);
 		$this->assertStringContainsString("t('Suggested: %s'", $js);
 		$this->assertStringContainsString('data-crm-review-none', $js);
@@ -209,7 +210,7 @@ final class BachusSimplicityUxContractTest extends TestCase
 		$this->assertStringNotContainsString('Scan as workspace member', $reviewSrc);
 		$settingsJs = (string)file_get_contents(dirname(__DIR__, 2) . '/js/pages/settings.js');
 		$this->assertStringNotContainsString("' · #' + currentWorkspaceId", $settingsJs);
-		$this->assertStringContainsString("tr('Add a colleague below so they can help with customers.')", $settingsJs);
+		$this->assertStringContainsString("tr('Open Add a member to invite a colleague.')", $settingsJs);
 		$this->assertStringContainsString("tr('Look only')", $settingsJs);
 		$this->assertStringContainsString('focusMailboxServersIfIncomplete', $settingsJs);
 		$this->assertStringContainsString('syncMailboxEncFromPorts', $settingsJs);

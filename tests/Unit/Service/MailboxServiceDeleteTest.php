@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace OCA\CustomerCheck\Tests\Unit\Service;
 
+use OCA\CustomerCheck\Service\HtmlSanitizeService;
+
 use OCA\CustomerCheck\Exception\NotFoundException;
 use OCA\CustomerCheck\Exception\ValidationException;
 use OCA\CustomerCheck\Service\MailboxService;
@@ -30,6 +32,7 @@ final class MailboxServiceDeleteTest extends TestCase
 			$this->createMock(ICrypto::class),
 			$this->createMock(ITimeFactory::class),
 			$l10n,
+			new HtmlSanitizeService(),
 		);
 		$this->expectException(ValidationException::class);
 		$svc->delete(0, 1);
@@ -65,6 +68,7 @@ final class MailboxServiceDeleteTest extends TestCase
 			$this->createMock(ICrypto::class),
 			$this->createMock(ITimeFactory::class),
 			$l10n,
+			new HtmlSanitizeService(),
 		);
 		$this->expectException(NotFoundException::class);
 		$svc->delete(7, 99);
@@ -73,10 +77,11 @@ final class MailboxServiceDeleteTest extends TestCase
 	public function testDeleteSourceContainsReviewPurgeAndChildTables(): void
 	{
 		$src = (string)file_get_contents(dirname(__DIR__, 3) . '/lib/Service/MailboxService.php');
-		$this->assertStringContainsString('$this->purgeOpenSharedMailReviewForMessages($workspaceId, $mailMsgIds);', $src);
-		$this->assertMatchesRegularExpression('/private function purgeOpenSharedMailReviewForMessages\(int \$workspaceId, array \$mailMsgIds\): void/', $src);
+		$this->assertStringContainsString('$this->purgeOpenSharedMailAssignForMessages($workspaceId, $mailMsgIds);', $src);
+		$this->assertMatchesRegularExpression('/private function purgeOpenSharedMailAssignForMessages\(int \$workspaceId, array \$mailMsgIds\): void/', $src);
 		$this->assertStringContainsString('listMessageIdsForMailbox', $src);
-		$this->assertStringContainsString("source_kind', \$qb->createNamedParameter('shared_mail')", $src);
+		$this->assertStringContainsString('personal_mail_shared_unmatched', $src);
+		$this->assertStringContainsString("['shared_mail', 'personal_mail_shared_unmatched']", $src);
 		$this->assertStringContainsString("['open', 'follow_up', 'snoozed']", $src);
 		$this->assertStringContainsString("->delete('crm_review_item')", $src);
 		$this->assertStringContainsString("->delete('crm_mail_msg')", $src);
@@ -90,12 +95,15 @@ final class MailboxServiceDeleteTest extends TestCase
 	public function testSyncServiceDeleteUsesSameLockAsSync(): void
 	{
 		$src = (string)file_get_contents(dirname(__DIR__, 3) . '/lib/Service/MailboxSyncService.php');
-		$this->assertStringContainsString('function deleteMailbox(int $workspaceId, int $mailboxId)', $src);
+		$this->assertStringContainsString('function deleteMailbox(int $workspaceId, int $mailboxId, bool $allowPersonal = false)', $src);
 		$this->assertStringContainsString("\$lockKey = 'crm_mbox_' . \$mailboxId;", $src);
-		$this->assertStringContainsString('$this->mailboxes->delete($workspaceId, $mailboxId)', $src);
+		$this->assertStringContainsString('$this->mailboxes->delete($workspaceId, $mailboxId, $allowPersonal)', $src);
+		$this->assertStringContainsString('assertTeamMailboxForRemoteMutate', $src);
 		$this->assertStringContainsString('Sync already running for this mailbox', $src);
 		$controller = (string)file_get_contents(dirname(__DIR__, 3) . '/lib/Controller/PersonaApiController.php');
 		$this->assertStringContainsString('$this->mailboxSync->deleteMailbox($workspaceId, $id)', $controller);
+		$personal = (string)file_get_contents(dirname(__DIR__, 3) . '/lib/Service/PersonalMailService.php');
+		$this->assertStringContainsString('deleteMailbox($workspaceId, $mailboxId, true)', $personal);
 		$routes = (string)file_get_contents(dirname(__DIR__, 3) . '/appinfo/routes.php');
 		$this->assertStringContainsString("/mailboxes/{id}', 'verb' => 'DELETE'", $routes);
 		$this->assertStringContainsString("/mailboxes/{id}/remove', 'verb' => 'POST'", $routes);

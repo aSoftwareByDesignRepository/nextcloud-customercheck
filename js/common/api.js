@@ -58,7 +58,7 @@
 				return 'Server gateway error (HTTP ' + status + '). Try again in a moment.';
 			}
 			if (status === 500) {
-				return 'Server error (HTTP 500). Check Nextcloud logs — the API returned an HTML error page instead of JSON.';
+				return 'The server had a problem loading this (HTTP 500). Please try again in a moment. If it keeps failing, ask an admin to check the Nextcloud log.';
 			}
 			return 'Server returned an HTML error page instead of JSON' + (status ? ' (HTTP ' + status + ')' : '') + '.';
 		}

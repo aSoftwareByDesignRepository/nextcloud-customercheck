@@ -23,7 +23,8 @@ use Psr\Log\LoggerInterface;
  * Shared mailbox IMAP sync — product §14.1 / §17.4.
  *
  * Bounded messages/run; advisory lock per mailbox; auth fail ×3 → error.
- * Personal IMAP is never ingested — only workspace-owned rows in crm_mailbox.
+ * Team and personal mailboxes are ingested when policy allows (`personalMailEnabled`
+ * for kind=personal). Personal visibility/ACL is enforced at read time (MailAclLogic).
  */
 class MailboxSyncService
 {
@@ -32,12 +33,14 @@ class MailboxSyncService
 		private readonly ICrypto $crypto,
 		private readonly MailboxService $mailboxes,
 		private readonly WorkspaceService $workspaces,
+		/** @deprecated Quarantine notify lives on MailboxService::recordAuthFailure (US-002 AC-3). Kept for DI BC. */
 		private readonly NotificationService $notifications,
 		private readonly ILockingProvider $locks,
 		private readonly ITimeFactory $timeFactory,
 		private readonly LoggerInterface $logger,
 		private readonly IL10N $l10n,
 		private readonly RateLimitService $rateLimit,
+		private readonly MailboxAuthService $mailboxAuth,
 		private readonly ?FacadeProbeService $facades = null,
 	) {
 	}
@@ -45,15 +48,22 @@ class MailboxSyncService
 	/**
 	 * Delete one indexed shared-mailbox message on the IMAP server (spam / junk).
 	 * Idempotent when the UID is already gone. Does not change CRM triage by itself —
-	 * callers (Review discard) close the CRM copy after a successful dial.
+	 * callers (Assign discard) close the CRM copy after a successful dial.
 	 *
 	 * Prefers php-imap when available; falls back to ImapLiveProbe (same path as sync
 	 * on Docker/dev hosts without ext-imap).
 	 *
+	 * @param ?string $personalOwnerActor When set, personal mailboxes may be dialed if this
+	 *                                    actor owns the mailbox (Inbox Personal tab). Null =
+	 *                                    Assign path — personal dials stay forbidden.
+	 *
+	 * @return bool true when IMAP was dialed (or UID already gone); false when CRM-only
+	 *              (synthetic outbound: / missing uid — Assign still closes)
+	 *
 	 * @throws NotFoundException
 	 * @throws ValidationException
 	 */
-	public function deleteIndexedMessage(int $workspaceId, int $messageId): void
+	public function deleteIndexedMessage(int $workspaceId, int $messageId, ?string $personalOwnerActor = null): bool
 	{
 		$msg = $this->mailboxes->findMessageForPreview($workspaceId, $messageId);
 		if ($msg === null) {
@@ -62,12 +72,13 @@ class MailboxSyncService
 		$mailboxId = (int)$msg['mailboxId'];
 		$folder = trim((string)$msg['folderPath']) !== '' ? trim((string)$msg['folderPath']) : 'INBOX';
 		$uidRaw = trim((string)$msg['messageUid']);
-		if ($mailboxId <= 0 || $uidRaw === '' || !preg_match('/^\d+$/', $uidRaw)) {
-			throw new ValidationException(
-				Constants::ERR_VALIDATION,
-				$this->l10n->t('This message cannot be deleted from the shared mailbox (missing folder or id).'),
-			);
+		// No mailbox / no live IMAP UID → CRM-only. Never throw “missing folder or id”
+		// for outbound:… / empty / garbage UIDs (Assign + Inbox must still close).
+		if ($mailboxId <= 0 || !ImapConnection::isLiveUid($uidRaw)) {
+			return false;
 		}
+		// Live dial only — personal mailboxes need the owning actor (Inbox Personal).
+		$this->assertRemoteMutateAllowed($workspaceId, $mailboxId, $personalOwnerActor);
 		if (!ImapConnection::isSafeImapFolder($folder)) {
 			throw new ValidationException(
 				Constants::ERR_VALIDATION,
@@ -129,7 +140,7 @@ class MailboxSyncService
 			if (!function_exists('imap_open') || !function_exists('imap_delete') || !function_exists('imap_expunge')) {
 				$this->deleteIndexedMessageViaLiveProbe($workspaceId, $mailboxId, $host, $port, $user, $secret, $folder, $uidRaw, $messageId);
 
-				return;
+				return true;
 			}
 
 			$mailboxPath = ImapConnection::buildMailboxRoot($host, $port, $enc, false);
@@ -148,14 +159,14 @@ class MailboxSyncService
 				// php-imap open failed — last chance via wire probe (same as sync fallback).
 				$this->deleteIndexedMessageViaLiveProbe($workspaceId, $mailboxId, $host, $port, $user, $secret, $folder, $uidRaw, $messageId);
 
-				return;
+				return true;
 			}
 			try {
 				$ftUid = defined('FT_UID') ? FT_UID : 1;
 				// Already gone on the server → success (idempotent spam cleanup).
 				$msgNo = function_exists('imap_msgno') ? @imap_msgno($stream, (int)$uidRaw) : 0;
 				if ($msgNo < 1) {
-					return;
+					return true;
 				}
 				$ok = @imap_delete($stream, $uidRaw, $ftUid);
 				if ($ok !== true) {
@@ -186,6 +197,8 @@ class MailboxSyncService
 			} catch (\Throwable) {
 			}
 		}
+
+		return true;
 	}
 
 	/**
@@ -232,27 +245,209 @@ class MailboxSyncService
 	}
 
 	/**
-	 * Prepare Answer (mailto / Mail app) for an indexed message — no IMAP dial.
+	 * Move one indexed shared-mailbox message into the server Junk/Spam folder.
+	 * Folder is discovered on the IMAP host (never client-supplied). Same lock as delete/sync.
 	 *
-	 * @return array{to:string,subject:string,bodyText:string,mailtoUrl:string,mailAppUrl:?string,available:bool}
+	 * @param ?string $personalOwnerActor When set, personal mailboxes may be dialed if this
+	 *                                    actor owns the mailbox (Inbox Personal tab). Null =
+	 *                                    Assign path — personal dials stay forbidden.
+	 *
+	 * @return bool true when IMAP was dialed (or UID already gone); false when CRM-only
+	 *              (synthetic outbound: / missing uid — Assign still closes)
+	 *
+	 * @throws NotFoundException
+	 * @throws ValidationException
 	 */
-	public function replyComposeIndexedMessage(int $workspaceId, int $messageId): array
+	public function moveIndexedMessageToJunk(int $workspaceId, int $messageId, ?string $personalOwnerActor = null): bool
 	{
 		$msg = $this->mailboxes->findMessageForPreview($workspaceId, $messageId);
 		if ($msg === null) {
 			throw new NotFoundException($this->l10n->t('Message not found'));
 		}
+		$mailboxId = (int)$msg['mailboxId'];
+		$folder = trim((string)$msg['folderPath']) !== '' ? trim((string)$msg['folderPath']) : 'INBOX';
+		$uidRaw = trim((string)$msg['messageUid']);
+		// No mailbox / no live IMAP UID → CRM-only (same gate as deleteIndexedMessage).
+		if ($mailboxId <= 0 || !ImapConnection::isLiveUid($uidRaw)) {
+			return false;
+		}
+		$this->assertRemoteMutateAllowed($workspaceId, $mailboxId, $personalOwnerActor);
+		if (!ImapConnection::isSafeImapFolder($folder)) {
+			throw new ValidationException(
+				Constants::ERR_VALIDATION,
+				$this->l10n->t('This message cannot be marked as spam (unsafe folder).'),
+			);
+		}
+
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('*')->from('crm_mailbox')
+			->where($qb->expr()->eq('id', $qb->createNamedParameter($mailboxId)))
+			->andWhere($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId)))
+			->setMaxResults(1);
+		$r = $qb->executeQuery();
+		$row = $r->fetch();
+		$r->closeCursor();
+		if ($row === false) {
+			throw new NotFoundException($this->l10n->t('Shared mailbox not found'));
+		}
+
+		$host = ImapConnection::normalizeHost((string)$row['imap_host']);
+		if (ImapConnection::isBlockedMailHost($host)) {
+			throw new ValidationException(
+				Constants::ERR_VALIDATION,
+				$this->l10n->t('Shared mailbox host is blocked.'),
+			);
+		}
+		try {
+			$secret = $this->crypto->decrypt((string)$row['secret_enc']);
+		} catch (\Throwable) {
+			throw new ValidationException(
+				Constants::ERR_VALIDATION,
+				$this->l10n->t('Shared mailbox password could not be decrypted. Re-save the mailbox credentials in Team & mailbox.'),
+			);
+		}
+		$port = (int)$row['imap_port'];
+		$enc = ImapConnection::resolveImapEnc((string)$row['imap_enc'], $port > 0 ? $port : 993);
+		$user = ImapConnection::normalizeUsername((string)$row['username']);
+		if ($port <= 0) {
+			$port = $enc === ImapConnection::ENC_TLS ? 143 : 993;
+		}
+		if ($user === '' || $secret === '') {
+			throw new ValidationException(
+				Constants::ERR_VALIDATION,
+				$this->l10n->t('Shared mailbox credentials are incomplete. Re-save them in Team & mailbox.'),
+			);
+		}
+
+		$lockKey = 'crm_mbox_' . $mailboxId;
+		try {
+			$this->locks->acquireLock($lockKey, ILockingProvider::LOCK_EXCLUSIVE);
+		} catch (\Throwable) {
+			throw new ValidationException(
+				Constants::ERR_VALIDATION,
+				$this->l10n->t('Mailbox is busy (sync or another preview). Try again in a moment.'),
+			);
+		}
+		try {
+			// Live probe speaks IMAP over TLS (993). STARTTLS-only hosts need php-imap.
+			$probePort = $port === 143 ? 993 : $port;
+			$result = ImapLiveProbe::moveUidToJunk($host, $probePort, $user, $secret, $folder, $uidRaw, 25.0);
+			if (!empty($result['ok'])) {
+				return true;
+			}
+			$this->logger->warning('CustomerCheck IMAP move-to-junk failed', [
+				'workspaceId' => $workspaceId,
+				'mailboxId' => $mailboxId,
+				'messageId' => $messageId,
+				'uid' => $uidRaw,
+				'reason' => (string)($result['reason'] ?? ''),
+				'detail' => (string)($result['detail'] ?? ''),
+			]);
+			$reason = (string)($result['reason'] ?? '');
+			$detail = (string)($result['detail'] ?? '');
+			if ($reason === 'auth') {
+				throw new ValidationException(
+					Constants::ERR_VALIDATION,
+					$this->l10n->t('Could not sign in to the shared mailbox to mark spam. Check Team & mailbox.'),
+				);
+			}
+			if (str_contains(strtolower($detail), 'no junk') || str_contains(strtolower($detail), 'no spam')) {
+				throw new ValidationException(
+					Constants::ERR_VALIDATION,
+					$this->l10n->t('This mailbox has no Spam/Junk folder. Delete the message instead.'),
+				);
+			}
+			throw new ValidationException(
+				Constants::ERR_VALIDATION,
+				$this->l10n->t('Could not mark this message as spam on the mail server. Try again or move it in the mail host.'),
+			);
+		} finally {
+			try {
+				$this->locks->releaseLock($lockKey, ILockingProvider::LOCK_EXCLUSIVE);
+			} catch (\Throwable) {
+			}
+		}
+	}
+
+	/**
+	 * Prepare Answer (mailto / Mail app / in-app send) for an indexed message — no IMAP dial.
+	 * Same ACL as preview (never leak private personal bodies via reply pack).
+	 *
+	 * @return array{
+	 *   to:string,
+	 *   subject:string,
+	 *   bodyText:string,
+	 *   mailtoUrl:string,
+	 *   mailAppUrl:?string,
+	 *   available:bool,
+	 *   mailboxId?:int,
+	 *   companyId?:int,
+	 *   visibility?:string,
+	 *   mailboxKind?:string
+	 * }
+	 */
+	public function replyComposeIndexedMessage(
+		int $workspaceId,
+		int $messageId,
+		string $actorUid = '',
+		bool $canReadCompany = false,
+		bool $canReadOrTriageMail = true,
+	): array {
+		$msg = $this->mailboxes->findMessageForPreview($workspaceId, $messageId);
+		if ($msg === null) {
+			throw new NotFoundException($this->l10n->t('Message not found'));
+		}
+		$actorUid = trim($actorUid);
+		if ($actorUid === '') {
+			throw new ValidationException(
+				Constants::ERR_VALIDATION,
+				$this->l10n->t('Sign in to prepare a reply.'),
+			);
+		}
+		$companyId = isset($msg['companyId']) ? (int)$msg['companyId'] : 0;
+		if (!MailAclLogic::canReadMessage(
+			$actorUid,
+			[
+				'visibility' => (string)($msg['visibility'] ?? MailAclLogic::VISIBILITY_SHARED),
+				'ownerUserId' => $msg['ownerUserId'] ?? null,
+				'companyId' => $companyId > 0 ? $companyId : null,
+				'mailboxKind' => (string)($msg['mailboxKind'] ?? MailAclLogic::KIND_TEAM),
+			],
+			$canReadCompany,
+			$canReadOrTriageMail,
+		)) {
+			throw new NotFoundException($this->l10n->t('Message not found'));
+		}
 		$quote = trim((string)($msg['preview'] ?? ''));
 		if ($quote === '') {
 			$quote = $this->messageSnippet($workspaceId, $messageId);
-			// Review sync stores the From line in snippet — not useful as a quote body.
+			// Assign sync stores the From line in snippet — not useful as a quote body.
 			$asEmail = MailtoReplyBuilder::extractEmail($quote);
 			if ($asEmail !== null && strcasecmp($asEmail, $quote) === 0) {
 				$quote = '';
 			}
 		}
 
-		return $this->replyPackFromMessage($msg, $quote);
+		$pack = $this->replyPackFromMessage($msg, $quote);
+		foreach (['to', 'subject', 'bodyText', 'mailtoUrl'] as $k) {
+			if (isset($pack[$k]) && is_string($pack[$k])) {
+				$pack[$k] = MailPreviewText::ensureUtf8($pack[$k]);
+			}
+		}
+		if (isset($msg['mailboxId'])) {
+			$pack['mailboxId'] = (int)$msg['mailboxId'];
+		}
+		if ($companyId > 0) {
+			$pack['companyId'] = $companyId;
+		}
+		if (isset($msg['visibility'])) {
+			$pack['visibility'] = (string)$msg['visibility'];
+		}
+		if (isset($msg['mailboxKind'])) {
+			$pack['mailboxKind'] = (string)$msg['mailboxKind'];
+		}
+
+		return $pack;
 	}
 
 	/**
@@ -325,7 +520,33 @@ class MailboxSyncService
 	 */
 	private function withReplyPack(array $payload, array $msg): array
 	{
+		// Preview / headers must be JSON-safe UTF-8 — invalid IMAP bytes otherwise
+		// make Nextcloud JSONResponse::render() throw → HTML HTTP 500 for the client.
+		$payload['subject'] = MailPreviewText::ensureUtf8((string)($payload['subject'] ?? ''));
+		$payload['from'] = MailPreviewText::ensureUtf8((string)($payload['from'] ?? ''));
+		// Re-run full plain preview pipeline so legacy cached MIME debris is stripped on read.
+		$payload['preview'] = MailPreviewText::toPlainPreview((string)($payload['preview'] ?? ''));
+		// FAC-16: expose re-sanitized bodyHtml from findMessageForPreview (never raw DB).
+		$bodyHtml = trim((string)($msg['bodyHtml'] ?? ''));
+		if ($bodyHtml !== '') {
+			$payload['bodyHtml'] = MailPreviewText::ensureUtf8($bodyHtml);
+		} else {
+			$payload['bodyHtml'] = '';
+		}
+		if (isset($msg['mailboxId'])) {
+			$payload['mailboxId'] = (int)$msg['mailboxId'];
+		}
+		if (!isset($payload['visibility']) && isset($msg['visibility'])) {
+			$payload['visibility'] = (string)$msg['visibility'];
+		}
 		$payload['reply'] = $this->replyPackFromMessage($msg, (string)($payload['preview'] ?? ''));
+		if (isset($payload['reply']) && is_array($payload['reply'])) {
+			foreach (['to', 'subject', 'bodyText', 'mailtoUrl'] as $k) {
+				if (isset($payload['reply'][$k]) && is_string($payload['reply'][$k])) {
+					$payload['reply'][$k] = MailPreviewText::ensureUtf8($payload['reply'][$k]);
+				}
+			}
+		}
 
 		return $payload;
 	}
@@ -337,12 +558,43 @@ class MailboxSyncService
 	 *
 	 * @return array{id: int, subject: string, from: string, preview: string, cached: bool, truncated: bool, reply: array<string, mixed>}
 	 */
-	public function previewIndexedMessage(int $workspaceId, int $messageId, string $actorUid = ''): array
-	{
+	/**
+	 * @param bool $canReadCompany Workspace `read` / company.read — never invent from company_id alone (FAC-04).
+	 * @param bool $canReadOrTriageMail Workspace mail.read / triage — for shared unmatched (FAC-02/03).
+	 */
+	public function previewIndexedMessage(
+		int $workspaceId,
+		int $messageId,
+		string $actorUid = '',
+		bool $canReadCompany = false,
+		bool $canReadOrTriageMail = true,
+	): array {
 		$msg = $this->mailboxes->findMessageForPreview($workspaceId, $messageId);
 		if ($msg === null) {
 			throw new NotFoundException($this->l10n->t('Message not found'));
 		}
+		$actorUid = trim($actorUid);
+		if ($actorUid === '') {
+			throw new ValidationException(
+				Constants::ERR_VALIDATION,
+				$this->l10n->t('Sign in to load a message preview.'),
+			);
+		}
+		$companyId = isset($msg['companyId']) ? (int)$msg['companyId'] : 0;
+		if (!MailAclLogic::canReadMessage(
+			$actorUid,
+			[
+				'visibility' => (string)($msg['visibility'] ?? MailAclLogic::VISIBILITY_SHARED),
+				'ownerUserId' => $msg['ownerUserId'] ?? null,
+				'companyId' => $companyId > 0 ? $companyId : null,
+				'mailboxKind' => (string)($msg['mailboxKind'] ?? MailAclLogic::KIND_TEAM),
+			],
+			$canReadCompany,
+			$canReadOrTriageMail,
+		)) {
+			throw new NotFoundException($this->l10n->t('Message not found'));
+		}
+
 		$cached = trim((string)($msg['preview'] ?? ''));
 		if ($cached !== '') {
 			return $this->withReplyPack([
@@ -352,16 +604,8 @@ class MailboxSyncService
 				'preview' => $cached,
 				'cached' => true,
 				'truncated' => str_ends_with($cached, '…'),
+				'visibility' => (string)($msg['visibility'] ?? MailAclLogic::VISIBILITY_SHARED),
 			], $msg);
-		}
-
-		$actorUid = trim($actorUid);
-		// Uncached preview dials IMAP — never allow an anonymous/empty actor to bypass rate limits.
-		if ($actorUid === '') {
-			throw new ValidationException(
-				Constants::ERR_VALIDATION,
-				$this->l10n->t('Sign in to load a message preview.'),
-			);
 		}
 
 		$uid = trim((string)($msg['messageUid'] ?? ''));
@@ -437,13 +681,16 @@ class MailboxSyncService
 			}
 
 			try {
-				$secret = $this->crypto->decrypt((string)$row['secret_enc']);
-			} catch (\Throwable) {
+				$auth = $this->mailboxAuth->resolve($row);
+			} catch (\Throwable $e) {
 				throw new ValidationException(
 					Constants::ERR_VALIDATION,
-					$this->l10n->t('Mailbox password could not be unlocked.'),
+					$e instanceof ValidationException ? $e->getMessage() : $this->l10n->t('Mailbox password could not be unlocked.'),
 				);
 			}
+			$secret = $auth['secret'];
+			$user = $auth['user'];
+			$authMode = $auth['mode'];
 
 			$host = ImapConnection::normalizeHost((string)$row['imap_host']);
 			if (ImapConnection::isBlockedMailHost($host)) {
@@ -454,7 +701,6 @@ class MailboxSyncService
 			}
 			$port = (int)$row['imap_port'];
 			$enc = ImapConnection::resolveImapEnc((string)$row['imap_enc'], $port > 0 ? $port : 993);
-			$user = ImapConnection::normalizeUsername((string)$row['username']);
 			if ($port <= 0) {
 				$port = $enc === ImapConnection::ENC_TLS ? 143 : 993;
 			}
@@ -467,7 +713,8 @@ class MailboxSyncService
 			}
 
 			$probe = ['ok' => false, 'reason' => 'unknown', 'detail' => '', 'text' => '', 'truncated' => false];
-			$useLiveProbe = ($enc === ImapConnection::ENC_SSL && $port !== 143);
+			$useLiveProbe = ($enc === ImapConnection::ENC_SSL && $port !== 143)
+				|| $authMode === MailboxAuthService::MODE_XOAUTH2;
 			if ($useLiveProbe) {
 				$probe = ImapLiveProbe::fetchUidTextPreview(
 					$host,
@@ -476,7 +723,9 @@ class MailboxSyncService
 					$secret,
 					$folder,
 					$uid,
-					Constants::MAIL_PREVIEW_MAX_BYTES,
+					Constants::MAIL_BODY_PLAIN_MAX_BYTES,
+					20.0,
+					$authMode,
 				);
 			} elseif (!function_exists('imap_open')) {
 				throw new ValidationException(
@@ -490,7 +739,10 @@ class MailboxSyncService
 			}
 
 			if (!$probe['ok'] || trim((string)$probe['text']) === '') {
-				$fallback = $this->fetchPreviewViaPhpImap($row, $folder, $uid);
+				// php-imap cannot do XOAUTH2 — fail closed for OAuth mailboxes.
+				$fallback = $authMode === MailboxAuthService::MODE_XOAUTH2
+					? null
+					: $this->fetchPreviewViaPhpImap($row, $folder, $uid);
 				if ($fallback === null || trim($fallback) === '') {
 					$detail = ImapConnection::sanitizeError((string)($probe['detail'] ?? ''));
 					if ($detail !== '') {
@@ -506,8 +758,9 @@ class MailboxSyncService
 						$this->l10n->t('Could not load message preview from the mailbox.'),
 					);
 				}
-				$plain = MailPreviewText::toPlainPreview($fallback, Constants::MAIL_PREVIEW_MAX_BYTES);
-				$truncated = str_ends_with($plain, '…');
+				$plain = MailPreviewText::toPlainPreview($fallback, Constants::MAIL_BODY_PLAIN_MAX_BYTES);
+				$truncated = str_ends_with($plain, '…')
+					|| strlen($fallback) >= Constants::MAIL_BODY_PLAIN_MAX_BYTES;
 			} else {
 				$plain = (string)$probe['text'];
 				$truncated = !empty($probe['truncated']);
@@ -519,6 +772,8 @@ class MailboxSyncService
 
 			if ($plain !== '') {
 				try {
+					// MH-05: backfill body_text when empty; preview column stays preview-sized.
+					$this->mailboxes->cacheMessageBodies($workspaceId, (int)$again['id'], $plain);
 					$this->mailboxes->cacheMessagePreview($workspaceId, (int)$again['id'], $plain);
 				} catch (\Throwable $e) {
 					$this->logger->warning('CustomerCheck mail preview cache failed', [
@@ -627,25 +882,43 @@ class MailboxSyncService
 		$mailboxes = 0;
 		$messages = 0;
 		$errors = 0;
+		$cooldownSkipped = 0;
 		if ($this->db->tableExists('crm_mailbox')) {
 			$qb = $this->db->getQueryBuilder();
-			$qb->select('id', 'workspace_id')->from('crm_mailbox')
+			$qb->select('*')->from('crm_mailbox')
 				->where($qb->expr()->neq('status', $qb->createNamedParameter('error')));
 			$r = $qb->executeQuery();
+			$now = $this->timeFactory->getDateTime();
 			while ($row = $r->fetch()) {
 				$mailboxes++;
+				$mailboxId = (int)$row['id'];
+				$workspaceId = (int)$row['workspace_id'];
+				if ($this->mailboxes->isSyncDialCooldownActive($row, $now)) {
+					$cooldownSkipped++;
+					continue;
+				}
 				try {
-					$result = $this->syncOne((int)$row['id'], (int)$row['workspace_id']);
+					$result = $this->syncOne($mailboxId, $workspaceId);
 					$messages += (int)$result['ingested'];
+					$this->afterCronSyncResult($mailboxId, $workspaceId, $row, $result);
 				} catch (\Throwable $e) {
 					$errors++;
+					$this->mailboxes->recordSyncDialFailure(
+						$mailboxId,
+						(int)($row['sync_fail_streak'] ?? 0),
+						$e->getMessage(),
+					);
+					$this->logPersonalSyncFail($mailboxId, $workspaceId, 'exception', $e->getMessage());
 					$this->logger->warning('CustomerCheck mailbox sync failed', [
-						'mailboxId' => (int)$row['id'],
+						'event' => 'personal_mail.sync_fail',
+						'mailboxId' => $mailboxId,
+						'workspaceId' => $workspaceId,
 						'exception' => $e,
 					]);
 				}
 			}
 			$r->closeCursor();
+			$this->emitSyncFailRateAlert($mailboxes, $errors, $cooldownSkipped);
 		}
 		// Retention purge runs after sync so a concurrent ingest cannot race a
 		// mid-flight message into a half-deleted state for the same batch.
@@ -654,8 +927,471 @@ class MailboxSyncService
 			'mailboxes' => $mailboxes,
 			'messages' => $messages,
 			'errors' => $errors,
+			'cooldownSkipped' => $cooldownSkipped,
 			'purged' => $purge['purged'],
 			'purgeRemaining' => $purge['remaining'],
+		];
+	}
+
+	/**
+	 * @param array<string, mixed> $row
+	 * @param array{ingested?: int, status?: string} $result
+	 */
+	private function afterCronSyncResult(int $mailboxId, int $workspaceId, array $row, array $result): void
+	{
+		$status = (string)($result['status'] ?? '');
+		if ($status === 'ok' || in_array($status, ['locked', 'disabled', 'missing', 'cooldown'], true)) {
+			return;
+		}
+		if (in_array($status, ['auth', 'error', 'no_imap', 'network'], true)) {
+			$this->mailboxes->recordSyncDialFailure(
+				$mailboxId,
+				(int)($row['sync_fail_streak'] ?? 0),
+				'status:' . $status,
+			);
+			$this->logPersonalSyncFail($mailboxId, $workspaceId, $status, 'status:' . $status);
+		}
+	}
+
+	private function logPersonalSyncFail(int $mailboxId, int $workspaceId, string $reason, string $detail = ''): void
+	{
+		$this->logger->warning('personal_mail.sync_fail', [
+			'event' => 'personal_mail.sync_fail',
+			'reason' => $reason,
+			'detail' => mb_substr($detail, 0, 512),
+			'mailboxId' => $mailboxId,
+			'workspaceId' => $workspaceId,
+		]);
+	}
+
+	/**
+	 * Spec §6 / Zeus SF-03 — structured rate signal for ops scrapers (alert if >10% over a run).
+	 * Counts hard exceptions only (cooldown skips are not failures).
+	 */
+	private function emitSyncFailRateAlert(int $mailboxes, int $errors, int $cooldownSkipped): void
+	{
+		$attempted = max(0, $mailboxes - $cooldownSkipped);
+		if ($attempted < 3 || $errors < 1) {
+			return;
+		}
+		$rate = $errors / $attempted;
+		if ($rate <= 0.10) {
+			return;
+		}
+		$this->logger->error('personal_mail.sync_fail_rate', [
+			'event' => 'personal_mail.sync_fail_rate',
+			'mailboxes' => $mailboxes,
+			'attempted' => $attempted,
+			'errors' => $errors,
+			'cooldownSkipped' => $cooldownSkipped,
+			'rate' => round($rate, 4),
+			'threshold' => 0.10,
+		]);
+	}
+
+	/**
+	 * Sync every healthy shared mailbox in one workspace (manual “Sync now”).
+	 *
+	 * @return array{
+	 *   mailboxes: int,
+	 *   attempted: int,
+	 *   ok: int,
+	 *   ingested: int,
+	 *   locked: int,
+	 *   errors: int,
+	 *   lastSyncAt: ?string,
+	 *   message: string
+	 * }
+	 */
+	public function syncWorkspace(int $workspaceId): array
+	{
+		if ($workspaceId <= 0) {
+			throw ValidationException::field(
+				Constants::ERR_VALIDATION,
+				'workspaceId',
+				$this->l10n->t('Workspace not found.'),
+			);
+		}
+		$boxes = $this->mailboxes->listMailboxes($workspaceId, null);
+		$ingested = 0;
+		$refreshed = 0;
+		$attempted = 0;
+		$ok = 0;
+		$locked = 0;
+		$errors = 0;
+		foreach ($boxes as $box) {
+			if ((string)($box['status'] ?? '') === 'error') {
+				continue;
+			}
+			$id = (int)($box['id'] ?? 0);
+			if ($id <= 0) {
+				continue;
+			}
+			$attempted++;
+			try {
+				$result = $this->syncOne($id, $workspaceId);
+				$ingested += (int)($result['ingested'] ?? 0);
+				$refreshed += (int)($result['refreshed'] ?? 0);
+				$st = (string)($result['status'] ?? '');
+				if ($st === 'ok') {
+					$ok++;
+				} elseif ($st === 'locked') {
+					$locked++;
+				} elseif (in_array($st, ['auth', 'error', 'missing', 'no_imap'], true)) {
+					$errors++;
+				}
+			} catch (\Throwable $e) {
+				$errors++;
+				$this->logger->warning('CustomerCheck workspace mailbox sync failed', [
+					'workspaceId' => $workspaceId,
+					'mailboxId' => $id,
+					'exception' => $e,
+				]);
+			}
+		}
+
+		$lastSyncAt = self::newestLastSyncAt($this->mailboxes->listMailboxes($workspaceId, null));
+		$boxCount = count($boxes);
+		$multi = $boxCount > 1;
+
+		if ($boxes === []) {
+			$message = $this->l10n->t('No shared mailbox is connected for this workspace.');
+		} elseif ($attempted < 1) {
+			$message = $multi
+				? $this->l10n->t('All shared mailboxes need attention before sync. Open Team & mailbox settings.')
+				: $this->l10n->t('Shared mailbox needs attention before sync. Open Team & mailbox settings.');
+		} elseif ($locked > 0 && $ok < 1 && $errors < 1) {
+			$message = $multi
+				? $this->l10n->t('Sync already running for one or more mailboxes. Try again in a moment.')
+				: $this->l10n->t('Sync already running for this mailbox. Try again in a moment.');
+		} elseif ($errors > 0 && $ok < 1) {
+			$message = $multi
+				? $this->l10n->t('Could not sync the shared mailboxes. Check Team & mailbox settings.')
+				: $this->l10n->t('Could not sync the shared mailbox. Check Team & mailbox settings.');
+		} elseif ($errors > 0 && $ok > 0) {
+			$message = $ingested > 0
+				? $this->l10n->n(
+					'Synced %n new message. Some mailboxes need attention in Team & mailbox settings.',
+					'Synced %n new messages. Some mailboxes need attention in Team & mailbox settings.',
+					$ingested,
+				)
+				: $this->l10n->t('Some mailboxes synced; others need attention in Team & mailbox settings.');
+		} elseif ($ingested > 0) {
+			$message = $this->l10n->n(
+				'Synced %n new message.',
+				'Synced %n new messages.',
+				$ingested,
+			);
+		} elseif ($refreshed > 0) {
+			$message = $this->l10n->n(
+				'Updated %n existing message for matching.',
+				'Updated %n existing messages for matching.',
+				$refreshed,
+			);
+		} else {
+			$message = $multi
+				? $this->l10n->t('All shared mailboxes are up to date.')
+				: $this->l10n->t('Shared mailbox is up to date.');
+		}
+
+		return [
+			'mailboxes' => $boxCount,
+			'attempted' => $attempted,
+			'ok' => $ok,
+			'ingested' => $ingested,
+			'refreshed' => $refreshed,
+			'locked' => $locked,
+			'errors' => $errors,
+			'lastSyncAt' => $lastSyncAt,
+			'message' => $message,
+		];
+	}
+
+	/**
+	 * Backfill missing To/CC, preview, and forward hints on open indexed mail via IMAP
+	 * so reconcileKnownSharedMail can file known customers (production rows indexed
+	 * before body preview persistence or with empty headers).
+	 *
+	 * @return int number of rows patched
+	 */
+	public function repairOpenMailMatchData(int $workspaceId, int $maxProbes = Constants::MAIL_FORWARD_BODY_PROBE_CAP): int
+	{
+		if ($workspaceId <= 0 || $maxProbes <= 0 || !$this->db->tableExists('crm_mail_msg')) {
+			return 0;
+		}
+		$exclude = $this->matchExcludeEmails($workspaceId);
+		$patched = 0;
+		$afterId = 0;
+		$remaining = $maxProbes;
+		while ($remaining > 0) {
+			$candidates = $this->mailboxes->listOpenMailForRepair($workspaceId, $afterId, $remaining);
+			if ($candidates === []) {
+				break;
+			}
+			/** @var array<string, array{host: string, port: int, user: string, secret: string, enc: string}> $mailboxCreds */
+			$mailboxCreds = [];
+			/** @var array<string, list<array<string, mixed>>> $byFolder */
+			$byFolder = [];
+			foreach ($candidates as $row) {
+				$afterId = max($afterId, (int)$row['id']);
+				$uid = trim((string)$row['messageUid']);
+				if ($uid === '' || !preg_match('/^\d+$/', $uid)) {
+					continue;
+				}
+				$toEmpty = trim((string)$row['toAddrs']) === '' || trim((string)$row['toAddrs']) === '[]';
+				$hintsEmpty = trim((string)$row['forwardFromHints']) === '' || trim((string)$row['forwardFromHints']) === '[]';
+				$previewEmpty = trim((string)$row['preview']) === '';
+				$to = [];
+				$cc = [];
+				if (!$toEmpty) {
+					$decoded = json_decode((string)$row['toAddrs'], true);
+					if (is_array($decoded)) {
+						foreach ($decoded as $addr) {
+							$to[] = (string)$addr;
+						}
+					}
+				}
+				$headerHints = MailForwardLogic::hintsFromRedirectHeaders(null, null);
+				if ($hintsEmpty && !$previewEmpty) {
+					$fromPreview = MailForwardLogic::hintsFromBodyPrefix((string)$row['preview'], $exclude);
+					if ($fromPreview !== []) {
+						if ($this->mailboxes->patchOpenMailForRematch(
+							$workspaceId,
+							(int)$row['id'],
+							null,
+							null,
+							$fromPreview,
+							null,
+						)) {
+							$patched++;
+						}
+						$remaining--;
+						continue;
+					}
+				}
+				$needsBody = $hintsEmpty && MailForwardLogic::needsBodyProbe(
+					(string)$row['from'],
+					$to,
+					$cc,
+					(string)$row['subject'],
+					$exclude,
+					$headerHints,
+				);
+				if (!$toEmpty && !$needsBody) {
+					continue;
+				}
+				$mailboxId = (int)$row['mailboxId'];
+				$folderPath = (string)$row['folderPath'];
+				$key = $mailboxId . "\0" . $folderPath;
+				$byFolder[$key][] = $row;
+			}
+			if ($byFolder === []) {
+				if (count($candidates) < $remaining) {
+					break;
+				}
+				continue;
+			}
+			foreach ($byFolder as $key => $rows) {
+				if ($remaining <= 0) {
+					break;
+				}
+				[$mailboxIdRaw, $folderPath] = explode("\0", $key, 2);
+				$mailboxId = (int)$mailboxIdRaw;
+				if ($mailboxId <= 0) {
+					continue;
+				}
+				if (!isset($mailboxCreds[(string)$mailboxId])) {
+					$mailboxCreds[(string)$mailboxId] = $this->loadMailboxImapCreds($mailboxId, $workspaceId);
+				}
+				$creds = $mailboxCreds[(string)$mailboxId];
+				if ($creds === []) {
+					continue;
+				}
+				$uids = [];
+				foreach ($rows as $row) {
+					$uids[] = (string)$row['messageUid'];
+				}
+				$uids = array_slice(array_values(array_unique($uids)), 0, $remaining);
+				if ($uids === []) {
+					continue;
+				}
+				$headersByUid = ImapLiveProbe::fetchUidHeadersForUids(
+					$creds['host'],
+					$creds['port'],
+					$creds['user'],
+					$creds['secret'],
+					$folderPath,
+					$uids,
+				);
+				$bodyUids = [];
+				foreach ($rows as $row) {
+					$uid = (string)$row['messageUid'];
+					$toEmpty = trim((string)$row['toAddrs']) === '' || trim((string)$row['toAddrs']) === '[]';
+					$hintsEmpty = trim((string)$row['forwardFromHints']) === '' || trim((string)$row['forwardFromHints']) === '[]';
+					$previewEmpty = trim((string)$row['preview']) === '';
+					$hdr = $headersByUid[$uid] ?? null;
+					$to = $hdr !== null && isset($hdr['to']) ? $hdr['to'] : [];
+					$cc = $hdr !== null && isset($hdr['cc']) ? $hdr['cc'] : [];
+					$redirectHints = $hdr !== null
+						? MailForwardLogic::hintsFromRedirectHeaders($hdr['xOriginalFrom'] ?? null, $hdr['replyTo'] ?? null)
+						: [];
+					if ($hintsEmpty && MailForwardLogic::needsBodyProbe(
+						$hdr !== null ? (string)$hdr['from'] : (string)$row['from'],
+						$to,
+						$cc,
+						(string)$row['subject'],
+						$exclude,
+						$redirectHints,
+					)) {
+						$bodyUids[] = $uid;
+					}
+				}
+				$bodyUids = array_slice(array_values(array_unique($bodyUids)), 0, $remaining);
+				$bodyByUid = $bodyUids !== []
+					? ImapLiveProbe::peekTextPrefixesForUids(
+						$creds['host'],
+						$creds['port'],
+						$creds['user'],
+						$creds['secret'],
+						$folderPath,
+						$bodyUids,
+					)
+					: [];
+				foreach ($rows as $row) {
+					if ($remaining <= 0) {
+						break 2;
+					}
+					$uid = (string)$row['messageUid'];
+					$mailId = (int)$row['id'];
+					$hdr = $headersByUid[$uid] ?? null;
+					$recipients = null;
+					$fromAddr = null;
+					if ($hdr !== null) {
+						$toEmpty = trim((string)$row['toAddrs']) === '' || trim((string)$row['toAddrs']) === '[]';
+						if ($toEmpty) {
+							$recipients = array_merge(
+								isset($hdr['to']) && is_array($hdr['to']) ? $hdr['to'] : [],
+								isset($hdr['cc']) && is_array($hdr['cc']) ? $hdr['cc'] : [],
+							);
+						}
+						if (trim((string)$row['from']) === '' && trim((string)$hdr['from']) !== '') {
+							$fromAddr = (string)$hdr['from'];
+						}
+					}
+					$bodyPrefix = $bodyByUid[$uid] ?? null;
+					$forwardHints = null;
+					$preview = null;
+					if ($bodyPrefix !== null && $bodyPrefix !== '') {
+						$preview = $bodyPrefix;
+						$forwardHints = MailForwardLogic::hintsFromBodyPrefix($bodyPrefix, $exclude);
+					} elseif (trim((string)$row['preview']) !== '') {
+						$forwardHints = MailForwardLogic::hintsFromBodyPrefix((string)$row['preview'], $exclude);
+						if ($forwardHints === []) {
+							$forwardHints = null;
+						}
+					} elseif ($hdr !== null) {
+						$forwardHints = MailForwardLogic::hintsFromRedirectHeaders(
+							$hdr['xOriginalFrom'] ?? null,
+							$hdr['replyTo'] ?? null,
+						);
+						if ($forwardHints === []) {
+							$forwardHints = null;
+						}
+					}
+					if ($this->mailboxes->patchOpenMailForRematch(
+						$workspaceId,
+						$mailId,
+						$recipients,
+						$fromAddr,
+						$forwardHints,
+						$preview,
+					)) {
+						$patched++;
+					}
+					$remaining--;
+				}
+			}
+			if (count($candidates) < $remaining) {
+				break;
+			}
+		}
+
+		return $patched;
+	}
+
+	/**
+	 * @return array{host: string, port: int, user: string, secret: string, enc: string}|array{}
+	 */
+	private function loadMailboxImapCreds(int $mailboxId, int $workspaceId): array
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('*')->from('crm_mailbox')
+			->where($qb->expr()->eq('id', $qb->createNamedParameter($mailboxId)))
+			->andWhere($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId)))
+			->setMaxResults(1);
+		$r = $qb->executeQuery();
+		$row = $r->fetch();
+		$r->closeCursor();
+		if ($row === false || (string)($row['status'] ?? '') === 'error') {
+			return [];
+		}
+		try {
+			$secret = $this->crypto->decrypt((string)$row['secret_enc']);
+		} catch (\Throwable) {
+			return [];
+		}
+		$host = ImapConnection::normalizeHost((string)$row['imap_host']);
+		$port = (int)$row['imap_port'];
+		$enc = ImapConnection::resolveImapEnc((string)$row['imap_enc'], $port > 0 ? $port : 993);
+		if ($port <= 0) {
+			$port = $enc === ImapConnection::ENC_TLS ? 143 : 993;
+		}
+		if ($host === '' || ImapConnection::isBlockedMailHost($host)) {
+			return [];
+		}
+
+		return [
+			'host' => $host,
+			'port' => $port,
+			'user' => ImapConnection::normalizeUsername((string)$row['username']),
+			'secret' => $secret,
+			'enc' => $enc,
+		];
+	}
+
+	/**
+	 * @param list<array<string, mixed>> $boxes
+	 */
+	private static function newestLastSyncAt(array $boxes): ?string
+	{
+		$best = null;
+		foreach ($boxes as $box) {
+			$at = $box['lastSyncAt'] ?? null;
+			if (!is_string($at) || trim($at) === '') {
+				continue;
+			}
+			if ($best === null || $at > $best) {
+				$best = $at;
+			}
+		}
+
+		return $best;
+	}
+
+	/**
+	 * @param list<array<string, mixed>> $boxes
+	 * @return array{mailboxCount: int, lastSyncAt: ?string, backgroundIntervalMinutes: int}|null
+	 */
+	public static function mailSyncSummaryFromBoxes(array $boxes): ?array
+	{
+		if ($boxes === []) {
+			return null;
+		}
+
+		return [
+			'mailboxCount' => count($boxes),
+			'lastSyncAt' => self::newestLastSyncAt($boxes),
+			'backgroundIntervalMinutes' => (int)max(1, (int)round(Constants::MAILBOX_SYNC_INTERVAL_SECONDS / 60)),
 		];
 	}
 
@@ -753,7 +1489,21 @@ class MailboxSyncService
 			return ['ingested' => 0, 'status' => 'locked'];
 		}
 		try {
-			return $this->doSync($mailboxId, $workspaceId);
+			$result = $this->doSync($mailboxId, $workspaceId);
+			if (($result['status'] ?? '') === 'ok') {
+				$this->mailboxes->clearSyncDialFailure($mailboxId);
+			}
+
+			return $result;
+		} catch (\Throwable $e) {
+			$this->logger->error('CustomerCheck mailbox syncOne failed', [
+				'mailboxId' => $mailboxId,
+				'workspaceId' => $workspaceId,
+				'exception' => $e,
+			]);
+			$this->logPersonalSyncFail($mailboxId, $workspaceId, 'exception', $e->getMessage());
+
+			return ['ingested' => 0, 'status' => 'error'];
 		} finally {
 			try {
 				$this->locks->releaseLock($lockKey, ILockingProvider::LOCK_EXCLUSIVE);
@@ -765,9 +1515,10 @@ class MailboxSyncService
 	/**
 	 * Remove mailbox under the same advisory lock as sync — prevents ingest racing delete.
 	 *
+	 * @param bool $allowPersonal Owner disconnect only; team admin delete must leave personal alone.
 	 * @throws \OCA\CustomerCheck\Exception\ValidationException when sync holds the lock
 	 */
-	public function deleteMailbox(int $workspaceId, int $mailboxId): void
+	public function deleteMailbox(int $workspaceId, int $mailboxId, bool $allowPersonal = false): void
 	{
 		$lockKey = 'crm_mbox_' . $mailboxId;
 		try {
@@ -780,13 +1531,139 @@ class MailboxSyncService
 			);
 		}
 		try {
-			$this->mailboxes->delete($workspaceId, $mailboxId);
+			$this->mailboxes->delete($workspaceId, $mailboxId, $allowPersonal);
 		} finally {
 			try {
 				$this->locks->releaseLock($lockKey, ILockingProvider::LOCK_EXCLUSIVE);
 			} catch (\Throwable) {
 			}
 		}
+	}
+
+	/**
+	 * Assign path: never dial a personal mailbox (privacy / data-loss).
+	 * Inbox Personal tab: pass the signed-in owner as $personalOwnerActor to allow dial.
+	 */
+	private function assertRemoteMutateAllowed(int $workspaceId, int $mailboxId, ?string $personalOwnerActor): void
+	{
+		if ($this->mailboxes->resolveMailboxKind($workspaceId, $mailboxId) !== MailAclLogic::KIND_PERSONAL) {
+			return;
+		}
+		$actor = trim((string)$personalOwnerActor);
+		if ($actor === '') {
+			throw new ValidationException(
+				Constants::ERR_VALIDATION,
+				$this->l10n->t('Personal mailbox messages cannot be deleted or junked from Assign. Remove the Assign item only, or ask the owner.'),
+			);
+		}
+		$owner = $this->mailboxes->resolveMailboxOwnerUserId($workspaceId, $mailboxId);
+		if ($owner === null || !hash_equals($owner, $actor)) {
+			throw new ValidationException(
+				Constants::ERR_VALIDATION,
+				$this->l10n->t('Only the mailbox owner can delete or mark spam on personal mail.'),
+			);
+		}
+	}
+
+	/**
+	 * Inbox Personal/Team delete — ACL read gate, IMAP dial (owner-safe for personal), CRM purge + Assign close.
+	 *
+	 * @return array{ok: true, dialedRemote: bool, assignClosed: int}
+	 */
+	public function deleteIndexedMessageFromInbox(
+		int $workspaceId,
+		int $messageId,
+		string $actorUid,
+		bool $canReadCompany,
+		bool $canReadOrTriageMail,
+	): array {
+		$msg = $this->requireReadableIndexedMessage(
+			$workspaceId,
+			$messageId,
+			$actorUid,
+			$canReadCompany,
+			$canReadOrTriageMail,
+		);
+		$kind = (string)($msg['mailboxKind'] ?? MailAclLogic::KIND_TEAM);
+		$personalActor = $kind === MailAclLogic::KIND_PERSONAL ? $actorUid : null;
+		$dialed = $this->deleteIndexedMessage($workspaceId, $messageId, $personalActor);
+		$this->mailboxes->markRemoteDeleted($workspaceId, $messageId);
+		$note = $dialed
+			? $this->l10n->t('Deleted from mailbox')
+			: $this->l10n->t('Removed from Assign (no live mail-server id yet)');
+		$closed = $this->mailboxes->closeOpenAssignForMailMessage($workspaceId, $messageId, $actorUid, $note);
+
+		return ['ok' => true, 'dialedRemote' => $dialed, 'assignClosed' => $closed];
+	}
+
+	/**
+	 * Inbox Personal/Team mark-as-spam — same ACL as delete; Junk on host when live UID exists.
+	 *
+	 * @return array{ok: true, dialedRemote: bool, assignClosed: int}
+	 */
+	public function markIndexedMessageSpamFromInbox(
+		int $workspaceId,
+		int $messageId,
+		string $actorUid,
+		bool $canReadCompany,
+		bool $canReadOrTriageMail,
+	): array {
+		$msg = $this->requireReadableIndexedMessage(
+			$workspaceId,
+			$messageId,
+			$actorUid,
+			$canReadCompany,
+			$canReadOrTriageMail,
+		);
+		$kind = (string)($msg['mailboxKind'] ?? MailAclLogic::KIND_TEAM);
+		$personalActor = $kind === MailAclLogic::KIND_PERSONAL ? $actorUid : null;
+		$dialed = $this->moveIndexedMessageToJunk($workspaceId, $messageId, $personalActor);
+		$this->mailboxes->markRemoteDeleted($workspaceId, $messageId);
+		$note = $dialed
+			? $this->l10n->t('Marked as spam on mailbox')
+			: $this->l10n->t('Removed from Assign (no live mail-server id yet)');
+		$closed = $this->mailboxes->closeOpenAssignForMailMessage($workspaceId, $messageId, $actorUid, $note);
+
+		return ['ok' => true, 'dialedRemote' => $dialed, 'assignClosed' => $closed];
+	}
+
+	/**
+	 * @return array<string, mixed>
+	 */
+	private function requireReadableIndexedMessage(
+		int $workspaceId,
+		int $messageId,
+		string $actorUid,
+		bool $canReadCompany,
+		bool $canReadOrTriageMail,
+	): array {
+		$msg = $this->mailboxes->findMessageForPreview($workspaceId, $messageId);
+		if ($msg === null) {
+			throw new NotFoundException($this->l10n->t('Message not found'));
+		}
+		$actorUid = trim($actorUid);
+		if ($actorUid === '') {
+			throw new ValidationException(
+				Constants::ERR_VALIDATION,
+				$this->l10n->t('Sign in to manage this message.'),
+			);
+		}
+		$companyId = isset($msg['companyId']) ? (int)$msg['companyId'] : 0;
+		if (!MailAclLogic::canReadMessage(
+			$actorUid,
+			[
+				'visibility' => (string)($msg['visibility'] ?? MailAclLogic::VISIBILITY_SHARED),
+				'ownerUserId' => $msg['ownerUserId'] ?? null,
+				'companyId' => $companyId > 0 ? $companyId : null,
+				'mailboxKind' => (string)($msg['mailboxKind'] ?? MailAclLogic::KIND_TEAM),
+			],
+			$canReadCompany,
+			$canReadOrTriageMail,
+		)) {
+			throw new NotFoundException($this->l10n->t('Message not found'));
+		}
+
+		return $msg;
 	}
 
 	/**
@@ -798,10 +1675,13 @@ class MailboxSyncService
 	public function ingestBatch(int $workspaceId, int $mailboxId, int $folderId, array $messages): array
 	{
 		$persons = $this->personIndex($workspaceId);
+		$exclude = $this->matchExcludeEmails($workspaceId);
 		$n = 0;
+		$refreshed = 0;
 		foreach (array_slice($messages, 0, Constants::MAILBOX_SYNC_CAP) as $msg) {
-			$this->mailboxes->ingestMessage($workspaceId, $mailboxId, $folderId, $msg, $persons);
-			$n++;
+			$enriched = $this->attachOriginalFromHints($msg, $exclude, null);
+			$result = $this->mailboxes->ingestMessage($workspaceId, $mailboxId, $folderId, $enriched, $persons, $exclude);
+			self::tallyIngest($result, $n, $refreshed);
 		}
 		$now = $this->timeFactory->getDateTime()->format('Y-m-d H:i:s');
 		$qb = $this->db->getQueryBuilder();
@@ -811,7 +1691,7 @@ class MailboxSyncService
 			->set('auth_fail_count', $qb->createNamedParameter(0))
 			->where($qb->expr()->eq('id', $qb->createNamedParameter($mailboxId)))
 			->executeStatement();
-		return ['ingested' => $n];
+		return ['ingested' => $n, 'refreshed' => $refreshed];
 	}
 
 	/**
@@ -936,7 +1816,7 @@ class MailboxSyncService
 			return [
 				'ok' => true,
 				'message' => $this->l10n->t('IMAP login OK (probed without PHP IMAP extension). Install php-imap on the server before relying on background sync.'),
-				'folders' => array_slice($folders, 0, Constants::MAILBOX_MAX_FOLDERS),
+				'folders' => array_slice($folders, 0, Constants::MAILBOX_LIST_FOLDERS_MAX),
 				'via' => 'live_probe',
 				'reason' => 'ok',
 			];
@@ -959,6 +1839,121 @@ class MailboxSyncService
 			}
 		}
 		return $result;
+	}
+
+	/**
+	 * Re-LIST selectable remote folders for an existing mailbox (UTF-8 paths).
+	 * Used by personal-mail “Refresh folders” so newly created subfolders appear.
+	 *
+	 * @return list<string>
+	 */
+	public function listRemoteFoldersForMailbox(int $workspaceId, int $mailboxId): array
+	{
+		if ($workspaceId <= 0 || $mailboxId <= 0 || !$this->db->tableExists('crm_mailbox')) {
+			return ['INBOX'];
+		}
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('*')->from('crm_mailbox')
+			->where($qb->expr()->eq('id', $qb->createNamedParameter($mailboxId)))
+			->andWhere($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId)))
+			->setMaxResults(1);
+		$r = $qb->executeQuery();
+		$row = $r->fetch();
+		$r->closeCursor();
+		if ($row === false) {
+			return ['INBOX'];
+		}
+
+		try {
+			$auth = $this->mailboxAuth->resolve($row);
+		} catch (\Throwable) {
+			return ['INBOX'];
+		}
+
+		$host = ImapConnection::normalizeHost((string)($row['imap_host'] ?? ''));
+		$port = (int)($row['imap_port'] ?? 993);
+		$enc = ImapConnection::resolveImapEnc(
+			isset($row['imap_enc']) ? (string)$row['imap_enc'] : null,
+			$port > 0 ? $port : 993,
+		);
+		if ($port <= 0) {
+			$port = $enc === ImapConnection::ENC_TLS ? 143 : 993;
+		}
+		$user = (string)$auth['user'];
+		$secret = (string)$auth['secret'];
+		$mode = (string)$auth['mode'];
+
+		if ($host === '' || $user === '' || $secret === '' || ImapConnection::isBlockedMailHost($host)) {
+			return ['INBOX'];
+		}
+
+		// OAuth / missing php-imap: live probe (SSL 993).
+		if ($mode === MailboxAuthService::MODE_XOAUTH2 || !function_exists('imap_open') || !function_exists('imap_list')) {
+			$probePort = $port === 143 ? 993 : ($port > 0 ? $port : 993);
+			$probe = ImapLiveProbe::probeLogin(
+				$host,
+				$probePort,
+				$user,
+				$secret,
+				15.0,
+				$mode === MailboxAuthService::MODE_XOAUTH2 ? 'xoauth2' : 'password',
+			);
+			$folders = isset($probe['folders']) && is_array($probe['folders'])
+				? array_values(array_filter(array_map('strval', $probe['folders'])))
+				: [];
+			return $this->normalizeDiscoveredFolders($folders);
+		}
+
+		if (function_exists('imap_errors')) {
+			@imap_errors();
+		}
+		$stream = $this->openImapStream($host, $port, $enc, $user, $secret, false);
+		$novalidate = false;
+		if ($stream === false) {
+			$stream = $this->openImapStream($host, $port, $enc, $user, $secret, true);
+			$novalidate = $stream !== false;
+		}
+		if ($stream === false) {
+			$probe = ImapLiveProbe::probeLogin($host, $port > 0 ? $port : 993, $user, $secret, 15.0);
+			$folders = isset($probe['folders']) && is_array($probe['folders'])
+				? array_values(array_filter(array_map('strval', $probe['folders'])))
+				: [];
+			return $this->normalizeDiscoveredFolders($folders);
+		}
+		try {
+			return $this->normalizeDiscoveredFolders(
+				$this->listRemoteFolders($stream, $host, $port, $enc, $novalidate),
+			);
+		} finally {
+			@imap_close($stream);
+		}
+	}
+
+	/**
+	 * @param list<string> $folders
+	 * @return list<string>
+	 */
+	private function normalizeDiscoveredFolders(array $folders): array
+	{
+		$out = [];
+		$seen = [];
+		foreach ($folders as $raw) {
+			$path = ImapConnection::normalizeFolderPath((string)$raw);
+			if ($path === '' || !ImapConnection::isSafeImapFolder($path)) {
+				continue;
+			}
+			$key = \OCA\CustomerCheck\Support\ImapUtf7::folderKey($path);
+			if ($key === '' || isset($seen[$key])) {
+				continue;
+			}
+			$seen[$key] = true;
+			$out[] = $path;
+			if (count($out) >= Constants::MAILBOX_LIST_FOLDERS_MAX) {
+				break;
+			}
+		}
+
+		return $out !== [] ? $out : ['INBOX'];
 	}
 
 	/**
@@ -992,17 +1987,23 @@ class MailboxSyncService
 			return ['INBOX'];
 		}
 		$out = [];
+		$seen = [];
 		foreach ($list as $full) {
 			$path = (string)$full;
 			if (str_starts_with($path, $root)) {
 				$path = substr($path, strlen($root));
 			}
-			$path = trim($path);
-			if ($path === '') {
+			$path = ImapConnection::normalizeFolderPath($path);
+			if ($path === '' || !ImapConnection::isSafeImapFolder($path)) {
 				continue;
 			}
+			$key = \OCA\CustomerCheck\Support\ImapUtf7::folderKey($path);
+			if ($key === '' || isset($seen[$key])) {
+				continue;
+			}
+			$seen[$key] = true;
 			$out[] = $path;
-			if (count($out) >= Constants::MAILBOX_MAX_FOLDERS) {
+			if (count($out) >= Constants::MAILBOX_LIST_FOLDERS_MAX) {
 				break;
 			}
 		}
@@ -1080,6 +2081,20 @@ class MailboxSyncService
 			return ['ingested' => 0, 'status' => 'missing'];
 		}
 
+		$kind = strtolower(trim((string)($row['kind'] ?? MailAclLogic::KIND_TEAM)));
+		if ($kind === MailAclLogic::KIND_PERSONAL) {
+			$settings = $this->workspaces->getSettings($workspaceId);
+			if (empty($settings['personalMailEnabled'])) {
+				$this->logger->info('personal_mail.sync_skip', [
+					'event' => 'personal_mail.sync_skip',
+					'reason' => 'disabled',
+					'mailboxId' => $mailboxId,
+					'workspaceId' => $workspaceId,
+				]);
+				return ['ingested' => 0, 'status' => 'disabled'];
+			}
+		}
+
 		$host = ImapConnection::normalizeHost((string)$row['imap_host']);
 		if (ImapConnection::isBlockedMailHost($host)) {
 			$this->logger->warning('CustomerCheck mailbox sync blocked private/local IMAP host', [
@@ -1090,6 +2105,12 @@ class MailboxSyncService
 		}
 
 		if (!function_exists('imap_open')) {
+			return $this->doSyncViaLiveProbe($mailboxId, $workspaceId, $row);
+		}
+
+		$authKind = strtolower(trim((string)($row['auth_kind'] ?? 'imap')));
+		// OAuth mailboxes must use wire XOAUTH2 — php-imap has no XOAUTH2.
+		if ($authKind === 'google' || $authKind === 'microsoft' || trim((string)($row['secret_enc'] ?? '')) === '') {
 			return $this->doSyncViaLiveProbe($mailboxId, $workspaceId, $row);
 		}
 
@@ -1124,68 +2145,171 @@ class MailboxSyncService
 			}
 		}
 		if ($stream === false) {
-			$status = $this->mailboxes->recordAuthFailure($mailboxId, (int)$row['auth_fail_count']);
-			if ($status === 'error') {
-				$wsId = (int)($row['workspace_id'] ?? 0);
-				if ($wsId > 0) {
-					$this->notifications->notifyWorkspaceUsers(
-						$wsId,
-						Constants::NOTIFY_DIGEST,
-						'mailbox_error',
-						(string)$mailboxId,
-						['label' => (string)$row['label']],
-					);
-				}
+			$err = ImapConnection::collectErrors(
+				function_exists('imap_errors') ? @imap_errors() : null,
+				function_exists('imap_last_error') ? @imap_last_error() : null,
+			);
+			$errReason = ImapConnection::classifyError($err);
+			// Only auth failures quarantine (US-002). Network/cert/unknown → dial backoff, not reconnect spam.
+			if ($errReason === 'auth') {
+				$status = $this->mailboxes->recordAuthFailure($mailboxId, (int)$row['auth_fail_count']);
+				return ['ingested' => 0, 'status' => $status === 'error' ? 'error' : 'auth'];
 			}
-			return ['ingested' => 0, 'status' => $status];
+			$this->logger->warning('CustomerCheck mailbox sync IMAP open failed (non-auth)', [
+				'mailboxId' => $mailboxId,
+				'workspaceId' => $workspaceId,
+				'reason' => $errReason,
+				'detail' => ImapConnection::sanitizeError($err),
+			]);
+			return ['ingested' => 0, 'status' => $errReason === 'network' ? 'network' : 'error'];
 		}
 
 		$persons = $this->personIndex($workspaceId);
+		$exclude = $this->matchExcludeEmails($workspaceId);
 		$folders = $this->enabledFolders($mailboxId);
 		$ingested = 0;
-		foreach ($folders as $folder) {
-			$folderPath = (string)$folder['folder_path'];
-			if (!ImapConnection::isSafeImapFolder($folderPath)) {
-				$this->logger->warning('CustomerCheck mailbox sync skipped unsafe IMAP folder', [
-					'mailboxId' => $mailboxId,
-					'workspaceId' => $workspaceId,
-				]);
-				continue;
-			}
-			$full = $mailboxPath . $folderPath;
-			@imap_reopen($stream, $full);
-			$n = @imap_num_msg($stream);
-			if ($n === false || $n < 1) {
-				continue;
-			}
-			$start = max(1, $n - Constants::MAILBOX_SYNC_CAP + 1);
-			for ($i = $n; $i >= $start && $ingested < Constants::MAILBOX_SYNC_CAP; $i--) {
-				$hdr = @imap_headerinfo($stream, $i);
-				if ($hdr === false) {
+		$refreshed = 0;
+		$forwardBodyProbes = 0;
+		$bodyFetches = 0;
+		try {
+			foreach ($folders as $folder) {
+				$folderPath = (string)$folder['folder_path'];
+				if (!ImapConnection::isSafeImapFolder($folderPath)) {
+					$this->logger->warning('CustomerCheck mailbox sync skipped unsafe IMAP folder', [
+						'mailboxId' => $mailboxId,
+						'workspaceId' => $workspaceId,
+					]);
 					continue;
 				}
-				$uid = (string)(@imap_uid($stream, $i) ?: $i);
-				$from = '';
-				if (!empty($hdr->from) && is_array($hdr->from)) {
-					$f = $hdr->from[0];
-					$from = strtolower(trim(($f->mailbox ?? '') . '@' . ($f->host ?? '')));
+				$wirePath = ImapConnection::folderToWire($folderPath);
+				$full = $mailboxPath . $wirePath;
+				if (@imap_reopen($stream, $full) === false) {
+					$this->logger->warning('CustomerCheck mailbox sync could not reopen IMAP folder', [
+						'mailboxId' => $mailboxId,
+						'workspaceId' => $workspaceId,
+						'folder' => $folderPath,
+					]);
+					continue;
 				}
-				$subject = isset($hdr->subject)
-					? MimeHeader::decode((string)@imap_utf8($hdr->subject))
-					: '';
-				$sentAt = isset($hdr->date) ? date('Y-m-d H:i:s', strtotime((string)$hdr->date) ?: time()) : null;
-				$this->mailboxes->ingestMessage($workspaceId, $mailboxId, (int)$folder['id'], [
-					'uid' => $uid,
-					'from' => $from,
-					'subject' => $subject,
-					'snippet' => mb_substr($subject, 0, 200),
-					'sentAt' => $sentAt,
-					'direction' => 'inbound',
-				], $persons);
-				$ingested++;
+				$n = @imap_num_msg($stream);
+				if ($n === false || $n < 1) {
+					continue;
+				}
+				$start = max(1, $n - Constants::MAILBOX_SYNC_CAP + 1);
+				$scanned = 0;
+				for ($i = $n; $i >= $start && $scanned < Constants::MAILBOX_SYNC_CAP; $i--) {
+					try {
+						$hdr = @imap_headerinfo($stream, $i);
+						if ($hdr === false) {
+							continue;
+						}
+						$uid = (string)(@imap_uid($stream, $i) ?: $i);
+						$from = '';
+						if (!empty($hdr->from) && is_array($hdr->from)) {
+							$f = $hdr->from[0];
+							$from = strtolower(trim(($f->mailbox ?? '') . '@' . ($f->host ?? '')));
+						}
+						$to = self::imapAddressList($hdr->to ?? null);
+						$cc = self::imapAddressList($hdr->cc ?? null);
+						$subject = isset($hdr->subject)
+							? MimeHeader::decode((string)@imap_utf8($hdr->subject))
+							: '';
+						$sentAt = isset($hdr->date) ? date('Y-m-d H:i:s', strtotime((string)$hdr->date) ?: time()) : null;
+						// php-imap headerinfo often omits Resent-From / X-Original-From — parse the raw header.
+						$rawHdr = (string)(@imap_fetchheader($stream, $i) ?: '');
+						$fwdHdr = $rawHdr !== '' ? ImapLiveProbe::parseRfc822Headers($rawHdr) : [
+							'resentFrom' => null,
+							'xOriginalFrom' => null,
+						];
+						$resentFrom = $fwdHdr['resentFrom'] ?? null;
+						if (($resentFrom === null || $resentFrom === '') && isset($hdr->resentfromaddress)) {
+							$resentRaw = trim((string)$hdr->resentfromaddress);
+							$resentFrom = $resentRaw !== '' ? ImapLiveProbe::extractEmailAddress($resentRaw) : null;
+						}
+						$replyTo = $fwdHdr['replyTo'] ?? null;
+						if (($replyTo === null || $replyTo === '') && !empty($hdr->reply_to) && is_array($hdr->reply_to)) {
+							$rt = $hdr->reply_to[0];
+							$replyTo = strtolower(trim(($rt->mailbox ?? '') . '@' . ($rt->host ?? '')));
+							if ($replyTo === '@' || !str_contains($replyTo, '@')) {
+								$replyTo = null;
+							}
+						}
+						$msg = [
+							'uid' => $uid,
+							'from' => $from,
+							'to' => $to,
+							'cc' => $cc,
+							'replyTo' => $replyTo,
+							'resentFrom' => $resentFrom,
+							'xOriginalFrom' => $fwdHdr['xOriginalFrom'] ?? null,
+							'messageId' => $fwdHdr['messageId'] ?? null,
+							'subject' => $subject,
+							'snippet' => mb_substr($subject, 0, 200),
+							'sentAt' => $sentAt,
+							'direction' => 'inbound',
+						];
+						$bodyPrefix = null;
+						// MH-05 / Q7: persist capped plain (+ HTML when part looks like HTML) during sync.
+						if ($bodyFetches < Constants::MAIL_SYNC_BODY_FETCH_CAP) {
+							$bodies = self::fetchPhpImapBodiesCapped($stream, $i);
+							if ($bodies['plain'] !== '' || $bodies['html'] !== '') {
+								if ($bodies['plain'] !== '') {
+									$msg['bodyText'] = $bodies['plain'];
+									$msg['preview'] = MailPreviewText::toPlainPreview(
+										$bodies['plain'],
+										Constants::MAIL_PREVIEW_MAX_BYTES,
+									);
+									$bodyPrefix = mb_substr($bodies['plain'], 0, Constants::MAIL_FORWARD_BODY_PEEK_BYTES);
+								}
+								if ($bodies['html'] !== '') {
+									$msg['bodyHtml'] = $bodies['html'];
+								}
+								$bodyFetches++;
+							}
+						}
+						$headerHints = MailForwardLogic::hintsFromRedirectHeaders(
+							isset($msg['xOriginalFrom']) ? (string)$msg['xOriginalFrom'] : null,
+							isset($msg['replyTo']) ? (string)$msg['replyTo'] : null,
+						);
+						if ($bodyPrefix === null
+							&& MailForwardLogic::needsBodyProbe($from, $to, $cc, $subject, $exclude, $headerHints)
+							&& $forwardBodyProbes < Constants::MAIL_FORWARD_BODY_PROBE_CAP) {
+							// Part 1 only — never imap_body() (unbounded full MIME into memory).
+							$rawBody = (string)(@imap_fetchbody($stream, $i, '1', FT_PEEK) ?: '');
+							if ($rawBody !== '') {
+								if (strlen($rawBody) > Constants::MAIL_FORWARD_BODY_PEEK_BYTES) {
+									$rawBody = substr($rawBody, 0, Constants::MAIL_FORWARD_BODY_PEEK_BYTES);
+								}
+								$bodyPrefix = MailPreviewText::toPlainPreview(
+									$rawBody,
+									Constants::MAIL_FORWARD_BODY_PEEK_BYTES,
+								);
+								$forwardBodyProbes++;
+							}
+						}
+						$enriched = $this->attachOriginalFromHints($msg, $exclude, $bodyPrefix);
+						$result = $this->mailboxes->ingestMessage(
+							$workspaceId,
+							$mailboxId,
+							(int)$folder['id'],
+							$enriched,
+							$persons,
+							$exclude,
+						);
+						self::tallyIngest($result, $ingested, $refreshed);
+						$scanned++;
+					} catch (\Throwable $e) {
+						$this->logger->warning('CustomerCheck mailbox sync skipped one message', [
+							'mailboxId' => $mailboxId,
+							'workspaceId' => $workspaceId,
+							'exception' => $e,
+						]);
+					}
+				}
 			}
+		} finally {
+			@imap_close($stream);
 		}
-		imap_close($stream);
 
 		$now = $this->timeFactory->getDateTime()->format('Y-m-d H:i:s');
 		$u = $this->db->getQueryBuilder();
@@ -1197,7 +2321,9 @@ class MailboxSyncService
 			->where($u->expr()->eq('id', $u->createNamedParameter($mailboxId)))
 			->executeStatement();
 
-		return ['ingested' => $ingested, 'status' => 'ok'];
+		$this->logPersonalSyncOk($row, $workspaceId, $mailboxId, $ingested, $refreshed);
+
+		return ['ingested' => $ingested, 'refreshed' => $refreshed, 'status' => 'ok'];
 	}
 
 	/**
@@ -1209,16 +2335,22 @@ class MailboxSyncService
 	private function doSyncViaLiveProbe(int $mailboxId, int $workspaceId, array $row): array
 	{
 		try {
-			$secret = $this->crypto->decrypt((string)$row['secret_enc']);
+			$auth = $this->mailboxAuth->resolve($row);
 		} catch (\Throwable) {
-			$this->mailboxes->recordAuthFailure($mailboxId, (int)$row['auth_fail_count']);
+			$authKind = strtolower(trim((string)($row['auth_kind'] ?? 'imap')));
+			// OAuth resolve already counted (and notified on ×3) via MailboxAuthService.
+			if ($authKind !== 'google' && $authKind !== 'microsoft') {
+				$this->mailboxes->recordAuthFailure($mailboxId, (int)$row['auth_fail_count']);
+			}
 			return ['ingested' => 0, 'status' => 'auth'];
 		}
 
 		$host = ImapConnection::normalizeHost((string)$row['imap_host']);
 		$port = (int)$row['imap_port'];
 		$enc = ImapConnection::resolveImapEnc((string)$row['imap_enc'], $port > 0 ? $port : 993);
-		$user = ImapConnection::normalizeUsername((string)$row['username']);
+		$user = $auth['user'];
+		$secret = $auth['secret'];
+		$authMode = $auth['mode'];
 		if ($port <= 0) {
 			$port = $enc === ImapConnection::ENC_TLS ? 143 : 993;
 		}
@@ -1229,8 +2361,9 @@ class MailboxSyncService
 			]);
 			return ['ingested' => 0, 'status' => 'error'];
 		}
-		// Live probe currently speaks SSL wrap (993). STARTTLS without php-imap is not supported.
-		if ($enc !== ImapConnection::ENC_SSL || $port === 143) {
+		// Live probe currently speaks SSL wrap (993). STARTTLS without php-imap is not supported
+		// (OAuth always uses live probe — providers speak 993/SSL).
+		if ($authMode !== MailboxAuthService::MODE_XOAUTH2 && ($enc !== ImapConnection::ENC_SSL || $port === 143)) {
 			$now = $this->timeFactory->getDateTime()->format('Y-m-d H:i:s');
 			$u = $this->db->getQueryBuilder();
 			$u->update('crm_mailbox')
@@ -1242,62 +2375,151 @@ class MailboxSyncService
 		}
 
 		$persons = $this->personIndex($workspaceId);
+		$exclude = $this->matchExcludeEmails($workspaceId);
 		$folders = $this->enabledFolders($mailboxId);
 		$ingested = 0;
+		$refreshed = 0;
 		foreach ($folders as $folder) {
-			if ($ingested >= Constants::MAILBOX_SYNC_CAP) {
+			if ($ingested + $refreshed >= Constants::MAILBOX_SYNC_CAP) {
 				break;
 			}
 			$folderPath = (string)$folder['folder_path'];
 			if (!ImapConnection::isSafeImapFolder($folderPath)) {
-				$this->logger->warning('CustomerCheck mailbox live-probe sync skipped unsafe IMAP folder', [
-					'mailboxId' => $mailboxId,
-					'workspaceId' => $workspaceId,
-				]);
 				continue;
 			}
-			$remaining = Constants::MAILBOX_SYNC_CAP - $ingested;
 			$result = ImapLiveProbe::fetchRecentMessages(
 				$host,
-				$port,
+				$port > 0 ? $port : 993,
 				$user,
 				$secret,
 				$folderPath,
-				$remaining,
+				Constants::MAIL_SYNC_MAX_MESSAGES,
+				20.0,
+				$authMode,
 			);
 			if (!$result['ok']) {
-				if ($result['reason'] === 'auth') {
+				if (($result['reason'] ?? '') === 'auth') {
 					$status = $this->mailboxes->recordAuthFailure($mailboxId, (int)$row['auth_fail_count']);
-					if ($status === 'error') {
-						$wsId = (int)($row['workspace_id'] ?? $workspaceId);
-						if ($wsId > 0) {
-							$this->notifications->notifyWorkspaceUsers(
-								$wsId,
-								Constants::NOTIFY_DIGEST,
-								'mailbox_error',
-								(string)$mailboxId,
-								['label' => (string)$row['label']],
-							);
-						}
-					}
-					return ['ingested' => $ingested, 'status' => $status];
+					return ['ingested' => 0, 'status' => $status === 'error' ? 'error' : 'auth'];
 				}
-				$now = $this->timeFactory->getDateTime()->format('Y-m-d H:i:s');
-				$detail = ImapConnection::sanitizeError((string)($result['detail'] ?? 'IMAP sync failed'));
-				$u = $this->db->getQueryBuilder();
-				$u->update('crm_mailbox')
-					->set('last_error', $u->createNamedParameter($detail !== '' ? $detail : 'IMAP sync failed'))
-					->set('last_sync_at', $u->createNamedParameter($now))
-					->where($u->expr()->eq('id', $u->createNamedParameter($mailboxId)))
-					->executeStatement();
-				return ['ingested' => $ingested, 'status' => (string)$result['reason']];
+				$this->logger->warning('CustomerCheck live-probe sync folder failed', [
+					'mailboxId' => $mailboxId,
+					'folder' => $folderPath,
+					'detail' => (string)($result['detail'] ?? ''),
+				]);
+				continue;
 			}
+			$probeUids = [];
+			$bodyFetchUids = [];
 			foreach ($result['messages'] as $msg) {
-				if ($ingested >= Constants::MAILBOX_SYNC_CAP) {
+				$uid = (string)($msg['uid'] ?? '');
+				if ($uid !== '' && count($bodyFetchUids) < Constants::MAIL_SYNC_BODY_FETCH_CAP) {
+					$bodyFetchUids[] = $uid;
+				}
+				$headerHints = MailForwardLogic::hintsFromRedirectHeaders(
+					isset($msg['xOriginalFrom']) ? (string)$msg['xOriginalFrom'] : null,
+					isset($msg['xOriginalTo']) ? (string)$msg['xOriginalTo'] : null,
+					isset($msg['deliveredTo']) ? (string)$msg['deliveredTo'] : null,
+					isset($msg['resentFrom']) ? (string)$msg['resentFrom'] : null,
+				);
+				$from = (string)($msg['from'] ?? '');
+				$to = (string)($msg['to'] ?? '');
+				$cc = (string)($msg['cc'] ?? '');
+				if (MailForwardLogic::shouldProbeBody(
+					$from,
+					$to,
+					$cc,
+					(string)($msg['subject'] ?? ''),
+					$exclude,
+					$headerHints,
+				)) {
+					if ($uid !== '') {
+						$probeUids[] = $uid;
+					}
+				}
+			}
+			$bodyFetchUids = array_values(array_unique($bodyFetchUids));
+			$fullBodyByUid = [];
+			if ($bodyFetchUids !== []) {
+				$fullBodyByUid = ImapLiveProbe::peekBodiesForUids(
+					$host,
+					$port > 0 ? $port : 993,
+					$user,
+					$secret,
+					$folderPath,
+					$bodyFetchUids,
+					Constants::MAIL_BODY_PLAIN_MAX_BYTES,
+					20.0,
+					$authMode,
+				);
+			}
+			$probeUids = array_values(array_diff(
+				array_unique($probeUids),
+				$bodyFetchUids,
+			));
+			$probeUids = array_slice($probeUids, 0, Constants::MAIL_FORWARD_BODY_PROBE_CAP);
+			$bodyByUid = [];
+			foreach ($fullBodyByUid as $u => $parts) {
+				if (is_array($parts) && trim((string)($parts['plain'] ?? '')) !== '') {
+					$bodyByUid[$u] = (string)$parts['plain'];
+				}
+			}
+			if ($probeUids !== []) {
+				$fwdPeek = ImapLiveProbe::peekTextPrefixesForUids(
+					$host,
+					$port > 0 ? $port : 993,
+					$user,
+					$secret,
+					$folderPath,
+					$probeUids,
+					Constants::MAIL_FORWARD_BODY_PEEK_BYTES,
+					20.0,
+					$authMode,
+				);
+				foreach ($fwdPeek as $u => $txt) {
+					$bodyByUid[$u] = $txt;
+				}
+			}
+			$scanned = 0;
+			foreach ($result['messages'] as $msg) {
+				if ($scanned >= Constants::MAILBOX_SYNC_CAP) {
 					break;
 				}
-				$this->mailboxes->ingestMessage($workspaceId, $mailboxId, (int)$folder['id'], $msg, $persons);
-				$ingested++;
+				try {
+					$uid = (string)($msg['uid'] ?? '');
+					$bodyPrefix = ($uid !== '' && isset($bodyByUid[$uid])) ? $bodyByUid[$uid] : null;
+					if ($uid !== '' && isset($fullBodyByUid[$uid]) && is_array($fullBodyByUid[$uid])) {
+						$plainPart = trim((string)($fullBodyByUid[$uid]['plain'] ?? ''));
+						$htmlPart = trim((string)($fullBodyByUid[$uid]['html'] ?? ''));
+						if ($plainPart !== '') {
+							$msg['bodyText'] = $plainPart;
+							$msg['preview'] = MailPreviewText::toPlainPreview(
+								$plainPart,
+								Constants::MAIL_PREVIEW_MAX_BYTES,
+							);
+						}
+						if ($htmlPart !== '') {
+							$msg['bodyHtml'] = $htmlPart;
+						}
+					}
+					$enriched = $this->attachOriginalFromHints($msg, $exclude, $bodyPrefix);
+					$ingest = $this->mailboxes->ingestMessage(
+						$workspaceId,
+						$mailboxId,
+						(int)$folder['id'],
+						$enriched,
+						$persons,
+						$exclude,
+					);
+					self::tallyIngest($ingest, $ingested, $refreshed);
+					$scanned++;
+				} catch (\Throwable $e) {
+					$this->logger->warning('CustomerCheck live-probe sync skipped one message', [
+						'mailboxId' => $mailboxId,
+						'workspaceId' => $workspaceId,
+						'exception' => $e,
+					]);
+				}
 			}
 		}
 
@@ -1311,7 +2533,125 @@ class MailboxSyncService
 			->where($u->expr()->eq('id', $u->createNamedParameter($mailboxId)))
 			->executeStatement();
 
-		return ['ingested' => $ingested, 'status' => 'ok'];
+		$this->logPersonalSyncOk($row, $workspaceId, $mailboxId, $ingested, $refreshed);
+
+		return ['ingested' => $ingested, 'refreshed' => $refreshed, 'status' => 'ok'];
+	}
+
+	/**
+	 * @param array<string, mixed> $row
+	 */
+	private function logPersonalSyncOk(array $row, int $workspaceId, int $mailboxId, int $ingested, int $refreshed): void
+	{
+		$kind = strtolower(trim((string)($row['kind'] ?? MailAclLogic::KIND_TEAM)));
+		if ($kind !== MailAclLogic::KIND_PERSONAL) {
+			return;
+		}
+		$this->logger->info('personal_mail.sync_ok', [
+			'event' => 'personal_mail.sync_ok',
+			'workspaceId' => $workspaceId,
+			'mailboxId' => $mailboxId,
+			'ingested' => $ingested,
+			'refreshed' => $refreshed,
+		]);
+	}
+
+	/**
+	 * @param array{inserted?: bool, touched?: bool} $result
+	 */
+	private static function tallyIngest(array $result, int &$ingested, int &$refreshed): void
+	{
+		if (!empty($result['inserted'])) {
+			$ingested++;
+		} elseif (!empty($result['touched'])) {
+			$refreshed++;
+		}
+	}
+
+	/**
+	 * @param array<string, mixed> $msg
+	 * @param list<string> $excludeEmails
+	 * @return array<string, mixed>
+	 */
+	private function attachOriginalFromHints(array $msg, array $excludeEmails, ?string $bodyPrefix): array
+	{
+		$headerHints = MailForwardLogic::hintsFromRedirectHeaders(
+			isset($msg['xOriginalFrom']) ? (string)$msg['xOriginalFrom'] : null,
+			isset($msg['replyTo']) ? (string)$msg['replyTo'] : null,
+		);
+		$bodyHints = [];
+		if ($bodyPrefix !== null && $bodyPrefix !== '') {
+			$plain = MailPreviewText::toPlainPreview($bodyPrefix, Constants::MAIL_PREVIEW_MAX_BYTES);
+			if ($plain !== '') {
+				$msg['preview'] = $plain;
+				$bodyHints = MailForwardLogic::hintsFromBodyPrefix($plain, $excludeEmails);
+			}
+		} elseif (isset($msg['forwardBodyPrefix']) && is_string($msg['forwardBodyPrefix'])) {
+			$bodyHints = MailForwardLogic::hintsFromBodyPrefix($msg['forwardBodyPrefix'], $excludeEmails);
+		}
+		$msg['originalFromHints'] = MailForwardLogic::mergeHints($headerHints, $bodyHints, $excludeEmails);
+
+		return $msg;
+	}
+
+	/**
+	 * Cap-safe body fetch for php-imap sync (MH-05 / Q7). Never uses imap_body().
+	 *
+	 * @param resource|\IMAP\Connection $stream
+	 * @return array{plain: string, html: string}
+	 */
+	private static function fetchPhpImapBodiesCapped($stream, int $msgNo): array
+	{
+		$plain = '';
+		$html = '';
+		$raw1 = (string)(@imap_fetchbody($stream, $msgNo, '1', FT_PEEK) ?: '');
+		if ($raw1 === '') {
+			return ['plain' => '', 'html' => ''];
+		}
+		if (strlen($raw1) > Constants::MAIL_BODY_PLAIN_MAX_BYTES) {
+			$raw1 = substr($raw1, 0, Constants::MAIL_BODY_PLAIN_MAX_BYTES);
+		}
+		$plain = MailPreviewText::toPlainPreview($raw1, Constants::MAIL_BODY_PLAIN_MAX_BYTES);
+		$looksHtml = (bool)preg_match('/<(?:html|body|div|p|br|table)\b/i', $raw1);
+		if ($looksHtml) {
+			$html = $raw1;
+		} else {
+			$raw2 = (string)(@imap_fetchbody($stream, $msgNo, '2', FT_PEEK) ?: '');
+			if ($raw2 !== '' && preg_match('/<(?:html|body|div|p|br|table)\b/i', $raw2) === 1) {
+				if (strlen($raw2) > Constants::MAIL_BODY_HTML_MAX_BYTES) {
+					$raw2 = substr($raw2, 0, Constants::MAIL_BODY_HTML_MAX_BYTES);
+				}
+				$html = $raw2;
+			}
+		}
+
+		return ['plain' => $plain, 'html' => $html];
+	}
+
+	/**
+	 * @param mixed $list php-imap to/cc address objects
+	 * @return list<string>
+	 */
+	private static function imapAddressList(mixed $list): array
+	{
+		if (!is_array($list) || $list === []) {
+			return [];
+		}
+		$out = [];
+		foreach ($list as $addr) {
+			if (!is_object($addr)) {
+				continue;
+			}
+			$mailbox = trim((string)($addr->mailbox ?? ''));
+			$host = trim((string)($addr->host ?? ''));
+			if ($mailbox === '' || $host === '') {
+				continue;
+			}
+			$email = strtolower($mailbox . '@' . $host);
+			$out[$email] = true;
+		}
+
+		return array_keys($out);
 	}
 
 	/** @return list<array{email: string, companyId: int}> */
@@ -1323,7 +2663,8 @@ class MailboxSyncService
 			->from('crm_person', 'p')
 			->innerJoin('p', 'crm_company', 'c', $qb->expr()->eq('p.company_id', 'c.id'))
 			->where($qb->expr()->eq('c.workspace_id', $qb->createNamedParameter($workspaceId)))
-			->andWhere($qb->expr()->isNotNull('p.email'));
+			->andWhere($qb->expr()->isNotNull('p.email'))
+			->andWhere($qb->expr()->isNull('c.archived_at'));
 		$r = $qb->executeQuery();
 		while ($row = $r->fetch()) {
 			$email = strtolower(trim((string)$row['email']));
@@ -1334,6 +2675,46 @@ class MailboxSyncService
 		}
 		$r->closeCursor();
 		return $out;
+	}
+
+	/**
+	 * Person email → company index for MailMatchLogic (ingest + Assign rematch).
+	 *
+	 * @return list<array{email: string, companyId: int}>
+	 */
+	public function matchPersonIndex(int $workspaceId): array
+	{
+		return $this->personIndex($workspaceId);
+	}
+
+	/**
+	 * Addresses that must never auto-match onto a customer (From only).
+	 * Shared mailbox identities + Nextcloud emails of workspace members.
+	 *
+	 * @return list<string>
+	 */
+	private function matchExcludeEmails(int $workspaceId): array
+	{
+		$out = [];
+		foreach ($this->mailboxes->listMailboxes($workspaceId, null) as $box) {
+			$email = strtolower(trim((string)($box['emailAddress'] ?? '')));
+			if ($email !== '' && str_contains($email, '@')) {
+				$out[] = $email;
+			}
+		}
+		foreach ($this->workspaces->listMemberEmails($workspaceId) as $email) {
+			$out[] = $email;
+		}
+
+		return array_values(array_unique($out));
+	}
+
+	/**
+	 * @return list<string>
+	 */
+	public function matchExcludeEmailsPublic(int $workspaceId): array
+	{
+		return $this->matchExcludeEmails($workspaceId);
 	}
 
 	/** @return list<array{id: int, folder_path: string}> */

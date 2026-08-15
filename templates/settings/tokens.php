@@ -33,11 +33,11 @@ $settings = is_array($_['settings'] ?? null) ? $_['settings'] : [];
 				<div class="form-group">
 					<label class="form-label" for="crm-order-url"><?php p($l->t('Website order link')); ?></label>
 					<div class="crm-token-row">
-						<input id="crm-order-url" class="form-input crm-input" type="text" readonly value="<?php p($settings['orderWebhookUrl'] ?? ''); ?>">
+						<input id="crm-order-url" class="form-input crm-input" type="text" readonly value="<?php p($settings['orderWebhookUrl'] ?? ''); ?>" autocomplete="off" spellcheck="false" aria-describedby="crm-order-url-help">
 						<button type="button" class="crm-btn crm-btn--secondary" data-copy-target="crm-order-url"><?php p($l->t('Copy')); ?></button>
 						<button type="button" class="crm-btn crm-btn--danger" data-rotate-token="order"><?php p($l->t('Rotate')); ?></button>
 					</div>
-					<p class="form-help"><?php p($l->t('Licence order form dual-write. Creates draft agreements plus “Issue licence” and “Write invoice” tasks. Same rate limit as leads.')); ?></p>
+					<p id="crm-order-url-help" class="form-help"><?php p($l->t('Licence orders from the website. Creates the company (or finds it by email), a deal, draft licences, and “Issue licence” / “Write invoice” tasks. On the website set customercheck_order_url to the part ending in /hooks/order and customercheck_order_token to the secret after /order/. Same rate limit as leads.')); ?></p>
 				</div>
 			<?php endif; ?>
 		</div>

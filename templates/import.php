@@ -7,7 +7,7 @@ include __DIR__ . '/common/page-start.php';
 		<header class="crm-card__header">
 			<div class="crm-card__header-text">
 				<h2 id="crm-import-source-title" class="crm-card__title"><?php p($l->t('Add your list')); ?></h2>
-				<p class="crm-card__lead"><?php p($l->t('Drop a CSV or JSON file, or paste names. We show a preview first — nothing is saved yet.')); ?></p>
+				<p class="crm-card__lead"><?php p($l->t('Drop a CSV or JSON file, or paste names. We match by company id, exact name, then contact email — you review a preview before anything is saved. If more than one company fits, you choose (or create new).')); ?></p>
 			</div>
 			<div class="crm-card__header-actions">
 				<button type="button" class="crm-btn crm-btn--ghost crm-btn--sm" id="crm-import-change-list" hidden>

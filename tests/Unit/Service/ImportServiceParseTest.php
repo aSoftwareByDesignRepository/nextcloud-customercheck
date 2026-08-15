@@ -261,4 +261,140 @@ class ImportServiceParseTest extends TestCase
 		$this->assertSame([], $parsed['errors']);
 		$this->assertSame('ops@acme.test', $parsed['rows'][0]['email']);
 	}
+
+	public function testWebsiteOrderJsonExpandsAgreementsWithSeatsAndContact(): void
+	{
+		$json = json_encode([
+			'orderId' => 'cabd3240dd9042ce8829887e',
+			'source' => 'website-order',
+			'lang' => 'de',
+			'companyName' => 'Julian Grosahupt Development',
+			'contactName' => 'Julian Groshaupt',
+			'email' => 'moin@groshaupt.dev',
+			'address' => "Holtenauer Straße 267\n24106 Kiel",
+			'startsAt' => '2026-08-01',
+			'validUntil' => '2027-08-01',
+			'totalCents' => 4500,
+			'agreements' => [
+				[
+					'productCode' => 'azc',
+					'ladder' => 'AZC2',
+					'label' => 'ArbeitszeitCheck Mobile / Terminal',
+					'seats' => 5,
+					'devices' => 0,
+					'bundle' => false,
+					'amountEur' => '20.00',
+					'amountCents' => 2000,
+					'startsAt' => '2026-08-01',
+					'validUntil' => '2027-08-01',
+					'kind' => 'license',
+					'status' => 'draft',
+				],
+				[
+					'productCode' => 'pc',
+					'ladder' => 'PC2',
+					'label' => 'ProjectCheck Mobile',
+					'seats' => 5,
+					'devices' => 0,
+					'amountCents' => 2500,
+					'startsAt' => '2026-08-01',
+					'validUntil' => '2027-08-01',
+				],
+			],
+			'tasks' => [
+				['type' => 'todo', 'title' => 'Issue licence key(s)', 'dueOffsetDays' => 0],
+			],
+		], JSON_THROW_ON_ERROR);
+
+		$parsed = $this->service()->parseTextPayload($json);
+		$this->assertSame('json', $parsed['format']);
+		$this->assertSame([], $parsed['errors']);
+		$this->assertCount(2, $parsed['rows']);
+
+		$azc = $parsed['rows'][0];
+		$this->assertSame('Julian Grosahupt Development', $azc['companyName']);
+		$this->assertSame('Julian Groshaupt', $azc['contactName']);
+		$this->assertSame('moin@groshaupt.dev', $azc['email']);
+		$this->assertSame('azc', $azc['productCode']);
+		$this->assertSame(5, $azc['mobileSeats']);
+		$this->assertSame(0, $azc['terminalDevices']);
+		$this->assertSame('20', $azc['amountEur']);
+		$this->assertSame('2026-08-01', $azc['startsAt']);
+		$this->assertSame('2027-08-01', $azc['validUntil']);
+		$this->assertSame('ArbeitszeitCheck Mobile / Terminal', $azc['label']);
+		$this->assertSame('Holtenauer Straße 267', $azc['addrStreet']);
+		$this->assertSame('24106', $azc['addrZip']);
+		$this->assertSame('Kiel', $azc['addrCity']);
+		$this->assertStringContainsString('Website order cabd3240dd9042ce8829887e', $azc['notes']);
+		$this->assertStringNotContainsString('Holtenauer', $azc['notes']);
+
+		$pc = $parsed['rows'][1];
+		$this->assertSame('pc', $pc['productCode']);
+		$this->assertSame(5, $pc['mobileSeats']);
+		$this->assertSame('25', $pc['amountEur']);
+		$this->assertSame('ProjectCheck Mobile', $pc['label']);
+
+		// Same company identity so apply can coalesce creates.
+		$this->assertSame($azc['customerId'], $pc['customerId']);
+		$this->assertNotSame('', $azc['customerId']);
+	}
+
+	public function testWebsiteOrderPlanAgreementsUsesLicenseNotCustom(): void
+	{
+		$json = json_encode([
+			'orderId' => 'order-plan-1',
+			'source' => 'website-order',
+			'companyName' => 'Plan Co',
+			'email' => 'plan@example.test',
+			'agreements' => [
+				[
+					'productCode' => 'azc',
+					'label' => 'AZC seats',
+					'seats' => 5,
+					'devices' => 0,
+					'amountCents' => 2000,
+					'startsAt' => '2026-08-01',
+					'validUntil' => '2027-08-01',
+				],
+			],
+		], JSON_THROW_ON_ERROR);
+		$parsed = $this->service()->parseJson($json);
+		$row = $parsed['rows'][0];
+		$plans = $this->service()->planAgreements($row, 'csv', null);
+		$this->assertCount(1, $plans);
+		$this->assertFalse($plans[0]['skip']);
+		$this->assertSame('license', $plans[0]['input']['kind']);
+		$this->assertSame('azc', $plans[0]['input']['productCode']);
+		$this->assertSame(5, $plans[0]['input']['limits']['mobileSeats']);
+		$this->assertSame(2000, $plans[0]['input']['amountCents']);
+		$this->assertSame('2026-08-01', $plans[0]['input']['startsAt']);
+		$this->assertSame('AZC seats', $plans[0]['input']['label']);
+	}
+
+	public function testFlatRowWithoutAgreementsStillSingleRow(): void
+	{
+		$json = json_encode([
+			'companyName' => 'Flat Co',
+			'email' => 'flat@example.test',
+			'productCode' => 'azc',
+			'mobileSeats' => 2,
+			'validUntil' => '2027-01-01',
+			'amountEur' => '10',
+		], JSON_THROW_ON_ERROR);
+		$parsed = $this->service()->parseJson($json);
+		$this->assertSame([], $parsed['errors']);
+		$this->assertCount(1, $parsed['rows']);
+		$this->assertSame('azc', $parsed['rows'][0]['productCode']);
+		$this->assertSame(2, $parsed['rows'][0]['mobileSeats']);
+	}
+
+	public function testApplyBatchCoalesceAnchorPresent(): void
+	{
+		$src = (string)file_get_contents(dirname(__DIR__, 3) . '/lib/Service/ImportService.php');
+		$this->assertStringContainsString('$batchCompanyIds', $src);
+		$this->assertStringContainsString('batchIdentityKey', $src);
+		$this->assertStringContainsString('isExpandableAgreementPayload', $src);
+		$this->assertStringContainsString("\$agreement['seats']", $src);
+		$this->assertStringContainsString("\$agreement['devices']", $src);
+	}
 }

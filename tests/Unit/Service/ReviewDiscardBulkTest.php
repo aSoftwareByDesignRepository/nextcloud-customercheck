@@ -74,8 +74,26 @@ final class ReviewDiscardBulkTest extends TestCase
 
 		$result = $svc->discardBulk(7, [1, 2, 3, 1], 'alex');
 		$this->assertSame(1, $result['discarded']);
-		$this->assertSame(2, $result['skipped']);
+		$this->assertSame(1, $result['skipped']);
+		$this->assertSame(1, $result['failed']);
 		$this->assertSame([1], $result['ids']);
+		$this->assertCount(1, $result['errors']);
+		$this->assertSame(3, $result['errors'][0]['id']);
+	}
+
+	public function testBulkAllImapFailuresSurfaceAsValidationError(): void
+	{
+		$svc = $this->serviceMockingDiscard();
+		$svc->expects($this->exactly(2))->method('discard')
+			->willThrowException(ValidationException::field(Constants::ERR_VALIDATION, 'imap', 'Mailbox is busy'));
+
+		$this->expectException(ValidationException::class);
+		try {
+			$svc->discardBulk(7, [10, 11], 'alex');
+		} catch (ValidationException $e) {
+			$this->assertStringContainsString('Mailbox is busy', $e->getMessage());
+			throw $e;
+		}
 	}
 
 	/** @return ReviewService&\PHPUnit\Framework\MockObject\MockObject */

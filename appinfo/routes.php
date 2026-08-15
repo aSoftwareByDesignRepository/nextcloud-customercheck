@@ -22,6 +22,7 @@ return [
 		['name' => 'page#strategy', 'url' => '/strategy', 'verb' => 'GET'],
 		['name' => 'page#prepareMeeting', 'url' => '/companies/{id}/prepare-meeting', 'verb' => 'GET', 'requirements' => ['id' => '\d+']],
 		['name' => 'page#mailTriage', 'url' => '/mail-triage', 'verb' => 'GET'],
+		['name' => 'page#salesInbox', 'url' => '/sales-inbox', 'verb' => 'GET'],
 		['name' => 'page#review', 'url' => '/review', 'verb' => 'GET'],
 		['name' => 'page#conflicts', 'url' => '/conflicts', 'verb' => 'GET'],
 		['name' => 'page#companies', 'url' => '/companies', 'verb' => 'GET'],
@@ -39,12 +40,12 @@ return [
 		// Keep the requirement literal (route files load without the app autoloader).
 		// tests/Unit/Controller/WorkspaceSettingsPagesContractTest pins it to WorkspaceSettingsSectionCatalog::routeRequirement().
 		['name' => 'page#settingsSection', 'url' => '/settings/{section}', 'verb' => 'GET',
-			'requirements' => ['section' => 'mailbox|preferences|checklists|review-sources|circles|integrations']],
+			'requirements' => ['section' => 'my-email|mailbox|preferences|checklists|review-sources|circles|integrations']],
 		['name' => 'page#appSettings', 'url' => '/app-settings', 'verb' => 'GET'],
 		// Keep the requirement literal (route files load without the app autoloader).
 		// tests/Unit/Controller/AppSettingsPagesContractTest pins it to AppSettingsSectionCatalog::routeRequirement().
 		['name' => 'page#appSettingsSection', 'url' => '/app-settings/{section}', 'verb' => 'GET',
-			'requirements' => ['section' => 'access|jobs|tokens|license|product-codes']],
+			'requirements' => ['section' => 'access|jobs|tokens|license|product-codes|personal-mail']],
 		['name' => 'page#supportUs', 'url' => '/support-us', 'verb' => 'GET'],
 
 		// ── Companies API ───────────────────────────────────────────────
@@ -160,6 +161,20 @@ return [
 		['name' => 'persona_api#setOoo', 'url' => '/api/v1/workspaces/{workspaceId}/ooo', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\d+']],
 		['name' => 'persona_api#bulkReassign', 'url' => '/api/v1/workspaces/{workspaceId}/bulk-reassign', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\d+']],
 		['name' => 'persona_api#mailboxes', 'url' => '/api/v1/workspaces/{workspaceId}/mailboxes', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\d+']],
+		['name' => 'persona_api#personalMailboxes', 'url' => '/api/v1/workspaces/{workspaceId}/personal-mailboxes', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\d+']],
+		['name' => 'persona_api#connectPersonalMailbox', 'url' => '/api/v1/workspaces/{workspaceId}/personal-mailboxes', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\d+']],
+		['name' => 'persona_api#savePersonalMailboxFolders', 'url' => '/api/v1/workspaces/{workspaceId}/personal-mailboxes/{id}/folders', 'verb' => 'PUT', 'requirements' => ['workspaceId' => '\d+', 'id' => '\d+']],
+		['name' => 'persona_api#refreshPersonalMailboxFolders', 'url' => '/api/v1/workspaces/{workspaceId}/personal-mailboxes/{id}/folders/refresh', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\d+', 'id' => '\d+']],
+		['name' => 'persona_api#disconnectPersonalMailbox', 'url' => '/api/v1/workspaces/{workspaceId}/personal-mailboxes/{id}', 'verb' => 'DELETE', 'requirements' => ['workspaceId' => '\d+', 'id' => '\d+']],
+		['name' => 'persona_api#disconnectPersonalMailbox', 'url' => '/api/v1/workspaces/{workspaceId}/personal-mailboxes/{id}/remove', 'verb' => 'POST', 'postfix' => 'Remove', 'requirements' => ['workspaceId' => '\d+', 'id' => '\d+']],
+		['name' => 'persona_api#syncPersonalMailbox', 'url' => '/api/v1/workspaces/{workspaceId}/personal-mailboxes/{id}/sync', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\d+', 'id' => '\d+']],
+		['name' => 'persona_api#savePersonalMailboxSignature', 'url' => '/api/v1/workspaces/{workspaceId}/personal-mailboxes/{id}/signature', 'verb' => 'PUT', 'requirements' => ['workspaceId' => '\d+', 'id' => '\d+']],
+		['name' => 'persona_api#saveTeamMailboxSignature', 'url' => '/api/v1/workspaces/{workspaceId}/mailboxes/{id}/signature', 'verb' => 'PUT', 'requirements' => ['workspaceId' => '\d+', 'id' => '\d+']],
+		['name' => 'persona_api#mailInbox', 'url' => '/api/v1/workspaces/{workspaceId}/mail/inbox', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\d+']],
+		['name' => 'persona_api#mailSendAccounts', 'url' => '/api/v1/workspaces/{workspaceId}/mail/send-accounts', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\d+']],
+		['name' => 'persona_api#beginPersonalMailOAuth', 'url' => '/api/v1/workspaces/{workspaceId}/personal-mailboxes/oauth/{provider}', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\d+', 'provider' => 'google|microsoft']],
+		['name' => 'persona_api#personalMailOAuthCallback', 'url' => '/api/v1/personal-mail/oauth/callback', 'verb' => 'GET'],
+		['name' => 'persona_api#syncAllMailboxes', 'url' => '/api/v1/workspaces/{workspaceId}/mailboxes/sync-all', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\d+']],
 		['name' => 'persona_api#saveMailbox', 'url' => '/api/v1/workspaces/{workspaceId}/mailboxes', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\d+']],
 		['name' => 'persona_api#deleteMailbox', 'url' => '/api/v1/workspaces/{workspaceId}/mailboxes/{id}', 'verb' => 'DELETE', 'requirements' => ['workspaceId' => '\d+', 'id' => '\d+']],
 		// POST alias — same handler. Survives stale OPcache gaps on DELETE and proxies that strip DELETE.
@@ -169,12 +184,18 @@ return [
 		['name' => 'persona_api#previewMail', 'url' => '/api/v1/workspaces/{workspaceId}/mail/{id}/preview', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\d+', 'id' => '\d+']],
 		['name' => 'persona_api#replyMail', 'url' => '/api/v1/workspaces/{workspaceId}/mail/{id}/reply', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\d+', 'id' => '\d+']],
 		['name' => 'persona_api#triageMail', 'url' => '/api/v1/workspaces/{workspaceId}/mail/{id}/triage', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\d+', 'id' => '\d+']],
+		// Inbox Personal/Team mutate (not Assign) — CSRF via POST; never GET.
+		['name' => 'persona_api#deleteMail', 'url' => '/api/v1/workspaces/{workspaceId}/mail/{id}/delete', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\d+', 'id' => '\d+']],
+		['name' => 'persona_api#markSpamMail', 'url' => '/api/v1/workspaces/{workspaceId}/mail/{id}/mark-spam', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\d+', 'id' => '\d+']],
 		['name' => 'review_api#listItems', 'url' => '/api/v1/workspaces/{workspaceId}/review/items', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\d+']],
+		// Literal bulk paths before /items/{id}/… so Symfony never treats "discard-bulk" / "mark-spam-bulk" as ids.
+		['name' => 'review_api#discardBulk', 'url' => '/api/v1/workspaces/{workspaceId}/review/items/discard-bulk', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\d+']],
+		['name' => 'review_api#markSpamBulk', 'url' => '/api/v1/workspaces/{workspaceId}/review/items/mark-spam-bulk', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\d+']],
 		['name' => 'review_api#assign', 'url' => '/api/v1/workspaces/{workspaceId}/review/items/{id}/assign', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\d+', 'id' => '\d+']],
 		['name' => 'review_api#snooze', 'url' => '/api/v1/workspaces/{workspaceId}/review/items/{id}/snooze', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\d+', 'id' => '\d+']],
 		['name' => 'review_api#noRelation', 'url' => '/api/v1/workspaces/{workspaceId}/review/items/{id}/no-relation', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\d+', 'id' => '\d+']],
 		['name' => 'review_api#discard', 'url' => '/api/v1/workspaces/{workspaceId}/review/items/{id}/discard', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\d+', 'id' => '\d+']],
-		['name' => 'review_api#discardBulk', 'url' => '/api/v1/workspaces/{workspaceId}/review/items/discard-bulk', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\d+']],
+		['name' => 'review_api#markSpam', 'url' => '/api/v1/workspaces/{workspaceId}/review/items/{id}/mark-spam', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\d+', 'id' => '\d+']],
 		['name' => 'review_api#followUp', 'url' => '/api/v1/workspaces/{workspaceId}/review/items/{id}/follow-up', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\d+', 'id' => '\d+']],
 		['name' => 'review_api#applyCountry', 'url' => '/api/v1/workspaces/{workspaceId}/review/items/{id}/apply-country', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\d+', 'id' => '\d+']],
 		['name' => 'review_api#reopen', 'url' => '/api/v1/workspaces/{workspaceId}/review/items/{id}/reopen', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\d+', 'id' => '\d+']],
@@ -225,6 +246,8 @@ return [
 		['name' => 'settings_api#rotateToken', 'url' => '/api/v1/settings/tokens/{kind}/rotate', 'verb' => 'POST', 'requirements' => ['kind' => 'ics|lead|order']],
 		['name' => 'settings_api#productCodes', 'url' => '/api/v1/settings/product-codes', 'verb' => 'GET'],
 		['name' => 'settings_api#saveProductCodes', 'url' => '/api/v1/settings/product-codes', 'verb' => 'PUT'],
+		['name' => 'settings_api#personalMailOAuthConfig', 'url' => '/api/v1/settings/personal-mail-oauth', 'verb' => 'GET'],
+		['name' => 'settings_api#savePersonalMailOAuthConfig', 'url' => '/api/v1/settings/personal-mail-oauth', 'verb' => 'PUT'],
 
 		// ── License / companion seats (app-admin, COMPANION-APP §5.2) ───
 		['name' => 'license#show', 'url' => '/api/v1/license', 'verb' => 'GET'],
@@ -263,6 +286,21 @@ return [
 		['name' => 'mobile#agreements', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/agreements', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\d+']],
 		['name' => 'mobile#registerPush', 'url' => '/api/mobile/v1/push', 'verb' => 'POST'],
 		['name' => 'mobile#unregisterPush', 'url' => '/api/mobile/v1/push', 'verb' => 'DELETE'],
+		['name' => 'mobile_mail#inbox', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/mail/inbox', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\d+']],
+		['name' => 'mobile_mail#message', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/mail/{id}', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\d+', 'id' => '\d+']],
+		['name' => 'mobile_mail#sendAccounts', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/mail/send-accounts', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\d+']],
+		['name' => 'mobile_mail#send', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/mail/send', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\d+']],
+		['name' => 'mobile_mail#stageAttachment', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/mail/attachments', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\d+']],
+		['name' => 'mobile_mail#listMailAttachFiles', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/mail/attachable-files', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\d+']],
+		['name' => 'mobile_mail#personalMailboxes', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/personal-mailboxes', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\d+']],
+		['name' => 'mobile_mail#connectPersonalMailbox', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/personal-mailboxes', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\d+']],
+		['name' => 'mobile_mail#savePersonalMailboxFolders', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/personal-mailboxes/{id}/folders', 'verb' => 'PUT', 'requirements' => ['workspaceId' => '\d+', 'id' => '\d+']],
+		['name' => 'mobile_mail#refreshPersonalMailboxFolders', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/personal-mailboxes/{id}/folders/refresh', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\d+', 'id' => '\d+']],
+		['name' => 'mobile_mail#disconnectPersonalMailbox', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/personal-mailboxes/{id}', 'verb' => 'DELETE', 'requirements' => ['workspaceId' => '\d+', 'id' => '\d+']],
+		['name' => 'mobile_mail#syncPersonalMailbox', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/personal-mailboxes/{id}/sync', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\d+', 'id' => '\d+']],
+		['name' => 'mobile_mail#savePersonalMailboxSignature', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/personal-mailboxes/{id}/signature', 'verb' => 'PUT', 'requirements' => ['workspaceId' => '\d+', 'id' => '\d+']],
+		['name' => 'mobile_mail#beginPersonalMailOAuth', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/personal-mailboxes/oauth/{provider}', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\d+', 'provider' => 'google|microsoft']],
+		['name' => 'mobile_mail#completePersonalMailOAuth', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/personal-mailboxes/oauth/complete', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\d+']],
 
 		// ── Public token routes (no session; token validated in controller) ──
 		['name' => 'feed#renewals', 'url' => '/feed/{token}/renewals.ics', 'verb' => 'GET'],

@@ -15,7 +15,7 @@ final class Company360PageContractTest extends TestCase
 	{
 		$controller = (string)file_get_contents(dirname(__DIR__, 2) . '/lib/Controller/PageController.php');
 		$this->assertStringContainsString(
-			"registerFrontEndAssets('pages/company-detail', null, ['common/identity-links'], ['common/company360-focus', 'common/folder-picker', 'common/glance-summary', 'common/company360-present', 'common/deal-checklist-ux', 'pages/persona'])",
+			"registerFrontEndAssets('pages/company-detail', null, ['common/identity-links'], ['common/company360-focus', 'common/folder-picker', 'common/glance-summary', 'common/company360-present', 'common/deal-checklist-ux', 'common/mail-sync-now', 'common/rich-mail-composer', 'common/shared-mail-send', 'pages/persona'])",
 			$controller,
 		);
 	}
@@ -96,10 +96,17 @@ final class Company360PageContractTest extends TestCase
 		$this->assertStringNotContainsString('crm-btn--ghost crm-btn--sm crm-review-open', $js);
 		$this->assertStringContainsString('data-crm-talk-detail-row', $js);
 		$this->assertStringContainsString('crm-mail-3pane__reader crm-review-detail-row', $js);
-		$this->assertStringNotContainsString('opt.after(detailLi)', $js);
+		$this->assertStringContainsString('opt.after(detailHost)', $js);
+		$this->assertStringNotContainsString('role="presentation"', $js);
 		$this->assertStringContainsString('escapeHtml(item.subject || \'\')', $js);
 		$this->assertStringContainsString('crm-empty-state__title', $js);
 		$this->assertStringContainsString('Never seed body text from list/feed JSON', $js);
+		// Talk list search (client-side filter over from/subject/date/snippet).
+		$this->assertStringContainsString('id="crm-talk-q"', $js);
+		$this->assertStringContainsString('data-crm-talk-search', $js);
+		$this->assertStringContainsString('talkMatchesQuery', $js);
+		$this->assertStringContainsString("t('No messages match this search')", $js);
+		$this->assertStringContainsString('data-crm-talk-q', $js);
 		$boot = (string)file_get_contents(dirname(__DIR__, 2) . '/js/common/company360-present.js');
 		$this->assertStringContainsString('crm-billing-strip', $boot);
 	}

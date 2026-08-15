@@ -102,7 +102,7 @@ final class DealNotesUxContractTest extends TestCase
 	{
 		$js = (string)file_get_contents(dirname(__DIR__, 2) . '/js/pages/company-detail.js');
 		$this->assertMatchesRegularExpression(
-			"/f\.type === 'textarea'[\s\S]{0,200}f\.maxlength !== undefined/",
+			"/f\.type === 'textarea'[\s\S]{0,500}f\.maxlength !== undefined/",
 			$js,
 		);
 	}

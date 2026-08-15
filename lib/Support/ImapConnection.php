@@ -123,20 +123,63 @@ final class ImapConnection
 	}
 
 	/**
+	 * Live IMAP UIDs are positive decimal integers (as stored after sync).
+	 * CRM-first sends use synthetic `outbound:…` ids until Sent re-ingest; empty/garbage
+	 * values also must never be dialed for delete/junk (Assign closes CRM only).
+	 */
+	public static function isLiveUid(string $uid): bool
+	{
+		$uid = trim($uid);
+
+		return $uid !== '' && preg_match('/^\d+$/', $uid) === 1;
+	}
+
+	/**
 	 * Reject folder paths that can break IMAP quoting, SELECT injection, or php-imap `{host}` framing.
+	 * Accepts UTF-8 (umlauts) and Modified UTF-7 wire forms; validates the wire octet length.
 	 */
 	public static function isSafeImapFolder(string $folder): bool
 	{
 		$folder = trim($folder);
-		if ($folder === '' || strlen($folder) > 255) {
+		if ($folder === '') {
 			return false;
 		}
-		// Control chars, quotes, backslash, and braces (mailbox-spec breakout).
-		if (preg_match('/[\x00-\x1f\x7f"\\\\{}]/', $folder) === 1) {
+		$utf8 = ImapUtf7::toUtf8($folder);
+		if ($utf8 === '') {
+			return false;
+		}
+		// Control chars, quotes, backslash, and braces (mailbox-spec breakout) — UTF-8 text.
+		if (preg_match('/[\x00-\x1f\x7f"\\\\{}]/u', $utf8) === 1) {
+			return false;
+		}
+		$wire = ImapUtf7::toWire($utf8);
+		// IMAP mailbox names are bounded; refuse absurd / DoS paths.
+		if ($wire === '' || strlen($wire) > 255) {
 			return false;
 		}
 
 		return true;
+	}
+
+	/**
+	 * Normalize LIST / stored folder path to UTF-8 for CRM storage + UI.
+	 */
+	public static function normalizeFolderPath(string $folder): string
+	{
+		return ImapUtf7::toUtf8(trim($folder));
+	}
+
+	/**
+	 * Wire form for SELECT / imap_reopen / imap_open append.
+	 */
+	public static function folderToWire(string $folder): string
+	{
+		$folder = trim($folder);
+		if ($folder === '') {
+			return 'INBOX';
+		}
+
+		return ImapUtf7::toWire($folder);
 	}
 
 	public static function isBlockedIp(string $ip): bool
@@ -372,5 +415,91 @@ final class ImapConnection
 			}
 		}
 		return 'unknown';
+	}
+
+	/**
+	 * Pick the mailbox’s Junk/Spam folder from LIST results (server-discovered only).
+	 * Prefer SPECIAL-USE \Junk / \Spam, then common names. Never returns INBOX.
+	 *
+	 * @param list<string|array{name?:string,flags?:list<string>}> $folders
+	 */
+	public static function pickJunkFolder(array $folders): ?string
+	{
+		$entries = [];
+		foreach ($folders as $raw) {
+			if (is_string($raw)) {
+				$name = trim($raw);
+				if ($name === '') {
+					continue;
+				}
+				$entries[] = ['name' => $name, 'flags' => []];
+				continue;
+			}
+			if (!is_array($raw)) {
+				continue;
+			}
+			$name = trim((string)($raw['name'] ?? ''));
+			if ($name === '') {
+				continue;
+			}
+			$flags = [];
+			if (isset($raw['flags']) && is_array($raw['flags'])) {
+				foreach ($raw['flags'] as $flag) {
+					if (is_string($flag) || is_int($flag)) {
+						$flags[] = (string)$flag;
+					}
+				}
+			}
+			$entries[] = ['name' => $name, 'flags' => $flags];
+		}
+
+		$usable = static function (string $name): bool {
+			if (!self::isSafeImapFolder($name)) {
+				return false;
+			}
+			return strcasecmp($name, 'INBOX') !== 0;
+		};
+
+		foreach ($entries as $entry) {
+			foreach ($entry['flags'] as $flag) {
+				$norm = ltrim(strtolower(trim($flag)), '\\');
+				if ($norm === 'junk' || $norm === 'spam') {
+					if ($usable($entry['name'])) {
+						return $entry['name'];
+					}
+				}
+			}
+		}
+
+		$preferred = [
+			'Junk',
+			'Spam',
+			'INBOX.Junk',
+			'INBOX.Spam',
+			'Junk E-Mail',
+			'Junk Email',
+			'Bulk Mail',
+			'[Gmail]/Spam',
+		];
+		foreach ($preferred as $want) {
+			foreach ($entries as $entry) {
+				if (strcasecmp($entry['name'], $want) === 0 && $usable($entry['name'])) {
+					return $entry['name'];
+				}
+			}
+		}
+
+		foreach ($entries as $entry) {
+			$base = $entry['name'];
+			if (str_contains($base, '/') || str_contains($base, '.')) {
+				$parts = preg_split('/[\/.]/', $base) ?: [];
+				$base = (string)end($parts);
+			}
+			if (preg_match('/^(junk|spam)$/i', $base) === 1 && $usable($entry['name'])) {
+				return $entry['name'];
+			}
+		}
+
+		return null;
 	}
 }

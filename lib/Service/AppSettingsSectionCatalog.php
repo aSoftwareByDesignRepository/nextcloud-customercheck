@@ -22,6 +22,7 @@ final class AppSettingsSectionCatalog
 		'tokens',
 		'license',
 		'product-codes',
+		'personal-mail',
 	];
 
 	/**
@@ -43,6 +44,8 @@ final class AppSettingsSectionCatalog
 		'crm-license-form' => 'license',
 		'section-product-codes' => 'product-codes',
 		'crm-product-codes-form' => 'product-codes',
+		'section-personal-mail' => 'personal-mail',
+		'crm-personal-mail-oauth-form' => 'personal-mail',
 	];
 
 	public function isSection(string $section): bool
@@ -63,6 +66,7 @@ final class AppSettingsSectionCatalog
 			'tokens' => $l->t('Public feeds & intake'),
 			'license' => $l->t('Mobile app license'),
 			'product-codes' => $l->t('Agreement catalogue'),
+			'personal-mail' => $l->t('Personal email OAuth'),
 			default => $l->t('App settings'),
 		};
 	}
@@ -75,6 +79,7 @@ final class AppSettingsSectionCatalog
 			'tokens' => $l->t('Feeds'),
 			'license' => $l->t('License'),
 			'product-codes' => $l->t('Catalogue'),
+			'personal-mail' => $l->t('Mail OAuth'),
 			default => $l->t('App'),
 		};
 	}
@@ -87,6 +92,7 @@ final class AppSettingsSectionCatalog
 			'tokens' => $l->t('Calendar feed and website intake links for this Nextcloud.'),
 			'license' => $l->t('Official mobile seats — the web app stays free either way.'),
 			'product-codes' => $l->t('Labels and kinds for agreements across CustomerCheck.'),
+			'personal-mail' => $l->t('Google and Microsoft OAuth apps so people can connect their email without a password.'),
 			default => $l->t('Access control, reminders, tokens, mobile license, and the agreement catalogue.'),
 		};
 	}

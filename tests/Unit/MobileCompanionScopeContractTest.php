@@ -119,6 +119,22 @@ final class MobileCompanionScopeContractTest extends TestCase
 		$this->assertStringContainsString("'deals'", $svc);
 	}
 
+	public function testMobileMailMutationsVerifyBasicAuthNotPresenceOnly(): void
+	{
+		$ctrl = (string)file_get_contents(dirname(__DIR__, 2) . '/lib/Controller/MobileMailController.php');
+		$channel = $this->extractMethod($ctrl, 'assertSafeMutationChannel');
+		$this->assertStringContainsString('passesCSRFCheck', $channel);
+		$this->assertStringContainsString('authorizationBasicAuthenticatesCurrentUser', $channel);
+		$this->assertDoesNotMatchRegularExpression(
+			'/preg_match\s*\(\s*[\'"]\/\^\(Basic\|Bearer\)/',
+			$channel,
+			'Must not accept Authorization presence alone as CSRF bypass',
+		);
+		$basicAuth = $this->extractMethod($ctrl, 'authorizationBasicAuthenticatesCurrentUser');
+		$this->assertStringContainsString('checkPassword', $basicAuth);
+		$this->assertStringContainsString('hash_equals', $basicAuth);
+	}
+
 	private function extractMethod(string $src, string $name): string
 	{
 		$pos = strpos($src, 'function ' . $name);

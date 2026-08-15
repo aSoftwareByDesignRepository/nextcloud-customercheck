@@ -134,6 +134,30 @@
     }
   }
 
+  function viaLabel(via) {
+    switch (String(via || '')) {
+      case 'slug': return t('matched by id');
+      case 'name': return t('matched by name');
+      case 'email': return t('matched by email');
+      default: return '';
+    }
+  }
+
+  /** Distinguish same-name twins in the Pick-a-match dropdown. */
+  function candidateOptionLabel(c) {
+    const name = String((c && c.name) || '').trim() || '—';
+    const slug = String((c && c.slug) || '').trim();
+    const via = viaLabel(c && c.via);
+    let label = name;
+    if (slug) {
+      label += ' (' + slug + ')';
+    }
+    if (via) {
+      label += ' · ' + via;
+    }
+    return label;
+  }
+
   function humanErrorReason(reason) {
     switch (String(reason || '')) {
       case 'missing_header': return t('Missing column header');
@@ -363,7 +387,7 @@
       let decisionHtml = '';
       if (p.action === 'needs_decision') {
         const opts = (p.match.candidates || []).map((c) =>
-          '<option value="' + c.id + '">' + escapeHtml(c.name || '') + '</option>'
+          '<option value="' + c.id + '">' + escapeHtml(candidateOptionLabel(c)) + '</option>'
         ).join('');
         decisionHtml =
           '<label class="crm-sr-only" for="crm-import-dec-' + p.index + '">' + escapeHtml(t('Pick a match')) + '</label>' +
@@ -541,13 +565,26 @@
       if (skipped === 1) parts.push(t('Skipped 1 row'));
       else if (skipped > 1) parts.push(fillOne('Skipped %s rows', skipped));
       const lead = parts.join(' · ') || t('Nothing changed.');
+      const errorBlock = (summary.errors && summary.errors.length)
+        ? (function () {
+            const items = summary.errors.slice(0, 8).map(function (err) {
+              const msg = String((err && (err.message || err.reason)) || t('Unknown error'));
+              const n = err && err.index != null ? String(Number(err.index) + 1) : '';
+              const text = n !== '' ? t('Row %s: %s', [n, msg]) : msg;
+              return '<li>' + escapeHtml(text) + '</li>';
+            }).join('');
+            const more = summary.errors.length > 8
+              ? '<p>' + escapeHtml(fillOne('…and %s more.', summary.errors.length - 8)) + '</p>'
+              : '';
+            return '<div class="crm-callout crm-callout--warning" role="status">' +
+              '<p>' + escapeHtml(fillOne('%s row error(s).', summary.errors.length)) + '</p>' +
+              '<ul class="crm-import-error-list">' + items + '</ul>' + more +
+              '</div>';
+          })()
+        : '';
       body.innerHTML =
         '<p class="crm-import-summary-lead">' + escapeHtml(lead) + '</p>' +
-        (summary.errors && summary.errors.length
-          ? '<div class="crm-callout crm-callout--warning" role="status"><p>' +
-            escapeHtml(fillOne('%s row error(s).', summary.errors.length)) +
-            '</p></div>'
-          : '') +
+        errorBlock +
         '<p class="crm-form-actions">' +
         '<a class="crm-btn crm-btn--primary crm-btn--lg" href="' + companiesUrl + '">' +
         escapeHtml(t('Open companies')) +

@@ -5,16 +5,15 @@
  * @license AGPL-3.0-or-later
  */
 
+import { localYmd } from './local-ymd.js';
+
 /**
  * Local calendar YYYY-MM-DD (timezone-safe — never toISOString).
  * @param {Date} [d]
  * @returns {string}
  */
 export function todayIso(d = new Date()) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
+  return localYmd(d);
 }
 
 /**

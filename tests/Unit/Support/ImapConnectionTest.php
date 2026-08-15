@@ -116,14 +116,35 @@ final class ImapConnectionTest extends TestCase
 		$this->assertTrue(ImapConnection::isBlockedIp('fe80::1'));
 	}
 
+	public function testIsLiveUidAcceptsOnlyDecimalImapUids(): void
+	{
+		$this->assertTrue(ImapConnection::isLiveUid('1'));
+		$this->assertTrue(ImapConnection::isLiveUid('1703'));
+		$this->assertTrue(ImapConnection::isLiveUid(' 42 '));
+		$this->assertFalse(ImapConnection::isLiveUid(''));
+		$this->assertFalse(ImapConnection::isLiveUid('outbound:crm-send-1'));
+		$this->assertFalse(ImapConnection::isLiveUid('1703a'));
+		$this->assertFalse(ImapConnection::isLiveUid('17.03'));
+		$this->assertFalse(ImapConnection::isLiveUid('-1'));
+	}
+
 	public function testIsSafeImapFolderRejectsControlChars(): void
 	{
 		$this->assertTrue(ImapConnection::isSafeImapFolder('INBOX'));
 		$this->assertTrue(ImapConnection::isSafeImapFolder('INBOX.Archive'));
+		$this->assertTrue(ImapConnection::isSafeImapFolder('INBOX/Ärger'));
+		$this->assertTrue(ImapConnection::isSafeImapFolder('INBOX/&AMQ-rger'));
 		$this->assertFalse(ImapConnection::isSafeImapFolder("INBOX\nBAD"));
 		$this->assertFalse(ImapConnection::isSafeImapFolder(''));
 		$this->assertFalse(ImapConnection::isSafeImapFolder('INBOX"evil'));
 		$this->assertFalse(ImapConnection::isSafeImapFolder('INBOX{breakout'));
 		$this->assertFalse(ImapConnection::isSafeImapFolder('INBOX\\r'));
+	}
+
+	public function testFolderToWireEncodesUmlautsForSelect(): void
+	{
+		$this->assertSame('INBOX', ImapConnection::folderToWire('INBOX'));
+		$this->assertSame('INBOX/&AMQ-rger', ImapConnection::folderToWire('INBOX/Ärger'));
+		$this->assertSame('INBOX/&AMQ-rger', ImapConnection::folderToWire('INBOX/&AMQ-rger'));
 	}
 }

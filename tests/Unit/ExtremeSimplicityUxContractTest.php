@@ -299,9 +299,10 @@ final class ExtremeSimplicityUxContractTest extends TestCase
 	{
 		$html = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/companies.php');
 		$this->assertStringContainsString('crm-quick-filters', $html);
-		$this->assertStringContainsString('?status=active', $html);
-		$this->assertStringContainsString('?archived=1', $html);
+		$this->assertStringContainsString("'status' => 'active'", $html);
+		$this->assertStringContainsString("'archived' => '1'", $html);
 		$this->assertStringContainsString('data-crm-live-filter', $html);
+		$this->assertStringContainsString('crm-companies-search', $html);
 	}
 
 	public function testCompanyDetailCollapsesEmptyLinkedApps(): void
@@ -564,6 +565,9 @@ final class ExtremeSimplicityUxContractTest extends TestCase
 		$this->assertStringContainsString("\$l->t('Website lead link')", $tokens);
 		$this->assertStringContainsString("\$l->t('Calendar feed for renewals')", $tokens);
 		$this->assertStringContainsString("\$l->t('Website order link')", $tokens);
+		$this->assertStringContainsString('customercheck_order_url', $tokens);
+		$this->assertStringContainsString('customercheck_order_token', $tokens);
+		$this->assertStringContainsString('crm-order-url-help', $tokens);
 		$this->assertStringNotContainsString("\$l->t('Lead webhook')", $tokens);
 		$settingsJs = (string)file_get_contents(dirname(__DIR__, 2) . '/js/pages/settings.js');
 		$this->assertStringContainsString("tr('Promises')", $settingsJs);
@@ -607,6 +611,8 @@ final class ExtremeSimplicityUxContractTest extends TestCase
 		$planPhp = (string)file_get_contents(dirname(__DIR__, 2) . '/lib/Service/AccountPlanService.php');
 		$this->assertStringContainsString("'statusLabel' => \$this->labels->mapStepStatus", $planPhp);
 		$this->assertStringContainsString("'healthLabel' => \$this->labels->planHealth", $planPhp);
+		$this->assertStringContainsString("'priorityLabel' => \$this->labels->planPriority", $planPhp);
+		$this->assertStringContainsString("'statusLabel' => \$this->labels->planStatus", $planPhp);
 		$emails = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/common/crm-emails-section.php');
 		$this->assertStringContainsString('Logged messages', $emails);
 		$this->assertStringContainsString('data-crm-trigger="crm-log-email"', $emails);

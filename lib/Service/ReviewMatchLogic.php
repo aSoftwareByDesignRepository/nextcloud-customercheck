@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace OCA\CustomerCheck\Service;
 
 /**
- * Deterministic Review match suggestions — GNQ §5.5.
+ * Deterministic Assign match suggestions — GNQ §5.5.
  * Scores are integers 0–100. Auto-link never runs in v1.
  */
 final class ReviewMatchLogic
@@ -29,7 +29,7 @@ final class ReviewMatchLogic
 	public static function suggest(?string $email, ?string $orgName, array $companies, bool $includeArchived = false): array
 	{
 		$out = [];
-		$email = strtolower(trim((string)$email));
+		$email = self::normalizeEmail((string)$email);
 		$domain = '';
 		if ($email !== '' && str_contains($email, '@')) {
 			$domain = substr($email, (int)strrpos($email, '@') + 1);
@@ -131,6 +131,28 @@ final class ReviewMatchLogic
 			'score' => $score,
 			'reasonCode' => $reasonCode,
 		];
+	}
+
+	/**
+	 * Normalize From / display strings to a bare email (handles `Name <a@b.c>`).
+	 */
+	public static function normalizeEmail(string $raw): string
+	{
+		$raw = trim($raw);
+		if ($raw === '') {
+			return '';
+		}
+		if (preg_match('/<([^<>@\s]+@[^<>@\s]+)>/', $raw, $m) === 1) {
+			return strtolower(trim($m[1]));
+		}
+		if (str_contains($raw, '@') && !str_contains($raw, ' ')) {
+			return strtolower($raw);
+		}
+		if (preg_match('/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i', $raw, $m) === 1) {
+			return strtolower($m[0]);
+		}
+
+		return strtolower($raw);
 	}
 
 	public static function normalizeOrgName(string $name): string

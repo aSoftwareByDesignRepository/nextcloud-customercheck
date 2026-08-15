@@ -113,9 +113,10 @@ test.describe('Persona Monday operating path', () => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await login(page, credsFromEnv('ADMIN'));
 
-    await openPersona(page, '/review?kind=shared_mail');
-    const disclosure = page.locator('#crm-review-disclosure, [data-crm-persona-mount="review"] .crm-callout[role="status"], [data-crm-persona-mount="review"] h1, [data-crm-persona-mount="review"] .crm-page-stack').first();
+    await openPersona(page, '/sales-inbox?tab=unmatched&kind=mail');
+    const disclosure = page.locator('#crm-sales-inbox-disclosure');
     await expect(disclosure).toBeVisible({ timeout: 30000 });
-    await expect(page.getByText(/Review|Review-Eingang|shared mailbox|gemeinsamen Postfach|Nothing to review|Nichts zu prüfen/i).first()).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('#crm-sales-tab-unmatched')).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByText(/Unassigned|Nicht zugeordnet|company|Firma|Nothing unassigned|Nichts/i).first()).toBeVisible({ timeout: 15000 });
   });
 });

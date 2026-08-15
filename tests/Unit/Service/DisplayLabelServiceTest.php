@@ -34,9 +34,20 @@ final class DisplayLabelServiceTest extends TestCase
 			return $out;
 		});
 		$l10n->method('l')->willReturnCallback(static function (string $type, $data) {
-			if ($data instanceof \DateTimeInterface) {
+			// Mirror Nextcloud L10N::l: only mutable DateTime is accepted as object.
+			// DateTimeImmutable falls through to (int)$obj === 1 → epoch.
+			if ($data instanceof \DateTimeImmutable) {
+				$data = 1;
+			}
+			if ($data instanceof \DateTime) {
 				return $data->format('Y-m-d H:i');
 			}
+			if (is_int($data) || (is_string($data) && is_numeric($data))) {
+				$dt = (new \DateTime('@' . (int)$data))->setTimezone(new \DateTimeZone(date_default_timezone_get()));
+
+				return $dt->format('Y-m-d H:i');
+			}
+
 			return (string)$data;
 		});
 		$l10n->method('n')->willReturnCallback(static function (string $singular, string $plural, int $count, array $args = []) {
@@ -106,6 +117,12 @@ final class DisplayLabelServiceTest extends TestCase
 		$this->assertSame('Stalled', $this->labels->planHealth('stalled'));
 		$this->assertSame('At risk', $this->labels->planHealth('at_risk'));
 		$this->assertSame('On track', $this->labels->planHealth('on_track'));
+		$this->assertSame('High', $this->labels->planPriority('p1'));
+		$this->assertSame('Normal', $this->labels->planPriority('p2'));
+		$this->assertSame('Low', $this->labels->planPriority('p3'));
+		$this->assertSame('Active', $this->labels->planStatus('active'));
+		$this->assertSame('Paused', $this->labels->planStatus('paused'));
+		$this->assertSame('Done', $this->labels->planStatus('done'));
 		$this->assertSame('Renewal', $this->labels->todayKind('agreement_expiry'));
 		$this->assertSame('Stale deal', $this->labels->todayKind('deal_stale'));
 		$this->assertSame('Overdue activity', $this->labels->todayKind('activity_overdue'));
@@ -210,5 +227,31 @@ final class DisplayLabelServiceTest extends TestCase
 		$this->assertSame('—', $this->labels->formatDateTime(''));
 		// Date-only stays on the same calendar day even when formatted via datetime mock.
 		$this->assertStringStartsWith('2026-08-03', $this->labels->formatDate('2026-08-03'));
+	}
+
+	public function testFormatDateNeverEmitsUnixEpochForValidYmd(): void
+	{
+		$out = $this->labels->formatDate('2026-09-13');
+		$this->assertStringContainsString('2026-09-13', $out);
+		$this->assertStringNotContainsString('1970-01-01', $out);
+		$this->assertStringNotContainsString('1970', $out);
+	}
+
+	public function testTimelineWhenAcceptsDateTimeImmutable(): void
+	{
+		$at = new \DateTimeImmutable('2026-09-13T15:30:00+00:00');
+		$out = $this->labels->timelineWhen($at);
+		$this->assertStringContainsString('2026-09-13', $out);
+		$this->assertStringNotContainsString('1970', $out);
+	}
+
+	public function testL10nDatePassesUnixTimestampNotImmutable(): void
+	{
+		$src = (string)file_get_contents(dirname(__DIR__, 3) . '/lib/Service/DisplayLabelService.php');
+		$this->assertStringContainsString('function l10nDate', $src);
+		$this->assertStringContainsString('$dt->getTimestamp()', $src);
+		$this->assertStringNotContainsString("\$this->l10n->l('date', \$dt)", $src);
+		$this->assertStringNotContainsString("\$this->l10n->l('datetime', \$dt)", $src);
+		$this->assertStringNotContainsString("\$this->l10n->l('datetime', \$at)", $src);
 	}
 }

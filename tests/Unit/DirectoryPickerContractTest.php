@@ -95,13 +95,14 @@ final class DirectoryPickerContractTest extends TestCase
 		$this->assertStringContainsString('crm-review-sources-form', $js);
 		$this->assertStringContainsString("document.getElementById('crm-review-sources-form')", $js);
 		$this->assertStringContainsString("document.getElementById('section-workspace-mailbox')", $js);
+		$this->assertStringContainsString("document.getElementById('section-my-email')", $js);
 		$this->assertMatchesRegularExpression(
 			"/crm-review-sources-form[\s\S]{0,120}crm-circles-roll-call|crm-circles-roll-call[\s\S]{0,120}crm-review-sources-form/",
 			$js,
 		);
 		$controller = (string)file_get_contents($this->root . '/lib/Controller/PageController.php');
 		$this->assertStringContainsString(
-			"registerFrontEndAssets('pages/settings', null, [], ['common/folder-picker', 'common/mailbox-settings-present', 'workspace-settings-legacy-redirect'])",
+			"registerFrontEndAssets('pages/settings', null, [], ['common/folder-picker', 'common/signature-logo-core', 'common/personal-mail-settings-core', 'common/rich-mail-composer', 'common/mailbox-settings-present', 'workspace-settings-legacy-redirect'])",
 			$controller,
 		);
 	}
@@ -114,6 +115,7 @@ final class DirectoryPickerContractTest extends TestCase
 		$this->assertStringContainsString('role="alert"', $partial);
 		foreach ([
 			'templates/settings/workspace-mailbox.php',
+			'templates/settings/my-email.php',
 			'templates/settings/workspace-review-sources.php',
 			'templates/settings/circles-roll-call.php',
 		] as $rel) {
@@ -233,7 +235,7 @@ final class DirectoryPickerContractTest extends TestCase
 		$this->assertStringNotContainsString('crm-company-move-workspace', $html);
 		$this->assertStringNotContainsString('/move-workspace', $js);
 		$this->assertStringContainsString('MULTI_WORKSPACE_ENABLED', $svc);
-		$this->assertStringContainsString('Shared mailbox: everyone on the team', $shared);
+		$this->assertStringContainsString('Send from a connected personal or team account', $shared);
 	}
 
 	public function testMailTriageUsesCompanySearchNotTypedId(): void
@@ -253,13 +255,16 @@ final class DirectoryPickerContractTest extends TestCase
 	{
 		$js = (string)file_get_contents($this->root . '/js/common/shared-mail-send.js');
 		$this->assertStringContainsString('pickMailbox', $js);
-		$this->assertStringContainsString('Which shared mailbox?', $js);
+		$this->assertStringContainsString("title: t('Send as')", $js);
+		$this->assertStringContainsString('mail/send-accounts', $js);
 		$this->assertStringContainsString('lastMailboxByWs', $js);
 		$this->assertStringContainsString('attachmentFileIds', $js);
 		$this->assertStringContainsString('data-crm-attach-file', $js);
 		$this->assertStringContainsString('pickFile', $js);
 		$job = (string)file_get_contents($this->root . '/lib/BackgroundJob/MailRetentionPurgeJob.php');
 		$this->assertStringContainsString('purgeExpiredAcrossWorkspaces', $job);
+		$this->assertStringContainsString('purgeStale', $job);
+		$this->assertStringContainsString('MailDraftService', $job);
 		$info = (string)file_get_contents($this->root . '/appinfo/info.xml');
 		$this->assertStringContainsString('MailRetentionPurgeJob', $info);
 	}
@@ -297,6 +302,11 @@ final class DirectoryPickerContractTest extends TestCase
 		$picker = (string)file_get_contents($this->root . '/js/common/folder-picker.js');
 		$tpl = (string)file_get_contents($this->root . '/templates/pipeline.php');
 		$this->assertStringContainsString('pickFile', $picker);
+		$this->assertStringContainsString('__modernUnavailable', $picker);
+		$this->assertStringContainsString('extractPickerPickResult', $picker);
+		$this->assertStringContainsString('picker.pickNodes()', $picker);
+		$this->assertStringContainsString('function resolveFileIdViaDav', $picker);
+		$this->assertStringContainsString('function selectionFromPickerNode', $picker);
 		$this->assertStringContainsString('Pick PDF', $pipeline);
 		$this->assertStringContainsString('quoteFileId', $pipeline);
 		$this->assertStringContainsString('data-quote-file-id', $tpl);

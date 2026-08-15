@@ -10,6 +10,8 @@ use OCA\CustomerCheck\Service\AgreementService;
 use OCA\CustomerCheck\Service\CompanyService;
 use OCA\CustomerCheck\Service\DealService;
 use OCA\CustomerCheck\Service\EditConflictService;
+use OCA\CustomerCheck\Service\MailboxService;
+use OCA\CustomerCheck\Service\MailboxSyncService;
 use OCA\CustomerCheck\Service\PersonService;
 use OCA\CustomerCheck\Service\ReviewService;
 use OCA\CustomerCheck\Service\TimelineService;
@@ -40,6 +42,7 @@ class ReviewApiController extends Controller
 		private readonly DealService $deals,
 		private readonly PersonService $persons,
 		private readonly AgreementService $agreements,
+		private readonly MailboxService $mailbox,
 		private readonly IDBConnection $db,
 		private readonly TimelineService $timeline,
 	) {
@@ -70,20 +73,25 @@ class ReviewApiController extends Controller
 				$this->access->isAppAdmin($uid),
 			);
 
+			$kindParam = $kind !== '' ? $kind : null;
+
 			return $this->ok([
 				'items' => $this->review->listItems(
 					$workspaceId,
 					$status !== '' ? $status : null,
-					$kind !== '' ? $kind : null,
+					$kindParam,
 					$q,
 					100,
 					$includeArchived,
 				),
-				'openCount' => $this->review->countOpen($workspaceId),
+				'openCount' => $this->review->countOpen($workspaceId, $kindParam),
 				'sources' => $this->workspaceService->getReviewSources($workspaceId),
 				'includeArchived' => $includeArchived,
 				'canWrite' => $canWrite,
 				'canReopen' => $canReopen,
+				'mailSync' => MailboxSyncService::mailSyncSummaryFromBoxes(
+					$this->mailbox->listMailboxes($workspaceId),
+				),
 			]);
 		} catch (\Throwable $e) {
 			return $this->fromThrowable($e);
@@ -149,7 +157,7 @@ class ReviewApiController extends Controller
 	}
 
 	/**
-	 * Remove junk from Review. Shared mail is deleted on the IMAP host.
+	 * Remove junk from Assign. Shared mail is deleted on the IMAP host.
 	 */
 	#[NoAdminRequired]
 	public function discard(int $workspaceId, int $id): JSONResponse
@@ -165,7 +173,7 @@ class ReviewApiController extends Controller
 	}
 
 	/**
-	 * Bulk remove junk from Review (same semantics as single discard — shared mail deleted on IMAP).
+	 * Bulk remove junk from Assign (same semantics as single discard — shared mail deleted on IMAP).
 	 */
 	#[NoAdminRequired]
 	public function discardBulk(int $workspaceId): JSONResponse
@@ -177,6 +185,40 @@ class ReviewApiController extends Controller
 			$ids = is_array($body['ids'] ?? null) ? $body['ids'] : [];
 
 			return $this->ok($this->review->discardBulk($workspaceId, $ids, $uid));
+		} catch (\Throwable $e) {
+			return $this->fromThrowable($e);
+		}
+	}
+
+	/**
+	 * Mark one shared-mail Assign item as spam (IMAP move to Junk/Spam, then leave Assign).
+	 */
+	#[NoAdminRequired]
+	public function markSpam(int $workspaceId, int $id): JSONResponse
+	{
+		try {
+			$uid = $this->access->currentUserId();
+			$this->assertReviewWrite($uid, $workspaceId);
+
+			return $this->ok($this->review->markSpam($workspaceId, $id, $uid));
+		} catch (\Throwable $e) {
+			return $this->fromThrowable($e);
+		}
+	}
+
+	/**
+	 * Bulk mark shared-mail Assign items as spam (IMAP Junk/Spam).
+	 */
+	#[NoAdminRequired]
+	public function markSpamBulk(int $workspaceId): JSONResponse
+	{
+		try {
+			$uid = $this->access->currentUserId();
+			$this->assertReviewWrite($uid, $workspaceId);
+			$body = $this->requestBody();
+			$ids = is_array($body['ids'] ?? null) ? $body['ids'] : [];
+
+			return $this->ok($this->review->markSpamBulk($workspaceId, $ids, $uid));
 		} catch (\Throwable $e) {
 			return $this->fromThrowable($e);
 		}
@@ -441,7 +483,7 @@ class ReviewApiController extends Controller
 
 			return $this->ok($result);
 		} catch (\Throwable $e) {
-			// Unmapped raw without a valid canonical → Review import_anomaly when requested.
+			// Unmapped raw without a valid canonical → Assign import_anomaly when requested.
 			if ($uid !== '' && !empty($body['enqueueAnomaly'])) {
 				try {
 					return $this->ok($this->review->enqueueImportAnomaly(

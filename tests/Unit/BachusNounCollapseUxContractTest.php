@@ -19,7 +19,8 @@ final class BachusNounCollapseUxContractTest extends TestCase
 		$this->assertStringContainsString("\$l->t('Also on your phone')", $detail);
 		$this->assertStringContainsString("\$l->t('Licenses & renewals')", $detail);
 		$this->assertStringContainsString("\$l->t('Next steps for this customer')", $detail);
-		$this->assertStringContainsString('<details class="crm-next-steps__extra" id="crm-promises">', $detail);
+		$this->assertStringContainsString('<details class="crm-next-steps__extra-details" id="crm-promises">', $detail);
+		$this->assertStringContainsString('crm-next-steps__extra-head', $detail);
 		$this->assertStringNotContainsString('crm-next-steps__block', $detail);
 		$nextChunkStart = (int)strpos($detail, 'id="crm-next-steps"');
 		$nextChunkEnd = (int)strpos($detail, 'id="crm-deals"', $nextChunkStart);

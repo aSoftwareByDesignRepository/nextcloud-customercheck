@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace OCA\CustomerCheck\Tests\Unit\Service;
 
+use OCA\CustomerCheck\Service\HtmlSanitizeService;
+
 use OCA\CustomerCheck\Constants;
 use OCA\CustomerCheck\Service\MailboxService;
 use OCP\AppFramework\Utility\ITimeFactory;
@@ -31,6 +33,7 @@ final class MailboxServicePurgeTest extends TestCase
 			$this->createMock(ICrypto::class),
 			$this->createMock(ITimeFactory::class),
 			$this->createMock(IL10N::class),
+			new HtmlSanitizeService(),
 		);
 
 		$this->assertSame(0, $svc->purgeExpired(1, 365));
@@ -46,6 +49,7 @@ final class MailboxServicePurgeTest extends TestCase
 			$this->createMock(ICrypto::class),
 			$this->createMock(ITimeFactory::class),
 			$this->createMock(IL10N::class),
+			new HtmlSanitizeService(),
 		);
 
 		$this->assertSame(0, $svc->purgeExpired(0, 365));
@@ -98,6 +102,7 @@ final class MailboxServicePurgeTest extends TestCase
 			$this->createMock(ICrypto::class),
 			$time,
 			$this->createMock(IL10N::class),
+			new HtmlSanitizeService(),
 		);
 
 		$this->assertSame(0, $svc->purgeExpired(9, 7));
@@ -157,6 +162,7 @@ final class MailboxServicePurgeTest extends TestCase
 			$this->createMock(ICrypto::class),
 			$time,
 			$this->createMock(IL10N::class),
+			new HtmlSanitizeService(),
 		);
 
 		$this->assertSame(2, $svc->purgeExpired(3, 365));

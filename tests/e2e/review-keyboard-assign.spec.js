@@ -1,51 +1,47 @@
 /**
- * GNQ §5.8#8 — assign suggested Review item in ≤3 keyboard actions (j → a).
+ * Unassigned assign — open row, use suggestion or Assign (same chrome as Inbox Reply).
  */
 import { test, expect } from '@playwright/test';
 import { login, credsFromEnv } from './helpers/auth.js';
 
-async function openReview(page) {
-  await page.goto('/apps/customercheck/review');
-  await expect(page.locator('[data-crm-persona-mount="review"], #crm-review-disclosure, .crm-page-stack').first()).toBeVisible({ timeout: 30000 });
+async function openUnassigned(page) {
+  await page.goto('/apps/customercheck/sales-inbox?tab=unmatched&kind=mail');
+  await expect(page.locator('#crm-sales-inbox-root[data-crm-inbox-unified="1"]')).toBeVisible({ timeout: 30000 });
+  await expect(page.locator('#crm-sales-tab-unmatched')).toHaveAttribute('aria-selected', 'true');
 }
 
-test.describe('Review keyboard assign', () => {
+test.describe('Inbox Unassigned assign', () => {
   test.skip(!process.env.NC_ADMIN_USER, 'Requires NC_ADMIN_USER / NC_ADMIN_PASS');
 
-  test('disclosure is present on unfiltered Review inbox', async ({ page }) => {
+  test('disclosure is present on Unassigned tab', async ({ page }) => {
     await login(page, credsFromEnv('ADMIN'));
-    await openReview(page);
-    await expect(page.locator('#crm-review-disclosure, [data-crm-persona-mount="review"] .crm-callout[role="status"]').first()).toBeVisible({ timeout: 20000 });
+    await openUnassigned(page);
+    await expect(page.locator('#crm-sales-inbox-disclosure')).toBeVisible({ timeout: 20000 });
   });
 
-  test('suggested row can be assigned with keyboard a when company is prefilled', async ({ page }) => {
+  test('suggested row can be assigned via one-tap when company is prefilled', async ({ page }) => {
     await login(page, credsFromEnv('ADMIN'));
-    await openReview(page);
+    await openUnassigned(page);
 
-    const rows = page.locator('[data-crm-review-reader] [data-crm-review-row], [data-crm-review-reader] form[data-review-id]');
+    const rows = page.locator('#crm-sales-inbox-list .crm-mail-thread-row');
     const count = await rows.count();
-    test.skip(count === 0, 'No open Review items seeded for keyboard assign');
+    test.skip(count === 0, 'No open Unassigned mail seeded for assign');
 
-    const first = rows.first();
-    const hidden = first.locator('input[name="companyId"]');
-    const companyId = await hidden.inputValue().catch(() => '');
-    test.skip(!companyId || companyId === '0', 'Top row has no suggested company prefill');
+    await rows.first().click();
+    await expect(page.locator('#crm-sales-inbox-open-assign')).toBeVisible({ timeout: 20000 });
+    await page.locator('#crm-sales-inbox-open-assign').click();
+    await expect(page.locator('#crm-sales-inbox-decide')).toBeVisible({ timeout: 20000 });
 
-    await first.focus();
+    const quick = page.locator('#crm-sales-inbox-quick-assign');
+    const quickId = await quick.getAttribute('data-company-id').catch(() => null);
+    test.skip(!quickId || quickId === '0' || !(await quick.isVisible()), 'Top row has no suggested company');
+
     const assignReq = page.waitForRequest(
       (req) => req.method() === 'POST' && /\/review\/items\/\d+\/assign/.test(req.url()),
       { timeout: 15000 },
     ).catch(() => null);
-    await page.keyboard.press('a');
+    await quick.click();
     const req = await assignReq;
-    if (req) {
-      expect(req.url()).toMatch(/\/review\/items\/\d+\/assign/);
-    } else {
-      // Fallback: primary Assign remains keyboard-reachable (WCAG).
-      const submit = first.locator('button[type="submit"]');
-      await expect(submit).toBeVisible();
-      await submit.focus();
-      await expect(submit).toBeFocused();
-    }
+    expect(req, 'expected assign POST').toBeTruthy();
   });
 });

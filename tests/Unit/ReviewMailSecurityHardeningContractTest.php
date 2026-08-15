@@ -80,7 +80,8 @@ final class ReviewMailSecurityHardeningContractTest extends TestCase
 			$deletePos,
 			'person delete must run before unmatch so lock conflicts leave mail untouched',
 		);
-		$this->assertStringContainsString('returnMailToReview', $chunk);
+		$this->assertStringContainsString('returnMailToAssign', $chunk);
+		$this->assertStringContainsString('returnSharedMailMessagesToAssign', $chunk);
 		$this->assertStringContainsString('contactsKept', $chunk);
 	}
 
@@ -91,13 +92,14 @@ final class ReviewMailSecurityHardeningContractTest extends TestCase
 		$this->assertNotFalse($start);
 		$chunk = substr($svc, (int)$start, 4500);
 		$this->assertStringContainsString('$dateOnlyQuery', $chunk);
-		$this->assertStringContainsString(
-			'$fetchLimit = $dateOnlyQuery ? max($limit, min(500, $limit * 5)) : $limit;',
-			$chunk,
-		);
+		$this->assertStringContainsString('ReviewSharedMailTriage::fetchWindow', $chunk);
 		$this->assertStringContainsString('enrichSentAt', $chunk);
+		$this->assertStringContainsString('dropDeadSharedMailItems', $chunk);
 		$this->assertStringContainsString('usort', $chunk);
 		$this->assertStringContainsString('sentAt', $chunk);
 		$this->assertStringContainsString('array_slice', $chunk);
+		$triage = (string)file_get_contents(dirname(__DIR__, 2) . '/lib/Support/ReviewSharedMailTriage.php');
+		$this->assertStringContainsString('function fetchWindow', $triage);
+		$this->assertStringContainsString('max($limit * 5, 200)', $triage);
 	}
 }

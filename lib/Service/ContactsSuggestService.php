@@ -53,7 +53,7 @@ class ContactsSuggestService
 	}
 
 	/**
-	 * Search Contacts as a workspace member (background Review ingress — GNQ §5.2).
+	 * Search Contacts as a workspace member (background Assign ingress — GNQ §5.2).
 	 *
 	 * @return list<array{name: string, email: string|null, phone: string|null, uid: string|null, org: string|null}>
 	 */
@@ -81,7 +81,7 @@ class ContactsSuggestService
 	}
 
 	/**
-	 * Periodic Review scan seeds — email-ish + common letters (bounded).
+	 * Periodic Assign scan seeds — email-ish + common letters (bounded).
 	 *
 	 * @return list<array{name: string, email: string|null, phone: string|null, uid: string|null, org: string|null}>
 	 */

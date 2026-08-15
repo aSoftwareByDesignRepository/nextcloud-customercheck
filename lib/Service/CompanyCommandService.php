@@ -211,8 +211,22 @@ class CompanyCommandService
 
 		try {
 			foreach ($this->mailbox->matchedForCompany($companyId, 50) as $msg) {
+				$canRead = MailAclLogic::canReadMessage(
+					$userId,
+					[
+						'visibility' => (string)($msg['visibility'] ?? MailAclLogic::VISIBILITY_SHARED),
+						'ownerUserId' => $msg['ownerUserId'] ?? null,
+						'companyId' => $companyId,
+					],
+					true, // caller already has company read
+					false,
+				);
+				if (!$canRead) {
+					continue;
+				}
 				$sent = (string)($msg['sentAt'] ?? '');
 				$snippet = trim((string)($msg['snippet'] ?? ''));
+				$visibility = (string)($msg['visibility'] ?? MailAclLogic::VISIBILITY_SHARED);
 				$raw[] = [
 					'id' => 'shared_mail:' . (int)$msg['id'],
 					'kind' => 'shared_mail',
@@ -229,7 +243,8 @@ class CompanyCommandService
 					'crmMailId' => (int)$msg['id'],
 					'deepLink' => null,
 					'mailMessageId' => isset($msg['messageId']) ? (string)$msg['messageId'] : null,
-					'shared' => true,
+					'shared' => $visibility === MailAclLogic::VISIBILITY_SHARED,
+					'visibility' => $visibility,
 					'mailboxLabel' => (string)($msg['mailboxLabel'] ?? 'shared'),
 				];
 			}
@@ -264,7 +279,7 @@ class CompanyCommandService
 		$boxes = [];
 		try {
 			if ($wsId > 0) {
-				$boxes = $this->mailbox->listMailboxes($wsId);
+				$boxes = $this->mailbox->listMailboxes($wsId, MailAclLogic::KIND_TEAM);
 			}
 		} catch (\Throwable) {
 			$boxes = [];

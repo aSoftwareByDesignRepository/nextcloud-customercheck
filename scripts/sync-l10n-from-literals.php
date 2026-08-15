@@ -170,7 +170,7 @@ file_put_contents(
 writeL10n($root, 'en', $enTr, $enPrev['pluralForm'] ?? null);
 writeL10n($root, 'de', $deTr, $dePrev['pluralForm'] ?? null);
 
-$secondary = ['da', 'es', 'fr', 'it', 'nb', 'nl', 'pl', 'sv'];
+$secondary = ['da', 'es', 'fr', 'it', 'nb', 'nl', 'pl', 'sv', 'pt_BR'];
 $secondaryCounts = [];
 foreach ($secondary as $lang) {
 	$path = $root . '/l10n/' . $lang . '.json';

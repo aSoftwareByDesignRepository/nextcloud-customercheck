@@ -183,6 +183,26 @@ final class DisplayLabelService
 		};
 	}
 
+	public function planPriority(string $priority): string
+	{
+		return match (strtolower(trim($priority))) {
+			'p1' => $this->l10n->t('High'),
+			'p2' => $this->l10n->t('Normal'),
+			'p3' => $this->l10n->t('Low'),
+			default => $priority !== '' ? $priority : $this->l10n->t('Normal'),
+		};
+	}
+
+	public function planStatus(string $status): string
+	{
+		return match (strtolower(trim($status))) {
+			'active' => $this->l10n->t('Active'),
+			'paused' => $this->l10n->t('Paused'),
+			'done' => $this->l10n->t('Done'),
+			default => $status !== '' ? $status : $this->l10n->t('Unknown'),
+		};
+	}
+
 	public function commitmentStatus(string $status): string
 	{
 		return match ($status) {
@@ -249,7 +269,7 @@ final class DisplayLabelService
 			'email.logged' => $this->l10n->t('Email logged'),
 			'email.composed' => $this->l10n->t('Email composed'),
 			'mail_sent' => $this->l10n->t('Email sent'),
-			'review.assigned' => $this->l10n->t('Review item assigned'),
+			'review.assigned' => $this->l10n->t('Item assigned'),
 			'invoice.paid' => $this->l10n->t('Invoice marked paid'),
 			'invoice.paid.ambiguous' => $this->l10n->t('Invoice payment needs review'),
 			'lead.webhook' => $this->l10n->t('Lead received'),
@@ -284,7 +304,7 @@ final class DisplayLabelService
 			return '';
 		}
 
-		return (string)$this->l10n->l('datetime', $at);
+		return $this->l10nDate('datetime', $at);
 	}
 
 	/**
@@ -292,6 +312,10 @@ final class DisplayLabelService
 	 *
 	 * Date-only values are anchored at noon so user-timezone formatting cannot
 	 * shift the calendar day backward (midnight UTC → previous evening locally).
+	 *
+	 * Nextcloud {@see IL10N::l()} only accepts mutable {@see \DateTime} or a Unix
+	 * timestamp — {@see \DateTimeImmutable} falls through to `(int)$obj` (= 1) and
+	 * renders as 1970-01-01. Always pass a timestamp.
 	 */
 	public function formatDate(?string $ymd): string
 	{
@@ -309,7 +333,7 @@ final class DisplayLabelService
 			return $raw;
 		}
 
-		return (string)$this->l10n->l('date', $dt);
+		return $this->l10nDate('date', $dt);
 	}
 
 	/**
@@ -327,7 +351,15 @@ final class DisplayLabelService
 			return $raw;
 		}
 
-		return (string)$this->l10n->l('datetime', $dt);
+		return $this->l10nDate('datetime', $dt);
+	}
+
+	/**
+	 * @param 'date'|'datetime'|'time' $type
+	 */
+	private function l10nDate(string $type, \DateTimeInterface $dt): string
+	{
+		return (string)$this->l10n->l($type, $dt->getTimestamp());
 	}
 
 	public function personStatus(string $status): string

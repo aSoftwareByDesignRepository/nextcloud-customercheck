@@ -1,7 +1,7 @@
 <?php
 /**
  * Shared workspace boot status/error hosts for every workspace settings section.
- * After the settings split, mailbox / Review sources / Circles each mount alone —
+ * After the settings split, mailbox / Assign sources / Circles each mount alone —
  * without these nodes, boot failures and early saves were silent.
  *
  * @var \OCP\IL10N $l

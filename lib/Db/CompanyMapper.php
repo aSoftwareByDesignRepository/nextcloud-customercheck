@@ -74,6 +74,46 @@ class CompanyMapper extends QBMapper
 	}
 
 	/**
+	 * Active (non-archived) company display names in a workspace — used to flag
+	 * case-insensitive name twins on the companies list (slug remains the only
+	 * hard-unique key).
+	 *
+	 * @return list<string>
+	 */
+	public function listActiveNames(int $workspaceId, int $limit = 5000): array
+	{
+		if ($workspaceId <= 0) {
+			return [];
+		}
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('name')
+			->from($this->getTableName())
+			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, IQueryBuilder::PARAM_INT)))
+			->andWhere($qb->expr()->isNull('archived_at'))
+			->setMaxResults($this->clampLimit($limit));
+		$result = $qb->executeQuery();
+		$names = [];
+		try {
+			while (($row = $result->fetch()) !== false) {
+				$names[] = (string)($row['name'] ?? '');
+			}
+		} finally {
+			$result->closeCursor();
+		}
+		return $names;
+	}
+
+	/**
+	 * @return array<string, true>
+	 */
+	public function activeDuplicateNameKeys(int $workspaceId): array
+	{
+		return \OCA\CustomerCheck\Support\CompanyDuplicateLogic::duplicateKeysFromNames(
+			$this->listActiveNames($workspaceId)
+		);
+	}
+
+	/**
 	 * @param array{status?: string, search?: string, archived?: bool} $filters
 	 * @return Company[]
 	 */
@@ -253,12 +293,12 @@ class CompanyMapper extends QBMapper
 	}
 
 	/**
-	 * @param array{status?: string, search?: string, archived?: bool, workspaceId?: int, workspaceIds?: list<int>} $filters
+	 * @param array{status?: string, search?: string, archived?: bool, workspaceId?: int, workspaceIds?: list<int>, statusSearchCodes?: list<string>, ownerUserIds?: list<string>, matchOpenCallbacks?: bool} $filters
 	 */
 	private function applyFilters(IQueryBuilder $qb, array $filters): void
 	{
 		if (($filters['includeArchived'] ?? false) === true) {
-			// Both active and archived — Review re-link / historical books (GNQ §5.5).
+			// Both active and archived — Assign re-link / historical books (GNQ §5.5).
 		} elseif (($filters['archived'] ?? false) === true) {
 			$qb->andWhere($qb->expr()->isNotNull('archived_at'));
 		} else {
@@ -295,11 +335,106 @@ class CompanyMapper extends QBMapper
 
 		$search = trim((string)($filters['search'] ?? ''));
 		if ($search !== '') {
+			if (mb_strlen($search) > \OCA\CustomerCheck\Support\CompanyListSearch::MAX_LEN) {
+				$search = mb_substr($search, 0, \OCA\CustomerCheck\Support\CompanyListSearch::MAX_LEN);
+			}
 			$like = '%' . $this->db->escapeLikeParameter($search) . '%';
-			$qb->andWhere($qb->expr()->orX(
+			$ors = [
 				$qb->expr()->iLike('name', $qb->createNamedParameter($like)),
 				$qb->expr()->iLike('slug', $qb->createNamedParameter($like)),
-			));
+				$qb->expr()->iLike('notes', $qb->createNamedParameter($like)),
+				$qb->expr()->iLike('account_owner_user_id', $qb->createNamedParameter($like)),
+				$qb->expr()->iLike('status', $qb->createNamedParameter($like)),
+			];
+
+			$statusCodes = $filters['statusSearchCodes'] ?? [];
+			if (is_array($statusCodes) && $statusCodes !== []) {
+				$codes = [];
+				foreach ($statusCodes as $code) {
+					$code = trim((string)$code);
+					if ($code !== '') {
+						$codes[$code] = $code;
+					}
+				}
+				$codes = array_values($codes);
+				if ($codes !== []) {
+					$ors[] = $qb->expr()->in(
+						'status',
+						$qb->createNamedParameter($codes, IQueryBuilder::PARAM_STR_ARRAY)
+					);
+				}
+			}
+
+			$ownerIds = $filters['ownerUserIds'] ?? [];
+			if (is_array($ownerIds) && $ownerIds !== []) {
+				$uids = [];
+				foreach ($ownerIds as $uid) {
+					$uid = trim((string)$uid);
+					if ($uid !== '') {
+						$uids[$uid] = $uid;
+					}
+				}
+				$uids = array_values($uids);
+				if ($uids !== []) {
+					$ors[] = $qb->expr()->in(
+						'account_owner_user_id',
+						$qb->createNamedParameter($uids, IQueryBuilder::PARAM_STR_ARRAY)
+					);
+				}
+			}
+
+			// Contacts (name / email / phone / job title) — EXISTS keeps the company row distinct.
+			$pName = $qb->createNamedParameter($like);
+			$pEmail = $qb->createNamedParameter($like);
+			$pPhone = $qb->createNamedParameter($like);
+			$pRole = $qb->createNamedParameter($like);
+			$ors[] = $qb->createFunction(
+				'EXISTS (SELECT 1 FROM `*PREFIX*crm_person` p'
+				. ' WHERE p.company_id = id AND ('
+				. ' LOWER(p.name) LIKE LOWER(' . $pName . ')'
+				. ' OR LOWER(COALESCE(p.email, \'\')) LIKE LOWER(' . $pEmail . ')'
+				. ' OR LOWER(COALESCE(p.phone, \'\')) LIKE LOWER(' . $pPhone . ')'
+				. ' OR LOWER(COALESCE(p.role, \'\')) LIKE LOWER(' . $pRole . ')'
+				. '))'
+			);
+
+			// Open callbacks / calls (title or details), plus keyword “callbacks”.
+			$aTitle = $qb->createNamedParameter($like);
+			$aDetails = $qb->createNamedParameter($like);
+			$ors[] = $qb->createFunction(
+				'EXISTS (SELECT 1 FROM `*PREFIX*crm_activity` a'
+				. ' WHERE a.company_id = id'
+				. ' AND a.done_at IS NULL'
+				. ' AND (a.is_callback = 1 OR a.type = \'call\')'
+				. ' AND ('
+				. ' LOWER(a.title) LIKE LOWER(' . $aTitle . ')'
+				. ' OR LOWER(COALESCE(a.details, \'\')) LIKE LOWER(' . $aDetails . ')'
+				. '))'
+			);
+			if (($filters['matchOpenCallbacks'] ?? false) === true) {
+				$ors[] = $qb->createFunction(
+					'EXISTS (SELECT 1 FROM `*PREFIX*crm_activity` a'
+					. ' WHERE a.company_id = id'
+					. ' AND a.done_at IS NULL'
+					. ' AND (a.is_callback = 1 OR a.type = \'call\'))'
+				);
+			}
+
+			// Last contact / talk log (subject, snippet, or date fragment).
+			$eSubject = $qb->createNamedParameter($like);
+			$eSnippet = $qb->createNamedParameter($like);
+			$emailSql = 'EXISTS (SELECT 1 FROM `*PREFIX*crm_email_touch` e'
+				. ' WHERE e.company_id = id AND ('
+				. ' LOWER(e.subject) LIKE LOWER(' . $eSubject . ')'
+				. ' OR LOWER(COALESCE(e.snippet, \'\')) LIKE LOWER(' . $eSnippet . ')';
+			if (preg_match('/^\d{4}(-\d{2})?(-\d{2})?$/', $search) === 1) {
+				$eDate = $qb->createNamedParameter($like);
+				$emailSql .= ' OR CAST(e.occurred_at AS CHAR) LIKE ' . $eDate;
+			}
+			$emailSql .= '))';
+			$ors[] = $qb->createFunction($emailSql);
+
+			$qb->andWhere($qb->expr()->orX(...$ors));
 		}
 	}
 

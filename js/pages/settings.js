@@ -657,6 +657,70 @@
   const codesSave = document.getElementById('crm-product-codes-save');
   let customCodes = [];
 
+  // Personal mail OAuth (app admin)
+  const oauthForm = document.getElementById('crm-personal-mail-oauth-form');
+  if (oauthForm && Api) {
+    (async function loadOAuthConfig() {
+      const err = document.getElementById('crm-oauth-config-error');
+      const status = document.getElementById('crm-oauth-config-status');
+      try {
+        const res = await Api.get('/settings/personal-mail-oauth');
+        const data = res.data || {};
+        const setVal = function (id, v) {
+          const el = document.getElementById(id);
+          if (el) el.value = v == null ? '' : String(v);
+        };
+        setVal('crm-oauth-google-client-id', data.googleClientId || '');
+        setVal('crm-oauth-microsoft-client-id', data.microsoftClientId || '');
+        const gHint = document.getElementById('crm-oauth-google-secret-hint');
+        if (gHint) {
+          gHint.textContent = data.googleHasSecret
+            ? tr('A Google client secret is saved. Leave blank to keep it.')
+            : tr('No Google client secret saved yet.');
+        }
+        const mHint = document.getElementById('crm-oauth-microsoft-secret-hint');
+        if (mHint) {
+          mHint.textContent = data.microsoftHasSecret
+            ? tr('A Microsoft client secret is saved. Leave blank to keep it.')
+            : tr('No Microsoft client secret saved yet.');
+        }
+        const uri = document.getElementById('crm-oauth-redirect-uri');
+        if (uri && data.redirectUri) uri.textContent = String(data.redirectUri);
+        if (status) status.textContent = '';
+      } catch (e) {
+        if (err) {
+          err.hidden = false;
+          err.textContent = (e.payload && e.payload.message) || e.message || tr('Could not load OAuth settings.');
+        }
+      }
+    })();
+    oauthForm.addEventListener('submit', async function (ev) {
+      ev.preventDefault();
+      const err = document.getElementById('crm-oauth-config-error');
+      const status = document.getElementById('crm-oauth-config-status');
+      if (err) { err.hidden = true; err.textContent = ''; }
+      try {
+        await Api.put('/settings/personal-mail-oauth', {
+          googleClientId: String((document.getElementById('crm-oauth-google-client-id') || {}).value || ''),
+          googleClientSecret: String((document.getElementById('crm-oauth-google-client-secret') || {}).value || ''),
+          microsoftClientId: String((document.getElementById('crm-oauth-microsoft-client-id') || {}).value || ''),
+          microsoftClientSecret: String((document.getElementById('crm-oauth-microsoft-client-secret') || {}).value || ''),
+        });
+        if (status) status.textContent = tr('OAuth settings saved.');
+        if (C && C.announce) C.announce(tr('OAuth settings saved.'));
+        const gSec = document.getElementById('crm-oauth-google-client-secret');
+        const mSec = document.getElementById('crm-oauth-microsoft-client-secret');
+        if (gSec) gSec.value = '';
+        if (mSec) mSec.value = '';
+      } catch (e) {
+        if (err) {
+          err.hidden = false;
+          err.textContent = (e.payload && e.payload.message) || e.message;
+        }
+      }
+    });
+  }
+
   function escapeHtml(value) {
     return String(value || '').replace(/[&<>"']/g, (char) => ({
       '&': '&amp;',
@@ -821,7 +885,7 @@
   }
 
   /**
-   * Lock Review sources + mailbox form until workspace hydrate completes so boot cannot
+   * Lock Assign sources + mailbox form until workspace hydrate completes so boot cannot
    * overwrite toggles the operator already flipped (settings-split race).
    * @param {boolean} locked
    */
@@ -954,6 +1018,21 @@
     }
   }
 
+  function setMailboxComposeOpen(open) {
+    const panel = document.getElementById('crm-mailbox-compose');
+    if (!panel) return;
+    panel.open = !!open;
+  }
+
+  function syncMailboxComposeVisibility(forceOpen) {
+    const editingId = parseInt(String((document.getElementById('crm-mbox-id') || {}).value || '0'), 10);
+    if (forceOpen || editingId > 0 || mailboxCache.length === 0) {
+      setMailboxComposeOpen(true);
+      return;
+    }
+    setMailboxComposeOpen(false);
+  }
+
   function syncMailboxPasswordRequired() {
     const pass = document.getElementById('crm-mbox-pass');
     const id = parseInt(String((document.getElementById('crm-mbox-id') || {}).value || '0'), 10);
@@ -989,6 +1068,7 @@
     const resetBtn = document.getElementById('crm-mailbox-reset');
     if (resetBtn) resetBtn.hidden = true;
     syncMailboxPasswordRequired();
+    setMailboxComposeOpen(true);
   }
 
   /**
@@ -1013,6 +1093,16 @@
     setVal('crm-mbox-smtp-port', box.smtpPort || 465);
     setVal('crm-mbox-user', box.username || '');
     setVal('crm-mbox-pass', '');
+    setVal('crm-mbox-signature', box.signaturePlain || box.signatureHtml || '');
+    if (teamSigApi && teamSigApi.destroy) teamSigApi.destroy();
+    teamSigApi = mountSignatureEditor(
+      'crm-mbox-signature-editor',
+      'crm-mbox-signature-label',
+      box.signatureHtml || '',
+      box.signaturePlain || '',
+    );
+    const sigSave = document.getElementById('crm-mbox-signature-save');
+    if (sigSave) sigSave.disabled = false;
     const imapEncEl = document.getElementById('crm-mbox-imap-enc');
     const smtpEncEl = document.getElementById('crm-mbox-smtp-enc');
     if (imapEncEl) imapEncEl.value = box.imapEnc || 'ssl';
@@ -1043,8 +1133,10 @@
     const resetBtn = document.getElementById('crm-mailbox-reset');
     if (resetBtn) resetBtn.hidden = false;
     syncMailboxPasswordRequired();
+    setMailboxComposeOpen(true);
     if (!opts || opts.scrollForm !== false) {
-      form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      const panel = document.getElementById('crm-mailbox-compose') || form;
+      panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
   }
 
@@ -1079,10 +1171,12 @@
       if (emptyHost) {
         emptyHost.hidden = rows.length > 0;
       }
+      syncMailboxComposeVisibility(false);
     } catch (e) {
       if (generation !== mailboxesGeneration) return;
       showWsError((e.payload && e.payload.message) || e.message || tr('Could not load mailboxes.'));
       if (emptyHost) emptyHost.hidden = false;
+      syncMailboxComposeVisibility(true);
     }
   }
 
@@ -1099,7 +1193,7 @@
         empty.setAttribute('role', 'status');
         empty.innerHTML = '<h4 class="crm-empty-state__title"></h4><p class="crm-empty-state__text"></p>';
         empty.querySelector('.crm-empty-state__title').textContent = tr('No members yet');
-        empty.querySelector('.crm-empty-state__text').textContent = tr('Add a colleague below so they can help with customers.');
+        empty.querySelector('.crm-empty-state__text').textContent = tr('Open Add a member to invite a colleague.');
         wsMembers.appendChild(empty);
         return;
       }
@@ -1138,7 +1232,7 @@
   }
 
   /**
-   * Review file source folder — directory picker only (never a typed file id).
+   * Assign file source folder — directory picker only (never a typed file id).
    * @param {number} fileId
    * @param {string} [path]
    */
@@ -1153,9 +1247,9 @@
     if (pathHidden) pathHidden.value = id > 0 && label ? label : '';
     if (status) {
       if (id > 0 && label) {
-        status.textContent = tr('Review folder linked: %s', [label]);
+        status.textContent = tr('Assign folder linked: %s', [label]);
       } else if (id > 0) {
-        status.textContent = tr('Review folder linked.');
+        status.textContent = tr('Assign folder linked.');
       } else {
         status.textContent = tr('No review folder selected.');
       }
@@ -1178,6 +1272,15 @@
       if (stuck) stuck.value = String(s.stuckChaseDays != null ? s.stuckChaseDays : 3);
       if (mailRetention) mailRetention.value = String(s.mailRetentionDays != null ? s.mailRetentionDays : 365);
       if (digest) digest.checked = !!s.digestEnabled;
+      const personalEnabled = document.getElementById('crm-ws-personal-mail-enabled');
+      const personalDsgvo = document.getElementById('crm-ws-personal-mail-dsgvo');
+      if (personalEnabled) {
+        personalEnabled.checked = !!s.personalMailEnabled;
+      }
+      if (personalDsgvo) {
+        // Ack is sticky once recorded — keep checked when already acknowledged.
+        personalDsgvo.checked = !!(s.personalMailDsgvoAt || s.personalMailDsgvoAck);
+      }
       const icsWrap = document.getElementById('crm-ws-ics-wrap');
       const icsUrl = document.getElementById('crm-ws-ics-url');
       if (icsWrap && icsUrl) {
@@ -1247,14 +1350,16 @@
   }
 
   async function bootWorkspaceSection() {
-    if (!canManageWorkspace) return;
     const needsWorkspaceBoot = !!(
       document.getElementById('section-workspace-mailbox')
+      || document.getElementById('section-my-email')
       || document.getElementById('crm-review-sources-form')
       || document.getElementById('crm-circles-roll-call')
       || document.getElementById('section-checklists')
+      || document.getElementById('crm-ws-personal-mail-mine')
     );
     if (!needsWorkspaceBoot) return;
+    if (!canManageWorkspace && !document.getElementById('crm-ws-personal-mail-mine')) return;
     workspaceBootReady = false;
     setReviewSourcesLocked(true);
     showWsError('');
@@ -1269,15 +1374,28 @@
         wsCurrentLabel.textContent = '';
       }
       if (currentWorkspaceId) {
-        await refreshWorkspaceSettings();
-        if (document.getElementById('crm-ws-members')) {
-          await refreshWorkspaceMembers();
+        if (canManageWorkspace) {
+          await refreshWorkspaceSettings();
+          if (document.getElementById('crm-ws-members')) {
+            await refreshWorkspaceMembers();
+          }
+          if (document.getElementById('crm-mailbox-form') || document.getElementById('crm-mailbox-list')) {
+            await refreshMailboxes();
+          }
+          if (document.getElementById('section-checklists')) {
+            await loadChecklistTemplates();
+          }
+        } else if (document.getElementById('crm-ws-personal-mail-enabled') || document.getElementById('crm-ws-personal-mail-mine')) {
+          // Members only need personal-mail hydrate; settings GET still drives enabled flag.
+          try {
+            await refreshWorkspaceSettings();
+          } catch (e) { /* personal list API also returns enabled */ }
         }
-        if (document.getElementById('crm-mailbox-form') || document.getElementById('crm-mailbox-list')) {
-          await refreshMailboxes();
-        }
-        if (document.getElementById('section-checklists')) {
-          await loadChecklistTemplates();
+        if (document.getElementById('crm-ws-personal-mail-mine')) {
+          await refreshPersonalMail();
+          if (typeof window.__crmFocusPersonalMailMine === 'function') {
+            window.__crmFocusPersonalMailMine();
+          }
         }
         workspaceBootReady = true;
         setReviewSourcesLocked(false);
@@ -1316,15 +1434,27 @@
       const stuckChaseDays = parseInt(String((document.getElementById('crm-ws-stuck') || {}).value || '3'), 10);
       const mailRetentionDays = parseInt(String((document.getElementById('crm-ws-mail-retention') || {}).value || '365'), 10);
       const digestEnabled = !!(document.getElementById('crm-ws-digest') || {}).checked;
-      try {
-        await Api.put('/workspaces/' + currentWorkspaceId + '/settings', {
+      const payload = {
           wipLimit: wip,
           leadSlaHours: leadSlaHours,
           stuckChaseDays: stuckChaseDays,
           mailRetentionDays: mailRetentionDays,
           digestEnabled: digestEnabled,
-        });
+        };
+      const personalEnabledEl = document.getElementById('crm-ws-personal-mail-enabled');
+      const personalDsgvoEl = document.getElementById('crm-ws-personal-mail-dsgvo');
+      if (personalEnabledEl) {
+        payload.personalMailEnabled = !!personalEnabledEl.checked;
+      }
+      if (personalDsgvoEl) {
+        payload.personalMailDsgvoAck = !!personalDsgvoEl.checked;
+      }
+      try {
+        await Api.put('/workspaces/' + currentWorkspaceId + '/settings', payload);
         if (C && C.announce) C.announce(tr('Team & mailbox settings saved'));
+        if (document.getElementById('crm-ws-personal-mail-mine')) {
+          await refreshPersonalMail();
+        }
       } catch (e) {
         showWsError((e.payload && e.payload.message) || e.message);
       }
@@ -1486,6 +1616,63 @@
   if (mailboxReset && canManageWorkspace) {
     mailboxReset.addEventListener('click', () => {
       resetMailboxForm();
+      setMailboxComposeOpen(true);
+    });
+  }
+
+  let personalSigApi = null;
+  let teamSigApi = null;
+
+  function mountSignatureEditor(hostId, labelledBy, initialHtml, initialPlain) {
+    const host = document.getElementById(hostId);
+    const Rich = window.CustomerCheckRichMailComposer;
+    if (!host || !Rich || !Rich.mount) {
+      return null;
+    }
+    host.textContent = '';
+    // Same WYSIWYG shell + full toolbar as Inbox compose (layout parity).
+    // allowSignatureLogo: AS-18 — http(s) <img> only in signature HTML (not compose body).
+    return Rich.mount(host, {
+      labelledBy: labelledBy,
+      hasSignature: false,
+      toolbar: 'full',
+      allowSignatureLogo: true,
+      initialHtml: initialHtml || '',
+      initialPlain: initialPlain || '',
+    });
+  }
+
+  function syncHiddenSignature(textareaId, api) {
+    const el = document.getElementById(textareaId);
+    if (!el || !api) return;
+    el.value = String(api.getPlain() || '');
+  }
+
+  const teamSigSave = document.getElementById('crm-mbox-signature-save');
+  if (teamSigSave && canManageWorkspace) {
+    teamSigSave.addEventListener('click', async () => {
+      if (!requireWorkspaceReady()) return;
+      const id = parseInt(String((document.getElementById('crm-mbox-id') || {}).value || '0'), 10);
+      if (id < 1) {
+        showInlineError(mailboxErr, tr('Save or open a Team mailbox first.'));
+        return;
+      }
+      syncHiddenSignature('crm-mbox-signature', teamSigApi);
+      const plain = teamSigApi ? String(teamSigApi.getPlain() || '') : String((document.getElementById('crm-mbox-signature') || {}).value || '');
+      const html = teamSigApi ? String(teamSigApi.getHtml() || '') : '';
+      showInlineError(mailboxErr, '');
+      try {
+        await Api.put('/workspaces/' + currentWorkspaceId + '/mailboxes/' + id + '/signature', {
+          signaturePlain: plain,
+          signatureHtml: html,
+          plain: plain,
+          html: html,
+        });
+        if (C && C.announce) C.announce(tr('Team signature saved.'));
+        await refreshMailboxes();
+      } catch (e) {
+        showInlineError(mailboxErr, (e.payload && e.payload.message) || e.message);
+      }
     });
   }
 
@@ -1582,7 +1769,7 @@
           if (listHost && typeof listHost.scrollIntoView === 'function') {
             listHost.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
           }
-          // Pull headers now so Review / Talk update without waiting for the 15-minute job.
+          // Pull headers now so Assign / Talk update without waiting for the 15-minute job.
           await syncMailboxNow(savedId, null);
         } else if (mailboxTestStatus) {
           // Fallback: keep the typed form (do not blank) if the API omitted id.
@@ -1647,7 +1834,7 @@
     const ok = C && typeof C.confirmDialog === 'function'
       ? await C.confirmDialog({
         title: tr('Remove this mailbox?'),
-        message: tr('Removes “%s” from CustomerCheck (indexed mail, open Review items, and failed sends for it). The real inbox on your mail host is not deleted.', [name]),
+        message: tr('Removes “%s” from CustomerCheck (indexed mail, open Assign items, and failed sends for it). The real inbox on your mail host is not deleted.', [name]),
         confirmLabel: tr('Remove'),
         cancelLabel: tr('Cancel'),
         variant: 'danger',
@@ -1880,12 +2067,934 @@
       try {
         await Api.put('/workspaces/' + currentWorkspaceId + '/review/sources', { sources: sources });
         showWsError('');
-        if (status) status.textContent = tr('Review sources saved.');
-        if (C && C.announce) C.announce(tr('Review sources saved.'));
+        if (status) status.textContent = tr('Assign sources saved.');
+        if (C && C.announce) C.announce(tr('Assign sources saved.'));
       } catch (e) {
         const msg = (e.payload && e.payload.message) || e.message;
         if (status) status.textContent = msg;
         showWsError(msg);
+      }
+    });
+  }
+
+  // ── Personal email (policy + My email) ───────────────────────────────
+  /** @type {Record<string, mixed>|null} */
+  let personalMailBox = null;
+  /** Voluntary “Update password or servers” — keeps folders visible (unlike auth quarantine). */
+  let personalMailEditMode = false;
+  /** Last oauthProviders payload from personal-mailboxes GET (for edit-mode OAuth strip). */
+  let personalMailOauthSnapshot = null;
+  const PmCore = window.CustomerCheckPersonalMailSettingsCore || null;
+
+  function pmNeedsReconnect(box) {
+    if (PmCore && typeof PmCore.needsPersonalMailReconnect === 'function') {
+      return !!PmCore.needsPersonalMailReconnect(box);
+    }
+    if (!box) return false;
+    const st = String(box.status || 'ok').toLowerCase();
+    return st === 'error' || st === 'auth' || st === 'auth_error'
+      || (parseInt(String(box.authFailCount || 0), 10) >= 3);
+  }
+
+  function pmIsOAuth(box) {
+    if (PmCore && typeof PmCore.isPersonalMailOAuth === 'function') {
+      return !!PmCore.isPersonalMailOAuth(box);
+    }
+    const authKind = String((box && (box.authKind || box.auth_kind)) || 'imap').toLowerCase();
+    return authKind === 'google' || authKind === 'microsoft' || authKind.indexOf('oauth') >= 0;
+  }
+
+  function pmShowConnectForm(box, editConnection) {
+    if (PmCore && typeof PmCore.showPersonalMailConnectForm === 'function') {
+      return !!PmCore.showPersonalMailConnectForm({ box: box, editConnection: !!editConnection });
+    }
+    if (!box) return true;
+    return pmNeedsReconnect(box) || !!editConnection;
+  }
+
+  function fillPersonalConnectForm(box, opts) {
+    opts = opts || {};
+    const lockEmail = !!opts.lockEmail;
+    const em = document.getElementById('crm-pm-email');
+    const user = document.getElementById('crm-pm-user');
+    const pass = document.getElementById('crm-pm-pass');
+    const emailHelp = document.getElementById('crm-pm-email-help');
+    const passHelp = document.getElementById('crm-pm-pass-help');
+    if (em) {
+      em.value = box ? String(box.emailAddress || '') : String(em.value || '');
+      em.readOnly = lockEmail;
+      if (lockEmail) {
+        em.setAttribute('aria-readonly', 'true');
+      } else {
+        em.removeAttribute('aria-readonly');
+      }
+    }
+    if (emailHelp) emailHelp.hidden = !lockEmail;
+    if (user) {
+      user.value = box ? String(box.username || box.emailAddress || '') : String(user.value || '');
+    }
+    if (pass) pass.value = '';
+    if (passHelp) passHelp.hidden = !(box && parseInt(String(box.id || 0), 10) > 0);
+    const setVal = function (id, val) {
+      const el = document.getElementById(id);
+      if (el) el.value = val == null ? '' : String(val);
+    };
+    if (box) {
+      setVal('crm-pm-imap-host', box.imapHost || '');
+      setVal('crm-pm-imap-port', box.imapPort || 993);
+      setVal('crm-pm-smtp-host', box.smtpHost || '');
+      setVal('crm-pm-smtp-port', box.smtpPort || 465);
+      const imapEnc = document.getElementById('crm-pm-imap-enc');
+      const smtpEnc = document.getElementById('crm-pm-smtp-enc');
+      if (imapEnc && box.imapEnc) imapEnc.value = String(box.imapEnc);
+      if (smtpEnc && box.smtpEnc) smtpEnc.value = String(box.smtpEnc);
+    }
+    const dsgvo = document.getElementById('crm-pm-dsgvo');
+    if (dsgvo && box && (box.dsgvoAckAt || box.dsgvo_ack_at)) {
+      dsgvo.checked = true;
+    }
+  }
+
+  function applyPersonalConnectChrome(box, needsReconnect, editConnection) {
+    const connectBtn = document.getElementById('crm-personal-mail-connect');
+    const cancelBtn = document.getElementById('crm-personal-mail-edit-cancel');
+    const heading = document.getElementById('crm-personal-mail-connect-heading');
+    const lead = document.getElementById('crm-personal-mail-connect-lead');
+    const editBtn = document.getElementById('crm-personal-mail-edit-connection');
+    const label = PmCore && typeof PmCore.personalConnectSubmitLabel === 'function'
+      ? PmCore.personalConnectSubmitLabel({
+        box: box,
+        editConnection: editConnection,
+        needsReconnect: needsReconnect,
+      }, tr)
+      : (needsReconnect
+        ? tr('Save and reconnect')
+        : (box && editConnection ? tr('Save connection') : tr('Connect my email')));
+    if (connectBtn) connectBtn.textContent = label;
+    if (cancelBtn) {
+      cancelBtn.hidden = !(editConnection && box && !needsReconnect);
+    }
+    if (heading) {
+      heading.textContent = needsReconnect
+        ? tr('Reconnect your inbox')
+        : (box && editConnection ? tr('Update connection') : tr('Connect your inbox'));
+    }
+    if (lead) {
+      lead.textContent = needsReconnect
+        ? tr('Sign in again below. Your synced mail stays.')
+        : (box && editConnection
+          ? (pmIsOAuth(box)
+            ? tr('Reconnect with Google or Microsoft, or switch to an app password below. Synced mail stays.')
+            : tr('Change password or mail servers below. Leave password blank to keep the current one. Synced mail stays.'))
+          : tr('Prefer Google or Microsoft when offered. Or connect with an app password below.'));
+    }
+    if (editBtn && box) {
+      editBtn.textContent = PmCore && typeof PmCore.personalEditConnectionButtonLabel === 'function'
+        ? PmCore.personalEditConnectionButtonLabel(box, tr)
+        : (pmIsOAuth(box) ? tr('Reconnect account') : tr('Update password or servers'));
+      editBtn.hidden = !!needsReconnect;
+    } else if (editBtn) {
+      editBtn.hidden = true;
+    }
+  }
+
+  function renderPersonalOAuthButtons(needsReconnect, editConnection) {
+    const oauthHost = document.getElementById('crm-personal-mail-oauth');
+    if (!oauthHost) return 0;
+    const status = personalMailOauthSnapshot && typeof personalMailOauthSnapshot === 'object'
+      ? personalMailOauthSnapshot
+      : {};
+    const providers = Array.isArray(status.providers) ? status.providers : [];
+    oauthHost.textContent = '';
+    const configured = providers.filter(function (p) { return !!(p && p.configured); });
+    if (configured.length && (!personalMailBox || needsReconnect || editConnection)) {
+      oauthHost.hidden = false;
+      configured.forEach(function (p) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'crm-btn crm-btn--secondary';
+        const base = String(p.label || tr('Connect with OAuth'));
+        btn.textContent = (needsReconnect || editConnection)
+          ? (tr('Reconnect') + ' — ' + base)
+          : base;
+        btn.setAttribute('data-crm-oauth-provider', String(p.id || ''));
+        btn.addEventListener('click', async function () {
+          const provider = String(btn.getAttribute('data-crm-oauth-provider') || '');
+          if (!provider || !currentWorkspaceId) return;
+          const dsgvoEl = document.getElementById('crm-pm-dsgvo');
+          const dsgvoAck = !!(dsgvoEl && dsgvoEl.checked);
+          if (!dsgvoAck) {
+            showPersonalMailError(tr('Confirm that CustomerCheck may sync mail from your personal mailbox into this workspace.'));
+            if (dsgvoEl) {
+              const wrap = document.getElementById('crm-pm-dsgvo-wrap') || dsgvoEl.closest('label');
+              if (wrap && typeof wrap.scrollIntoView === 'function') {
+                wrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }
+              try { dsgvoEl.focus(); } catch (e) { /* ignore */ }
+            }
+            return;
+          }
+          btn.disabled = true;
+          showPersonalMailError('');
+          try {
+            const res = await Api.post(
+              '/workspaces/' + currentWorkspaceId + '/personal-mailboxes/oauth/' + encodeURIComponent(provider),
+              { dsgvoAck: true },
+            );
+            const url = res.data && res.data.authorizeUrl ? String(res.data.authorizeUrl) : '';
+            if (!url || (url.indexOf('https://') !== 0 && url.indexOf('http://') !== 0)) {
+              throw new Error(tr('OAuth start failed. Ask an admin to check Google/Microsoft credentials.'));
+            }
+            window.location.assign(url);
+          } catch (e) {
+            showPersonalMailError((e.payload && e.payload.message) || e.message);
+            btn.disabled = false;
+          }
+        });
+        oauthHost.appendChild(btn);
+      });
+    } else {
+      oauthHost.hidden = true;
+    }
+    return configured.length;
+  }
+
+  function openPersonalMailEditConnection() {
+    if (!personalMailBox) return;
+    personalMailEditMode = true;
+    const needsReconnect = pmNeedsReconnect(personalMailBox);
+    fillPersonalConnectForm(personalMailBox, { lockEmail: true });
+    const connectForm = document.getElementById('crm-personal-mail-connect-form');
+    if (connectForm) connectForm.hidden = false;
+    const imapDetails = document.getElementById('crm-personal-mail-imap');
+    const servers = document.getElementById('crm-personal-mail-servers');
+    if (!pmIsOAuth(personalMailBox)) {
+      if (imapDetails) imapDetails.open = true;
+      if (servers) servers.open = true;
+    }
+    applyPersonalConnectChrome(personalMailBox, needsReconnect, true);
+    const oauthCount = renderPersonalOAuthButtons(needsReconnect, true);
+    if (connectForm && oauthCount === 0 && imapDetails) {
+      imapDetails.open = true;
+    }
+    setPersonalMailState(tr('Updating connection — synced mail stays until you Disconnect.'));
+    if (connectForm && typeof connectForm.scrollIntoView === 'function') {
+      connectForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    const focusEl = pmIsOAuth(personalMailBox)
+      ? document.querySelector('#crm-personal-mail-oauth button')
+      : document.getElementById('crm-pm-pass');
+    if (focusEl) {
+      try { focusEl.focus(); } catch (e) { /* ignore */ }
+    }
+    if (C && C.announce) {
+      C.announce(tr('Update connection form opened. Synced mail stays until you Disconnect.'));
+    }
+  }
+
+  function cancelPersonalMailEditConnection() {
+    personalMailEditMode = false;
+    const pass = document.getElementById('crm-pm-pass');
+    if (pass) pass.value = '';
+    const connectForm = document.getElementById('crm-personal-mail-connect-form');
+    const needsReconnect = pmNeedsReconnect(personalMailBox);
+    if (connectForm && personalMailBox && !needsReconnect) {
+      connectForm.hidden = true;
+    }
+    applyPersonalConnectChrome(personalMailBox, needsReconnect, false);
+    renderPersonalOAuthButtons(needsReconnect, false);
+    showPersonalMailError('');
+    const status = document.getElementById('crm-personal-mail-connect-status');
+    if (status) status.textContent = '';
+    if (personalMailBox && !needsReconnect) {
+      setPersonalMailState(tr('Connected'));
+    }
+    if (C && C.announce) C.announce(tr('Update cancelled.'));
+  }
+
+  function showPersonalMailError(message) {
+    const el = document.getElementById('crm-personal-mail-error');
+    if (!el) return;
+    el.textContent = message || '';
+    el.hidden = !message;
+  }
+
+  /**
+   * OAuth callback redirects with ?personalMail=connected|personalMailError=… — surface once, then scrub URL.
+   */
+  function consumePersonalMailQueryFeedback() {
+    let params;
+    try {
+      params = new URLSearchParams(window.location.search || '');
+    } catch (e) {
+      return;
+    }
+    const errRaw = params.get('personalMailError');
+    const okFlag = params.get('personalMail');
+    if (!errRaw && okFlag !== 'connected') {
+      return;
+    }
+    if (errRaw) {
+      let msg = errRaw;
+      try {
+        msg = decodeURIComponent(errRaw.replace(/\+/g, ' '));
+      } catch (e) { /* keep raw */ }
+      const lower = String(msg).toLowerCase();
+      if (lower.indexOf('access_denied') >= 0
+        || (lower.indexOf('denied') >= 0 && lower.indexOf('access') >= 0)
+        || lower.indexOf('user denied') >= 0
+        || lower.indexOf('consent') >= 0 && lower.indexOf('cancel') >= 0) {
+        msg = tr('Connection cancelled. You can try again when ready.');
+      }
+      showPersonalMailError(msg);
+      const wrap = document.getElementById('crm-pm-dsgvo-wrap')
+        || document.getElementById('crm-personal-mail-connect-form');
+      if (wrap && typeof wrap.scrollIntoView === 'function') {
+        wrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    } else if (okFlag === 'connected') {
+      setPersonalMailState(tr('Connected'));
+      if (C && C.announce) {
+        C.announce(tr('Personal email connected.'));
+      }
+    }
+    params.delete('personalMailError');
+    params.delete('personalMail');
+    params.delete('mailboxId');
+    const qs = params.toString();
+    const next = window.location.pathname + (qs ? ('?' + qs) : '') + (window.location.hash || '');
+    try {
+      window.history.replaceState({}, '', next);
+    } catch (e) { /* ignore */ }
+  }
+
+  function setPersonalMailState(message) {
+    const el = document.getElementById('crm-personal-mail-state');
+    if (el) el.textContent = message || '';
+  }
+
+  function needsShareConfirm(path) {
+    const key = String(path || '').toUpperCase();
+    return key === 'INBOX' || key === 'SENT' || key.indexOf('SENT/') === 0;
+  }
+
+  function folderDisplayMeta(path) {
+    const raw = String(path || '');
+    const parts = raw.split(/[/.]/).filter(Boolean);
+    const depth = Math.max(0, parts.length - 1);
+    const leaf = parts.length ? parts[parts.length - 1] : raw;
+    return { depth: depth, leaf: leaf || raw, full: raw };
+  }
+
+  function renderPersonalFolders(folders) {
+    const host = document.getElementById('crm-personal-mail-folders');
+    if (!host) return;
+    const list = Array.isArray(folders) ? folders.slice() : [];
+    list.sort(function (a, b) {
+      return String(a.path || '').localeCompare(String(b.path || ''), undefined, { sensitivity: 'base' });
+    });
+    host.textContent = '';
+    if (!list.length) {
+      const p = document.createElement('p');
+      p.className = 'crm-muted';
+      p.textContent = tr('No folders yet — tap Refresh folders to load them from your mailbox.');
+      host.appendChild(p);
+      return;
+    }
+    list.forEach((f, idx) => {
+      const path = String(f.path || '');
+      const meta = folderDisplayMeta(path);
+      const depthCap = Math.min(meta.depth, 5);
+      const row = document.createElement('div');
+      row.className = 'crm-personal-mail-folder';
+      if (meta.depth > 0) {
+        row.className += ' crm-personal-mail-folder--nested';
+      }
+      row.setAttribute('data-folder-path', path);
+      row.setAttribute('data-folder-depth', String(depthCap));
+      row.style.setProperty('--crm-folder-depth', String(depthCap));
+
+      const name = document.createElement('p');
+      name.className = 'crm-personal-mail-folder__name';
+      if (meta.depth > 0) {
+        const mark = document.createElement('span');
+        mark.className = 'crm-personal-mail-folder__mark';
+        mark.setAttribute('aria-hidden', 'true');
+        mark.textContent = '↳';
+        name.appendChild(mark);
+        name.appendChild(document.createTextNode(meta.leaf));
+        name.title = meta.full;
+        name.setAttribute('aria-label', meta.full);
+      } else {
+        name.textContent = meta.leaf;
+      }
+      row.appendChild(name);
+
+      const syncId = 'crm-pm-sync-' + idx;
+      const shareId = 'crm-pm-share-' + idx;
+
+      const syncLabel = document.createElement('label');
+      syncLabel.className = 'crm-check';
+      syncLabel.setAttribute('for', syncId);
+      const syncInput = document.createElement('input');
+      syncInput.type = 'checkbox';
+      syncInput.id = syncId;
+      syncInput.className = 'crm-input';
+      syncInput.setAttribute('data-crm-pm-sync', '1');
+      syncInput.checked = !!f.syncEnabled;
+      syncInput.setAttribute('aria-label', tr('Sync folder: %s', [path]));
+      const syncSpan = document.createElement('span');
+      syncSpan.textContent = tr('Sync');
+      syncLabel.appendChild(syncInput);
+      syncLabel.appendChild(syncSpan);
+
+      const shareLabel = document.createElement('label');
+      shareLabel.className = 'crm-check';
+      shareLabel.setAttribute('for', shareId);
+      const shareInput = document.createElement('input');
+      shareInput.type = 'checkbox';
+      shareInput.id = shareId;
+      shareInput.className = 'crm-input';
+      shareInput.setAttribute('data-crm-pm-share', '1');
+      shareInput.checked = !!f.shareWithWorkspace;
+      shareInput.setAttribute('data-was-shared', f.shareWithWorkspace ? '1' : '0');
+      shareInput.setAttribute('aria-label', tr('Share with workspace: %s', [path]));
+      const shareSpan = document.createElement('span');
+      shareSpan.textContent = tr('Share with workspace');
+      shareLabel.appendChild(shareInput);
+      shareLabel.appendChild(shareSpan);
+
+      const toggles = document.createElement('div');
+      toggles.className = 'crm-personal-mail-folder__toggles';
+      toggles.appendChild(syncLabel);
+      toggles.appendChild(shareLabel);
+      row.appendChild(toggles);
+      host.appendChild(row);
+    });
+  }
+
+  function renderPersonalAccount(box) {
+    const host = document.getElementById('crm-personal-mail-account');
+    if (!host) return;
+    host.textContent = '';
+    if (!box) return;
+    const title = document.createElement('p');
+    title.className = 'crm-personal-mail-account__title';
+    title.innerHTML = '<strong>' + escapeHtml(String(box.label || box.emailAddress || tr('My email'))) + '</strong>';
+    const email = document.createElement('p');
+    email.className = 'crm-personal-mail-account__email';
+    email.textContent = String(box.emailAddress || '');
+    const meta = document.createElement('p');
+    meta.className = 'crm-muted crm-personal-mail-account__meta';
+    const bits = [];
+    const st = String(box.status || 'ok');
+    bits.push(tr('Status') + ': ' + (st === 'ok' ? tr('Connected') : st));
+    if (box.imapHost) {
+      bits.push(tr('IMAP') + ': ' + String(box.imapHost)
+        + (box.imapPort ? (':' + String(box.imapPort)) : ''));
+    }
+    if (pmIsOAuth(box)) {
+      bits.push(tr('Sign-in') + ': ' + String(box.authKind || box.auth_kind || 'OAuth'));
+    }
+    if (box.lastSyncAt) bits.push(tr('Last sync') + ': ' + String(box.lastSyncAt));
+    if (box.lastError) bits.push(String(box.lastError));
+    meta.textContent = bits.join(' · ');
+    host.appendChild(title);
+    host.appendChild(email);
+    host.appendChild(meta);
+  }
+
+  async function refreshPersonalMail(opts) {
+    opts = opts || {};
+    const keepEditMode = !!opts.keepEditMode;
+    if (!keepEditMode) {
+      personalMailEditMode = false;
+    }
+    const mineCard = document.getElementById('crm-ws-personal-mail-mine');
+    if (!mineCard || !currentWorkspaceId) return;
+    const disabled = document.getElementById('crm-personal-mail-disabled');
+    const connected = document.getElementById('crm-personal-mail-connected');
+    const connectForm = document.getElementById('crm-personal-mail-connect-form');
+    showPersonalMailError('');
+    setPersonalMailState(tr('Loading…'));
+    try {
+      const res = await Api.get('/workspaces/' + currentWorkspaceId + '/personal-mailboxes');
+      const data = res.data || {};
+      const enabled = !!data.personalMailEnabled;
+      const items = Array.isArray(data.items) ? data.items : [];
+      personalMailBox = items.length ? items[0] : null;
+      personalMailOauthSnapshot = data.oauthProviders && typeof data.oauthProviders === 'object'
+        ? data.oauthProviders
+        : null;
+
+      const policyEnabled = document.getElementById('crm-ws-personal-mail-enabled');
+      if (policyEnabled) policyEnabled.checked = enabled;
+
+      if (!enabled) {
+        personalMailEditMode = false;
+        setPersonalMailState(tr('Personal email sync is disabled for this workspace.'));
+        if (disabled) disabled.hidden = false;
+        if (connected) connected.hidden = true;
+        if (connectForm) connectForm.hidden = true;
+        return;
+      }
+      if (disabled) disabled.hidden = true;
+
+      if (personalMailBox) {
+        const needsReconnect = pmNeedsReconnect(personalMailBox);
+        if (needsReconnect) {
+          personalMailEditMode = false;
+        }
+        const editConnection = !!personalMailEditMode && !needsReconnect;
+        const showForm = pmShowConnectForm(personalMailBox, editConnection);
+        setPersonalMailState(needsReconnect
+          ? tr('Needs reconnect — sign in again below. Your synced mail stays.')
+          : (editConnection
+            ? tr('Updating connection — synced mail stays until you Disconnect.')
+            : tr('Connected')));
+        if (connected) connected.hidden = false;
+        if (connectForm) connectForm.hidden = !showForm;
+        // Bachus: while reconnecting (auth quarantine), hide folder/signature/Sync — keep Disconnect.
+        // Voluntary update keeps folders/signature/Sync visible.
+        const hideOps = PmCore && typeof PmCore.hidePersonalMailOpsForReconnect === 'function'
+          ? !!PmCore.hidePersonalMailOpsForReconnect(personalMailBox)
+          : needsReconnect;
+        const foldersWrap = document.getElementById('crm-personal-mail-folders-wrap');
+        const sigDetails = document.getElementById('crm-personal-mail-signature-details');
+        const syncBtn = document.getElementById('crm-personal-mail-sync');
+        const disconnectBtn = document.getElementById('crm-personal-mail-disconnect');
+        if (foldersWrap) foldersWrap.hidden = !!hideOps;
+        if (sigDetails) sigDetails.hidden = !!hideOps;
+        if (syncBtn) syncBtn.hidden = !!needsReconnect;
+        if (disconnectBtn) disconnectBtn.hidden = false;
+        if (showForm) {
+          fillPersonalConnectForm(personalMailBox, { lockEmail: true });
+          if (needsReconnect && !pmIsOAuth(personalMailBox)) {
+            const imapDetails = document.getElementById('crm-personal-mail-imap');
+            if (imapDetails) imapDetails.open = true;
+          }
+        } else {
+          const em = document.getElementById('crm-pm-email');
+          if (em) {
+            em.readOnly = false;
+            em.removeAttribute('aria-readonly');
+          }
+          const emailHelp = document.getElementById('crm-pm-email-help');
+          const passHelp = document.getElementById('crm-pm-pass-help');
+          if (emailHelp) emailHelp.hidden = true;
+          if (passHelp) passHelp.hidden = true;
+        }
+        applyPersonalConnectChrome(personalMailBox, needsReconnect, editConnection);
+        renderPersonalAccount(personalMailBox);
+        renderPersonalFolders(personalMailBox.folders || []);
+        const sig = document.getElementById('crm-personal-mail-signature');
+        if (sig) {
+          sig.value = String(personalMailBox.signaturePlain || personalMailBox.signatureHtml || '');
+        }
+        if (personalSigApi && personalSigApi.destroy) personalSigApi.destroy();
+        personalSigApi = mountSignatureEditor(
+          'crm-personal-mail-signature-editor',
+          'crm-personal-mail-signature-label',
+          personalMailBox.signatureHtml || '',
+          personalMailBox.signaturePlain || '',
+        );
+      } else {
+        personalMailEditMode = false;
+        setPersonalMailState(tr('Not connected — add your email below.'));
+        if (connected) connected.hidden = true;
+        if (connectForm) connectForm.hidden = false;
+        fillPersonalConnectForm(null, { lockEmail: false });
+        applyPersonalConnectChrome(null, false, false);
+      }
+
+      // OAuth providers: POST beginAuthorize then navigate (never trust raw URLs from JSON).
+      const needsReconnectOauth = !!(personalMailBox && pmNeedsReconnect(personalMailBox));
+      const editConnectionOauth = !!(personalMailBox && personalMailEditMode && !needsReconnectOauth);
+      const oauthConfiguredCount = renderPersonalOAuthButtons(needsReconnectOauth, editConnectionOauth);
+      // IMAP-only / no-provider workspaces: Connect lives inside details — open it so CTA is visible.
+      const connectFormEl = document.getElementById('crm-personal-mail-connect-form');
+      const imapDetailsEl = document.getElementById('crm-personal-mail-imap');
+      if (connectFormEl && !connectFormEl.hidden && imapDetailsEl && oauthConfiguredCount === 0) {
+        imapDetailsEl.open = true;
+      }
+      consumePersonalMailQueryFeedback();
+    } catch (e) {
+      setPersonalMailState((e.payload && e.payload.message) || e.message || tr('Could not load personal email.'));
+    }
+  }
+
+  async function collectPersonalFolderPayload() {
+    const host = document.getElementById('crm-personal-mail-folders');
+    if (!host) return [];
+    const rows = Array.from(host.querySelectorAll('.crm-personal-mail-folder'));
+    const out = [];
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const path = String(row.getAttribute('data-folder-path') || '');
+      const syncEl = row.querySelector('[data-crm-pm-sync]');
+      const shareEl = row.querySelector('[data-crm-pm-share]');
+      const syncEnabled = !!(syncEl && syncEl.checked);
+      const shareWithWorkspace = !!(shareEl && shareEl.checked);
+      const wasShared = shareEl && shareEl.getAttribute('data-was-shared') === '1';
+      const folder = {
+        path: path,
+        syncEnabled: syncEnabled,
+        shareWithWorkspace: shareWithWorkspace,
+      };
+      if (shareWithWorkspace) {
+        if (!wasShared) {
+          const inboxSent = needsShareConfirm(path);
+          const ack = C && C.confirmDialog
+            ? await C.confirmDialog({
+              title: tr('Share this folder with your workspace?'),
+              message: inboxSent
+                ? tr('Everyone who can open a linked customer in this workspace can read these emails. Type SHARE to confirm Inbox or Sent sharing.')
+                : tr('Everyone who can open a linked customer in this workspace can read these emails. This is not private to you anymore. Unmatched shared mail may appear in Assign for teammates with mail rights.'),
+              confirmLabel: tr('Share folder'),
+              cancelLabel: tr('Cancel'),
+              variant: 'warning',
+              requireCheckbox: true,
+              checkboxLabel: tr('I understand these emails will be visible to teammates who can open the linked customer.'),
+              requireTypedConfirm: !!inboxSent,
+              typedConfirmPhrase: 'SHARE',
+            })
+            : {
+              confirmed: window.confirm(
+                inboxSent
+                  ? tr('Share Inbox/Sent with your workspace? Type SHARE in the next step.')
+                  : tr('Share this folder with your workspace? I understand these emails will be readable by teammates.'),
+              ),
+            };
+          if (!ack || !ack.confirmed) {
+            if (shareEl) shareEl.checked = false;
+            // Keep the folder in the PUT payload — omit would delete it from sync (replacePersonalFolders).
+            folder.shareWithWorkspace = false;
+            out.push(folder);
+            continue;
+          }
+          // Legacy confirm() path still needs an explicit SHARE prompt for Inbox/Sent.
+          if (inboxSent && !(C && C.confirmDialog)) {
+            const typed = window.prompt(tr('Type SHARE to share Inbox or Sent with your workspace.'), '');
+            if (String(typed || '').toUpperCase().trim() !== 'SHARE') {
+              if (shareEl) shareEl.checked = false;
+              folder.shareWithWorkspace = false;
+              out.push(folder);
+              continue;
+            }
+          }
+          folder.shareAck = true;
+          if (inboxSent) {
+            folder.shareConfirm = 'SHARE';
+          }
+        } else {
+          folder.shareAck = true;
+          if (needsShareConfirm(path)) {
+            folder.shareConfirm = 'SHARE';
+          }
+        }
+      }
+      out.push(folder);
+    }
+    return out;
+  }
+
+  const personalPolicyForm = document.getElementById('crm-ws-personal-mail-policy-form');
+  if (personalPolicyForm && canManageWorkspace) {
+    personalPolicyForm.addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      if (!requireWorkspaceReady()) return;
+      const err = document.getElementById('crm-ws-personal-mail-policy-error');
+      const status = document.getElementById('crm-ws-personal-mail-policy-status');
+      if (err) {
+        err.hidden = true;
+        err.textContent = '';
+      }
+      const enabled = !!(document.getElementById('crm-ws-personal-mail-enabled') || {}).checked;
+      const dsgvoAck = !!(document.getElementById('crm-ws-personal-mail-dsgvo') || {}).checked;
+      if (enabled && !dsgvoAck) {
+        if (err) {
+          err.hidden = false;
+          err.textContent = tr('Confirm the data-protection notice before enabling personal email sync.');
+        }
+        return;
+      }
+      try {
+        await Api.put('/workspaces/' + currentWorkspaceId + '/settings', {
+          personalMailEnabled: enabled,
+          personalMailDsgvoAck: dsgvoAck,
+        });
+        if (status) status.textContent = tr('Personal email policy saved.');
+        if (C && C.announce) C.announce(tr('Personal email policy saved.'));
+        await refreshPersonalMail();
+      } catch (e) {
+        if (err) {
+          err.hidden = false;
+          err.textContent = (e.payload && e.payload.message) || e.message;
+        }
+      }
+    });
+  }
+
+  const personalConnectForm = document.getElementById('crm-personal-mail-connect-form');
+  if (personalConnectForm) {
+    const pmEmail = document.getElementById('crm-pm-email');
+    if (pmEmail) {
+      pmEmail.addEventListener('blur', () => {
+        const user = document.getElementById('crm-pm-user');
+        if (!user) return;
+        if (String(user.value || '').trim() !== '') return;
+        user.value = String(pmEmail.value || '').trim();
+      });
+    }
+    personalConnectForm.addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      if (!requireWorkspaceReady()) return;
+      showPersonalMailError('');
+      const status = document.getElementById('crm-personal-mail-connect-status');
+      if (status) status.textContent = tr('Connecting…');
+      const emailAddress = String((document.getElementById('crm-pm-email') || {}).value || '').trim();
+      let username = String((document.getElementById('crm-pm-user') || {}).value || '').trim();
+      if (username === '' && emailAddress !== '') {
+        username = emailAddress;
+        const userEl = document.getElementById('crm-pm-user');
+        if (userEl) userEl.value = username;
+      }
+      const imapHost = String((document.getElementById('crm-pm-imap-host') || {}).value || '').trim();
+      const smtpHost = String((document.getElementById('crm-pm-smtp-host') || {}).value || '').trim();
+      if (!imapHost || !smtpHost) {
+        const imapDetails = document.getElementById('crm-personal-mail-imap');
+        const servers = document.getElementById('crm-personal-mail-servers');
+        if (imapDetails) imapDetails.open = true;
+        if (servers) servers.open = true;
+        if (status) status.textContent = '';
+        showPersonalMailError(tr('Enter IMAP and SMTP hosts from your hoster (under Mail servers).'));
+        const focusHost = document.getElementById(imapHost ? 'crm-pm-smtp-host' : 'crm-pm-imap-host');
+        if (focusHost) {
+          try { focusHost.focus(); } catch (e) { /* ignore */ }
+        }
+        return;
+      }
+      const password = String((document.getElementById('crm-pm-pass') || {}).value || '');
+      const healId = PmCore && typeof PmCore.personalMailHealId === 'function'
+        ? PmCore.personalMailHealId(personalMailBox, emailAddress)
+        : (personalMailBox && parseInt(String(personalMailBox.id || 0), 10) > 0
+          && String(personalMailBox.emailAddress || '').trim().toLowerCase() === emailAddress.toLowerCase()
+          ? parseInt(String(personalMailBox.id), 10)
+          : 0);
+      if (password === '' && healId < 1) {
+        const imapDetails = document.getElementById('crm-personal-mail-imap');
+        if (imapDetails) imapDetails.open = true;
+        if (status) status.textContent = '';
+        showPersonalMailError(tr('Enter the mailbox password.'));
+        const passEl = document.getElementById('crm-pm-pass');
+        if (passEl) {
+          try { passEl.focus(); } catch (e) { /* ignore */ }
+        }
+        return;
+      }
+      const payload = {
+        emailAddress: emailAddress,
+        email: emailAddress,
+        username: username,
+        password: password,
+        imapHost: imapHost,
+        imapPort: parseInt(String((document.getElementById('crm-pm-imap-port') || {}).value || '993'), 10),
+        imapEnc: String((document.getElementById('crm-pm-imap-enc') || {}).value || 'ssl'),
+        smtpHost: smtpHost,
+        smtpPort: parseInt(String((document.getElementById('crm-pm-smtp-port') || {}).value || '465'), 10),
+        smtpEnc: String((document.getElementById('crm-pm-smtp-enc') || {}).value || 'ssl'),
+        dsgvoAck: !!(document.getElementById('crm-pm-dsgvo') || {}).checked,
+        label: tr('My email'),
+      };
+      // Heal in place only when form email matches the existing box (never rebind id→new address).
+      if (healId > 0) {
+        payload.id = healId;
+      }
+      try {
+        await Api.post('/workspaces/' + currentWorkspaceId + '/personal-mailboxes', payload);
+        personalMailEditMode = false;
+        if (status) {
+          status.textContent = healId > 0 ? tr('Connection updated.') : tr('Connected.');
+        }
+        if (C && C.announce) {
+          C.announce(healId > 0 ? tr('Connection updated. Synced mail kept.') : tr('Personal email connected.'));
+        }
+        await refreshPersonalMail();
+      } catch (e) {
+        if (status) status.textContent = '';
+        showPersonalMailError((e.payload && e.payload.message) || e.message);
+      }
+    });
+  }
+
+  const personalEditConnectionBtn = document.getElementById('crm-personal-mail-edit-connection');
+  if (personalEditConnectionBtn) {
+    personalEditConnectionBtn.addEventListener('click', () => {
+      if (!requireWorkspaceReady()) return;
+      openPersonalMailEditConnection();
+    });
+  }
+  const personalEditCancelBtn = document.getElementById('crm-personal-mail-edit-cancel');
+  if (personalEditCancelBtn) {
+    personalEditCancelBtn.addEventListener('click', () => {
+      cancelPersonalMailEditConnection();
+    });
+  }
+
+  const personalFoldersRefresh = document.getElementById('crm-personal-mail-folders-refresh');
+  if (personalFoldersRefresh) {
+    personalFoldersRefresh.addEventListener('click', async () => {
+      if (!requireWorkspaceReady() || !personalMailBox) return;
+      const id = parseInt(String(personalMailBox.id || 0), 10);
+      if (id < 1) return;
+      showPersonalMailError('');
+      const status = document.getElementById('crm-personal-mail-folders-status');
+      if (status) status.textContent = tr('Loading folders from your mailbox…');
+      personalFoldersRefresh.disabled = true;
+      try {
+        const res = await Api.post('/workspaces/' + currentWorkspaceId + '/personal-mailboxes/' + id + '/folders/refresh', {});
+        const box = res.data || res;
+        personalMailBox = box;
+        renderPersonalAccount(box);
+        renderPersonalFolders(box.folders || []);
+        const added = parseInt(String(box.foldersAdded || 0), 10) || 0;
+        let msg = added > 0
+          ? tr('Found %s new folder(s). Turn on Sync for the ones you want, then Save folders.', [String(added)])
+          : tr('Folder list updated. Turn on Sync for any folder you want, then Save folders.');
+        if (box.atFolderCap) {
+          msg += ' ' + tr('You already track the maximum of %s folders. Turn Sync off and Save to free a slot before adding another.', [String(box.folderCap || 20)]);
+        }
+        if (status) status.textContent = msg;
+        if (C && C.announce) C.announce(msg);
+      } catch (e) {
+        if (status) status.textContent = '';
+        showPersonalMailError((e.payload && e.payload.message) || e.message);
+      } finally {
+        personalFoldersRefresh.disabled = false;
+      }
+    });
+  }
+
+  const personalFoldersSave = document.getElementById('crm-personal-mail-folders-save');
+  if (personalFoldersSave) {
+    personalFoldersSave.addEventListener('click', async () => {
+      if (!requireWorkspaceReady() || !personalMailBox) return;
+      const id = parseInt(String(personalMailBox.id || 0), 10);
+      if (id < 1) return;
+      showPersonalMailError('');
+      try {
+        let folders = await collectPersonalFolderPayload();
+        if (!folders.length) {
+          showPersonalMailError(tr('Pick at least one folder to sync.'));
+          return;
+        }
+        try {
+          await Api.put('/workspaces/' + currentWorkspaceId + '/personal-mailboxes/' + id + '/folders', { folders: folders });
+        } catch (firstErr) {
+          const code = (firstErr.payload && (firstErr.payload.error || firstErr.payload.code)) || '';
+          const field = (firstErr.payload && firstErr.payload.field) || '';
+          if (String(code).indexOf('MAIL_SHARE_EXISTING') >= 0 || field === 'shareExistingAck') {
+            const msg = (firstErr.payload && firstErr.payload.message) || firstErr.message
+              || tr('Share existing private messages with teammates?');
+            const ack = C && C.confirmDialog
+              ? await C.confirmDialog({
+                title: tr('Share existing messages?'),
+                message: msg,
+                confirmLabel: tr('Share existing messages'),
+                cancelLabel: tr('Cancel'),
+                variant: 'warning',
+                requireCheckbox: true,
+                checkboxLabel: tr('I understand these existing emails will be visible to teammates who can open the linked customer.'),
+              })
+              : { confirmed: window.confirm(msg) };
+            if (!ack || !ack.confirmed) {
+              showPersonalMailError(tr('Folders not saved — existing private messages stay private.'));
+              return;
+            }
+            folders = folders.map(function (f) {
+              return Object.assign({}, f, { shareExistingAck: true });
+            });
+            await Api.put('/workspaces/' + currentWorkspaceId + '/personal-mailboxes/' + id + '/folders', { folders: folders });
+          } else {
+            throw firstErr;
+          }
+        }
+        if (C && C.announce) C.announce(tr('Folders saved.'));
+        await refreshPersonalMail();
+      } catch (e) {
+        showPersonalMailError((e.payload && e.payload.message) || e.message);
+      }
+    });
+  }
+
+  const personalSigSave = document.getElementById('crm-personal-mail-signature-save');
+  if (personalSigSave) {
+    personalSigSave.addEventListener('click', async () => {
+      if (!requireWorkspaceReady() || !personalMailBox) return;
+      const id = parseInt(String(personalMailBox.id || 0), 10);
+      if (id < 1) return;
+      const plain = personalSigApi
+        ? String(personalSigApi.getPlain() || '')
+        : String((document.getElementById('crm-personal-mail-signature') || {}).value || '');
+      const html = personalSigApi ? String(personalSigApi.getHtml() || '') : '';
+      showPersonalMailError('');
+      try {
+        await Api.put('/workspaces/' + currentWorkspaceId + '/personal-mailboxes/' + id + '/signature', {
+          signaturePlain: plain,
+          signatureHtml: html,
+          plain: plain,
+          html: html,
+        });
+        if (C && C.announce) C.announce(tr('Signature saved.'));
+        await refreshPersonalMail();
+      } catch (e) {
+        showPersonalMailError((e.payload && e.payload.message) || e.message);
+      }
+    });
+  }
+
+  const personalSyncBtn = document.getElementById('crm-personal-mail-sync');
+  if (personalSyncBtn) {
+    personalSyncBtn.addEventListener('click', async () => {
+      if (!requireWorkspaceReady() || !personalMailBox) return;
+      const id = parseInt(String(personalMailBox.id || 0), 10);
+      if (id < 1) return;
+      personalSyncBtn.disabled = true;
+      setPersonalMailState(tr('Updating mail…'));
+      try {
+        await Api.post('/workspaces/' + currentWorkspaceId + '/personal-mailboxes/' + id + '/sync', {});
+        if (C && C.announce) C.announce(tr('Personal mail sync finished.'));
+        await refreshPersonalMail();
+      } catch (e) {
+        showPersonalMailError((e.payload && e.payload.message) || e.message);
+      } finally {
+        personalSyncBtn.disabled = false;
+      }
+    });
+  }
+
+  const personalDisconnect = document.getElementById('crm-personal-mail-disconnect');
+  if (personalDisconnect) {
+    personalDisconnect.addEventListener('click', async () => {
+      if (!requireWorkspaceReady() || !personalMailBox) return;
+      const id = parseInt(String(personalMailBox.id || 0), 10);
+      if (id < 1) return;
+      const ok = C && C.confirmDialog
+        ? await C.confirmDialog({
+          title: tr('Disconnect personal email?'),
+          message: tr('CustomerCheck will stop syncing and remove indexed copies of this mailbox. Your real mailbox is unchanged.'),
+          confirmLabel: tr('Disconnect'),
+          cancelLabel: tr('Cancel'),
+          variant: 'danger',
+        })
+        : { confirmed: window.confirm(tr('Disconnect personal email?')) };
+      if (!ok || !ok.confirmed) return;
+      try {
+        await Api.del('/workspaces/' + currentWorkspaceId + '/personal-mailboxes/' + id);
+        if (C && C.announce) C.announce(tr('Personal email disconnected.'));
+        await refreshPersonalMail();
+      } catch (e) {
+        showPersonalMailError((e.payload && e.payload.message) || e.message);
       }
     });
   }
@@ -2131,7 +3240,35 @@
 
   loadCirclesRollCall();
 
-  // Deep-link from Review empty CTA — scroll Review sources into view.
+  // Deep-link from Sales Inbox Reconnect / Connect CTA — land on My email.
+  (function focusPersonalMailMineHash() {
+    function go() {
+      if (window.location.hash !== '#crm-ws-personal-mail-mine') return;
+      const el = document.getElementById('crm-ws-personal-mail-mine');
+      if (!el) return;
+      el.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      const dsgvo = document.getElementById('crm-pm-dsgvo');
+      const oauth = document.getElementById('crm-personal-mail-oauth');
+      const connectForm = document.getElementById('crm-personal-mail-connect-form');
+      if (connectForm && !connectForm.hidden) {
+        if (oauth && !oauth.hidden) {
+          const firstBtn = oauth.querySelector('button');
+          if (firstBtn) {
+            try { firstBtn.focus(); } catch (e) { /* ignore */ }
+            return;
+          }
+        }
+        if (dsgvo) {
+          try { dsgvo.focus(); } catch (e) { /* ignore */ }
+        }
+      }
+    }
+    window.__crmFocusPersonalMailMine = go;
+    go();
+    window.addEventListener('hashchange', go);
+  }());
+
+  // Deep-link from Assign empty CTA — scroll Assign sources into view.
   (function focusReviewSourcesHash() {
     if (window.location.hash !== '#crm-review-sources') return;
     const el = document.getElementById('crm-review-sources');

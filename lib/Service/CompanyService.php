@@ -106,6 +106,21 @@ class CompanyService
 	}
 
 	/**
+	 * Case-insensitive name keys that appear more than once among active companies
+	 * in a workspace (companies list duplicate banner / Merge into…).
+	 *
+	 * @return array<string, true>
+	 */
+	public function activeDuplicateNameKeys(int $workspaceId): array
+	{
+		if ($workspaceId <= 0) {
+			return [];
+		}
+
+		return $this->companyMapper->activeDuplicateNameKeys($workspaceId);
+	}
+
+	/**
 	 * @param list<int> $ids
 	 * @return array<int, Company>
 	 */
@@ -800,7 +815,7 @@ class CompanyService
 				$personIds[] = (int)$person->getId();
 			}
 			$wsId = (int)($company->getWorkspaceId() ?? 0);
-			$this->eraseReviewAndConflicts($wsId, $id, $dealIds, $personIds, $agreementIds);
+			$this->eraseAssignAndConflicts($wsId, $id, $dealIds, $personIds, $agreementIds);
 
 			$now = $this->timeFactory->getDateTime();
 			$company->setVatId(null);
@@ -923,14 +938,14 @@ class CompanyService
 	}
 
 	/**
-	 * Cancel open edit conflicts and scrub Review PII for an erased company (GNQ §5 / §18.9).
+	 * Cancel open edit conflicts and scrub Assign PII for an erased company (GNQ §5 / §18.9).
 	 * Uses raw QB to avoid circular DI with ReviewService.
 	 *
 	 * @param list<int> $dealIds
 	 * @param list<int> $personIds
 	 * @param list<int> $agreementIds
 	 */
-	private function eraseReviewAndConflicts(
+	private function eraseAssignAndConflicts(
 		int $workspaceId,
 		int $companyId,
 		array $dealIds,
@@ -977,7 +992,7 @@ class CompanyService
 
 		// Open items that only *suggest* this company (not yet assigned) — drop that suggestion.
 		if ($workspaceId > 0) {
-			$this->scrubReviewSuggestionsForCompany($workspaceId, $companyId, $now);
+			$this->scrubAssignSuggestionsForCompany($workspaceId, $companyId, $now);
 		}
 	}
 
@@ -991,10 +1006,6 @@ class CompanyService
 			return;
 		}
 		$qb = $this->db->getQueryBuilder();
-		$params = [];
-		foreach ($entityIds as $i => $eid) {
-			$params[] = $qb->createNamedParameter($eid, IQueryBuilder::PARAM_INT, 'ceid' . $i);
-		}
 		$qb->update('crm_edit_conflict')
 			->set('status', $qb->createNamedParameter('cancelled'))
 			->set('reason', $qb->createNamedParameter('gdpr_erase'))
@@ -1006,15 +1017,20 @@ class CompanyService
 			->set('fields_json', $qb->createNamedParameter('[]'))
 			->set('updated_at', $qb->createNamedParameter($now))
 			->where($qb->expr()->eq('entity_type', $qb->createNamedParameter($entityType)))
-			->andWhere($qb->expr()->in('entity_id', $params))
+			// PARAM_INT_ARRAY — never pass a list of createNamedParameter() tokens into in();
+			// Doctrine treats bare names (ceid0) as columns → SQLSTATE 42S22 / HTTP 500.
+			->andWhere($qb->expr()->in(
+				'entity_id',
+				$qb->createNamedParameter($entityIds, IQueryBuilder::PARAM_INT_ARRAY),
+			))
 			->andWhere($qb->expr()->eq('status', $qb->createNamedParameter('open')))
 			->executeStatement();
 	}
 
 	/**
-	 * Remove suggestion entries pointing at an erased company from still-open Review rows.
+	 * Remove suggestion entries pointing at an erased company from still-open Assign rows.
 	 */
-	private function scrubReviewSuggestionsForCompany(int $workspaceId, int $companyId, string $now): void
+	private function scrubAssignSuggestionsForCompany(int $workspaceId, int $companyId, string $now): void
 	{
 		$qb = $this->db->getQueryBuilder();
 		$qb->select('id', 'suggestion_json')->from('crm_review_item')
@@ -1092,24 +1108,22 @@ class CompanyService
 
 		if ($planIds !== [] && $this->db->tableExists('crm_map_step')) {
 			$qb = $this->db->getQueryBuilder();
-			$params = [];
-			foreach ($planIds as $i => $pid) {
-				$params[] = $qb->createNamedParameter($pid, null, 'pid' . $i);
-			}
 			$mapStepsDeleted = $qb->delete('crm_map_step')
-				->where($qb->expr()->in('plan_id', $params))
+				->where($qb->expr()->in(
+					'plan_id',
+					$qb->createNamedParameter($planIds, IQueryBuilder::PARAM_INT_ARRAY),
+				))
 				->executeStatement();
 		}
 
 		// Milestones carry free-text titles — delete before the parent plan (§18.9).
 		if ($planIds !== [] && $this->db->tableExists('crm_plan_ms')) {
 			$qb = $this->db->getQueryBuilder();
-			$params = [];
-			foreach ($planIds as $i => $pid) {
-				$params[] = $qb->createNamedParameter($pid, null, 'pmid' . $i);
-			}
 			$qb->delete('crm_plan_ms')
-				->where($qb->expr()->in('plan_id', $params))
+				->where($qb->expr()->in(
+					'plan_id',
+					$qb->createNamedParameter($planIds, IQueryBuilder::PARAM_INT_ARRAY),
+				))
 				->executeStatement();
 		}
 

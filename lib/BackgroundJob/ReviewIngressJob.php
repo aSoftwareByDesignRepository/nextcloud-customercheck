@@ -8,7 +8,7 @@ use OCA\CustomerCheck\Service\ReviewIngressService;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\BackgroundJob\TimedJob;
 
-/** Opt-in Review source ingress — GNQ §5.2. Interval 20 minutes. */
+/** Opt-in Assign source ingress — GNQ §5.2. Interval 20 minutes. */
 class ReviewIngressJob extends TimedJob
 {
 	public function __construct(

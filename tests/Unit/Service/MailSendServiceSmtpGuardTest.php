@@ -4,12 +4,17 @@ declare(strict_types=1);
 
 namespace OCA\CustomerCheck\Tests\Unit\Service;
 
+use OCA\CustomerCheck\Service\HtmlSanitizeService;
+
 use OCA\CustomerCheck\Constants;
 use OCA\CustomerCheck\Exception\ValidationException;
 use OCA\CustomerCheck\Service\EmailTouchService;
 use OCA\CustomerCheck\Service\FilesAccessService;
 use OCA\CustomerCheck\Service\MailboxService;
+use OCA\CustomerCheck\Service\MailboxAuthService;
+use Psr\Log\LoggerInterface;
 use OCA\CustomerCheck\Service\MailSendService;
+use OCA\CustomerCheck\Service\WorkspaceService;
 use OCA\CustomerCheck\Service\RateLimitService;
 use OCA\CustomerCheck\Service\TimelineService;
 use OCP\AppFramework\Utility\ITimeFactory;
@@ -34,6 +39,7 @@ final class MailSendServiceSmtpGuardTest extends TestCase
 		$mailboxQb = $this->selectQbReturning([
 			'id' => 9,
 			'workspace_id' => 1,
+			'kind' => 'team',
 			'email_address' => 'shared@example.com',
 			'label' => 'Shared',
 			'smtp_host' => 'smtp.example.com',
@@ -41,6 +47,8 @@ final class MailSendServiceSmtpGuardTest extends TestCase
 			'smtp_enc' => 'tls',
 			'username' => 'shared',
 			'secret_enc' => '',
+			'signature_html' => '',
+			'signature_plain' => '',
 		]);
 		$db->method('getQueryBuilder')->willReturn($mailboxQb);
 
@@ -70,6 +78,10 @@ final class MailSendServiceSmtpGuardTest extends TestCase
 			$this->createMock(ITimeFactory::class),
 			$this->createMock(IURLGenerator::class),
 			$l10n,
+			new HtmlSanitizeService(),
+			$this->createMock(MailboxAuthService::class),
+			$this->createMock(LoggerInterface::class),
+			$this->createMock(WorkspaceService::class),
 		);
 
 		try {
@@ -96,15 +108,12 @@ final class MailSendServiceSmtpGuardTest extends TestCase
 		$calls = 0;
 		$db->method('getQueryBuilder')->willReturnCallback(function () use (&$calls) {
 			$calls++;
-			// 1) findByIdempotency → miss
+			// 1) loadMailbox (before lock)
 			if ($calls === 1) {
-				return $this->selectQbReturning(false);
-			}
-			// 2) loadMailbox
-			if ($calls === 2) {
 				return $this->selectQbReturning([
 					'id' => 9,
 					'workspace_id' => 1,
+					'kind' => 'team',
 					'email_address' => 'shared@example.com',
 					'label' => 'Shared',
 					'smtp_host' => 'smtp.example.com',
@@ -112,7 +121,13 @@ final class MailSendServiceSmtpGuardTest extends TestCase
 					'smtp_enc' => 'tls',
 					'username' => 'shared',
 					'secret_enc' => 'cipher',
+					'signature_html' => '',
+					'signature_plain' => '',
 				]);
+			}
+			// 2) findByIdempotency → miss
+			if ($calls === 2) {
+				return $this->selectQbReturning(false);
 			}
 			// 3) claim insert
 			if ($calls === 3) {
@@ -162,6 +177,10 @@ final class MailSendServiceSmtpGuardTest extends TestCase
 			$time,
 			$this->createMock(IURLGenerator::class),
 			$l10n,
+			new HtmlSanitizeService(),
+			$this->createMock(MailboxAuthService::class),
+			$this->createMock(LoggerInterface::class),
+			$this->createMock(WorkspaceService::class),
 		);
 
 		try {
@@ -209,6 +228,10 @@ final class MailSendServiceSmtpGuardTest extends TestCase
 			$this->createMock(ITimeFactory::class),
 			$this->createMock(IURLGenerator::class),
 			$l10n,
+			new HtmlSanitizeService(),
+			$this->createMock(MailboxAuthService::class),
+			$this->createMock(LoggerInterface::class),
+			$this->createMock(WorkspaceService::class),
 		);
 
 		try {
@@ -232,35 +255,39 @@ final class MailSendServiceSmtpGuardTest extends TestCase
 		$sequence = [];
 		$db->method('getQueryBuilder')->willReturnCallback(function () use (&$sequence) {
 			$sequence[] = 'qb';
-			// 1) findByIdempotency → miss
-			// 2) loadMailbox
-			// 3) workspaceName
-			// 4) claim insert
-			// 5) delete claim after SMTP fail-closed
-			// 6) recovery draft insert
+			// 1) loadMailbox
+			// 2) findByIdempotency → miss
+			// 3) outboundExists → miss
+			// 4) workspaceName
+			// 5) claim insert
+			// 6) delete claim after SMTP fail-closed
+			// 7) recovery draft insert
 			static $n = 0;
 			$n++;
 			if ($n === 1) {
-				return $this->selectQbReturning(false);
-			}
-			if ($n === 2) {
 				return $this->selectQbReturning([
 					'id' => 9,
 					'workspace_id' => 3,
+					'kind' => 'team',
 					'email_address' => 'shared@example.com',
 					'label' => 'Shared',
 					'smtp_host' => 'smtp.example.com',
 					'secret_enc' => '',
 					'username' => 'u',
+					'signature_html' => '',
+					'signature_plain' => '',
 				]);
 			}
-			if ($n === 3) {
-				return $this->selectQbReturning(['name' => 'Book']);
+			if ($n === 2 || $n === 3) {
+				return $this->selectQbReturning(false);
 			}
 			if ($n === 4) {
-				return $this->insertQb();
+				return $this->selectQbReturning(['name' => 'Book']);
 			}
 			if ($n === 5) {
+				return $this->insertQb();
+			}
+			if ($n === 6) {
 				return $this->deleteQb();
 			}
 			return $this->insertQb();
@@ -299,6 +326,10 @@ final class MailSendServiceSmtpGuardTest extends TestCase
 			$time,
 			$this->createMock(IURLGenerator::class),
 			$l10n,
+			new HtmlSanitizeService(),
+			$this->createMock(MailboxAuthService::class),
+			$this->createMock(LoggerInterface::class),
+			$this->createMock(WorkspaceService::class),
 		);
 
 		try {
@@ -313,7 +344,7 @@ final class MailSendServiceSmtpGuardTest extends TestCase
 		} catch (ValidationException $e) {
 			$this->assertArrayHasKey('smtp', $e->getFields());
 		}
-		$this->assertSame(6, count($sequence));
+		$this->assertSame(7, count($sequence));
 	}
 
 	/** @param array<string, mixed>|false $row */

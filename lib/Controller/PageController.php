@@ -135,7 +135,7 @@ class PageController extends Controller
 	#[NoCSRFRequired]
 	public function pulse(): TemplateResponse
 	{
-		$this->registerFrontEndAssets('pages/persona');
+		$this->registerFrontEndAssets('pages/persona', null, [], ['common/mail-sync-now']);
 		return new TemplateResponse('customercheck', 'pulse', $this->mergeShellPageParams(
 			'pulse',
 			$this->l10n->t('Overview'),
@@ -147,7 +147,7 @@ class PageController extends Controller
 	#[NoCSRFRequired]
 	public function brief(): TemplateResponse
 	{
-		$this->registerFrontEndAssets('pages/persona');
+		$this->registerFrontEndAssets('pages/persona', null, [], ['common/mail-sync-now']);
 		return new TemplateResponse('customercheck', 'brief', $this->mergeShellPageParams(
 			'brief',
 			$this->l10n->t('This week'),
@@ -159,7 +159,7 @@ class PageController extends Controller
 	#[NoCSRFRequired]
 	public function myAccounts(): TemplateResponse
 	{
-		$this->registerFrontEndAssets('pages/persona');
+		$this->registerFrontEndAssets('pages/persona', null, [], ['common/mail-sync-now']);
 		return new TemplateResponse('customercheck', 'my-accounts', $this->mergeShellPageParams(
 			'my-accounts',
 			$this->l10n->t('My customers'),
@@ -171,7 +171,7 @@ class PageController extends Controller
 	#[NoCSRFRequired]
 	public function team(): TemplateResponse
 	{
-		$this->registerFrontEndAssets('pages/persona');
+		$this->registerFrontEndAssets('pages/persona', null, [], ['common/mail-sync-now']);
 		return new TemplateResponse('customercheck', 'team', $this->mergeShellPageParams(
 			'team',
 			$this->l10n->t('Team'),
@@ -196,11 +196,11 @@ class PageController extends Controller
 	#[NoCSRFRequired]
 	public function strategy(): TemplateResponse
 	{
-		$this->registerFrontEndAssets('pages/persona');
+		$this->registerFrontEndAssets('pages/persona', null, [], ['common/mail-sync-now']);
 		return new TemplateResponse('customercheck', 'strategy', $this->mergeShellPageParams(
 			'strategy',
 			$this->l10n->t('Plans'),
-			$this->l10n->t('Account plans across the workspace.'),
+			$this->l10n->t('Goals and health for every customer with a plan.'),
 		));
 	}
 
@@ -209,31 +209,73 @@ class PageController extends Controller
 	public function mailTriage(): RedirectResponse
 	{
 		return new RedirectResponse(
-			$this->urlGenerator->linkToRouteAbsolute('customercheck.page.review') . '?kind=shared_mail',
+			$this->inboxAssignUrl('mail'),
 			Http::STATUS_MOVED_PERMANENTLY,
 		);
 	}
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
-	public function review(): TemplateResponse
+	public function salesInbox(): TemplateResponse
 	{
-		$this->registerFrontEndAssets('pages/persona');
-		$kind = trim((string)$this->request->getParam('kind', ''));
+		$this->registerFrontEndAssets(
+			'pages/sales-inbox',
+			null,
+			[],
+			['common/mail-sync-now', 'common/folder-picker', 'common/rich-mail-composer', 'common/shared-mail-send', 'common/user-picker-nav', 'common/inbox-assign-map'],
+		);
 
-		return new TemplateResponse('customercheck', 'review', $this->mergeShellPageParams(
-			'review',
-			$this->l10n->t('Review'),
-			$this->l10n->t('Assign unmatched shared mail and other review items to a company.'),
-			['reviewKind' => $kind],
+		return new TemplateResponse('customercheck', 'sales-inbox', $this->mergeShellPageParams(
+			'sales-inbox',
+			$this->l10n->t('Inbox'),
+			$this->l10n->t('Your mail, the team inbox, and items that still need a company — one place.'),
 		));
+	}
+
+	/**
+	 * Legacy Assign URL — permanently merged into Inbox → Unassigned.
+	 */
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function review(): RedirectResponse
+	{
+		$kind = trim((string)$this->request->getParam('kind', ''));
+		if ($kind === 'shared_mail' || $kind === 'personal_mail_shared_unmatched') {
+			$kind = 'mail';
+		}
+
+		return new RedirectResponse(
+			$this->inboxAssignUrl($kind !== '' ? $kind : 'mail'),
+			Http::STATUS_MOVED_PERMANENTLY,
+		);
+	}
+
+	/**
+	 * Absolute Inbox URL with Unassigned tab (+ optional Assign source kind).
+	 */
+	private function inboxAssignUrl(string $kind = 'mail'): string
+	{
+		$params = [];
+		$ws = (int)$this->request->getParam('workspaceId', 0);
+		if ($ws > 0) {
+			$params['workspaceId'] = $ws;
+		}
+		$url = $this->urlGenerator->linkToRouteAbsolute('customercheck.page.salesInbox', $params);
+		$sep = str_contains($url, '?') ? '&' : '?';
+		$url .= $sep . 'tab=unmatched';
+		$kind = trim($kind);
+		if ($kind !== '') {
+			$url .= '&kind=' . rawurlencode($kind);
+		}
+
+		return $url;
 	}
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
 	public function conflicts(): TemplateResponse
 	{
-		$this->registerFrontEndAssets('pages/persona');
+		$this->registerFrontEndAssets('pages/persona', null, [], ['common/mail-sync-now']);
 
 		return new TemplateResponse('customercheck', 'conflicts', $this->mergeShellPageParams(
 			'conflicts',
@@ -247,7 +289,7 @@ class PageController extends Controller
 	public function prepareMeeting(int $id): TemplateResponse
 	{
 		$this->requireCompanyPage($id);
-		$this->registerFrontEndAssets('pages/persona');
+		$this->registerFrontEndAssets('pages/persona', null, [], ['common/mail-sync-now']);
 		return new TemplateResponse('customercheck', 'prepare-meeting', $this->mergeShellPageParams(
 			'prepare-meeting',
 			$this->l10n->t('Prepare meeting'),
@@ -262,18 +304,49 @@ class PageController extends Controller
 	{
 		$this->registerFrontEndAssets('pages/companies');
 		$wsId = $this->resolvedWorkspaceId();
-		$search = trim((string)$this->request->getParam('q', ''));
+		$search = \OCA\CustomerCheck\Support\CompanyListSearch::normalize(
+			(string)$this->request->getParam('q', '')
+		);
 		$status = trim((string)$this->request->getParam('status', ''));
 		$archived = $this->request->getParam('archived', '') === '1';
 		$filters = ['archived' => $archived, 'workspaceId' => $wsId];
 		if ($search !== '') {
 			$filters['search'] = $search;
+			$filters['statusSearchCodes'] = \OCA\CustomerCheck\Support\CompanyListSearch::matchingStatusCodes(
+				$search,
+				fn (string $code): string => $this->labels->companyStatus($code),
+			);
+			$ownerRoster = [];
+			try {
+				foreach ($this->workspaceService->listMembers($wsId) as $member) {
+					$uid = trim((string)$member->getUserId());
+					if ($uid !== '') {
+						$ownerRoster[] = ['id' => $uid];
+					}
+				}
+			} catch (\Throwable) {
+				$ownerRoster = [];
+			}
+			if ($ownerRoster !== []) {
+				$resolved = $this->directory->resolveUsers(array_column($ownerRoster, 'id'));
+				$filters['ownerUserIds'] = \OCA\CustomerCheck\Support\CompanyListSearch::matchingOwnerIds(
+					$search,
+					$resolved
+				);
+			}
+			if (\OCA\CustomerCheck\Support\CompanyListSearch::wantsOpenCallbacks($search, $this->l10n)) {
+				$filters['matchOpenCallbacks'] = true;
+			}
 		}
 		if ($status !== '') {
 			$filters['status'] = $status;
 		}
 		$list = $this->companies->search($filters, 200, 0);
 		$health = $this->companyHealth->enrich($list);
+		$duplicateNameKeys = [];
+		if (!$archived && $wsId > 0) {
+			$duplicateNameKeys = $this->companies->activeDuplicateNameKeys($wsId);
+		}
 		$ownerUids = [];
 		foreach ($list as $company) {
 			$oid = trim((string)($company->getAccountOwnerUserId() ?? ''));
@@ -292,10 +365,12 @@ class PageController extends Controller
 			[
 				'companies' => $list,
 				'health' => $health,
+				'duplicateNameKeys' => $duplicateNameKeys,
 				'ownerDisplayNames' => $ownerDisplayNames,
 				'filterQ' => $search,
 				'filterStatus' => $status,
 				'filterArchived' => $archived,
+				'workspaceId' => $wsId,
 			],
 		));
 	}
@@ -418,7 +493,7 @@ class PageController extends Controller
 	#[NoCSRFRequired]
 	public function companyDetail(int $id): TemplateResponse
 	{
-		$this->registerFrontEndAssets('pages/company-detail', null, ['common/identity-links'], ['common/company360-focus', 'common/folder-picker', 'common/glance-summary', 'common/company360-present', 'common/deal-checklist-ux', 'pages/persona']);
+		$this->registerFrontEndAssets('pages/company-detail', null, ['common/identity-links'], ['common/company360-focus', 'common/folder-picker', 'common/glance-summary', 'common/company360-present', 'common/deal-checklist-ux', 'common/mail-sync-now', 'common/rich-mail-composer', 'common/shared-mail-send', 'pages/persona']);
 		$company = $this->requireCompanyPage($id);
 		$now = $this->timeFactory->getDateTime();
 		$agreements = [];
@@ -1033,7 +1108,7 @@ class PageController extends Controller
 			));
 		}
 
-		$this->registerFrontEndAssets('pages/settings', null, [], ['common/folder-picker', 'common/mailbox-settings-present', 'workspace-settings-legacy-redirect']);
+		$this->registerFrontEndAssets('pages/settings', null, [], ['common/folder-picker', 'common/signature-logo-core', 'common/personal-mail-settings-core', 'common/rich-mail-composer', 'common/mailbox-settings-present', 'workspace-settings-legacy-redirect']);
 		$settings = $this->settings->getForUser($uid);
 		$settingsSectionLabels = [];
 		foreach (WorkspaceSettingsSectionCatalog::SECTIONS as $sectionId) {
@@ -1055,7 +1130,9 @@ class PageController extends Controller
 				'settingsSection' => $section,
 				'settingsSectionLabels' => $settingsSectionLabels,
 				'breadcrumbParent' => [
-					'label' => $this->l10n->t('Team & mailbox'),
+					'label' => $section === 'my-email'
+						? $this->l10n->t('My email')
+						: $this->l10n->t('Team & mailbox'),
 					'url' => $this->urlGenerator->linkToRoute(
 						'customercheck.page.settings',
 						$this->workspaceQueryParams(),
@@ -1147,6 +1224,9 @@ class PageController extends Controller
 				'selectedAppAdmins' => $canManage ? $this->directory->resolveUsers($appAdminUserIds) : [],
 				'license' => $canManage ? $this->license->status() : null,
 				'licenseSeats' => $canManage ? $this->license->listSeats(200, 0) : null,
+				'personalMailOAuthRedirectUri' => $canManage
+					? $this->urlGenerator->linkToRouteAbsolute('customercheck.persona_api.personalMailOAuthCallback')
+					: '',
 			],
 			true,
 		);

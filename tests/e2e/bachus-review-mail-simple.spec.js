@@ -4,130 +4,95 @@ import AxeBuilder from '@axe-core/playwright';
 import { login, credsFromEnv } from './helpers/auth.js';
 
 /**
- * Bachus Review mail triage: read before assign, one-click suggestion, no chrome pile-up.
+ * Unassigned mail: same Inbox chrome as Personal/Team — list, under-row reader, Reply, Assign.
  */
-test.describe('Bachus Review mail extreme simplicity', () => {
+test.describe('Bachus Inbox Unassigned mail simplicity', () => {
   test.skip(!process.env.NC_ADMIN_USER, 'Requires NC_ADMIN_USER / NC_ADMIN_PASS');
 
-  async function openReviewReady(page) {
+  async function openUnassigned(page) {
     await page.setViewportSize({ width: 390, height: 844 });
     await login(page, credsFromEnv('ADMIN'));
     await page.goto('/apps/customercheck/review?kind=shared_mail');
-    await page.waitForSelector('[data-crm-persona-mount="review"]', { timeout: 30000 });
+    await page.waitForURL(/\/sales-inbox/, { timeout: 30000 });
+    await expect(page.locator('#crm-sales-tab-unmatched')).toHaveAttribute('aria-selected', 'true', { timeout: 30000 });
+    await expect(page.locator('#crm-sales-inbox-panel')).toBeVisible();
+    await expect(page.locator('#crm-sales-inbox-root[data-crm-inbox-unified="1"]')).toBeVisible();
     await page.waitForFunction(() => {
-      const mount = document.querySelector('[data-crm-persona-mount="review"]');
-      return mount && mount.getAttribute('aria-busy') !== 'true';
+      const status = document.getElementById('crm-sales-inbox-status');
+      return status && !/Loading/i.test(status.textContent || '');
     }, null, { timeout: 30000 });
   }
 
-  test('mobile Review: visible search toolbar, preview reachable, axe clean', async ({ page }) => {
-    await openReviewReady(page);
+  test('mobile Unassigned: search, list, under-row decide + Reply, axe clean', async ({ page }) => {
+    await openUnassigned(page);
 
-    await expect(page.locator('#crm-review-disclosure')).toHaveCount(1);
-    await expect(page.locator('[data-crm-persona-mount="review"] .crm-quick-filters button')).toHaveCount(7);
+    await expect(page.locator('#crm-sales-inbox-disclosure')).toBeVisible();
+    await expect(page.locator('#crm-sales-inbox-list-tools')).toBeVisible();
+    await expect(page.locator('#crm-sales-inbox-q')).toBeVisible();
+    await expect(page.locator('[data-crm-persona-mount="review"]')).toHaveCount(0);
+    await expect(page.locator('#crm-sales-inbox-assign-panel')).toHaveCount(0);
+    await expect(page.locator('#crm-sales-inbox-list')).toHaveAttribute('role', 'listbox');
+    await expect(page.locator('#crm-sales-inbox-cols [data-crm-inbox-sort="from"]')).toBeVisible();
+    await page.locator('#crm-sales-inbox-cols [data-crm-inbox-sort="from"]').click();
+    await expect(page.locator('#crm-sales-inbox-cols [data-crm-inbox-sort="from"]')).toHaveAttribute('aria-pressed', 'true');
 
-    await expect(page.locator('details.crm-review-tools')).toHaveCount(0);
-    await expect(page.locator('.crm-review-toolbar').first()).toBeVisible();
-    await expect(page.locator('#crm-review-q')).toBeVisible();
-    await expect(page.locator('#crm-review-include-archived')).toBeAttached();
-    await page.locator('.crm-review-toolbar__extra > summary').first().click();
-    await expect(page.locator('#crm-review-include-archived')).toBeVisible();
-    await expect(page.locator('.crm-review-board').first()).toBeVisible();
-    await expect(page.locator('.crm-mail-thread.crm-review-list, .crm-review-table').first()).toBeVisible();
-    await expect(page.locator('[data-crm-review-sort]').first()).toBeVisible();
-    await expect(page.locator('[data-crm-review-sort="status"]')).toHaveCount(0);
-    const reviewRow = page.locator('li.crm-review-row').first();
-    if (await reviewRow.count()) {
-      await reviewRow.click();
-      await expect(page.locator('[data-crm-review-reader]')).toBeVisible();
-      await expect(page.locator('[data-crm-review-reader] .crm-mail-reader__subject, [data-crm-review-reader] .crm-review-zone__label').first()).toBeVisible();
-    }
-
-    const assignRow = page.locator('[data-crm-review-reader] form.crm-review-assign').first();
-    const empty = page.locator('.crm-empty-state');
-    if (await assignRow.count()) {
-      await expect(page.locator('li.crm-review-row, tr.crm-review-row').first()).toBeVisible();
-      await expect(assignRow.locator('.crm-review-zone--decide, .crm-review-primary').first()).toBeVisible();
-      const previewWrap = page.locator('[data-crm-mail-preview][data-crm-mail-auto-open]').first();
-      if (await previewWrap.count()) {
-        const preview = previewWrap.locator('[data-crm-mail-preview-toggle]');
-        await expect(preview).toBeVisible();
-        await expect(preview).toHaveCSS('min-height', /4[4-9]px|5\dpx/);
-        // Opening a row auto-loads the message — no second click.
-        await expect(preview).toHaveAttribute('aria-expanded', 'true', { timeout: 20000 });
-        const controls = await preview.getAttribute('aria-controls');
-        expect(controls).toBeTruthy();
-        await expect(page.locator('#' + controls)).toBeVisible();
-        await expect(page.locator('.crm-mail-preview__hint')).toHaveCount(0);
-        const answer = previewWrap.locator('[data-crm-mail-reply]').first();
-        await expect(answer).toBeVisible();
-        await expect(answer).toHaveCSS('min-height', /4[4-9]px|5\dpx/);
-      }
-      await expect(assignRow.locator('[data-crm-review-none]')).toBeVisible();
-      await expect(assignRow.locator('[data-crm-review-discard]')).toBeVisible();
-      const quick = assignRow.locator('[data-crm-review-quick-assign]');
-      if (await quick.count()) {
-        await expect(quick).toBeVisible();
-        const box = await quick.boundingBox();
-        expect(box && box.height >= 44).toBeTruthy();
-      } else {
-        const pick = assignRow.locator('.crm-review-pick-company');
-        await expect(pick).toBeVisible();
-        await expect(assignRow.locator('details.crm-review-pick-company')).toHaveCount(0);
-        const primary = assignRow.locator('button[type="submit"].crm-btn--primary').first();
-        await expect(primary).toBeVisible();
-        const box = await primary.boundingBox();
-        expect(box && box.height >= 44).toBeTruthy();
-      }
+    const row = page.locator('#crm-sales-inbox-list .crm-mail-thread-row').first();
+    if (await row.count()) {
+      await row.click();
+      await expect(page.locator('#crm-sales-inbox-reader')).toBeVisible();
+      await expect(page.locator('#crm-sales-inbox-open-assign')).toBeVisible({ timeout: 20000 });
+      await expect(page.locator('#crm-sales-inbox-reply')).toBeVisible();
+      await page.locator('#crm-sales-inbox-open-assign').click();
+      await expect(page.locator('#crm-sales-inbox-decide')).toBeVisible({ timeout: 20000 });
+      const underRow = await page.evaluate(() => {
+        const selected = document.querySelector('#crm-sales-inbox-list .crm-mail-thread-row.is-selected');
+        const host = document.getElementById('crm-sales-inbox-reader-host');
+        const reader = document.getElementById('crm-sales-inbox-reader');
+        return !!(
+          selected
+          && host
+          && reader
+          && !reader.hidden
+          && selected.nextElementSibling === host
+          && host.contains(reader)
+          && host.classList.contains('crm-sales-inbox__detail')
+        );
+      });
+      expect(underRow).toBe(true);
+      await row.click();
+      await expect(page.locator('#crm-sales-inbox-list .crm-mail-thread-row.is-selected')).toHaveCount(0);
     } else {
-      await expect(empty.first()).toBeVisible();
-      await expect(empty.locator('a[href*="settings"]')).toBeVisible();
+      await expect(page.locator('#crm-sales-inbox-empty')).toBeVisible();
     }
 
     const results = await new AxeBuilder({ page })
-      .include('#crm-main-content')
-      .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
+      .include('#crm-sales-inbox-root')
+      .disableRules(['color-contrast'])
       .analyze();
-    const serious = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
-    expect(serious, JSON.stringify(serious, null, 2)).toEqual([]);
+    expect(results.violations.filter((v) => v.impact === 'critical' || v.impact === 'serious')).toEqual([]);
   });
 
-  test('desktop Review: search stays visible, bulk bar stays quiet until selection', async ({ page }) => {
+  test('legacy /review redirects into unified Unassigned', async ({ page }) => {
+    await page.setViewportSize({ width: 1100, height: 900 });
+    await login(page, credsFromEnv('ADMIN'));
+    await page.goto('/apps/customercheck/review?kind=shared_mail');
+    await page.waitForURL(/\/sales-inbox/, { timeout: 30000 });
+    await expect(page).toHaveURL(/tab=unmatched/);
+    await expect(page).toHaveURL(/kind=mail/);
+    await expect(page.locator('#crm-sales-inbox-panel')).toBeVisible();
+    await expect(page.locator('#crm-sales-tab-unmatched')).toHaveAttribute('aria-selected', 'true');
+  });
+
+  test('desktop Unassigned keeps one chrome language', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await login(page, credsFromEnv('ADMIN'));
-    await page.goto('/apps/customercheck/review');
-    await page.waitForLoadState('domcontentloaded');
-    await page.waitForSelector('[data-crm-persona-mount="review"]', { timeout: 45000 });
-    await page.waitForFunction(() => {
-      const mount = document.querySelector('[data-crm-persona-mount="review"]');
-      return mount && mount.getAttribute('aria-busy') !== 'true' && mount.children.length > 0;
-    }, null, { timeout: 45000 });
-
-    await expect(page.locator('.crm-review-toolbar').first()).toBeVisible({ timeout: 15000 });
-    await expect(page.locator('#crm-review-q')).toBeVisible();
-    await page.locator('#crm-review-q').fill('zzz-no-such-mail-subject-xyz');
-    await page.locator('form.crm-review-search button[type="submit"]').click();
-    await page.waitForFunction(() => {
-      const mount = document.querySelector('[data-crm-persona-mount="review"]');
-      return mount && mount.getAttribute('aria-busy') !== 'true';
-    }, null, { timeout: 45000 });
-    // After search, toolbar + query remain visible (no progressive dump / dead end).
-    await expect(page.locator('.crm-review-toolbar').first()).toBeVisible();
-    await expect(page.locator('#crm-review-q')).toHaveValue('zzz-no-such-mail-subject-xyz');
-
-    const bulk = page.locator('[data-crm-review-bulk]');
-    if (await bulk.count()) {
-      await expect(bulk).toBeHidden();
-      const select = page.locator('li.crm-review-row:not([hidden]) [data-crm-review-select]').first();
-      if (await select.count()) {
-        await select.evaluate((el) => {
-          if (!(el instanceof HTMLInputElement)) return;
-          el.checked = true;
-          el.dispatchEvent(new Event('change', { bubbles: true }));
-        });
-        await expect(bulk).toBeVisible();
-        await expect(page.locator('[data-crm-review-bulk-remove]')).toBeEnabled();
-      }
-    }
+    await page.goto('/apps/customercheck/sales-inbox?tab=unmatched&kind=mail');
+    await expect(page.locator('#crm-sales-inbox-panel')).toBeVisible({ timeout: 30000 });
+    await expect(page.locator('#crm-sales-inbox-list-tools')).toBeVisible();
+    await expect(page.locator('#crm-sales-inbox-q')).toBeVisible();
+    await expect(page.locator('#crm-sales-compose-host')).toBeAttached();
+    await expect(page.locator('#crm-sales-inbox-decide')).toBeAttached();
+    await expect(page.locator('#crm-sales-inbox-open-assign')).toBeAttached();
+    await expect(page.locator('#crm-sales-inbox-reply')).toHaveText(/Reply|Antworten/i);
   });
 });

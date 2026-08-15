@@ -14,9 +14,14 @@ $workspaceName = (string)($_['workspaceName'] ?? '');
 $workspaceId = (int)($_['workspaceId'] ?? 0);
 $icon = static fn(string $n): string => IconCatalog::render($n, 'crm-nav__icon-svg');
 $is = static fn(string ...$ids): bool => in_array($pageId, $ids, true);
-$toolsOpen = $is('import', 'settings', 'app-settings', 'support-us', 'mail-triage', 'review', 'conflicts');
+$toolsOpen = $is('import', 'settings', 'app-settings', 'support-us', 'mail-triage', 'sales-inbox', 'review', 'conflicts');
 $canManageNav = !empty($_['canManage']);
+$canManageWorkspaceNav = !empty($_['canManageWorkspace']);
 $canWriteNav = !empty($_['canWrite']);
+$settingsSection = (string)($_['settingsSection'] ?? '');
+$settingsSections = is_array($urls['settingsSections'] ?? null) ? $urls['settingsSections'] : [];
+$myEmailUrl = (string)($settingsSections['my-email'] ?? '');
+$teamMailboxUrl = (string)($settingsSections['mailbox'] ?? '');
 $wsQ = $workspaceId > 0 ? ('?workspaceId=' . $workspaceId) : '';
 $u = static function (string $key) use ($urls, $wsQ): string {
 	$base = $urls[$key] ?? '#';
@@ -24,6 +29,18 @@ $u = static function (string $key) use ($urls, $wsQ): string {
 		return $base;
 	}
 	return str_contains($base, '?') ? ($base . '&workspaceId=' . ltrim($wsQ, '?workspaceId=')) : ($base . $wsQ);
+};
+$sectionHref = static function (string $url) use ($workspaceId): string {
+	if ($url === '') {
+		return '#';
+	}
+	if ($workspaceId <= 0 || str_contains($url, 'workspaceId=')) {
+		return $url;
+	}
+
+	return str_contains($url, '?')
+		? ($url . '&workspaceId=' . $workspaceId)
+		: ($url . '?workspaceId=' . $workspaceId);
 };
 $navItem = static function (
 	bool $active,
@@ -101,12 +118,17 @@ $navItem = static function (
 				<span class="nav-parent-chevron" aria-hidden="true"></span>
 			</button>
 			<ul id="tools-subnav" class="nav-submenu" <?php if (!$toolsOpen): ?>hidden<?php endif; ?>>
-				<li class="<?php p($is('review', 'mail-triage') ? 'active' : ''); ?>"><a href="<?php p($u('review')); ?>" title="<?php p($l->t('Assign unmatched shared mail and review items')); ?>"><?php p($l->t('Review')); ?></a></li>
+				<li class="<?php p($is('sales-inbox', 'review', 'mail-triage') ? 'active' : ''); ?>"><a href="<?php p($u('salesInbox')); ?>" title="<?php p($l->t('Your mail, team inbox, and items that need a company')); ?>"><?php p($l->t('Inbox')); ?></a></li>
+				<?php if ($myEmailUrl !== ''): ?>
+				<li class="<?php p(($is('settings') && $settingsSection === 'my-email') ? 'active' : ''); ?>"><a href="<?php p($sectionHref($myEmailUrl)); ?>" title="<?php p($l->t('Connect your personal mailbox')); ?>"><?php p($l->t('My email')); ?></a></li>
+				<?php endif; ?>
 				<li class="<?php p($is('conflicts') ? 'active' : ''); ?>"><a href="<?php p($u('conflicts')); ?>" title="<?php p($l->t('Resolve parallel edits')); ?>"><?php p($l->t('Conflicts')); ?></a></li>
 				<?php if ($canWriteNav): ?>
 				<li class="<?php p($is('import') ? 'active' : ''); ?>"><a href="<?php p($u('import')); ?>" title="<?php p($l->t('Import companies and deals')); ?>"><?php p($l->t('Import')); ?></a></li>
 				<?php endif; ?>
-				<li class="<?php p($is('settings') ? 'active' : ''); ?>"><a href="<?php p($u('settings')); ?>" title="<?php p($l->t('Members and mailbox')); ?>"><?php p($l->t('Team & mailbox')); ?></a></li>
+				<?php if ($canManageWorkspaceNav && $teamMailboxUrl !== ''): ?>
+				<li class="<?php p(($is('settings') && $settingsSection === 'mailbox') ? 'active' : ''); ?>"><a href="<?php p($sectionHref($teamMailboxUrl)); ?>" title="<?php p($l->t('Members and mailbox')); ?>"><?php p($l->t('Team & mailbox')); ?></a></li>
+				<?php endif; ?>
 				<?php if ($canManageNav): ?>
 				<li class="<?php p($is('app-settings') ? 'active' : ''); ?>"><a href="<?php p($u('appSettings')); ?>" title="<?php p($l->t('Access, seats, and tokens')); ?>"><?php p($l->t('App settings')); ?></a></li>
 				<?php endif; ?>

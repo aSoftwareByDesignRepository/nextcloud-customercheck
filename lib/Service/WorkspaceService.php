@@ -375,6 +375,34 @@ class WorkspaceService
 		return $this->members->findByWorkspace($workspaceId);
 	}
 
+	/**
+	 * Nextcloud account emails for workspace members — used so shared-mail
+	 * auto-match never files a colleague's outbound CC copy onto a customer.
+	 *
+	 * @return list<string>
+	 */
+	public function listMemberEmails(int $workspaceId): array
+	{
+		$out = [];
+		foreach ($this->members->findByWorkspace($workspaceId) as $member) {
+			$uid = trim((string)$member->getUserId());
+			if ($uid === '') {
+				continue;
+			}
+			$user = $this->userManager->get($uid);
+			if ($user === null) {
+				continue;
+			}
+			$email = strtolower(trim((string)($user->getEMailAddress() ?? '')));
+			if ($email === '' || !str_contains($email, '@')) {
+				continue;
+			}
+			$out[] = $email;
+		}
+
+		return array_values(array_unique($out));
+	}
+
 	public function ensureSettingsRow(int $workspaceId): void
 	{
 		$qb = $this->db->getQueryBuilder();
@@ -403,7 +431,17 @@ class WorkspaceService
 	}
 
 	/**
-	 * @return array{wipLimit: int, leadSlaHours: int, stuckChaseDays: int, mailRetentionDays: int, digestEnabled: bool, reviewSources: array<string, array{enabled: bool, dsgvoAckAt: ?string}>}
+	 * @return array{
+	 *   wipLimit: int,
+	 *   leadSlaHours: int,
+	 *   stuckChaseDays: int,
+	 *   mailRetentionDays: int,
+	 *   digestEnabled: bool,
+	 *   personalMailEnabled: bool,
+	 *   personalMailDsgvoAt: ?string,
+	 *   personalMailDsgvoBy: ?string,
+	 *   reviewSources: array<string, array{enabled: bool, dsgvoAckAt: ?string}>
+	 * }
 	 */
 	public function getSettings(int $workspaceId): array
 	{
@@ -422,6 +460,9 @@ class WorkspaceService
 			'stuckChaseDays' => max(1, (int)($row['stuck_chase_days'] ?? 3)),
 			'mailRetentionDays' => max(Constants::MAIL_RETENTION_DAYS_MIN, (int)($row['mail_retention_days'] ?? 365)),
 			'digestEnabled' => (int)($row['digest_enabled'] ?? 1) === 1,
+			'personalMailEnabled' => (int)($row['personal_mail_enabled'] ?? 0) === 1,
+			'personalMailDsgvoAt' => $row['personal_mail_dsgvo_at'] ?? null,
+			'personalMailDsgvoBy' => isset($row['personal_mail_dsgvo_by']) ? (string)$row['personal_mail_dsgvo_by'] : null,
 			'reviewSources' => $this->decodeReviewSources($row['review_sources_json'] ?? null),
 		];
 	}
@@ -627,6 +668,32 @@ class WorkspaceService
 			: $current['mailRetentionDays'];
 		$digest = array_key_exists('digestEnabled', $data) ? (!empty($data['digestEnabled']) ? 1 : 0) : ($current['digestEnabled'] ? 1 : 0);
 
+		$personalEnabled = $current['personalMailEnabled'] ? 1 : 0;
+		$personalAt = $current['personalMailDsgvoAt'];
+		$personalBy = $current['personalMailDsgvoBy'];
+		if (array_key_exists('personalMailEnabled', $data)) {
+			$want = !empty($data['personalMailEnabled']);
+			if ($want && empty($data['personalMailDsgvoAck']) && empty($current['personalMailDsgvoAt'])) {
+				throw ValidationException::field(
+					Constants::ERR_VALIDATION,
+					'personalMailDsgvoAck',
+					$this->l10n->t('Confirm the DSGVO acknowledgement before enabling personal email sync.'),
+				);
+			}
+			$personalEnabled = $want ? 1 : 0;
+			if ($want && ( !empty($data['personalMailDsgvoAck']) || !empty($current['personalMailDsgvoAt']))) {
+				$personalAt = $current['personalMailDsgvoAt'] ?? $this->timeFactory->getDateTime()->format('Y-m-d H:i:s');
+				$personalBy = $current['personalMailDsgvoBy'] ?? (string)($data['actor'] ?? 'system');
+				if (!empty($data['personalMailDsgvoAck'])) {
+					$personalAt = $this->timeFactory->getDateTime()->format('Y-m-d H:i:s');
+					$personalBy = (string)($data['actor'] ?? 'system');
+				}
+			}
+			if (!$want) {
+				// Keep prior ack timestamps for audit; feature simply off.
+			}
+		}
+
 		$qb = $this->db->getQueryBuilder();
 		$qb->update('crm_ws_set')
 			->set('wip_limit', $qb->createNamedParameter($wip))
@@ -634,6 +701,9 @@ class WorkspaceService
 			->set('stuck_chase_days', $qb->createNamedParameter($stuck))
 			->set('mail_retention_days', $qb->createNamedParameter($ret))
 			->set('digest_enabled', $qb->createNamedParameter($digest))
+			->set('personal_mail_enabled', $qb->createNamedParameter($personalEnabled))
+			->set('personal_mail_dsgvo_at', $qb->createNamedParameter($personalAt))
+			->set('personal_mail_dsgvo_by', $qb->createNamedParameter($personalBy))
 			->set('updated_at', $qb->createNamedParameter($this->timeFactory->getDateTime()->format('Y-m-d H:i:s')))
 			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId)))
 			->executeStatement();

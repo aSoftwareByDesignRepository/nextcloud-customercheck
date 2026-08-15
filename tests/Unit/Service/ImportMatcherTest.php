@@ -43,6 +43,19 @@ class ImportMatcherTest extends TestCase
 				return ($bySlug !== null && $bySlug->getSlug() === $slug) ? $bySlug : null;
 			}
 		);
+		$companies->method('slugExists')->willReturnCallback(
+			static function (string $slug) use ($bySlug, $byName) {
+				if ($bySlug !== null && $bySlug->getSlug() === $slug) {
+					return true;
+				}
+				foreach ($byName as $c) {
+					if ($c->getSlug() === $slug) {
+						return true;
+					}
+				}
+				return false;
+			}
+		);
 		$companies->method('search')->willReturn($byName);
 		$companies->method('findById')->willReturnCallback(
 			static function (int $id) use ($byName, $bySlug, $byEmail) {
@@ -150,5 +163,52 @@ class ImportMatcherTest extends TestCase
 		$result = $m->match(['customerId' => 'acme-gmbh'], 0);
 		$this->assertSame('needs_decision', $result['action']);
 		$this->assertNull($result['companyId']);
+	}
+
+	public function testArchivedSlugDoesNotLinkAndAvoidsTakenSuggestedSlug(): void
+	{
+		$archived = $this->company(7, 'acme-gmbh', 'Acme GmbH');
+		$archived->setArchivedAt(new \DateTime('2026-01-01'));
+		$m = $this->matcher($archived);
+		$result = $m->match(['customerId' => 'acme-gmbh', 'companyName' => 'Acme GmbH'], 1);
+		$this->assertSame('create', $result['action']);
+		$this->assertNull($result['companyId']);
+		$this->assertSame([], $result['candidates']);
+		// Must not reuse the archived company's slug (global unique → SLUG_TAKEN).
+		$this->assertNotSame('acme-gmbh', $result['suggestedSlug']);
+		$this->assertNotSame('', $result['suggestedSlug']);
+	}
+
+	public function testArchivedSlugPlusActiveNameLinksActiveOnly(): void
+	{
+		$archived = $this->company(7, 'acme-gmbh', 'Acme GmbH');
+		$archived->setArchivedAt(new \DateTime('2026-01-01'));
+		$active = $this->company(8, 'acme-gmbh-2', 'Acme GmbH');
+		$m = $this->matcher($archived, [$active]);
+		$result = $m->match(['customerId' => 'acme-gmbh', 'companyName' => 'Acme GmbH'], 1);
+		$this->assertSame('link', $result['action']);
+		$this->assertSame(8, $result['companyId']);
+		$this->assertSame('name', $result['candidates'][0]['via']);
+		$this->assertCount(1, $result['candidates']);
+	}
+
+	public function testSlugOwnedByOtherWorkspaceDoesNotLink(): void
+	{
+		$other = $this->company(9, 'shared-slug', 'Other Book Co', 99);
+		$m = $this->matcher($other);
+		$result = $m->match(['customerId' => 'shared-slug', 'companyName' => 'Brand New'], 1);
+		$this->assertSame('create', $result['action']);
+		$this->assertNull($result['companyId']);
+		$this->assertNotSame('shared-slug', $result['suggestedSlug']);
+	}
+
+	public function testArchivedNameHitIsIgnoredEvenIfMapperReturnsIt(): void
+	{
+		$archived = $this->company(7, 'old-acme', 'Acme GmbH');
+		$archived->setArchivedAt(new \DateTime('2026-01-01'));
+		$m = $this->matcher(null, [$archived]);
+		$result = $m->match(['companyName' => 'Acme GmbH'], 1);
+		$this->assertSame('create', $result['action']);
+		$this->assertSame([], $result['candidates']);
 	}
 }

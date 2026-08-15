@@ -7,19 +7,19 @@ namespace OCA\CustomerCheck\Tests\Unit;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Removing a company person can return matched shared mail to Review (unmatch only).
+ * Removing a company person can return matched shared mail to Assign (unmatch only).
  */
 final class PersonRemoveReturnMailContractTest extends TestCase
 {
-	public function testDestroyOrchestratesUnmatchAndReviewReturn(): void
+	public function testDestroyOrchestratesUnmatchAndAssignReturn(): void
 	{
 		$ctrl = (string)file_get_contents(dirname(__DIR__, 2) . '/lib/Controller/PersonApiController.php');
-		$this->assertStringContainsString('returnMailToReview', $ctrl);
+		$this->assertStringContainsString('returnMailToAssign', $ctrl);
 		$this->assertStringContainsString('unmatchByCompanyAndFrom', $ctrl);
-		$this->assertStringContainsString('returnSharedMailMessagesToReview', $ctrl);
+		$this->assertStringContainsString('returnSharedMailMessagesToAssign', $ctrl);
 		$this->assertStringContainsString('clearPersonId', $ctrl);
 		$this->assertStringContainsString("'contactsKept' => true", $ctrl);
-		$this->assertStringContainsString('mailReturnedToReview', $ctrl);
+		$this->assertStringContainsString('mailReturnedToAssign', $ctrl);
 		$start = strpos($ctrl, 'public function destroy(int $id)');
 		$this->assertNotFalse($start);
 		$chunk = substr($ctrl, (int)$start, 1600);
@@ -34,7 +34,7 @@ final class PersonRemoveReturnMailContractTest extends TestCase
 		$this->assertStringContainsString("'open'", $mail);
 
 		$review = (string)file_get_contents(dirname(__DIR__, 2) . '/lib/Service/ReviewService.php');
-		$this->assertStringContainsString('function returnSharedMailMessagesToReview', $review);
+		$this->assertStringContainsString('function returnSharedMailMessagesToAssign', $review);
 		$this->assertStringContainsString('syncSharedMail', $review);
 
 		$touches = (string)file_get_contents(dirname(__DIR__, 2) . '/lib/Db/EmailTouchMapper.php');

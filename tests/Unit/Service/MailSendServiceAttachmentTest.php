@@ -4,12 +4,17 @@ declare(strict_types=1);
 
 namespace OCA\CustomerCheck\Tests\Unit\Service;
 
+use OCA\CustomerCheck\Service\HtmlSanitizeService;
+
 use OCA\CustomerCheck\Constants;
 use OCA\CustomerCheck\Exception\ValidationException;
 use OCA\CustomerCheck\Service\EmailTouchService;
 use OCA\CustomerCheck\Service\FilesAccessService;
 use OCA\CustomerCheck\Service\MailboxService;
+use OCA\CustomerCheck\Service\MailboxAuthService;
+use Psr\Log\LoggerInterface;
 use OCA\CustomerCheck\Service\MailSendService;
+use OCA\CustomerCheck\Service\WorkspaceService;
 use OCA\CustomerCheck\Service\RateLimitService;
 use OCA\CustomerCheck\Service\TimelineService;
 use OCP\AppFramework\Utility\ITimeFactory;
@@ -45,8 +50,44 @@ final class MailSendServiceAttachmentTest extends TestCase
 		$l10n = $this->createMock(IL10N::class);
 		$l10n->method('t')->willReturnCallback(static fn (string $s): string => $s);
 
+		$db = $this->createMock(IDBConnection::class);
+		$db->method('tableExists')->willReturnCallback(static fn (string $t): bool => $t === 'crm_mailbox');
+		$db->method('getQueryBuilder')->willReturnCallback(function () {
+			return new class {
+				public function select(...$a) { return $this; }
+				public function from(...$a) { return $this; }
+				public function where(...$a) { return $this; }
+				public function andWhere(...$a) { return $this; }
+				public function setMaxResults(...$a) { return $this; }
+				public function expr() {
+					return new class {
+						public function eq(...$a) { return 'eq'; }
+					};
+				}
+				public function createNamedParameter(...$a) { return '?'; }
+				public function executeQuery() {
+					return new class {
+						public function fetch() {
+							return [
+								'id' => 2,
+								'workspace_id' => 1,
+								'kind' => 'team',
+								'email_address' => 'shared@example.com',
+								'label' => 'Shared',
+								'smtp_host' => '',
+								'secret_enc' => '',
+								'signature_html' => '',
+								'signature_plain' => '',
+							];
+						}
+						public function closeCursor(): void {}
+					};
+				}
+			};
+		});
+
 		$svc = new MailSendService(
-			$this->createMock(IDBConnection::class),
+			$db,
 			$this->createMock(IMailer::class),
 			$this->createMock(ICrypto::class),
 			$rate,
@@ -58,6 +99,10 @@ final class MailSendServiceAttachmentTest extends TestCase
 			$this->createMock(ITimeFactory::class),
 			$this->createMock(IURLGenerator::class),
 			$l10n,
+			new HtmlSanitizeService(),
+			$this->createMock(MailboxAuthService::class),
+			$this->createMock(LoggerInterface::class),
+			$this->createMock(WorkspaceService::class),
 		);
 
 		try {
@@ -72,6 +117,7 @@ final class MailSendServiceAttachmentTest extends TestCase
 			$this->fail('Expected ValidationException');
 		} catch (ValidationException $e) {
 			$this->assertSame(Constants::ERR_ATTACHMENT_TOO_LARGE, $e->getErrorCode());
+			$this->assertArrayHasKey('draftId', $e->getFields());
 		}
 	}
 
@@ -97,11 +143,14 @@ final class MailSendServiceAttachmentTest extends TestCase
 						return [
 							'id' => 2,
 							'workspace_id' => 1,
+							'kind' => 'team',
 							'email_address' => 'shared@example.com',
 							'label' => 'Shared',
 							'smtp_host' => '',
 							'username' => '',
 							'secret_enc' => '',
+							'signature_html' => '',
+							'signature_plain' => '',
 						];
 					}
 					public function closeCursor(): void {}
@@ -160,6 +209,10 @@ final class MailSendServiceAttachmentTest extends TestCase
 			$time,
 			$this->createMock(IURLGenerator::class),
 			$l10n,
+			new HtmlSanitizeService(),
+			$this->createMock(MailboxAuthService::class),
+			$this->createMock(LoggerInterface::class),
+			$this->createMock(WorkspaceService::class),
 		);
 
 		$result = $svc->send(1, [

@@ -186,8 +186,8 @@ $cases = [
 	],
 	[
 		'file' => $root . '/lib/Service/MailboxService.php',
-		'find' => 'purgeOpenSharedMailReviewForMessages',
-		'replace' => 'purgeOpenSharedMailReviewForMessagesDISABLED',
+		'find' => 'purgeOpenSharedMailAssignForMessages',
+		'replace' => 'purgeOpenSharedMailAssignForMessagesDISABLED',
 		'test' => 'MailboxServiceDeleteTest',
 		'label' => 'mailbox delete drops open Review purge',
 	],

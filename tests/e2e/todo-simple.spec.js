@@ -27,6 +27,8 @@ test.describe('To-do card extreme simplicity', () => {
     await expect(section.locator('#crm-activities .crm-empty-state [data-crm-trigger="crm-add-activity"]')).toHaveCount(0);
     await expect(page.locator('#crm-promises')).not.toHaveAttribute('open', '');
     await expect(page.locator('#crm-open-tasks')).not.toHaveAttribute('open', '');
+    await expect(page.locator('#crm-add-promise')).toBeVisible();
+    await expect(page.locator('#crm-new-task')).toBeVisible();
 
     await page.locator('#crm-add-activity').click();
     const form = page.locator('form[id^="crm-prompt-"]');

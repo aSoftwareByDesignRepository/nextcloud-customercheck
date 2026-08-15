@@ -60,8 +60,21 @@ class PersonApiController extends Controller
 		try {
 			$ctx = $this->requireCompanyCapability($id, 'write');
 			$body = $this->jsonBody();
+			$person = $this->persons->create($id, $body, $ctx['uid']);
+			$workspaceId = (int)($ctx['workspaceId'] ?? 0);
+			if ($workspaceId <= 0) {
+				$company = $this->companies->get($id);
+				$workspaceId = (int)($company->getWorkspaceId() ?? 0);
+			}
+			if ($workspaceId > 0 && trim((string)($person->getEmail() ?? '')) !== '') {
+				try {
+					$this->review->reconcileKnownSharedMail($workspaceId);
+				} catch (\Throwable) {
+					// Person create already succeeded — rematch is best-effort.
+				}
+			}
 
-			return $this->ok($this->ser($this->persons->create($id, $body, $ctx['uid'])), Http::STATUS_CREATED);
+			return $this->ok($this->ser($person), Http::STATUS_CREATED);
 		} catch (\Throwable $e) {
 			return $this->fromThrowable($e);
 		}
@@ -74,8 +87,21 @@ class PersonApiController extends Controller
 			$person = $this->persons->get($id);
 			$ctx = $this->requireCompanyCapability((int)$person->getCompanyId(), 'write');
 			$body = $this->jsonBody();
+			$updated = $this->persons->update($id, $body, $ctx['uid'], $this->updatedAtPrecondition($body));
+			$workspaceId = (int)($ctx['workspaceId'] ?? 0);
+			if ($workspaceId <= 0) {
+				$company = $this->companies->get((int)$person->getCompanyId());
+				$workspaceId = (int)($company->getWorkspaceId() ?? 0);
+			}
+			if ($workspaceId > 0 && trim((string)($updated->getEmail() ?? '')) !== '') {
+				try {
+					$this->review->reconcileKnownSharedMail($workspaceId);
+				} catch (\Throwable) {
+					// Person update already succeeded — rematch is best-effort.
+				}
+			}
 
-			return $this->ok($this->ser($this->persons->update($id, $body, $ctx['uid'], $this->updatedAtPrecondition($body))));
+			return $this->ok($this->ser($updated));
 		} catch (\Throwable $e) {
 			return $this->fromThrowable($e);
 		}
@@ -89,7 +115,7 @@ class PersonApiController extends Controller
 			$companyId = (int)$person->getCompanyId();
 			$ctx = $this->requireCompanyCapability($companyId, 'write');
 			$body = $this->jsonBody();
-			$returnMail = !empty($body['returnMailToReview']);
+			$returnMail = !empty($body['returnMailToAssign']);
 			$email = trim((string)($person->getEmail() ?? ''));
 			$workspaceId = (int)($ctx['workspaceId'] ?? 0);
 			if ($workspaceId <= 0) {
@@ -106,7 +132,7 @@ class PersonApiController extends Controller
 				if ($email !== '' && $workspaceId > 0) {
 					$mailIds = $this->mailbox->unmatchByCompanyAndFrom($workspaceId, $companyId, $email);
 					if ($mailIds !== []) {
-						$this->review->returnSharedMailMessagesToReview($workspaceId, $mailIds);
+						$this->review->returnSharedMailMessagesToAssign($workspaceId, $mailIds);
 						$mailReturned = count($mailIds);
 					}
 				}
@@ -115,7 +141,7 @@ class PersonApiController extends Controller
 			return $this->ok([
 				'deleted' => true,
 				'contactsKept' => true,
-				'mailReturnedToReview' => $mailReturned,
+				'mailReturnedToAssign' => $mailReturned,
 			]);
 		} catch (\Throwable $e) {
 			return $this->fromThrowable($e);

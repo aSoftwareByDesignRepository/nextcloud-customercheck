@@ -28,7 +28,14 @@ final class SharedMailboxSmtpClient
 		$pass = (string)($cfg['password'] ?? '');
 		$from = (string)($cfg['from'] ?? '');
 		$to = (string)($cfg['to'] ?? '');
-		if ($host === '' || $from === '' || $to === '' || $user === '' || $pass === '') {
+		$authMode = strtolower(trim((string)($cfg['authMode'] ?? 'password')));
+		if ($host === '' || $from === '' || $to === '' || $user === '') {
+			throw ValidationException::field('VALIDATION', 'smtp', 'SMTP configuration incomplete.');
+		}
+		if ($pass === '' && $authMode !== 'xoauth2') {
+			throw ValidationException::field('VALIDATION', 'smtp', 'SMTP configuration incomplete.');
+		}
+		if ($authMode === 'xoauth2' && $pass === '') {
 			throw ValidationException::field('VALIDATION', 'smtp', 'SMTP configuration incomplete.');
 		}
 	}
@@ -36,12 +43,16 @@ final class SharedMailboxSmtpClient
 	/**
 	 * Build the DATA payload (headers + body). Pure — used by unit tests.
 	 *
+	 * Spec MH-19: always multipart/alternative when HTML is present (never HTML-only).
+	 * With attachments: multipart/mixed wrapping alternative + parts.
+	 *
 	 * @param array{
 	 *   from: string,
 	 *   fromName?: string,
 	 *   to: string,
 	 *   subject: string,
 	 *   body: string,
+	 *   bodyHtml?: string,
 	 *   attachments?: list<array{filename: string, mime: string, data: string}>
 	 * } $cfg
 	 */
@@ -51,6 +62,7 @@ final class SharedMailboxSmtpClient
 		$to = (string)($cfg['to'] ?? '');
 		$subject = (string)($cfg['subject'] ?? '');
 		$body = (string)($cfg['body'] ?? '');
+		$bodyHtml = trim((string)($cfg['bodyHtml'] ?? ''));
 		$fromName = (string)($cfg['fromName'] ?? $from);
 		/** @var list<array{filename?: string, mime?: string, data?: string}> $attachments */
 		$attachments = isset($cfg['attachments']) && is_array($cfg['attachments'])
@@ -64,14 +76,39 @@ final class SharedMailboxSmtpClient
 			'MIME-Version: 1.0',
 			'Date: ' . gmdate('D, d M Y H:i:s') . ' +0000',
 		];
+		$messageId = self::normalizeMessageId((string)($cfg['messageId'] ?? ''));
+		if ($messageId === '') {
+			$messageId = self::generateMessageId($from);
+		}
+		$headers[] = 'Message-ID: ' . $messageId;
+		$ccRaw = $cfg['cc'] ?? [];
+		if (is_array($ccRaw) && $ccRaw !== []) {
+			$ccHeaders = [];
+			foreach ($ccRaw as $ccAddr) {
+				$ccAddr = trim((string)$ccAddr);
+				if ($ccAddr !== '') {
+					$ccHeaders[] = self::encodeAddress($ccAddr, $ccAddr);
+				}
+			}
+			if ($ccHeaders !== []) {
+				$headers[] = 'Cc: ' . implode(', ', $ccHeaders);
+			}
+		}
+
+		$bodyPart = self::buildBodyPart($body, $bodyHtml);
 
 		if ($attachments === []) {
-			$headers[] = 'Content-Type: text/plain; charset=UTF-8';
-			$headers[] = 'Content-Transfer-Encoding: 8bit';
-			$payload = implode("\r\n", $headers) . "\r\n\r\n"
-				. self::dotStuff($body) . "\r\n.";
+			if ($bodyHtml === '') {
+				$headers[] = 'Content-Type: text/plain; charset=UTF-8';
+				$headers[] = 'Content-Transfer-Encoding: 8bit';
+				return implode("\r\n", $headers) . "\r\n\r\n"
+					. self::dotStuff($body) . "\r\n.";
+			}
+			$boundary = 'crm_alt_' . bin2hex(random_bytes(10));
+			$headers[] = 'Content-Type: multipart/alternative; boundary="' . $boundary . '"';
+			$parts = self::wrapAlternative($boundary, $body, $bodyHtml);
 
-			return $payload;
+			return implode("\r\n", $headers) . "\r\n\r\n" . implode("\r\n", $parts) . "\r\n.";
 		}
 
 		$boundary = 'crm_' . bin2hex(random_bytes(12));
@@ -79,10 +116,20 @@ final class SharedMailboxSmtpClient
 
 		$parts = [];
 		$parts[] = '--' . $boundary;
-		$parts[] = 'Content-Type: text/plain; charset=UTF-8';
-		$parts[] = 'Content-Transfer-Encoding: 8bit';
-		$parts[] = '';
-		$parts[] = self::dotStuff($body);
+		if ($bodyHtml !== '') {
+			$altBoundary = 'crm_alt_' . bin2hex(random_bytes(8));
+			$parts[] = 'Content-Type: multipart/alternative; boundary="' . $altBoundary . '"';
+			$parts[] = '';
+			foreach (self::wrapAlternative($altBoundary, $body, $bodyHtml) as $line) {
+				$parts[] = $line;
+			}
+		} else {
+			$parts[] = 'Content-Type: text/plain; charset=UTF-8';
+			$parts[] = 'Content-Transfer-Encoding: 8bit';
+			$parts[] = '';
+			$parts[] = self::dotStuff($body);
+		}
+		unset($bodyPart);
 
 		foreach ($attachments as $att) {
 			$filename = self::safeAttachName((string)($att['filename'] ?? 'attachment.bin'));
@@ -98,6 +145,32 @@ final class SharedMailboxSmtpClient
 		$parts[] = '--' . $boundary . '--';
 
 		return implode("\r\n", $headers) . "\r\n\r\n" . implode("\r\n", $parts) . "\r\n.";
+	}
+
+	/**
+	 * @return list<string>
+	 */
+	private static function wrapAlternative(string $boundary, string $plain, string $html): array
+	{
+		$parts = [];
+		$parts[] = '--' . $boundary;
+		$parts[] = 'Content-Type: text/plain; charset=UTF-8';
+		$parts[] = 'Content-Transfer-Encoding: 8bit';
+		$parts[] = '';
+		$parts[] = self::dotStuff($plain);
+		$parts[] = '--' . $boundary;
+		$parts[] = 'Content-Type: text/html; charset=UTF-8';
+		$parts[] = 'Content-Transfer-Encoding: 8bit';
+		$parts[] = '';
+		$parts[] = self::dotStuff($html);
+		$parts[] = '--' . $boundary . '--';
+
+		return $parts;
+	}
+
+	private static function buildBodyPart(string $plain, string $html): string
+	{
+		return $html !== '' ? $html : $plain;
 	}
 
 	/**
@@ -119,6 +192,7 @@ final class SharedMailboxSmtpClient
 		$enc = strtolower(trim((string)($cfg['enc'] ?? 'tls')));
 		$user = (string)($cfg['username'] ?? '');
 		$pass = (string)($cfg['password'] ?? '');
+		$authMode = strtolower(trim((string)($cfg['authMode'] ?? 'password')));
 
 		$remote = ($enc === 'ssl' || $enc === 'smtps' ? 'ssl://' : '') . $host . ':' . ($port > 0 ? $port : ($enc === 'ssl' ? 465 : 587));
 		$fp = @stream_socket_client($remote, $errno, $errstr, 15, STREAM_CLIENT_CONNECT);
@@ -137,11 +211,25 @@ final class SharedMailboxSmtpClient
 				}
 				self::cmd($fp, 'EHLO customercheck.local', [250]);
 			}
-			self::cmd($fp, 'AUTH LOGIN', [334]);
-			self::cmd($fp, base64_encode($user), [334]);
-			self::cmd($fp, base64_encode($pass), [235]);
+			if ($authMode === 'xoauth2') {
+				$sasl = \OCA\CustomerCheck\Service\MailboxAuthService::xoauth2Sasl($user, $pass);
+				self::cmd($fp, 'AUTH XOAUTH2 ' . $sasl, [235]);
+			} else {
+				self::cmd($fp, 'AUTH LOGIN', [334]);
+				self::cmd($fp, base64_encode($user), [334]);
+				self::cmd($fp, base64_encode($pass), [235]);
+			}
 			self::cmd($fp, 'MAIL FROM:<' . self::addr((string)$cfg['from']) . '>', [250]);
 			self::cmd($fp, 'RCPT TO:<' . self::addr((string)$cfg['to']) . '>', [250, 251]);
+			$ccRaw = $cfg['cc'] ?? [];
+			$ccList = is_array($ccRaw) ? $ccRaw : [];
+			foreach ($ccList as $ccAddr) {
+				$ccAddr = trim((string)$ccAddr);
+				if ($ccAddr === '') {
+					continue;
+				}
+				self::cmd($fp, 'RCPT TO:<' . self::addr($ccAddr) . '>', [250, 251]);
+			}
 			self::cmd($fp, 'DATA', [354]);
 
 			fwrite($fp, self::buildDataPayload($cfg) . "\r\n");
@@ -233,5 +321,45 @@ final class SharedMailboxSmtpClient
 		}
 
 		return $mime;
+	}
+
+	/** Normalize RFC 5322 Message-ID (always angle-bracketed). */
+	public static function normalizeMessageId(string $raw): string
+	{
+		$s = trim($raw);
+		if ($s === '') {
+			return '';
+		}
+		$s = trim($s, " \t\"'");
+		if ($s === '') {
+			return '';
+		}
+		if ($s[0] !== '<') {
+			$s = '<' . $s;
+		}
+		if (!str_ends_with($s, '>')) {
+			$s .= '>';
+		}
+		if (strlen($s) > 512) {
+			$s = substr($s, 0, 511) . '>';
+		}
+
+		return $s;
+	}
+
+	/** Stable Message-ID for SMTP + CRM outbound dedupe against IMAP Sent. */
+	public static function generateMessageId(string $fromEmail): string
+	{
+		$domain = 'customercheck.local';
+		$fromEmail = strtolower(trim($fromEmail));
+		if (str_contains($fromEmail, '@')) {
+			$right = substr($fromEmail, strrpos($fromEmail, '@') + 1);
+			$right = preg_replace('/[^a-z0-9.-]/i', '', $right) ?? '';
+			if ($right !== '') {
+				$domain = strtolower($right);
+			}
+		}
+
+		return '<' . bin2hex(random_bytes(12)) . '.' . dechex(time()) . '@' . $domain . '>';
 	}
 }

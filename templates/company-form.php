@@ -62,6 +62,61 @@ include __DIR__ . '/common/page-start.php';
 								<option value="en" <?php if ($company && $company->getLang() === 'en'): ?>selected<?php endif; ?>>English</option>
 							</select>
 						</div>
+						<fieldset class="crm-company-address" id="crm-company-address">
+							<legend class="crm-company-address__legend"><?php p($l->t('Postal address')); ?></legend>
+							<p class="form-help" id="crm-company-address-help"><?php p($l->t('Street, postcode, city and country for invoices and letters.')); ?></p>
+							<div class="form-group">
+								<label class="form-label" for="crm-company-street"><?php p($l->t('Street and number')); ?></label>
+								<input class="crm-input form-input" id="crm-company-street" name="addrStreet" maxlength="255" value="<?php p($company ? (string)$company->getAddrStreet() : ''); ?>" autocomplete="street-address" aria-describedby="crm-company-address-help" />
+							</div>
+							<div class="crm-form-row-2">
+								<div class="form-group">
+									<label class="form-label" for="crm-company-zip"><?php p($l->t('Postcode')); ?></label>
+									<input class="crm-input form-input" id="crm-company-zip" name="addrZip" maxlength="16" value="<?php p($company ? (string)$company->getAddrZip() : ''); ?>" autocomplete="postal-code" inputmode="numeric" />
+								</div>
+								<div class="form-group">
+									<label class="form-label" for="crm-company-city"><?php p($l->t('City')); ?></label>
+									<input class="crm-input form-input" id="crm-company-city" name="addrCity" maxlength="128" value="<?php p($company ? (string)$company->getAddrCity() : ''); ?>" autocomplete="address-level2" />
+								</div>
+							</div>
+							<div class="form-group">
+								<label class="form-label" for="crm-company-country"><?php p($l->t('Country')); ?></label>
+								<?php
+								$countryCode = strtoupper(trim((string)($company ? $company->getCountry() : 'DE')));
+								if ($countryCode === '') {
+									$countryCode = 'DE';
+								}
+								$countryOptions = [
+									'DE' => $l->t('Germany'),
+									'AT' => $l->t('Austria'),
+									'CH' => $l->t('Switzerland'),
+									'LI' => $l->t('Liechtenstein'),
+									'LU' => $l->t('Luxembourg'),
+									'NL' => $l->t('Netherlands'),
+									'BE' => $l->t('Belgium'),
+									'FR' => $l->t('France'),
+									'IT' => $l->t('Italy'),
+									'ES' => $l->t('Spain'),
+									'PL' => $l->t('Poland'),
+									'CZ' => $l->t('Czechia'),
+									'DK' => $l->t('Denmark'),
+									'SE' => $l->t('Sweden'),
+									'NO' => $l->t('Norway'),
+									'GB' => $l->t('United Kingdom'),
+									'IE' => $l->t('Ireland'),
+									'US' => $l->t('United States'),
+								];
+								?>
+								<select class="crm-input form-select" id="crm-company-country" name="country" autocomplete="country">
+									<?php foreach ($countryOptions as $code => $label): ?>
+										<option value="<?php p($code); ?>" <?php if ($countryCode === $code): ?>selected<?php endif; ?>><?php p($label); ?> (<?php p($code); ?>)</option>
+									<?php endforeach; ?>
+									<?php if (!isset($countryOptions[$countryCode])): ?>
+										<option value="<?php p($countryCode); ?>" selected><?php p($countryCode); ?></option>
+									<?php endif; ?>
+								</select>
+							</div>
+						</fieldset>
 						<div class="form-group">
 							<label class="form-label" for="crm-company-notes"><?php p($l->t('Notes')); ?></label>
 							<textarea class="crm-input form-input" id="crm-company-notes" name="notes" rows="3"><?php p($company ? (string)$company->getNotes() : ''); ?></textarea>

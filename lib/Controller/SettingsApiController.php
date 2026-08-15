@@ -26,6 +26,7 @@ class SettingsApiController extends Controller
 		private readonly DirectoryOptionsService $directory,
 		private readonly \OCA\CustomerCheck\Service\ProductCodeRegistry $productCodes,
 		private readonly WorkspaceAccessService $workspaces,
+		private readonly \OCA\CustomerCheck\Service\PersonalMailOAuthService $personalMailOAuth,
 	) {
 		parent::__construct($appName, $request);
 	}
@@ -121,6 +122,37 @@ class SettingsApiController extends Controller
 			$body = json_decode(file_get_contents('php://input') ?: '{}', true) ?: [];
 			$custom = is_array($body['custom'] ?? null) ? $body['custom'] : [];
 			return $this->ok($this->productCodes->saveCustom($custom));
+		} catch (\Throwable $e) {
+			return $this->fromThrowable($e);
+		}
+	}
+
+	#[NoAdminRequired]
+	public function personalMailOAuthConfig(): JSONResponse
+	{
+		try {
+			$uid = $this->accessControl->requireCanUseApp();
+			if (!$this->accessControl->canManageAppConfiguration($uid)) {
+				throw new AccessDeniedException();
+			}
+
+			return $this->ok($this->personalMailOAuth->adminConfigStatus());
+		} catch (\Throwable $e) {
+			return $this->fromThrowable($e);
+		}
+	}
+
+	#[NoAdminRequired]
+	public function savePersonalMailOAuthConfig(): JSONResponse
+	{
+		try {
+			$uid = $this->accessControl->requireCanUseApp();
+			if (!$this->accessControl->canManageAppConfiguration($uid)) {
+				throw new AccessDeniedException();
+			}
+			$body = json_decode(file_get_contents('php://input') ?: '{}', true) ?: [];
+
+			return $this->ok($this->personalMailOAuth->saveAdminConfig(is_array($body) ? $body : []));
 		} catch (\Throwable $e) {
 			return $this->fromThrowable($e);
 		}

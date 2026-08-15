@@ -17,11 +17,22 @@ test.describe('Granny-simple company 360', () => {
     await page.waitForSelector('#crm-company-form', { timeout: 30000 });
     await expect(page.locator('#crm-company-advanced')).not.toHaveAttribute('open', '');
     await expect(page.locator('#crm-company-status')).toBeAttached();
+    await expect(page.locator('#crm-company-address')).toBeAttached();
+    await expect(page.locator('#crm-company-street')).toBeAttached();
     const suffix = Date.now().toString(36);
     await page.locator('#crm-company-name').fill(`Granny Co ${suffix}`);
+    await page.locator('#crm-company-advanced').evaluate((el) => { el.open = true; });
+    await page.locator('#crm-company-street').fill('Holtenauer Straße 267');
+    await page.locator('#crm-company-zip').fill('24106');
+    await page.locator('#crm-company-city').fill('Kiel');
+    await page.locator('#crm-company-country').selectOption('DE');
     await page.locator('#crm-company-form button[type="submit"]').click();
     await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
 
+    await expect(page.locator('#crm-company-address-display')).toBeVisible();
+    await expect(page.locator('#crm-company-address-display')).toContainText('Holtenauer Straße 267');
+    await expect(page.locator('#crm-company-address-display')).toContainText('24106');
+    await expect(page.locator('#crm-company-address-display')).toContainText('Kiel');
     await expect(page.locator('#crm-welcome-coach')).toBeVisible();
     await expect(page.locator('#crm-welcome-coach .crm-welcome-coach__steps')).toBeVisible();
     await expect(page.locator('#crm-welcome-coach .crm-welcome-coach__step')).toHaveCount(3);
@@ -43,6 +54,8 @@ test.describe('Granny-simple company 360', () => {
     await expect(page.locator('#crm-log-email')).toBeVisible();
     await expect(page.locator('#crm-log-email')).toHaveCount(1);
     await expect(page.locator('#crm-schedule-callback')).toContainText(/Call tomorrow|Morgen anrufen/i);
+    await expect(page.locator('#crm-add-promise')).toBeVisible();
+    await expect(page.locator('#crm-new-task')).toBeVisible();
     await expect(page.locator('#crm-promises')).not.toHaveAttribute('open', '');
     await expect(page.locator('#crm-promises .crm-next-steps__hint')).toContainText(/What you told the customer|Was ihr dem Kunden zugesagt habt|Was du dem Kunden gesagt hast/);
     await expect(page.locator('#crm-promises .crm-next-steps__hint')).not.toContainText(/WIP/i);

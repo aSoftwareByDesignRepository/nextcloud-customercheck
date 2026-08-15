@@ -140,7 +140,7 @@ function bachus_simplicity_mutations(string $appRoot): array
 		],
 		[
 			'file' => $appRoot . '/js/pages/persona.js',
-			'from' => "escapeHtml(t('Remove selected'))",
+			'from' => "escapeHtml(t('Delete selected'))",
 			'to' => "escapeHtml(t('Delete / remove selected'))",
 			'label' => 'review_bulk_label_verbose_again',
 			'filter' => 'BachusExtremeSimplifyUxContractTest::testReviewOpenIsScreenReaderOnlyAndStatusSortGone',

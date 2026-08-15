@@ -25,6 +25,8 @@
 		'crm-license-form': 'license',
 		'section-product-codes': 'product-codes',
 		'crm-product-codes-form': 'product-codes',
+		'section-personal-mail': 'personal-mail',
+		'crm-personal-mail-oauth-form': 'personal-mail',
 	});
 
 	/**

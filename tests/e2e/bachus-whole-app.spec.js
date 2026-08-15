@@ -162,6 +162,8 @@ test.describe('Bachus whole-app effortless flows', () => {
     const accounts = page.locator('[data-crm-persona-mount="my-accounts"]');
     await expect(accounts.getByText(/^Gap$/i)).toHaveCount(0);
     await expect(accounts.getByText(/^Covered$/i)).toHaveCount(0);
+    await expect(page.locator('#crm-page-actions #crm-my-accounts-add, #crm-my-accounts-add').first()).toBeVisible();
+    await expect(page.locator('#crm-page-actions #crm-my-accounts-add, #crm-my-accounts-add').first()).toContainText(/Add customer|Kunde hinzufügen|Kunden hinzufügen/i);
     await axeMain(page);
 
     // Workspace settings are split (SETTINGS-PAGES-STANDARD): mailbox first, promises on /settings/circles.
@@ -183,6 +185,7 @@ test.describe('Bachus whole-app effortless flows', () => {
     await expect(page.locator('#crm-mailbox-form')).toHaveAttribute('aria-busy', 'false', { timeout: 30000 });
     const settingsNav = page.locator('#crm-settings-pages');
     await expect(settingsNav.locator('a[href*="/settings/mailbox"]')).toBeVisible();
+    await expect(settingsNav.locator('a[href*="/settings/my-email"]')).toBeVisible();
     await expect(settingsNav.locator('a[href*="/settings/circles"]')).toBeVisible();
     const hasPresent = await page.evaluate(() => !!(window.CustomerCheckMailboxSettingsPresent && typeof window.CustomerCheckMailboxSettingsPresent.buildMailboxListRows === 'function'));
     expect(hasPresent).toBeTruthy();

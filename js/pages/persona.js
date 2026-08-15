@@ -33,11 +33,13 @@
     return !!(el && el.getAttribute('data-crm-can-' + flag) === '1');
   }
 
-  /** Monotonic load token — drops stale Review paints when filters race. */
+  /** Monotonic load token — drops stale Assign paints when filters race. */
   let reviewLoadGeneration = 0;
+  /** Monotonic Strategy board token — drops stale paints after filter/save races. */
+  let strategyLoadGeneration = 0;
   /** Monotonic preview token — drops stale mail-body paints on rapid j/k row changes. */
   let mailPreviewGeneration = 0;
-  /** Aborts in-flight Review preview fetch when the operator moves to another row. */
+  /** Aborts in-flight Assign preview fetch when the operator moves to another row. */
   let mailPreviewAbort = null;
 
   /**
@@ -142,7 +144,7 @@
       renewal_act: t('Act on renewals'),
       plan_push: t('Push a stalled plan'),
       link_debt: t('Fix missing links'),
-      unbilled_review: t('Review unbilled hours'),
+      unbilled_review: t('Assign unbilled hours'),
       custom: t('Custom promise'),
     };
     return map[key] || (key ? key : t('Custom promise'));
@@ -320,11 +322,27 @@
     mount.classList.remove('crm-skeleton');
   }
 
+  /** Local calendar YYYY-MM-DD — never toISOString (UTC day shift). */
+  function localYmd(d) {
+    const x = d instanceof Date ? d : new Date();
+    const y = x.getFullYear();
+    const m = String(x.getMonth() + 1).padStart(2, '0');
+    const day = String(x.getDate()).padStart(2, '0');
+    return y + '-' + m + '-' + day;
+  }
+
+  function utcYmd(d) {
+    const y = d.getUTCFullYear();
+    const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(d.getUTCDate()).padStart(2, '0');
+    return y + '-' + m + '-' + day;
+  }
+
   function formatDisplayDate(iso) {
     const raw = String(iso || '').trim();
     if (!raw || raw === '—') return '—';
     const hasTime = /T|\s\d{1,2}:/.test(raw);
-    const d = new Date(hasTime ? raw : (raw + 'T12:00:00'));
+    const d = new Date(hasTime ? raw.replace(' ', 'T') : (raw + 'T12:00:00'));
     if (Number.isNaN(d.getTime())) return raw;
     try {
       const locale = (document.documentElement.lang || navigator.language || undefined);
@@ -334,6 +352,17 @@
     } catch (e) {
       return raw;
     }
+  }
+
+  /** Stable ms for Assign/Talk date sort (space timestamps → ISO). */
+  function parseReviewTimestamp(raw) {
+    const s = String(raw == null ? '' : raw).trim();
+    if (!s) return 0;
+    const normalized = /T/.test(s)
+      ? s
+      : (/^\d{4}-\d{2}-\d{2}\s+\d{1,2}:/.test(s) ? s.replace(' ', 'T') : (s + (/^\d{4}-\d{2}-\d{2}$/.test(s) ? 'T12:00:00' : '')));
+    const ts = new Date(normalized).getTime();
+    return Number.isFinite(ts) ? ts : 0;
   }
 
   function weekOfLabel(weekKey) {
@@ -347,7 +376,7 @@
       const ISOweekStart = new Date(simple);
       if (day <= 4) ISOweekStart.setUTCDate(simple.getUTCDate() - simple.getUTCDay() + 1);
       else ISOweekStart.setUTCDate(simple.getUTCDate() + 8 - simple.getUTCDay());
-      return t('Week of %s', [formatDisplayDate(ISOweekStart.toISOString().slice(0, 10))]);
+      return t('Week of %s', [formatDisplayDate(utcYmd(ISOweekStart))]);
     } catch (e) {
       return weekKey;
     }
@@ -437,7 +466,7 @@
   }
 
   /**
-   * Review inbox — mail-thread list (same pattern as company Talk) + inline detail.
+   * Assign inbox — mail-thread list (same pattern as company Talk) + inline detail.
    * @returns {{ boardEl: Element, listEl: Element, readerEl: Element, detailRowEl: Element, tableEl: Element|null, options: Element[], colCount: number }|null}
    */
   function renderReviewBoard(mount, items, emptyMsg, ariaLabel, options) {
@@ -477,7 +506,7 @@
       const snippet = String(it.listSnippet || '').trim();
       const whenRaw = String(it.sentAt || it.createdAt || '').trim();
       const whenLabel = whenRaw ? formatDisplayDate(whenRaw) : '';
-      const whenSort = whenRaw ? String(new Date(/T|\s\d{1,2}:/.test(whenRaw) ? whenRaw : (whenRaw + 'T12:00:00')).getTime() || 0) : '0';
+      const whenSort = String(parseReviewTimestamp(whenRaw));
       const selectCtl = selectable
         ? (canSelect
           ? ('<label class="crm-check crm-review-select">' +
@@ -532,18 +561,23 @@
       (selectable ? ' data-crm-review-selectable="1"' : '') + '>' +
       selectToolbar +
       '<div class="crm-review-sortbar" role="toolbar" aria-label="' + escapeHtml(t('Sort')) + '">' +
-      sortBtn('sent', t('Sent')) +
+      sortBtn('sent', t('Date')) +
       sortBtn('from', t('From')) +
       sortBtn('subject', t('Subject')) +
       '</div>' +
       '<div class="crm-mail-3pane crm-review-mail crm-review-table">' +
       '<div class="crm-mail-3pane__thread">' +
       '<ul class="crm-mail-thread crm-review-list" role="list" aria-label="' + escapeHtml(t('Message list')) + '">' +
-      rows + '</ul></div>' +
-      '<div class="crm-mail-3pane__reader crm-review-detail-row" data-crm-review-detail-row hidden></div>' +
-      '</div></div>';
+      rows + '</ul></div></div></div>';
     const listEl = mount.querySelector('.crm-review-list');
-    const detailHost = mount.querySelector('[data-crm-review-detail-row]');
+    // Real listitem (not presentation) so axe aria-required-children stays clean,
+    // while placeDetailUnderRow can still park the pane directly under the opened row.
+    const detailHost = document.createElement('li');
+    detailHost.className = 'crm-mail-3pane__reader crm-review-detail-row';
+    detailHost.setAttribute('data-crm-review-detail-row', '');
+    detailHost.setAttribute('role', 'listitem');
+    detailHost.setAttribute('aria-label', t('Details'));
+    detailHost.hidden = true;
     const reader = document.createElement('section');
     reader.className = 'crm-review-detail crm-review-reader';
     reader.setAttribute('data-crm-review-reader', '');
@@ -556,8 +590,11 @@
       '<div class="crm-mail-reader__empty crm-empty-state" role="status">' +
       '<p class="crm-empty-state__text">' + escapeHtml(t('Select a message to read and decide.')) + '</p>' +
       '</div>';
-    if (detailHost) {
-      detailHost.appendChild(reader);
+    detailHost.appendChild(reader);
+    if (listEl && listEl.firstElementChild) {
+      listEl.firstElementChild.after(detailHost);
+    } else if (listEl) {
+      listEl.appendChild(detailHost);
     }
     const rowOptions = Array.from(mount.querySelectorAll('li.crm-review-row'));
     if (rowOptions.length) {
@@ -998,8 +1035,8 @@
         href: OC.generateUrl('/apps/customercheck/companies/' + a.id) + '?workspaceId=' + ws,
       };
     }), t('No customers assigned to you yet.'), {
-      href: OC.generateUrl('/apps/customercheck/companies') + '?workspaceId=' + ws,
-      label: t('Browse companies'),
+      href: OC.generateUrl('/apps/customercheck/companies/new') + '?workspaceId=' + ws,
+      label: t('Add customer'),
     });
   }
 
@@ -1465,7 +1502,7 @@
       '<div class="form-group">' +
       '<label class="form-label" for="crm-11-date">' + escapeHtml(t('Meeting date')) + '</label>' +
       '<input id="crm-11-date" name="meetingOn" type="date" class="crm-input form-input" value="' +
-      escapeHtml((prep.notes && prep.notes.meetingOn) || new Date().toISOString().slice(0, 10)) + '" /></div>' +
+      escapeHtml((prep.notes && prep.notes.meetingOn) || localYmd()) + '" /></div>' +
       '<div class="crm-form-actions">' +
       '<button type="submit" class="crm-btn crm-btn--primary">' + escapeHtml(t('Save notes')) + '</button>' +
       '<button type="button" class="crm-btn crm-btn--ghost" data-crm-11-close="1">' + escapeHtml(t('Close')) + '</button>' +
@@ -1492,80 +1529,273 @@
     });
   }
 
-  async function loadStrategy(mount) {
-    const ws = await resolveWorkspaceId();
-    const data = await apiGet('/api/v1/workspaces/' + ws + '/strategy');
-    clearMountBusy(mount);
-    const items = data.items || [];
-    if (!items.length) {
-      mount.innerHTML =
+  function strategyHealthBadge(health) {
+    switch (String(health || '')) {
+      case 'at_risk': return 'danger';
+      case 'stalled': return 'warning';
+      case 'on_track': return 'success';
+      default: return 'neutral';
+    }
+  }
+
+  function strategyPriorityBadge(priority) {
+    return String(priority || '') === 'p1' ? 'warning' : 'neutral';
+  }
+
+  function strategyNeedsAttention(p) {
+    const health = String(p.health || '');
+    return health === 'at_risk' || health === 'stalled';
+  }
+
+  function strategyAssignDue(p) {
+    const next = String(p.nextAssignOn || '').trim();
+    if (!next) return false;
+    const today = localYmd();
+    return next <= today;
+  }
+
+  function strategyMatchesFilter(p, filter) {
+    const key = String(filter || 'all');
+    if (key === 'all') return true;
+    if (key === 'needs_attention') return strategyNeedsAttention(p);
+    if (key === 'on_track') return String(p.health || '') === 'on_track';
+    if (key === 'high') return String(p.priority || '') === 'p1';
+    if (key === 'paused') return String(p.status || '') === 'paused';
+    return true;
+  }
+
+  function truncateGoal(goal, maxLen) {
+    const text = String(goal || '').trim().replace(/\s+/g, ' ');
+    if (!text) return '';
+    const limit = maxLen > 0 ? maxLen : 140;
+    if (text.length <= limit) return text;
+    return text.slice(0, Math.max(0, limit - 1)).trimEnd() + '…';
+  }
+
+  function strategyPlanFormHtml(p) {
+    const companyId = String(p.companyId || '');
+    const goalId = 'crm-strategy-goal-' + companyId;
+    const priorityId = 'crm-strategy-priority-' + companyId;
+    const reviewId = 'crm-strategy-review-' + companyId;
+    const statusId = 'crm-strategy-status-' + companyId;
+    return '<form class="crm-form crm-form--stack crm-strategy-edit" data-plan-form="' +
+      escapeHtml(companyId) + '" data-plan-updated-at="' + escapeHtml(p.updatedAt || '') +
+      '" aria-label="' + escapeHtml(t('Edit account plan')) + '">' +
+      '<div class="form-group">' +
+      '<label class="form-label" for="' + escapeHtml(goalId) + '">' + escapeHtml(t('Goal')) + '</label>' +
+      '<textarea id="' + escapeHtml(goalId) + '" name="goal" class="crm-input form-input crm-plan-goal" rows="3" maxlength="2000">' +
+      escapeHtml(p.goal || '') + '</textarea></div>' +
+      '<details class="crm-plan-more">' +
+      '<summary class="crm-plan-more__summary">' + escapeHtml(t('Priority, owner & review')) + '</summary>' +
+      '<div class="crm-plan-more__body">' +
+      '<div class="form-group">' +
+      '<label class="form-label" for="' + escapeHtml(priorityId) + '">' + escapeHtml(t('Priority')) + '</label>' +
+      '<select id="' + escapeHtml(priorityId) + '" name="priority" class="crm-input form-select">' +
+      '<option value="p1"' + (p.priority === 'p1' ? ' selected' : '') + '>' + escapeHtml(t('High')) + '</option>' +
+      '<option value="p2"' + (p.priority === 'p2' || !p.priority ? ' selected' : '') + '>' + escapeHtml(t('Normal')) + '</option>' +
+      '<option value="p3"' + (p.priority === 'p3' ? ' selected' : '') + '>' + escapeHtml(t('Low')) + '</option>' +
+      '</select></div>' +
+      '<div class="form-group">' +
+      '<label class="form-label" for="' + escapeHtml(reviewId) + '">' + escapeHtml(t('Next review')) + '</label>' +
+      '<input id="' + escapeHtml(reviewId) + '" type="date" name="nextAssignOn" class="crm-input form-input" value="' +
+      escapeHtml(p.nextAssignOn || '') + '" /></div>' +
+      '<div class="form-group">' +
+      '<label class="form-label" for="' + escapeHtml(statusId) + '">' + escapeHtml(t('Status')) + '</label>' +
+      '<select id="' + escapeHtml(statusId) + '" name="status" class="crm-input form-select">' +
+      '<option value="active"' + ((p.status || 'active') === 'active' ? ' selected' : '') + '>' + escapeHtml(t('Active')) + '</option>' +
+      '<option value="paused"' + (p.status === 'paused' ? ' selected' : '') + '>' + escapeHtml(t('Paused')) + '</option>' +
+      '<option value="done"' + (p.status === 'done' ? ' selected' : '') + '>' + escapeHtml(t('Done')) + '</option>' +
+      '</select></div>' +
+      '</div></details>' +
+      '<div class="crm-form-actions">' +
+      '<button type="submit" class="crm-btn crm-btn--primary">' + escapeHtml(t('Save')) + '</button>' +
+      '<button type="button" class="crm-btn crm-btn--ghost" data-cancel-plan="' +
+      escapeHtml(companyId) + '">' + escapeHtml(t('Cancel')) + '</button>' +
+      '</div></form>';
+  }
+
+  function renderStrategyBoard(mount, ws, items, filter) {
+    const root = document.getElementById('crm-strategy-root') || mount;
+    const activeFilter = String(filter || root.getAttribute('data-crm-strategy-filter') || 'all');
+    root.setAttribute('data-crm-strategy-filter', activeFilter);
+
+    const total = items.length;
+    const needsN = items.filter(strategyNeedsAttention).length;
+    const dueN = items.filter(strategyAssignDue).length;
+    const filtered = items.filter(function (p) { return strategyMatchesFilter(p, activeFilter); });
+
+    function filterBtn(key, label, count) {
+      const active = activeFilter === key;
+      return '<button type="button" class="crm-quick-filter' + (active ? ' is-active' : '') + '" ' +
+        'data-crm-strategy-filter-btn="' + escapeHtml(key) + '" ' +
+        'aria-pressed="' + (active ? 'true' : 'false') + '">' +
+        escapeHtml(label) +
+        (count != null
+          ? (' <span class="crm-quick-filter__count">' + escapeHtml(String(count)) + '</span>')
+          : '') +
+        '</button>';
+    }
+
+    let html = '';
+    html += '<div class="crm-today-role__stats" role="list" aria-label="' + escapeHtml(t('Plan snapshot')) + '">' +
+      pulseStat(total, t('Plans')) +
+      pulseStat(needsN, t('Needs attention'), '', needsN > 0 ? 'alert' : '') +
+      pulseStat(dueN, t('Assign due'), '', dueN > 0 ? 'alert' : '') +
+      '</div>';
+    html += '<nav class="crm-quick-filters" aria-label="' + escapeHtml(t('Filter plans')) + '">' +
+      filterBtn('all', t('All'), total) +
+      filterBtn('needs_attention', t('Needs attention'), needsN) +
+      filterBtn('on_track', t('On track'), items.filter(function (p) { return String(p.health || '') === 'on_track'; }).length) +
+      filterBtn('high', t('High'), items.filter(function (p) { return String(p.priority || '') === 'p1'; }).length) +
+      '</nav>';
+
+    if (!total) {
+      html +=
         '<div class="crm-empty-state" role="status">' +
-        '<p class="crm-empty-state__text">' + escapeHtml(t('No account plans yet — open a company to add one.')) + '</p>' +
+        '<h3 class="crm-empty-state__title">' + escapeHtml(t('No account plans yet')) + '</h3>' +
+        '<p class="crm-empty-state__text">' + escapeHtml(t('Open a company and add a goal — it will show up here.')) + '</p>' +
         '<div class="crm-empty-state__actions">' +
         '<a class="crm-btn crm-btn--primary crm-btn--lg" href="' +
         escapeHtml(OC.generateUrl('/apps/customercheck/companies') + '?workspaceId=' + ws) + '">' +
         escapeHtml(t('Open companies')) + '</a></div></div>';
+      mount.innerHTML = html;
       return;
     }
-    const ul = document.createElement('ul');
-    ul.className = 'crm-list';
-    items.forEach(function (p) {
-      const li = document.createElement('li');
-      li.className = 'crm-list__item crm-list__item--stack';
-      const companyHref = OC.generateUrl('/apps/customercheck/companies/' + p.companyId) + '?workspaceId=' + ws;
-      const companyLabel = p.companyName ? String(p.companyName) : t('Unknown company');
-      const healthLabel = p.healthLabel || p.statusLabel || p.health || '';
-      const priorityLabel = p.priority === 'p1' ? t('High')
-        : (p.priority === 'p3' ? t('Low') : t('Normal'));
-      const editBtn = shellCan('write')
-        ? ('<button type="button" class="crm-btn crm-btn--secondary" data-edit-plan="' +
-          escapeHtml(String(p.companyId)) + '">' + t('Edit') + '</button>')
-        : '';
-      li.innerHTML =
-        '<div class="crm-list__main">' +
-        '<strong><a href="' + escapeHtml(companyHref) + '">' +
-        escapeHtml(companyLabel) + '</a></strong>' +
-        '<span class="crm-muted"> · ' + escapeHtml(healthLabel + ' · ' + priorityLabel +
-          (p.nextReviewOn ? ' · ' + formatDisplayDate(p.nextReviewOn) : '')) + '</span></div>' +
-        editBtn +
-        '<form class="crm-form crm-form--inline" hidden data-plan-form="' +
-        escapeHtml(String(p.companyId)) + '" data-plan-updated-at="' + escapeHtml(p.updatedAt || '') +
-        '" aria-label="' + escapeHtml(t('Edit account plan')) + '">' +
-        '<label>' + t('Goal') + '<textarea name="goal" class="crm-input" rows="2" maxlength="2000">' +
-        escapeHtml(p.goal || '') + '</textarea></label>' +
-        '<label>' + t('Priority') +
-        '<select name="priority" class="crm-input">' +
-        '<option value="p1"' + (p.priority === 'p1' ? ' selected' : '') + '>' + t('High') + '</option>' +
-        '<option value="p2"' + (p.priority === 'p2' || !p.priority ? ' selected' : '') + '>' + t('Normal') + '</option>' +
-        '<option value="p3"' + (p.priority === 'p3' ? ' selected' : '') + '>' + t('Low') + '</option>' +
-        '</select></label>' +
-        '<label>' + t('Next review') +
-        '<input type="date" name="nextReviewOn" class="crm-input" value="' +
-        escapeHtml(p.nextReviewOn || '') + '" /></label>' +
-        '<label>' + t('Status') +
-        '<select name="status" class="crm-input">' +
-        '<option value="active"' + ((p.status || 'active') === 'active' ? ' selected' : '') + '>' + t('Active') + '</option>' +
-        '<option value="paused"' + (p.status === 'paused' ? ' selected' : '') + '>' + t('Paused') + '</option>' +
-        '<option value="done"' + (p.status === 'done' ? ' selected' : '') + '>' + t('Done') + '</option>' +
-        '</select></label>' +
-        '<button type="submit" class="crm-btn crm-btn--primary">' + t('Save') + '</button>' +
-        '<button type="button" class="crm-btn crm-btn--ghost" data-cancel-plan="' +
-        escapeHtml(String(p.companyId)) + '">' + t('Cancel') + '</button>' +
-        '</form>';
-      ul.appendChild(li);
-    });
-    mount.innerHTML = '';
-    mount.appendChild(ul);
 
-    if (!mount.dataset.crmStrategyBound) {
-      mount.dataset.crmStrategyBound = '1';
-      mount.addEventListener('click', function (ev) {
+    if (!filtered.length) {
+      html +=
+        '<div class="crm-empty-state" role="status">' +
+        '<h3 class="crm-empty-state__title">' + escapeHtml(t('No plans match this filter')) + '</h3>' +
+        '<p class="crm-empty-state__text">' + escapeHtml(t('Try All, or open a company to update a plan.')) + '</p>' +
+        '</div>';
+      mount.innerHTML = html;
+      return;
+    }
+
+    html += '<div class="table-container crm-table--responsive" role="region" aria-label="' +
+      escapeHtml(t('Account plans')) + '">';
+    html += '<table class="table table--hover crm-table crm-table--responsive crm-table--strategy">';
+    html += '<thead><tr>' +
+      '<th scope="col">' + escapeHtml(t('Company')) + '</th>' +
+      '<th scope="col">' + escapeHtml(t('Goal')) + '</th>' +
+      '<th scope="col">' + escapeHtml(t('Health')) + '</th>' +
+      '<th scope="col">' + escapeHtml(t('Priority')) + '</th>' +
+      '<th scope="col">' + escapeHtml(t('Next review')) + '</th>' +
+      '<th scope="col">' + escapeHtml(t('Open moves')) + '</th>' +
+      '<th scope="col" class="crm-table-actions-col">' + escapeHtml(t('Action')) + '</th>' +
+      '</tr></thead><tbody>';
+
+    filtered.forEach(function (p) {
+      const companyId = String(p.companyId || '');
+      const companyHref = OC.generateUrl('/apps/customercheck/companies/' + companyId) +
+        '?workspaceId=' + ws + '#crm-account-plan';
+      const companyLabel = p.companyName ? String(p.companyName) : t('Unknown company');
+      const healthLabel = p.healthLabel || p.health || t('Unknown');
+      const priorityLabel = p.priorityLabel || (
+        p.priority === 'p1' ? t('High') : (p.priority === 'p3' ? t('Low') : t('Normal'))
+      );
+      const statusLabel = p.statusLabel || '';
+      const goalText = truncateGoal(p.goal, 140);
+      const goalCell = goalText
+        ? escapeHtml(goalText)
+        : ('<span class="crm-muted">' + escapeHtml(t('No goal yet')) + '</span>');
+      const reviewCell = p.nextAssignOn
+        ? ('<time datetime="' + escapeHtml(String(p.nextAssignOn)) + '">' +
+          escapeHtml(formatDisplayDate(p.nextAssignOn)) + '</time>')
+        : ('<span class="crm-muted" aria-hidden="true">—</span><span class="visually-hidden">' +
+          escapeHtml(t('Not scheduled')) + '</span>');
+      const openMoves = p.openMoves != null
+        ? Number(p.openMoves)
+        : (Array.isArray(p.mapSteps)
+          ? p.mapSteps.filter(function (s) { return String(s.status || '') === 'open'; }).length
+          : 0);
+      const editBtn = shellCan('write')
+        ? ('<button type="button" class="crm-btn crm-btn--sm crm-btn--secondary" data-edit-plan="' +
+          escapeHtml(companyId) + '">' + escapeHtml(t('Edit')) + '</button>')
+        : '';
+      html += '<tr class="crm-strategy-row" data-crm-strategy-company="' + escapeHtml(companyId) + '">' +
+        '<td data-label="' + escapeHtml(t('Company')) + '">' +
+        '<a class="crm-strategy-company" href="' + escapeHtml(companyHref) + '">' +
+        escapeHtml(companyLabel) + '</a>' +
+        (statusLabel && String(p.status || '') !== 'active'
+          ? (' <span class="crm-badge crm-badge--neutral">' + escapeHtml(statusLabel) + '</span>')
+          : '') +
+        '</td>' +
+        '<td data-label="' + escapeHtml(t('Goal')) + '">' + goalCell + '</td>' +
+        '<td data-label="' + escapeHtml(t('Health')) + '">' +
+        '<span class="crm-badge crm-badge--' + strategyHealthBadge(p.health) + '">' +
+        escapeHtml(healthLabel) + '</span></td>' +
+        '<td data-label="' + escapeHtml(t('Priority')) + '">' +
+        '<span class="crm-badge crm-badge--' + strategyPriorityBadge(p.priority) + '">' +
+        escapeHtml(priorityLabel) + '</span></td>' +
+        '<td data-label="' + escapeHtml(t('Next review')) + '">' + reviewCell + '</td>' +
+        '<td data-label="' + escapeHtml(t('Open moves')) + '">' + escapeHtml(String(openMoves)) + '</td>' +
+        '<td data-label="' + escapeHtml(t('Action')) + '" class="actions-cell crm-table-actions-col">' +
+        '<div class="crm-table-actions">' +
+        '<a class="crm-btn crm-btn--sm crm-btn--primary" href="' + escapeHtml(companyHref) + '">' +
+        escapeHtml(t('Open plan')) + '</a> ' + editBtn +
+        '</div></td></tr>';
+      html += '<tr class="crm-strategy-edit-row" data-crm-strategy-edit="' + escapeHtml(companyId) + '" hidden>' +
+        '<td colspan="7">' + strategyPlanFormHtml(p) + '</td></tr>';
+    });
+
+    html += '</tbody></table></div>';
+    mount.innerHTML = html;
+  }
+
+  async function loadStrategy(mount, opts) {
+    const gen = ++strategyLoadGeneration;
+    const root = document.getElementById('crm-strategy-root') || mount;
+    const filter = root.getAttribute('data-crm-strategy-filter') || 'all';
+    const fromCache = !!(opts && opts.fromCache && Array.isArray(mount._crmStrategyItems));
+
+    let ws;
+    let items;
+    if (fromCache) {
+      ws = mount._crmStrategyWs;
+      items = mount._crmStrategyItems;
+    } else {
+      ws = await resolveWorkspaceId();
+      if (gen !== strategyLoadGeneration) return;
+      if (!ws) {
+        clearMountBusy(mount);
+        mount.innerHTML = '<div class="crm-callout crm-callout--danger" role="alert"><p>' +
+          escapeHtml(t('Select a workspace first.')) + '</p></div>';
+        return;
+      }
+      const data = await apiGet('/api/v1/workspaces/' + ws + '/strategy');
+      if (gen !== strategyLoadGeneration) return;
+      items = data.items || [];
+      mount._crmStrategyItems = items;
+      mount._crmStrategyWs = ws;
+    }
+
+    if (gen !== strategyLoadGeneration) return;
+    clearMountBusy(mount);
+    renderStrategyBoard(mount, ws, items, filter);
+
+    if (!root.dataset.crmStrategyBound) {
+      root.dataset.crmStrategyBound = '1';
+      root.addEventListener('click', function (ev) {
+        const filterBtn = ev.target.closest('[data-crm-strategy-filter-btn]');
+        if (filterBtn && root.contains(filterBtn)) {
+          const next = filterBtn.getAttribute('data-crm-strategy-filter-btn') || 'all';
+          root.setAttribute('data-crm-strategy-filter', next);
+          loadStrategy(mount, { fromCache: true });
+          return;
+        }
         const editBtn = ev.target.closest('[data-edit-plan]');
-        if (editBtn) {
+        if (editBtn && root.contains(editBtn)) {
           const id = editBtn.getAttribute('data-edit-plan');
-          const form = mount.querySelector('[data-plan-form="' + CSS.escape(id) + '"]');
+          const editRow = mount.querySelector('[data-crm-strategy-edit="' + CSS.escape(id) + '"]');
+          const form = editRow ? editRow.querySelector('[data-plan-form]') : null;
           if (form) {
-            form.hidden = false;
+            if (!form.dataset.crmPlanSnapshot) {
+              form.dataset.crmPlanSnapshot = form.innerHTML;
+            } else {
+              form.innerHTML = form.dataset.crmPlanSnapshot;
+            }
+            if (editRow) editRow.hidden = false;
             editBtn.hidden = true;
             const first = form.querySelector('textarea, input, select');
             if (first) first.focus();
@@ -1573,30 +1803,46 @@
           return;
         }
         const cancelBtn = ev.target.closest('[data-cancel-plan]');
-        if (cancelBtn) {
+        if (cancelBtn && root.contains(cancelBtn)) {
           const id = cancelBtn.getAttribute('data-cancel-plan');
-          const form = mount.querySelector('[data-plan-form="' + CSS.escape(id) + '"]');
+          const editRow = mount.querySelector('[data-crm-strategy-edit="' + CSS.escape(id) + '"]');
+          const form = editRow ? editRow.querySelector('[data-plan-form]') : null;
           const edit = mount.querySelector('[data-edit-plan="' + CSS.escape(id) + '"]');
-          if (form) form.hidden = true;
+          if (form && form.dataset.crmPlanSnapshot) {
+            form.innerHTML = form.dataset.crmPlanSnapshot;
+          }
+          if (editRow) editRow.hidden = true;
           if (edit) edit.hidden = false;
         }
       });
-      mount.addEventListener('submit', async function (ev) {
+      root.addEventListener('submit', async function (ev) {
         const form = ev.target.closest('[data-plan-form]');
-        if (!form || !mount.contains(form)) return;
+        if (!form || !root.contains(form)) return;
         ev.preventDefault();
+        if (form.getAttribute('aria-busy') === 'true') return;
         const companyId = form.getAttribute('data-plan-form');
         const fd = new FormData(form);
+        const submitBtn = form.querySelector('button[type="submit"]');
+        form.setAttribute('aria-busy', 'true');
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.textContent = t('Saving…');
+        }
         try {
           await apiPut('/api/v1/companies/' + companyId + '/account-plan', {
             goal: String(fd.get('goal') || '').trim(),
             priority: String(fd.get('priority') || 'p2'),
-            nextReviewOn: String(fd.get('nextReviewOn') || ''),
+            nextAssignOn: String(fd.get('nextAssignOn') || ''),
             status: String(fd.get('status') || 'active'),
             updatedAt: form.getAttribute('data-plan-updated-at') || '',
           });
           await loadStrategy(mount);
         } catch (e) {
+          form.removeAttribute('aria-busy');
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = t('Save');
+          }
           showAlert(form, e.message || String(e));
         }
       });
@@ -1682,7 +1928,19 @@
       if (isAbortError(e) || isStalePreview()) {
         return false;
       }
-      showAlert(mount, e.message || String(e));
+      const errMsg = e.message || String(e);
+      pre.textContent = errMsg;
+      pre.hidden = false;
+      pre.classList.remove('crm-mail-preview__body--pending');
+      pre.removeAttribute('data-loaded');
+      pre.setAttribute('role', 'alert');
+      if (btn) {
+        btn.hidden = false;
+        btn.removeAttribute('hidden');
+        btn.setAttribute('aria-expanded', 'false');
+        btn.textContent = t('Show message');
+      }
+      showAlert(mount, errMsg);
       return false;
     } finally {
       if (btn && wrap.isConnected) {
@@ -1692,7 +1950,7 @@
     }
   }
 
-  /** Open every mail preview in root (Review: open row = read message, no second click). */
+  /** Open every mail preview in root (Assign: open row = read message, no second click). */
   function ensureMailPreviewsOpen(root, ws, mount, opts) {
     if (!root || !(ws > 0)) return;
     root.querySelectorAll('[data-crm-mail-preview]').forEach(function (wrap) {
@@ -1701,7 +1959,7 @@
   }
 
   /**
-   * Shared Show/Hide message + Answer wiring (Review + Mail triage).
+   * Shared Show/Hide message + Answer + Copy wiring (Assign + Mail triage).
    * Preview is POST-only; Answer hydrates a thin quote via preview once when needed.
    */
   function bindMailPreviewActions(root, ws, mount) {
@@ -1720,6 +1978,45 @@
           return;
         }
         await openMailPreview(wrap, ws, mount, {});
+      });
+    });
+    root.querySelectorAll('[data-crm-mail-copy]').forEach(function (btn) {
+      btn.addEventListener('click', async function () {
+        const wrap = btn.closest('[data-crm-mail-preview]');
+        if (!wrap) return;
+        const pre = wrap.querySelector('.crm-mail-preview__body');
+        if (!pre) return;
+        if (pre.getAttribute('data-loaded') !== '1' || pre.hidden) {
+          const ok = await openMailPreview(wrap, ws, mount, { quietFocus: true });
+          if (!ok) return;
+        }
+        const text = String(pre.textContent || '').trim();
+        if (!text) {
+          showAlert(mount, t('No message text could be loaded.'));
+          return;
+        }
+        const live = document.getElementById('crm-live-region');
+        try {
+          await navigator.clipboard.writeText(text);
+          if (live) live.textContent = t('Copied to clipboard.');
+          btn.textContent = t('Copied');
+          setTimeout(function () {
+            if (btn.isConnected) btn.textContent = t('Copy message');
+          }, 1600);
+        } catch (e) {
+          try {
+            const range = document.createRange();
+            range.selectNodeContents(pre);
+            const sel = window.getSelection();
+            if (sel) {
+              sel.removeAllRanges();
+              sel.addRange(range);
+            }
+            pre.focus({ preventScroll: true });
+          } catch (e2) { /* ignore */ }
+          if (live) live.textContent = t('Select the message text and copy it (Ctrl+C or Cmd+C).');
+          showAlert(mount, t('Clipboard access was denied. Select the message text and copy it.'));
+        }
       });
     });
     root.querySelectorAll('[data-crm-mail-reply]').forEach(function (btn) {
@@ -1744,6 +2041,22 @@
           }
           if (!pack || !pack.available) {
             showAlert(mount, t('This message has no usable reply address.'));
+            return;
+          }
+          const SharedMail = window.CustomerCheckSharedMail;
+          if (SharedMail && typeof SharedMail.offerPreparedMail === 'function') {
+            const companyHint = parseInt(String(
+              (pack && pack.companyId)
+              || (wrap.getAttribute('data-company-id') || '')
+              || (wrap.closest('[data-company-id]') && wrap.closest('[data-company-id]').getAttribute('data-company-id'))
+              || 0
+            ), 10) || 0;
+            await SharedMail.offerPreparedMail(pack, {
+              companyId: companyHint,
+              title: t('Answer'),
+              replyMode: true,
+              mailboxId: parseInt(String(pack.mailboxId || 0), 10) || 0,
+            });
             return;
           }
           const C = window.CustomerCheckComponents || window.CrmComponents;
@@ -1808,9 +2121,13 @@
             'aria-expanded="false" aria-controls="crm-triage-preview-body-' + escapeHtml(String(mid)) + '" ' +
             'title="' + escapeHtml(t('Plain text only — attachments stay in the mailbox.')) + '">' +
             escapeHtml(t('Show message')) + '</button>' +
+            '<button type="button" class="crm-btn crm-btn--secondary crm-btn--lg" data-crm-mail-copy ' +
+            'aria-label="' + escapeHtml(t('Copy message')) + '" ' +
+            'title="' + escapeHtml(t('Copy the readable message text to the clipboard.')) + '">' +
+            escapeHtml(t('Copy message')) + '</button>' +
             '<button type="button" class="crm-btn crm-btn--primary crm-btn--lg" data-crm-mail-reply ' +
             'aria-label="' + escapeHtml(t('Answer: %s', [String(m.subject || t('Shared mail'))])) + '" ' +
-            'title="' + escapeHtml(t('Opens your mail program with To and subject filled in. CustomerCheck does not send the email.')) + '">' +
+            'title="' + escapeHtml(t('Reply from your connected personal or team email, or open your mail program.')) + '">' +
             escapeHtml(t('Answer')) + '</button>' +
             '</div>' +
             '<pre class="crm-mail-preview__body" id="crm-triage-preview-body-' + escapeHtml(String(mid)) + '" ' +
@@ -2112,9 +2429,21 @@
     mount.appendChild(ctaBlock);
   }
 
+  function normalizeReviewKindAttr(mount) {
+    const raw = (mount && mount.getAttribute('data-crm-review-kind')) || '';
+    const k = String(raw).trim();
+    if (k === 'shared_mail' || k === 'personal_mail_shared_unmatched') {
+      return 'mail';
+    }
+    return k;
+  }
+
   async function loadReview(mount) {
     const ws = await resolveWorkspaceId();
-    const kind = (mount.getAttribute('data-crm-review-kind') || '').trim();
+    const kind = normalizeReviewKindAttr(mount);
+    if (mount && kind && mount.getAttribute('data-crm-review-kind') !== kind) {
+      mount.setAttribute('data-crm-review-kind', kind);
+    }
     const includeArchived = !!(document.getElementById('crm-review-include-archived') || {}).checked
       || mount.getAttribute('data-crm-include-archived') === '1';
     const searchQ = (document.getElementById('crm-review-q') || {}).value
@@ -2140,14 +2469,21 @@
     function sourceKindLabel(code) {
       const map = {
         shared_mail: t('Shared mail'),
+        personal_mail_shared_unmatched: t('Personal shared'),
+        mail: t('Mail'),
         contact_suggest: t('Contacts'),
         calendar_event: t('Calendar'),
         file: t('Files'),
         task: t('Tasks'),
         import_anomaly: t('Import'),
       };
-      return map[code] || code || t('Review');
+      return map[code] || code || t('Assign');
     }
+
+    function isMailSourceKind(code) {
+      return code === 'shared_mail' || code === 'personal_mail_shared_unmatched';
+    }
+
 
     function statusLabel(code) {
       const map = {
@@ -2174,25 +2510,35 @@
       mount.parentNode ? mount.parentNode.insertBefore(disclosure, mount) : mount.appendChild(disclosure);
     }
 
-    if (kind && kind !== 'shared_mail') {
-      setDisclosureText(t('These items come from %s. Everyone in this workspace with Review access can see them.', [sourceKindLabel(kind)]));
+    if (kind && kind !== 'shared_mail' && kind !== 'mail') {
+      setDisclosureText(t('These items come from %s. Everyone in this workspace with Assign access can see them.', [sourceKindLabel(kind)]));
     } else if (!kind) {
       const hasNonMail = items.some(function (it) {
-        return it && it.sourceKind && it.sourceKind !== 'shared_mail';
+        return it && it.sourceKind && !isMailSourceKind(it.sourceKind);
       });
       setDisclosureText(hasNonMail
-        ? t('This inbox may include shared mail and platform sources (Contacts, Files, Calendar, Tasks, import). Everyone in this workspace with Review access can see them.')
-        : t('Shared mailbox items are visible to everyone in this workspace with Review access.'));
+        ? t('This inbox may include shared mail and platform sources (Contacts, Files, Calendar, Tasks, import). Everyone in this workspace with Assign access can see them.')
+        : t('Write to the customer and CC the shared mailbox — or forward their mail to it. We file on From, a unique To/CC contact, or the original sender inside a forward — never onto every recipient.'));
     } else {
-      setDisclosureText(t('Shared mailbox items are visible to everyone in this workspace with Review access.'));
+      setDisclosureText(t('Write to the customer and CC the shared mailbox — or forward their mail to it. We file on From, a unique To/CC contact, or the original sender inside a forward — never onto every recipient.'));
     }
 
     const head = document.createElement('p');
     head.className = 'crm-muted crm-review-count';
     head.setAttribute('role', 'status');
-    head.textContent = openCount === 1
-      ? t('1 item needs a decision')
-      : t('%s items need a decision', [String(openCount)]);
+    const shown = items.length;
+    if (openCount <= 0) {
+      head.textContent = t('Nothing needs a decision right now.');
+    } else if (openCount === 1) {
+      head.textContent = t('1 item needs a decision');
+    } else if (shown > 0 && shown < openCount) {
+      head.textContent = t('Showing %1$s of %2$s items that need a decision — newest first. Delete or assign to see the next ones.', [
+        String(shown),
+        String(openCount),
+      ]);
+    } else {
+      head.textContent = t('%s items need a decision', [String(openCount)]);
+    }
     mount.appendChild(head);
 
     const kindChips = document.createElement('nav');
@@ -2200,7 +2546,7 @@
     kindChips.setAttribute('aria-label', t('Filter by source'));
     [
       { id: '', label: t('All') },
-      { id: 'shared_mail', label: t('Shared mail') },
+      { id: 'mail', label: t('Mail') },
       { id: 'contact_suggest', label: t('Contacts') },
       { id: 'file', label: t('Files') },
       { id: 'calendar_event', label: t('Calendar') },
@@ -2218,6 +2564,9 @@
           const url = new URL(window.location.href);
           if (chip.id) url.searchParams.set('kind', chip.id);
           else url.searchParams.delete('kind');
+          if (url.pathname.indexOf('/sales-inbox') !== -1) {
+            url.searchParams.set('tab', 'unmatched');
+          }
           window.history.replaceState({}, '', url.pathname + url.search + url.hash);
         } catch (e) { /* ignore */ }
         void loadReview(mount);
@@ -2230,11 +2579,11 @@
     const filterBar = document.createElement('div');
     filterBar.className = 'crm-review-toolbar';
     filterBar.setAttribute('role', 'search');
-    filterBar.setAttribute('aria-label', t('Search Review'));
+    filterBar.setAttribute('aria-label', t('Search Assign'));
     filterBar.innerHTML =
       '<form class="crm-form crm-review-search">' +
       '<div class="crm-review-search__field">' +
-      '<label class="form-label" for="crm-review-q">' + escapeHtml(t('Search Review')) + '</label>' +
+      '<label class="form-label" for="crm-review-q">' + escapeHtml(t('Search Assign')) + '</label>' +
       '<input type="search" id="crm-review-q" class="form-input crm-input" autocomplete="off" ' +
       'placeholder="' + escapeHtml(t('From, subject, date, or snippet…')) + '" value="' + escapeHtml(String(searchQ || '')) + '" />' +
       '</div>' +
@@ -2249,6 +2598,35 @@
       '<span>' + escapeHtml(t('Include archived companies in suggestions')) + '</span></label>' +
       '</details>';
     mount.appendChild(filterBar);
+
+    const showMailSync = !kind || kind === 'shared_mail' || kind === 'mail' || kind === 'personal_mail_shared_unmatched';
+    var lastSyncMessage = mount.getAttribute('data-crm-last-sync-message') || '';
+    if (showMailSync && data.mailSync && window.CustomerCheckMailSync) {
+      const syncHost = document.createElement('div');
+      syncHost.setAttribute('data-crm-mail-sync-bar', '');
+      mount.appendChild(syncHost);
+      window.CustomerCheckMailSync.mountBar(syncHost, {
+        t: t,
+        summary: data.mailSync,
+        canSync: canWrite,
+        workspaceId: ws,
+        syncMessage: lastSyncMessage,
+        apiPost: function (path, body) {
+          return apiPost('/api/v1' + path, body);
+        },
+        announce: function (msg) {
+          const live = document.getElementById('crm-live-region');
+          if (live) live.textContent = msg;
+        },
+        onSynced: function (payload) {
+          if (payload && payload.message) {
+            mount.setAttribute('data-crm-last-sync-message', String(payload.message));
+          }
+          return loadReview(mount);
+        },
+      });
+    }
+
     const searchBar = filterBar.querySelector('form.crm-review-search');
     if (searchBar) {
       searchBar.addEventListener('submit', function (ev) {
@@ -2292,16 +2670,20 @@
       bulkBar.className = 'crm-review-bulk-bar';
       bulkBar.setAttribute('data-crm-review-bulk', '');
       bulkBar.setAttribute('role', 'region');
-      bulkBar.setAttribute('aria-label', t('Select items to remove'));
+      bulkBar.setAttribute('aria-label', t('Selected messages'));
       bulkBar.hidden = true;
       bulkBar.innerHTML =
         '<p class="crm-muted crm-review-bulk-bar__hint" data-crm-review-bulk-count>' +
-        escapeHtml(t('Select items to remove')) + '</p>' +
+        escapeHtml(t('Select messages to delete or mark as spam')) + '</p>' +
         '<div class="crm-inline-actions crm-review-bulk-bar__actions">' +
-        '<button type="button" class="crm-btn crm-btn--secondary" data-crm-review-bulk-clear disabled>' +
+        '<button type="button" class="crm-btn crm-btn--ghost" data-crm-review-bulk-clear disabled>' +
         escapeHtml(t('Clear selection')) + '</button>' +
-        '<button type="button" class="crm-btn crm-btn--primary" data-crm-review-bulk-remove disabled>' +
-        escapeHtml(t('Remove selected')) + '</button>' +
+        '<button type="button" class="crm-btn crm-btn--secondary" data-crm-review-bulk-spam disabled ' +
+        'title="' + escapeHtml(t('Moves shared-mailbox messages into the server Spam/Junk folder.')) + '">' +
+        escapeHtml(t('Mark as spam')) + '</button>' +
+        '<button type="button" class="crm-btn crm-btn--danger" data-crm-review-bulk-remove disabled ' +
+        'title="' + escapeHtml(t('Deletes shared-mailbox messages forever on the mail server.')) + '">' +
+        escapeHtml(t('Delete selected')) + '</button>' +
         '</div>';
       mount.insertBefore(bulkBar, body);
     }
@@ -2332,10 +2714,10 @@
         const ref = item.sourceRef || {};
         const anomalyField = String(ref.fieldKey || '');
         const anomalyRaw = String(ref.raw || item.snippet || '');
-        const mailMsgId = item.sourceKind === 'shared_mail'
+        const mailMsgId = isMailSourceKind(item.sourceKind)
           ? (parseInt(String(ref.mailMsgId || '0'), 10) || 0)
           : 0;
-        const fromAddr = String(ref.from || (item.sourceKind === 'shared_mail' ? (item.snippet || '') : '') || '');
+        const fromAddr = String(ref.from || (isMailSourceKind(item.sourceKind) ? (item.snippet || '') : '') || '');
         const badges = [sourceKindLabel(item.sourceKind), statusLabel(item.status)];
         if (item.overhead) {
           badges.push(t('Overhead'));
@@ -2354,6 +2736,7 @@
             '<p class="crm-review-zone__label" id="crm-review-read-label-' + escapeHtml(String(item.id)) + '">' +
             escapeHtml(t('Message')) + '</p>' +
             '<div class="crm-mail-preview" data-crm-mail-preview="' + escapeHtml(String(mailMsgId)) + '" ' +
+            (prefillId ? ('data-company-id="' + escapeHtml(prefillId) + '" ') : '') +
             'data-crm-mail-auto-open="1" aria-labelledby="crm-review-read-label-' + escapeHtml(String(item.id)) + '">' +
             '<pre class="crm-mail-preview__body crm-mail-preview__body--pending" id="crm-mail-preview-body-' +
             escapeHtml('r' + String(item.id) + '-m' + String(mailMsgId)) + '" ' +
@@ -2361,8 +2744,12 @@
             '<div class="crm-mail-preview__actions crm-inline-actions crm-review-mail-tools">' +
             '<button type="button" class="crm-btn crm-btn--primary crm-btn--lg" data-crm-mail-reply ' +
             'aria-label="' + escapeHtml(t('Answer: %s', [String(item.subject || t('Shared mail'))])) + '" ' +
-            'title="' + escapeHtml(t('Opens your mail program with To and subject filled in. CustomerCheck does not send the email.')) + '">' +
+            'title="' + escapeHtml(t('Reply from your connected personal or team email, or open your mail program.')) + '">' +
             escapeHtml(t('Answer')) + '</button>' +
+            '<button type="button" class="crm-btn crm-btn--secondary" data-crm-mail-copy ' +
+            'aria-label="' + escapeHtml(t('Copy message')) + '" ' +
+            'title="' + escapeHtml(t('Copy the readable message text to the clipboard.')) + '">' +
+            escapeHtml(t('Copy message')) + '</button>' +
             '<button type="button" class="crm-btn crm-btn--ghost" data-crm-mail-preview-toggle hidden ' +
             'id="crm-mail-preview-btn-' + escapeHtml(String(item.id)) + '" ' +
             'aria-expanded="false" aria-controls="crm-mail-preview-body-' +
@@ -2444,7 +2831,7 @@
             '<summary>' + escapeHtml(t('Remind me later')) + '</summary>' +
             '<div class="crm-review-more__body">' +
             '<p class="crm-muted crm-review-more__hint">' +
-            escapeHtml(t('Hides this row for a while. It comes back to Review — the mail in the shared mailbox stays.')) +
+            escapeHtml(t('Hides this row for a while. It comes back to Assign — the mail in the shared mailbox stays.')) +
             '</p>' +
             '<div class="crm-review-more__field">' +
             '<p class="form-label" id="crm-review-snooze-label-' + escapeHtml(String(item.id)) + '">' + escapeHtml(t('Bring back in')) + '</p>' +
@@ -2469,13 +2856,18 @@
             '<button type="button" class="crm-btn crm-btn--secondary" data-crm-review-none title="' +
             escapeHtml(t('Not a customer or company you track.')) + '">' +
             escapeHtml(t('No relation')) + '</button>' +
+            (item.sourceKind === 'shared_mail'
+              ? ('<button type="button" class="crm-btn crm-btn--secondary" data-crm-review-spam ' +
+                'title="' + escapeHtml(t('Moves this message into the server Spam/Junk folder and leaves Assign.')) + '">' +
+                escapeHtml(t('Mark as spam')) + '</button>')
+              : '') +
             '<button type="button" class="crm-btn crm-btn--secondary" data-crm-review-discard' +
             (item.sourceKind === 'shared_mail' ? ' data-crm-review-discard-mail="1"' : '') +
             ' title="' +
             escapeHtml(item.sourceKind === 'shared_mail'
-              ? t('Deletes this message from the shared mailbox (for spam and junk).')
-              : t('Removes this item from Review.')) + '">' +
-            escapeHtml(item.sourceKind === 'shared_mail' ? t('Delete mail') : t('Remove from Review')) + '</button>' +
+              ? t('Deletes this message forever from the shared mailbox.')
+              : t('Removes this item from Assign.')) + '">' +
+            escapeHtml(item.sourceKind === 'shared_mail' ? t('Delete forever') : t('Remove from Assign')) + '</button>' +
             '</div></div></div>' +
             laterBlock +
             '</form>';
@@ -2498,7 +2890,7 @@
               '</form></details>';
           }
         }
-        const subject = item.subject || item.snippet || t('Review item');
+        const subject = item.subject || item.snippet || t('Assign item');
         return {
           id: item.id,
           selectable: canWrite && !terminal,
@@ -2532,20 +2924,18 @@
           av = (a.badges || []).join(' ').toLowerCase();
           bv = (b.badges || []).join(' ').toLowerCase();
         } else if (key === 'sent') {
-          const aRaw = String(a.sentAt || a.createdAt || '');
-          const bRaw = String(b.sentAt || b.createdAt || '');
-          const aTs = aRaw ? (new Date(/T|\s\d{1,2}:/.test(aRaw) ? aRaw : (aRaw + 'T12:00:00')).getTime() || 0) : 0;
-          const bTs = bRaw ? (new Date(/T|\s\d{1,2}:/.test(bRaw) ? bRaw : (bRaw + 'T12:00:00')).getTime() || 0) : 0;
+          const aTs = parseReviewTimestamp(a.sentAt || a.createdAt || '');
+          const bTs = parseReviewTimestamp(b.sentAt || b.createdAt || '');
           if (aTs < bTs) return -1 * mul;
           if (aTs > bTs) return 1 * mul;
-          return 0;
+          return (Number(b.id) || 0) - (Number(a.id) || 0);
         } else {
           av = String(a.subject || a.title || '').toLowerCase();
           bv = String(b.subject || b.title || '').toLowerCase();
         }
         if (av < bv) return -1 * mul;
         if (av > bv) return 1 * mul;
-        return 0;
+        return (Number(b.id) || 0) - (Number(a.id) || 0);
       });
     }
     const sortedModels = sortModels(viewModels, sortKey, sortDir);
@@ -2553,7 +2943,7 @@
       body,
       sortedModels,
       t('Nothing to review'),
-      t('Review inbox'),
+      t('Assign inbox'),
       { selectable: canWrite, sortKey: sortKey, sortDir: sortDir },
     );
 
@@ -2568,33 +2958,65 @@
     }
 
     function markThreadSelection(id) {
+      let firstVisible = null;
       threadRows.forEach(function (row, idx) {
         const rid = row.getAttribute('data-crm-review-item-id') || '';
-        const on = rid === String(id);
+        const on = id !== '' && rid === String(id);
         row.setAttribute('aria-current', on ? 'true' : 'false');
         row.classList.toggle('is-selected', on);
         row.tabIndex = on ? 0 : -1;
         if (on) focusIdx = idx;
+        if (!firstVisible && !row.hidden) firstVisible = row;
       });
+      // After collapse, keep one row in the tab order (WCAG keyboard access).
+      if (id === '' && firstVisible) {
+        firstVisible.tabIndex = 0;
+      }
     }
 
     function placeDetailUnderRow(row) {
-      if (!board || !board.detailRowEl) return board && board.readerEl;
-		// Reader lives outside the thread list so axe aria-required-children stays clean.
-      board.detailRowEl.hidden = false;
-      if (row && typeof row.scrollIntoView === 'function') {
-        try {
-          row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-        } catch (e) {
-          row.scrollIntoView(true);
-        }
+      if (!board || !board.detailRowEl || !row || !board.listEl) return board && board.readerEl;
+      const detailTr = board.detailRowEl;
+      detailTr.hidden = false;
+      if (detailTr.parentNode !== board.listEl || row.nextElementSibling !== detailTr) {
+        row.after(detailTr);
       }
       return board.readerEl;
+    }
+
+    function clearReviewSelection(opts) {
+      const prevId = selectedId;
+      selectedId = '';
+      mount.removeAttribute('data-crm-review-selected');
+      markThreadSelection('');
+      bumpMailPreviewRequest();
+      if (board && board.detailRowEl) {
+        board.detailRowEl.hidden = true;
+      }
+      if (board && board.readerEl) {
+        board.readerEl.innerHTML =
+          '<h3 class="crm-review-detail__title visually-hidden">' + escapeHtml(t('Details')) + '</h3>' +
+          '<div class="crm-mail-reader__empty crm-empty-state" role="status">' +
+          '<p class="crm-empty-state__text">' + escapeHtml(t('Select a message to read and decide.')) + '</p>' +
+          '</div>';
+      }
+      const row = prevId ? document.getElementById('crm-review-opt-' + prevId) : null;
+      if (row) {
+        row.tabIndex = 0;
+        if (!(opts && opts.quietFocus)) {
+          try { row.focus({ preventScroll: true }); } catch (e) { try { row.focus(); } catch (e2) { /* ignore */ } }
+        }
+      }
     }
 
     function selectReviewItem(id, opts) {
       const vm = byId[String(id)];
       if (!vm || !board) return;
+      // Second activation of the open row collapses the reader (accordion).
+      if (!(opts && opts.forceOpen) && selectedId === String(id)) {
+        clearReviewSelection(opts);
+        return;
+      }
       selectedId = String(id);
       mount.setAttribute('data-crm-review-selected', selectedId);
       markThreadSelection(selectedId);
@@ -2655,10 +3077,10 @@
       }
       if (canWrite) {
         reader.querySelectorAll('[data-review-id]').forEach(function (form) {
-          wireReviewAssignForm(form);
+          wireAssignAssignForm(form);
         });
         reader.querySelectorAll('[data-crm-review-learn]').forEach(function (learnForm) {
-          wireReviewLearnForm(learnForm);
+          wireAssignLearnForm(learnForm);
         });
       }
       if (!(opts && opts.quietFocus) && row) {
@@ -2670,6 +3092,9 @@
       board.listEl.addEventListener('click', function (ev) {
         if (ev.target.closest && ev.target.closest('[data-crm-review-select], .crm-review-select')) {
           ev.stopPropagation();
+          // Click toggles the box before change in some browsers — sync the sticky bar immediately.
+          if (typeof queueMicrotask === 'function') queueMicrotask(syncAssignBulkBar);
+          else setTimeout(syncAssignBulkBar, 0);
           return;
         }
         const openBtn = ev.target.closest ? ev.target.closest('[data-crm-review-open]') : null;
@@ -2777,7 +3202,7 @@
       emptyCta.setAttribute('role', 'status');
       emptyCta.innerHTML =
         '<h3 class="crm-empty-state__title">' + escapeHtml(t('Nothing to review')) + '</h3>' +
-        '<p class="crm-empty-state__text">' + escapeHtml(t('When shared mail or other sources need a company, they show up here.')) + '</p>' +
+        '<p class="crm-empty-state__text">' + escapeHtml(t('Only mail we cannot place on a customer yet shows here. Known contacts are filed automatically.')) + '</p>' +
         '<p class="crm-empty-state__actions"><a class="crm-btn crm-btn--primary" href="' +
         escapeHtml(OC.generateUrl('/apps/customercheck/settings/review-sources')) +
         '">' + escapeHtml(t('Open review source settings')) + '</a></p>';
@@ -2789,15 +3214,15 @@
       const send = document.createElement('details');
       send.className = 'crm-advanced';
       send.innerHTML =
-        '<summary class="crm-advanced__summary">' + escapeHtml(t('Send a contact to Review')) + '</summary>';
+        '<summary class="crm-advanced__summary">' + escapeHtml(t('Send a contact to Assign')) + '</summary>';
       const sendForm = document.createElement('form');
       sendForm.className = 'crm-form crm-form--row';
-      sendForm.setAttribute('aria-label', t('Send contact to Review'));
+      sendForm.setAttribute('aria-label', t('Send contact to Assign'));
       sendForm.innerHTML =
-        '<label class="form-label" for="crm-review-contact-q">' + escapeHtml(t('Send a contact to Review')) + '</label>' +
+        '<label class="form-label" for="crm-review-contact-q">' + escapeHtml(t('Send a contact to Assign')) + '</label>' +
         '<input type="search" id="crm-review-contact-q" class="form-input crm-input" autocomplete="off" ' +
         'placeholder="' + escapeHtml(t('Name or email…')) + '" />' +
-        '<button type="submit" class="crm-btn crm-btn--secondary">' + escapeHtml(t('Send to Review')) + '</button>';
+        '<button type="submit" class="crm-btn crm-btn--secondary">' + escapeHtml(t('Send to Assign')) + '</button>';
       send.appendChild(sendForm);
       mount.appendChild(send);
       sendForm.addEventListener('submit', async function (ev) {
@@ -2845,10 +3270,10 @@
       const id = next.getAttribute('data-crm-review-item-id');
       if (id) selectReviewItem(id);
     }
-    if (typeof mount._crmReviewKeydown === 'function') {
-      mount.removeEventListener('keydown', mount._crmReviewKeydown);
+    if (typeof mount._crmAssignKeydown === 'function') {
+      mount.removeEventListener('keydown', mount._crmAssignKeydown);
     }
-    mount._crmReviewKeydown = function (ev) {
+    mount._crmAssignKeydown = function (ev) {
       if (!threadRows.length) return;
       const tag = (ev.target && ev.target.tagName) || '';
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') {
@@ -2907,9 +3332,9 @@
         }
       }
     };
-    mount.addEventListener('keydown', mount._crmReviewKeydown);
+    mount.addEventListener('keydown', mount._crmAssignKeydown);
 
-    function wireReviewAssignForm(form) {
+    function wireAssignAssignForm(form) {
       if (!form || form.getAttribute('data-crm-review-wired') === '1') return;
       form.setAttribute('data-crm-review-wired', '1');
       const rid = form.getAttribute('data-review-id');
@@ -2940,7 +3365,7 @@
             const msg = e.message || String(e);
             showAlert(mount, msg);
             // Concurrent triage: refresh so the row does not stay "assignable" after a peer won.
-            if (/handled this message|not open for triage|Reload Review/i.test(msg)) {
+            if (/handled this message|not open for triage|Reload Assign/i.test(msg)) {
               try { await loadReview(mount); } catch (reloadErr) { /* keep alert */ }
             }
           } finally {
@@ -3067,7 +3492,7 @@
         } catch (e) {
           const msg = e.message || String(e);
           showAlert(form, msg);
-          if (/handled this message|not open for triage|Reload Review/i.test(msg)) {
+          if (/handled this message|not open for triage|Reload Assign/i.test(msg)) {
             try { await loadReview(mount); } catch (reloadErr) { /* keep alert */ }
           }
         } finally {
@@ -3125,11 +3550,11 @@
             return;
           }
           const ok = await C.confirmDialog({
-              title: isMail ? t('Delete this mail?') : t('Remove from Review?'),
+              title: isMail ? t('Delete this mail forever?') : t('Remove from Assign?'),
               message: isMail
-                ? t('Deletes the message from the shared mailbox. Use this for spam and junk. It also leaves Review.')
-                : t('Removes this item from Review.'),
-              confirmLabel: isMail ? t('Delete mail') : t('Remove from Review'),
+                ? t('Permanently deletes the message from the shared mailbox. It also leaves Assign. Prefer Mark as spam when you want the mail server’s Spam folder.')
+                : t('Removes this item from Assign.'),
+              confirmLabel: isMail ? t('Delete forever') : t('Remove from Assign'),
               cancelLabel: t('Cancel'),
               variant: 'danger',
             });
@@ -3139,7 +3564,7 @@
             await apiPost('/api/v1/workspaces/' + ws + '/review/items/' + rid + '/discard', {});
             const live = document.getElementById('crm-live-region');
             if (live) {
-              live.textContent = isMail ? t('Mail deleted.') : t('1 item removed from Review');
+              live.textContent = isMail ? t('Mail deleted.') : t('1 item removed from Assign');
             }
             await loadReview(mount);
           } catch (e) {
@@ -3148,9 +3573,37 @@
           }
         });
       }
+      const spamBtn = form.querySelector('[data-crm-review-spam]');
+      if (spamBtn) {
+        spamBtn.addEventListener('click', async function () {
+          const C = window.CustomerCheckComponents || window.CrmComponents;
+          if (!(C && typeof C.confirmDialog === 'function')) {
+            showAlert(form, t('Confirmation UI is unavailable. Reload the page and try again.'));
+            return;
+          }
+          const ok = await C.confirmDialog({
+            title: t('Mark as spam?'),
+            message: t('Moves this message into the shared mailbox Spam/Junk folder and removes it from Assign. You can usually recover it from Spam in the mail host.'),
+            confirmLabel: t('Mark as spam'),
+            cancelLabel: t('Cancel'),
+            variant: 'warning',
+          });
+          if (!ok || !ok.confirmed) return;
+          spamBtn.disabled = true;
+          try {
+            await apiPost('/api/v1/workspaces/' + ws + '/review/items/' + rid + '/mark-spam', {});
+            const live = document.getElementById('crm-live-region');
+            if (live) live.textContent = t('Marked as spam.');
+            await loadReview(mount);
+          } catch (e) {
+            spamBtn.disabled = false;
+            showAlert(form, e.message || String(e));
+          }
+        });
+      }
     }
 
-    function wireReviewLearnForm(learnForm) {
+    function wireAssignLearnForm(learnForm) {
       if (!learnForm || learnForm.getAttribute('data-crm-review-wired') === '1') return;
       learnForm.setAttribute('data-crm-review-wired', '1');
       async function applyCountryMap(learn, closeNote) {
@@ -3185,13 +3638,13 @@
     }
 
     if (!canWrite) {
-      if (!kind || kind === 'shared_mail') {
+      if (!kind || kind === 'shared_mail' || kind === 'mail' || kind === 'personal_mail_shared_unmatched') {
         await renderFailedSendsSection(mount, ws, function () { return loadReview(mount); });
       }
       return;
     }
 
-    function selectedReviewIds() {
+    function selectedAssignIds() {
       return Array.from(body.querySelectorAll('[data-crm-review-select]:checked'))
         .filter(function (el) {
           const row = el.closest('li.crm-review-row');
@@ -3201,24 +3654,29 @@
         .filter(function (id) { return id > 0; });
     }
 
-    function syncReviewBulkBar() {
+    function syncAssignBulkBar() {
       if (!bulkBar) return;
-      const ids = selectedReviewIds();
+      const ids = selectedAssignIds();
       const countEl = bulkBar.querySelector('[data-crm-review-bulk-count]');
       const clearBtn = bulkBar.querySelector('[data-crm-review-bulk-clear]');
+      const spamBtn = bulkBar.querySelector('[data-crm-review-bulk-spam]');
       const removeBtn = bulkBar.querySelector('[data-crm-review-bulk-remove]');
       const n = ids.length;
       if (countEl) {
         countEl.textContent = n === 0
-          ? t('Select items to remove')
+          ? t('Select messages to delete or mark as spam')
           : (n === 1
-            ? t('1 item selected')
-            : t('%s items selected', [String(n)]));
+            ? t('1 message selected')
+            : t('%s messages selected', [String(n)]));
       }
       if (clearBtn) clearBtn.disabled = n === 0;
+      if (spamBtn) {
+        spamBtn.disabled = n === 0;
+        spamBtn.textContent = n > 0 ? t('Mark as spam') + ' (' + String(n) + ')' : t('Mark as spam');
+      }
       if (removeBtn) {
         removeBtn.disabled = n === 0;
-        removeBtn.textContent = n > 0 ? t('Remove selected') + ' (' + String(n) + ')' : t('Remove selected');
+        removeBtn.textContent = n > 0 ? t('Delete selected') + ' (' + String(n) + ')' : t('Delete selected');
       }
       bulkBar.hidden = n === 0;
       const allBoxes = Array.from(body.querySelectorAll('[data-crm-review-select]')).filter(function (b) {
@@ -3250,11 +3708,11 @@
             }
             box.checked = !!tEl.checked;
           });
-          syncReviewBulkBar();
+          syncAssignBulkBar();
           return;
         }
         if (tEl.matches && tEl.matches('[data-crm-review-select]')) {
-          syncReviewBulkBar();
+          syncAssignBulkBar();
         }
       });
       if (bulkBar) {
@@ -3268,15 +3726,15 @@
               selectAll.checked = false;
               selectAll.indeterminate = false;
             });
-            syncReviewBulkBar();
+            syncAssignBulkBar();
           });
         }
         const removeBtn = bulkBar.querySelector('[data-crm-review-bulk-remove]');
         if (removeBtn) {
           removeBtn.addEventListener('click', async function () {
-            const ids = selectedReviewIds();
+            const ids = selectedAssignIds();
             if (!ids.length) {
-              showAlert(mount, t('Select at least one item to remove.'));
+              showAlert(mount, t('Select at least one message to delete.'));
               return;
             }
             const C = window.CustomerCheckComponents || window.CrmComponents;
@@ -3285,9 +3743,9 @@
               return;
             }
             const ok = await C.confirmDialog({
-                title: t('Remove selected?'),
-                message: t('Shared-mailbox messages are deleted on the mail server (spam/junk). Other items only leave Review.'),
-                confirmLabel: t('Remove selected'),
+                title: t('Delete selected forever?'),
+                message: t('Shared-mailbox messages are permanently deleted on the mail server. Other items only leave Assign. Prefer Mark as spam when you want the Spam folder.'),
+                confirmLabel: t('Delete selected'),
                 cancelLabel: t('Cancel'),
                 variant: 'danger',
               });
@@ -3296,31 +3754,91 @@
             try {
               const result = await apiPost('/api/v1/workspaces/' + ws + '/review/items/discard-bulk', { ids: ids });
               const n = (result && result.discarded) || 0;
+              const failed = (result && result.failed) || 0;
               const live = document.getElementById('crm-live-region');
               if (live) {
                 live.textContent = n === 1
-                  ? t('1 item deleted or removed')
-                  : t('%s items deleted or removed', [String(n)]);
+                  ? t('1 message deleted or removed')
+                  : t('%s messages deleted or removed', [String(n)]);
+              }
+              if (failed > 0) {
+                const firstErr = result.errors && result.errors[0] && result.errors[0].message
+                  ? String(result.errors[0].message)
+                  : t('Some messages could not be deleted on the mail server.');
+                showAlert(mount, firstErr);
               }
               await loadReview(mount);
+              const liveAfter = document.getElementById('crm-live-region');
+              if (liveAfter && n > 0) {
+                const left = mount.querySelector('.crm-review-count');
+                if (left && left.textContent) {
+                  liveAfter.textContent = (liveAfter.textContent ? (liveAfter.textContent + ' ') : '') +
+                    t('Inbox refreshed — next messages in the queue are shown.');
+                }
+              }
             } catch (e) {
               removeBtn.disabled = false;
               showAlert(mount, e.message || String(e));
             }
           });
         }
+        const spamBulkBtn = bulkBar.querySelector('[data-crm-review-bulk-spam]');
+        if (spamBulkBtn) {
+          spamBulkBtn.addEventListener('click', async function () {
+            const ids = selectedAssignIds();
+            if (!ids.length) {
+              showAlert(mount, t('Select at least one message to mark as spam.'));
+              return;
+            }
+            const C = window.CustomerCheckComponents || window.CrmComponents;
+            if (!(C && typeof C.confirmDialog === 'function')) {
+              showAlert(mount, t('Confirmation UI is unavailable. Reload the page and try again.'));
+              return;
+            }
+            const ok = await C.confirmDialog({
+              title: t('Mark selected as spam?'),
+              message: t('Moves shared-mailbox messages into the server Spam/Junk folder and removes them from Assign. Non-mail items are skipped.'),
+              confirmLabel: t('Mark as spam'),
+              cancelLabel: t('Cancel'),
+              variant: 'warning',
+            });
+            if (!ok || !ok.confirmed) return;
+            spamBulkBtn.disabled = true;
+            try {
+              const result = await apiPost('/api/v1/workspaces/' + ws + '/review/items/mark-spam-bulk', { ids: ids });
+              const n = (result && result.discarded) || 0;
+              const failed = (result && result.failed) || 0;
+              const live = document.getElementById('crm-live-region');
+              if (live) {
+                live.textContent = n === 1
+                  ? t('1 message marked as spam')
+                  : t('%s messages marked as spam', [String(n)]);
+              }
+              if (failed > 0) {
+                const firstErr = result.errors && result.errors[0] && result.errors[0].message
+                  ? String(result.errors[0].message)
+                  : t('Some messages could not be marked as spam.');
+                showAlert(mount, firstErr);
+              }
+              await loadReview(mount);
+            } catch (e) {
+              spamBulkBtn.disabled = false;
+              showAlert(mount, e.message || String(e));
+            }
+          });
+        }
       }
-      syncReviewBulkBar();
+      syncAssignBulkBar();
     }
 
-    // Failed SMTP outbox belongs with shared mail Review (mail-triage redirects here).
-    if (!kind || kind === 'shared_mail') {
+    // Failed SMTP outbox belongs with shared mail Assign (mail-triage redirects here).
+    if (!kind || kind === 'shared_mail' || kind === 'mail' || kind === 'personal_mail_shared_unmatched') {
       await renderFailedSendsSection(mount, ws, function () { return loadReview(mount); });
     }
   }
 
   /**
-   * Failed shared-mailbox SMTP sends — visible on Review (shared mail) and legacy mail-triage.
+   * Failed shared-mailbox SMTP sends — visible on Assign (shared mail) and legacy mail-triage.
    * @param {HTMLElement} mount
    * @param {number} ws
    * @param {() => Promise<void>} reload
@@ -3667,6 +4185,9 @@
   async function boot() {
     const mount = qs('[data-crm-persona-mount]');
     if (!mount) return;
+    if (mount.getAttribute('data-crm-defer-boot') === '1') {
+      return;
+    }
     const kind = mount.getAttribute('data-crm-persona-mount');
     try {
       if (kind === 'pulse') await loadPulse(mount);
@@ -3686,6 +4207,25 @@
       showMountLoadError(mount, e);
     }
   }
+
+  window.CustomerCheckReviewBoard = {
+    mount: function (el) {
+      if (!el) {
+        return Promise.resolve();
+      }
+      el.removeAttribute('data-crm-defer-boot');
+      el.setAttribute('aria-busy', 'true');
+      if (!el.classList.contains('crm-skeleton')) {
+        el.classList.add('crm-skeleton');
+      }
+      return loadReview(el).catch(function (e) {
+        showMountLoadError(el, e);
+      });
+    },
+    abort: function () {
+      reviewLoadGeneration += 1;
+    },
+  };
 
   document.addEventListener('DOMContentLoaded', function () {
     // Workspace switcher lives in common/navigation.js (all pages).

@@ -12,6 +12,7 @@ use OCA\CustomerCheck\Db\Person;
 use OCA\CustomerCheck\Db\PersonMapper;
 use OCA\CustomerCheck\Exception\ValidationException;
 use OCA\CustomerCheck\Support\DateMath;
+use OCA\CustomerCheck\Support\PostalAddressParser;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\IDBConnection;
 use OCP\IL10N;
@@ -140,6 +141,8 @@ class ImportService
 
 		$summary = ['created' => 0, 'updated' => 0, 'skipped' => 0, 'linked' => 0, 'agreements' => 0, 'errors' => []];
 		$now = $this->timeFactory->getDateTime();
+		/** @var array<string, int> company identity → id created/linked earlier in this apply */
+		$batchCompanyIds = [];
 
 		foreach ($scan['proposals'] as $proposal) {
 			$index = (int)$proposal['index'];
@@ -158,7 +161,7 @@ class ImportService
 							'source' => (string)($scan['source'] ?? 'csv'),
 						]);
 					} catch (\Throwable) {
-						// Never fail the import apply on Review enqueue.
+						// Never fail the import apply on Assign enqueue.
 					}
 				}
 				continue;
@@ -178,7 +181,12 @@ class ImportService
 				$this->db->beginTransaction();
 				$companyId = null;
 				$countryAnomaly = null;
-				if ($action === 'create') {
+				$identityKey = $this->batchIdentityKey($row);
+				// Multi-agreement JSON (GDPR / website-order) expands to one row per product.
+				// Reuse the company created earlier in this apply — never create a twin / SLUG_TAKEN.
+				if ($action === 'create' && $identityKey !== '' && isset($batchCompanyIds[$identityKey])) {
+					$companyId = $batchCompanyIds[$identityKey];
+				} elseif ($action === 'create') {
 					$createInput = [
 						'name' => (string)($row['companyName'] ?? $row['name'] ?? 'Imported'),
 						'slug' => (string)($proposal['match']['suggestedSlug'] ?? ''),
@@ -187,6 +195,12 @@ class ImportService
 						'notes' => isset($row['notes']) ? (string)$row['notes'] : null,
 						'workspaceId' => $workspaceId,
 					];
+					foreach (['addrStreet', 'addrZip', 'addrCity'] as $addrKey) {
+						$addrVal = trim((string)($row[$addrKey] ?? ''));
+						if ($addrVal !== '') {
+							$createInput[$addrKey] = $addrVal;
+						}
+					}
 					// MH-15 / AC-C-17: ProjectCheck import defaults to linked CRM (not orphan twin).
 					// Advanced disclosure may set decision.linkSibling=false to create unlinked.
 					$importSource = (string)($scan['source'] ?? '');
@@ -211,7 +225,7 @@ class ImportService
 						if ($mapped !== null && ValueMapLogic::isValidIsoCountry($mapped)) {
 							$createInput['country'] = $mapped;
 						} else {
-							// Unmapped vocabulary → Review import_anomaly (GNQ §7); still create the company.
+							// Unmapped vocabulary → Assign import_anomaly (GNQ §7); still create the company.
 							$countryAnomaly = $rawCountry;
 						}
 					}
@@ -224,6 +238,9 @@ class ImportService
 					$companyId = (int)$company->getId();
 					$summary['created']++;
 					$this->maybeCreatePerson($companyId, $row, $actor, $now);
+					if ($identityKey !== '') {
+						$batchCompanyIds[$identityKey] = $companyId;
+					}
 				} else {
 					$companyId = (int)($decision['companyId'] ?? $proposal['match']['companyId'] ?? 0);
 					$company = $this->companies->get($companyId);
@@ -255,6 +272,9 @@ class ImportService
 						}
 					}
 					$summary['linked']++;
+					if ($identityKey !== '') {
+						$batchCompanyIds[$identityKey] = $companyId;
+					}
 				}
 
 				$plans = $this->planAgreements($row, $scan['source'], $companyId);
@@ -297,7 +317,7 @@ class ImportService
 							'companyId' => $companyId,
 						]);
 					} catch (\Throwable) {
-						// Never fail the import apply on Review enqueue.
+						// Never fail the import apply on Assign enqueue.
 					}
 				}
 			} catch (\Throwable $e) {
@@ -411,6 +431,9 @@ class ImportService
 			}
 		} elseif (isset($data['company']) && is_array($data['company'])) {
 			$rowsIn = $this->expandJsonCompany($data);
+		} elseif ($this->isExpandableAgreementPayload($data)) {
+			// Website-order / top-level companyName+agreements (no company wrapper).
+			$rowsIn = $this->expandJsonCompany($data);
 		} else {
 			// Single flat object (sales-log style).
 			$rowsIn = [$data];
@@ -423,8 +446,11 @@ class ImportService
 				$errors[] = ['line' => $lineNo, 'column' => null, 'reason' => 'json_row_invalid'];
 				continue;
 			}
-			// Nested GDPR-ish company object inside a list.
-			if (isset($item['company']) && is_array($item['company'])) {
+			// Nested GDPR-ish / website-order company object inside a list.
+			if (
+				(isset($item['company']) && is_array($item['company']))
+				|| $this->isExpandableAgreementPayload($item)
+			) {
 				foreach ($this->expandJsonCompany($item) as $expanded) {
 					$mapped = $this->mapImportKeys($expanded);
 					$rowError = $this->validateCsvRow($mapped, $lineNo);
@@ -449,7 +475,72 @@ class ImportService
 	}
 
 	/**
-	 * Flatten a GDPR export (or {company, persons, agreements}) into import rows.
+	 * Detect GDPR / website-order shapes that carry nested agreements.
+	 *
+	 * @param array<string,mixed> $data
+	 */
+	private function isExpandableAgreementPayload(array $data): bool
+	{
+		if (isset($data['company']) && is_array($data['company'])) {
+			return true;
+		}
+		$agreements = $data['agreements'] ?? null;
+		if (!is_array($agreements) || $agreements === []) {
+			return false;
+		}
+		$looksLikeAgreement = false;
+		foreach ($agreements as $item) {
+			if (!is_array($item)) {
+				continue;
+			}
+			if (
+				isset($item['productCode'])
+				|| isset($item['product'])
+				|| isset($item['limits'])
+				|| isset($item['seats'])
+				|| isset($item['devices'])
+				|| isset($item['amountCents'])
+				|| isset($item['amountEur'])
+			) {
+				$looksLikeAgreement = true;
+				break;
+			}
+		}
+		if (!$looksLikeAgreement) {
+			return false;
+		}
+		if (trim((string)($data['companyName'] ?? $data['name'] ?? '')) !== '') {
+			return true;
+		}
+		$source = mb_strtolower(trim((string)($data['source'] ?? '')));
+		if ($source === 'website-order') {
+			return true;
+		}
+
+		return trim((string)($data['orderId'] ?? '')) !== '';
+	}
+
+	/**
+	 * Stable key so multi-agreement expand rows share one company within apply().
+	 *
+	 * @param array<string,mixed> $row
+	 */
+	private function batchIdentityKey(array $row): string
+	{
+		$slug = mb_strtolower(trim((string)($row['customerId'] ?? '')));
+		if ($slug !== '') {
+			return 's:' . $slug;
+		}
+		$name = mb_strtolower(trim((string)($row['companyName'] ?? $row['name'] ?? '')));
+		if ($name !== '') {
+			return 'n:' . $name;
+		}
+
+		return '';
+	}
+
+	/**
+	 * Flatten a GDPR export, website-order, or {company, persons, agreements} into import rows.
 	 *
 	 * @param array<string,mixed> $payload
 	 * @return list<array<string,mixed>>
@@ -477,19 +568,52 @@ class ImportService
 				}
 			}
 		}
+		// Website-order: contact lives on the payload, not in persons[].
+		if ($contactName === '') {
+			$contactName = trim((string)($payload['contactName'] ?? $company['contactName'] ?? ''));
+		}
+		if ($email === '') {
+			$email = trim((string)($payload['email'] ?? $company['email'] ?? ''));
+		}
+
+		$notesBits = [];
+		$baseNotes = trim((string)($company['notes'] ?? $payload['notes'] ?? ''));
+		if ($baseNotes !== '') {
+			$notesBits[] = $baseNotes;
+		}
+		$orderId = trim((string)($payload['orderId'] ?? $company['orderId'] ?? ''));
+		if ($orderId !== '') {
+			$notesBits[] = 'Website order ' . $orderId;
+		}
+		$addressParts = PostalAddressParser::fromImportPayload($payload, is_array($company) ? $company : []);
+		$freeAddress = trim((string)($payload['address'] ?? $company['address'] ?? ''));
+		// Only keep free-text address in notes when we could not map dedicated fields.
+		if ($freeAddress !== '' && !$addressParts['parsed']) {
+			$notesBits[] = $freeAddress;
+		}
+		$message = trim((string)($payload['message'] ?? ''));
+		if ($message !== '') {
+			$notesBits[] = $message;
+		}
 
 		$base = [
 			'customerId' => (string)($company['slug'] ?? $company['customerId'] ?? ''),
 			'companyName' => (string)($company['name'] ?? $company['companyName'] ?? ''),
 			'contactName' => $contactName,
 			'email' => $email,
-			'country' => (string)($company['country'] ?? ''),
-			'notes' => (string)($company['notes'] ?? ''),
+			'addrStreet' => (string)($addressParts['addrStreet'] ?? ''),
+			'addrZip' => (string)($addressParts['addrZip'] ?? ''),
+			'addrCity' => (string)($addressParts['addrCity'] ?? ''),
+			'country' => (string)($addressParts['country'] ?? $company['country'] ?? $payload['country'] ?? ''),
+			'notes' => implode("\n", $notesBits),
 		];
 
 		if ($agreements === []) {
 			return [$base];
 		}
+
+		$parentStarts = (string)($payload['startsAt'] ?? $company['startsAt'] ?? '');
+		$parentUntil = (string)($payload['validUntil'] ?? $company['validUntil'] ?? '');
 
 		$out = [];
 		foreach ($agreements as $agreement) {
@@ -498,19 +622,31 @@ class ImportService
 			}
 			$limits = is_array($agreement['limits'] ?? null) ? $agreement['limits'] : [];
 			$amountCents = $agreement['amountCents'] ?? $agreement['amountEurCents'] ?? null;
-			$amountEur = $agreement['amountEur'] ?? null;
-			if ($amountEur === null && $amountCents !== null) {
+			$amountEur = null;
+			if ($amountCents !== null && is_numeric($amountCents)) {
 				$amountEur = ((int)$amountCents) / 100;
+			} elseif (isset($agreement['amountEur']) && $agreement['amountEur'] !== '' && $agreement['amountEur'] !== null) {
+				$amountEur = $agreement['amountEur'];
+			}
+			$bundle = !empty($limits['bundle']) || !empty($agreement['bundle']);
+			$agreementNotes = isset($agreement['notes']) ? trim((string)$agreement['notes']) : '';
+			$rowNotes = $base['notes'];
+			if ($agreementNotes !== '') {
+				$rowNotes = trim($rowNotes . ($rowNotes !== '' ? "\n" : '') . $agreementNotes);
 			}
 			$out[] = array_merge($base, [
 				'productCode' => (string)($agreement['productCode'] ?? $agreement['product'] ?? ''),
-				'validUntil' => (string)($agreement['validUntil'] ?? ''),
+				'label' => (string)($agreement['label'] ?? ''),
+				'startsAt' => (string)($agreement['startsAt'] ?? $parentStarts),
+				'validUntil' => (string)($agreement['validUntil'] ?? $parentUntil),
 				'invoiceId' => (string)($agreement['invoiceRef'] ?? $agreement['invoiceId'] ?? ''),
 				'amountEur' => $amountEur !== null ? (string)$amountEur : '0',
 				'paidAt' => (string)($agreement['paidAt'] ?? ''),
-				'mobileSeats' => (int)($limits['mobileSeats'] ?? $agreement['mobileSeats'] ?? 0),
-				'terminalDevices' => (int)($limits['terminalDevices'] ?? $agreement['terminalDevices'] ?? 0),
-				'notes' => trim($base['notes'] . (isset($agreement['notes']) && $agreement['notes'] !== '' ? ("\n" . $agreement['notes']) : '')),
+				// Website-order uses seats/devices; GDPR uses limits.mobileSeats.
+				'mobileSeats' => (int)($limits['mobileSeats'] ?? $agreement['mobileSeats'] ?? $agreement['seats'] ?? 0),
+				'terminalDevices' => (int)($limits['terminalDevices'] ?? $agreement['terminalDevices'] ?? $agreement['devices'] ?? 0),
+				'bundle' => $bundle ? '1' : '',
+				'notes' => $rowNotes,
 			]);
 		}
 		return $out !== [] ? $out : [$base];
@@ -543,6 +679,12 @@ class ImportService
 			'keyPrefix' => 'keyFingerprint',
 			'licensekeyprefix' => 'keyFingerprint',
 			'licenseKeyPrefix' => 'keyFingerprint',
+			'street' => 'addrStreet',
+			'addressStreet' => 'addrStreet',
+			'zip' => 'addrZip',
+			'postalCode' => 'addrZip',
+			'postcode' => 'addrZip',
+			'city' => 'addrCity',
 		];
 
 		$out = [];
@@ -844,6 +986,10 @@ class ImportService
 		if ($until !== '' && DateMath::parseStrictDate($until) === null) {
 			return ['line' => $lineNo, 'column' => 'validUntil', 'reason' => 'bad_date'];
 		}
+		$starts = trim($row['startsAt'] ?? '');
+		if ($starts !== '' && DateMath::parseStrictDate($starts) === null) {
+			return ['line' => $lineNo, 'column' => 'startsAt', 'reason' => 'bad_date'];
+		}
 		$productCode = mb_strtolower(trim($row['productCode'] ?? $row['product'] ?? ''));
 		if ($productCode !== '' && preg_match(ProductCodeRegistry::CUSTOM_PATTERN, $productCode) !== 1) {
 			return ['line' => $lineNo, 'column' => 'productCode', 'reason' => 'PRODUCT_CODE_INVALID'];
@@ -859,16 +1005,24 @@ class ImportService
 		if ($customerId === '' && $name !== '') {
 			$customerId = SlugService::slugify($name);
 		}
+		$bundleRaw = trim((string)($row['bundle'] ?? ''));
+		$bundle = $bundleRaw !== '' && $bundleRaw !== '0' && mb_strtolower($bundleRaw) !== 'false';
 		return [
 			'customerId' => $customerId,
 			'companyName' => $name,
 			'contactName' => trim($row['contactName'] ?? ''),
 			'email' => mb_strtolower(trim($row['email'] ?? '')),
+			'addrStreet' => trim($row['addrStreet'] ?? ''),
+			'addrZip' => trim($row['addrZip'] ?? ''),
+			'addrCity' => trim($row['addrCity'] ?? ''),
 			'country' => trim($row['country'] ?? ''),
 			'product' => mb_strtolower(trim($row['product'] ?? $row['productCode'] ?? '')),
 			'productCode' => mb_strtolower(trim($row['productCode'] ?? $row['product'] ?? '')),
+			'label' => trim($row['label'] ?? ''),
 			'mobileSeats' => (int)($row['mobileSeats'] ?? 0),
 			'terminalDevices' => (int)($row['terminalDevices'] ?? 0),
+			'bundle' => $bundle,
+			'startsAt' => trim($row['startsAt'] ?? ''),
 			'validUntil' => trim($row['validUntil'] ?? ''),
 			'invoiceId' => trim($row['invoiceId'] ?? ''),
 			'amountEur' => trim($row['amountEur'] ?? '0'),
@@ -900,7 +1054,7 @@ class ImportService
 		$person = new Person();
 		$person->setCompanyId($companyId);
 		$person->setName($name !== '' ? $name : $email);
-		$person->setEmail($email !== '' ? $email : null);
+		$person->setEmail($email !== '' ? mb_strtolower($email) : null);
 		$person->setIsPrimary(1);
 		$person->setCreatedBy($actor);
 		$person->setCreatedAt($now instanceof \DateTime ? $now : new \DateTime($now->format('c')));

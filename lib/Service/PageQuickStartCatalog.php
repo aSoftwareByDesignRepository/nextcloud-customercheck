@@ -52,7 +52,7 @@ final class PageQuickStartCatalog
 	{
 		return [
 			'today', 'pulse', 'brief', 'my-accounts', 'team', 'strategy',
-			'mail-triage', 'review', 'conflicts', 'prepare-meeting', 'companies', 'company-form',
+			'mail-triage', 'sales-inbox', 'review', 'conflicts', 'prepare-meeting', 'companies', 'company-form',
 			'pipeline', 'agreements', 'agreement-form', 'money', 'activities',
 			'import', 'settings', 'app-settings', 'support-us',
 		];
@@ -197,9 +197,28 @@ final class PageQuickStartCatalog
 					],
 					[
 						'title' => $l->t('3. Need more sources?'),
-						'text' => $l->t('Contacts, Files, Calendar, Tasks, and import anomalies live under Review.'),
-						'href' => $link('review'),
-						'linkLabel' => $l->t('Open Review'),
+						'text' => $l->t('Contacts, Files, Calendar, Tasks, and import anomalies live under Inbox → Unassigned (filter chips).'),
+						'href' => $link('salesInbox'),
+						'linkLabel' => $l->t('Open Inbox'),
+					],
+				],
+			],
+			'sales-inbox' => [
+				'lead' => $l->t('Your mail in one place — Personal, Team, and Unassigned.'),
+				'steps' => [
+					[
+						'title' => $l->t('1. Pick a tab'),
+						'text' => $l->t('Personal is your connected mailbox. Team is the shared inbox. Unassigned is where you assign items to a company.'),
+					],
+					[
+						'title' => $l->t('2. Open a message'),
+						'text' => $l->t('Click a row to read a plain-text preview. Private badges mean only you can see that mail.'),
+					],
+					[
+						'title' => $l->t('3. Connect your email'),
+						'text' => $l->t('Managers enable personal sync under Team & mailbox. Then open My email and pick folders.'),
+						'href' => $link('settingsSection', ['section' => 'my-email']),
+						'linkLabel' => $l->t('Open My email'),
 					],
 				],
 			],
@@ -218,7 +237,7 @@ final class PageQuickStartCatalog
 						'title' => $l->t('3. Turn sources on'),
 						'text' => $l->t('Managers enable Contacts, Files, Calendar, Tasks, or import anomalies under Team & mailbox.'),
 						'href' => $link('settingsSection', ['section' => 'review-sources']),
-						'linkLabel' => $l->t('Review source settings'),
+						'linkLabel' => $l->t('Assign source settings'),
 					],
 				],
 			],
@@ -418,7 +437,7 @@ final class PageQuickStartCatalog
 					],
 					[
 						'title' => $l->t('2. Configure mailbox if shared'),
-						'text' => $l->t('Shared mailbox powers Review mail. Keep credentials in Team & mailbox — never in chat.'),
+						'text' => $l->t('Shared mailbox powers Assign mail. Keep credentials in Team & mailbox — never in chat.'),
 					],
 					[
 						'title' => $l->t('3. Personal preference'),

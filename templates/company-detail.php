@@ -63,6 +63,37 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 					? $labels->companyStatus((string)$company->getStatus())
 					: (string)$company->getStatus());
 			?></span>
+			<?php
+			$addrStreet = trim((string)($company->getAddrStreet() ?? ''));
+			$addrZip = trim((string)($company->getAddrZip() ?? ''));
+			$addrCity = trim((string)($company->getAddrCity() ?? ''));
+			$addrCountry = strtoupper(trim((string)($company->getCountry() ?? '')));
+			$addrLines = [];
+			if ($addrStreet !== '') {
+				$addrLines[] = $addrStreet;
+			}
+			$zipCity = trim($addrZip . ($addrZip !== '' && $addrCity !== '' ? ' ' : '') . $addrCity);
+			if ($zipCity !== '') {
+				$addrLines[] = $zipCity;
+			}
+			if ($addrCountry !== '' && $addrCountry !== 'DE') {
+				$addrLines[] = $addrCountry;
+			}
+			?>
+			<?php if ($addrLines !== []): ?>
+			<p class="crm-identity-strip__address" id="crm-company-address-display"><?php
+				foreach ($addrLines as $i => $line) {
+					if ($i > 0) {
+						print('<br>');
+					}
+					p($line);
+				}
+			?></p>
+			<?php elseif (!empty($_['canWrite'])): ?>
+			<p class="crm-identity-strip__address crm-identity-strip__address--empty">
+				<a class="crm-link" href="<?php p($urlGenerator->linkToRoute('customercheck.page.companyEdit', ['id' => $company->getId()])); ?>"><?php p($l->t('Add postal address')); ?></a>
+			</p>
+			<?php endif; ?>
 			<?php if ($company->getNotes()): ?>
 			<p class="crm-identity-strip__notes"><?php p($company->getNotes()); ?></p>
 			<?php endif; ?>
@@ -411,12 +442,19 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 				<?php endif; ?>
 			</div>
 
-			<details class="crm-next-steps__extra" id="crm-promises">
-				<summary>
-					<span id="crm-promises-title"><?php p($l->t('Told the customer')); ?></span>
-					<span class="crm-muted crm-next-steps__hint"> — <?php p($l->t('What you told the customer.')); ?></span>
-				</summary>
-				<div class="crm-next-steps__extra-body">
+			<div class="crm-next-steps__extra" id="crm-promises-section">
+				<div class="crm-next-steps__extra-head">
+					<details class="crm-next-steps__extra-details" id="crm-promises">
+						<summary>
+							<span id="crm-promises-title"><?php p($l->t('Told the customer')); ?></span>
+							<span class="crm-muted crm-next-steps__hint"> — <?php p($l->t('What you told the customer.')); ?></span>
+						</summary>
+						<div class="crm-next-steps__extra-body">
+							<div id="crm-promises-body">
+								<p class="crm-muted"><?php p($l->t('Loading promises…')); ?></p>
+							</div>
+						</div>
+					</details>
 					<?php if (!empty($_['canWrite'])): ?>
 					<div class="crm-inline-actions crm-next-steps__extra-actions">
 						<button type="button" class="crm-btn crm-btn--secondary crm-btn--sm" id="crm-add-promise"><?php p($l->t('Told the customer')); ?></button>
@@ -424,18 +462,22 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 					<?php else: ?>
 					<button type="button" class="crm-btn crm-btn--secondary crm-btn--sm" id="crm-add-promise" hidden><?php p($l->t('Told the customer')); ?></button>
 					<?php endif; ?>
-					<div id="crm-promises-body">
-						<p class="crm-muted"><?php p($l->t('Loading promises…')); ?></p>
-					</div>
 				</div>
-			</details>
+			</div>
 
-			<details class="crm-next-steps__extra crm-next-steps__tasks" id="crm-open-tasks">
-				<summary>
-					<span id="crm-open-tasks-title"><?php p($l->t('Also on your phone')); ?></span>
-					<span class="crm-muted"> — <?php p($l->t('Done in CustomerCheck is what counts. Tasks app gets a copy you can open on your phone.')); ?></span>
-				</summary>
-				<div class="crm-next-steps__extra-body">
+			<div class="crm-next-steps__extra crm-next-steps__tasks" id="crm-open-tasks-section">
+				<div class="crm-next-steps__extra-head">
+					<details class="crm-next-steps__extra-details" id="crm-open-tasks">
+						<summary>
+							<span id="crm-open-tasks-title"><?php p($l->t('Also on your phone')); ?></span>
+							<span class="crm-muted"> — <?php p($l->t('Done in CustomerCheck is what counts. Tasks app gets a copy you can open on your phone.')); ?></span>
+						</summary>
+						<div class="crm-next-steps__extra-body">
+							<div id="crm-open-tasks-body">
+								<p class="crm-muted"><?php p($l->t('Loading tasks…')); ?></p>
+							</div>
+						</div>
+					</details>
 					<?php if (!empty($_['canWrite'])): ?>
 					<div class="crm-inline-actions crm-next-steps__extra-actions">
 						<button type="button" class="crm-btn crm-btn--secondary crm-btn--sm" id="crm-new-task"><?php p($l->t('New task')); ?></button>
@@ -443,11 +485,8 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 					<?php else: ?>
 					<button type="button" class="crm-btn crm-btn--secondary crm-btn--sm" id="crm-new-task" hidden><?php p($l->t('New task')); ?></button>
 					<?php endif; ?>
-					<div id="crm-open-tasks-body">
-						<p class="crm-muted"><?php p($l->t('Loading tasks…')); ?></p>
-					</div>
 				</div>
-			</details>
+			</div>
 		</div>
 	</section>
 

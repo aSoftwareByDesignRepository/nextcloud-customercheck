@@ -26,7 +26,8 @@ final class TodoChecklistUxContractTest extends TestCase
 		$this->assertStringNotContainsString("\$l->t('Copy to phone Tasks')", $chunk);
 		$this->assertStringNotContainsString('data-crm-trigger="crm-add-activity"', $chunk);
 		$this->assertStringContainsString('class="visually-hidden"', $chunk);
-		$this->assertStringContainsString('<details class="crm-next-steps__extra" id="crm-promises">', $chunk);
+		$this->assertStringContainsString('<details class="crm-next-steps__extra-details" id="crm-promises">', $chunk);
+		$this->assertStringContainsString('crm-next-steps__extra-head', $chunk);
 		$this->assertStringContainsString('id="crm-open-tasks"', $chunk);
 		$this->assertStringContainsString('crm-todo-list', $chunk);
 		$this->assertStringContainsString('data-crm-complete-activity', $chunk);
@@ -69,6 +70,7 @@ final class TodoChecklistUxContractTest extends TestCase
 		$this->assertStringContainsString('.crm-todo-list__item', $css);
 		$this->assertStringContainsString('.crm-todo-list__actions .crm-btn--lg', $css);
 		$this->assertStringContainsString('min-height: 48px', $css);
-		$this->assertStringContainsString('.crm-next-steps__extra', $css);
+		$this->assertStringContainsString('.crm-next-steps__extra-head', $css);
+		$this->assertStringContainsString('.crm-next-steps__extra-actions .crm-btn', $css);
 	}
 }

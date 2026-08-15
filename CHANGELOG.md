@@ -5,6 +5,600 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.6.133 - 2026-08-15
+
+### Fix (Sales Inbox / Assign delete & spam)
+- CRM-sent copies (`outbound:…` UIDs) delete or mark-as-spam as CRM-only — no more “missing folder or id”
+- Live IMAP UIDs still dial the mail host; personal mail stays owner-gated
+- Clearer Inbox error titles (Could not delete / Could not mark as spam)
+
+### Added (Signature logo)
+- Personal and Team signature editors: add logo via public https URL or Files (public link)
+- Signature HTML allows http(s) `<img>` only (AS-18); compose body still has no image insert
+
+### Added (My email — update connection)
+- Connected inboxes: **Update password or servers** without Disconnect wipe
+- Prefill hosts; lock email; blank password keeps the current secret; Cancel closes the form
+
+## 1.6.132 - 2026-08-15
+
+### Fix (My email folders)
+- Subfolders: stronger indent, primary tree mark + tinted rail; name and Sync/Share on one row
+- Drop redundant full-path text beside the leaf name (full path stays on hover / screen reader)
+
+## 1.6.131 - 2026-08-15
+
+### Fix (My email connect)
+- DSGVO acknowledgement sits directly above Connect (same pattern as Team mailbox save)
+
+## 1.6.130 - 2026-08-15
+
+### Fix (My email connect form)
+- Flatten IMAP connect: one panel, no nested fieldset boxes; mail servers as a simple divider disclosure
+- Tighter, even spacing between email / username / password and server fields
+
+## 1.6.129 - 2026-08-15
+
+### Fix (Team & mailbox settings scroll)
+- Sticky jump links: Shared mailbox, Members, Personal email, Weekly limits
+- Add-member form and mailbox connection form collapse by default; open on Edit / when empty
+- Team signature tucked under a details panel; member list scrolls in place
+
+## 1.6.128 - 2026-08-15
+
+### Fix (Sales Inbox rows)
+- Full-width row: subject/from use the line; date sits on the right; no duplicate snippet
+- Click the open row again to collapse the preview (same as company Talk)
+
+## 1.6.127 - 2026-08-15
+
+### Security / UX (Talk & Review Answer)
+- In-app Answer: kind-aware send disclosure (personal vs team), companyId/mailbox/privacy on reply pack, close dialog after send
+- Private personal → team send warns before sharing the quote; scoped dialog controls; clearer To/Subject layout (WCAG touch targets)
+
+## 1.6.126 - 2026-08-15
+
+### Added (Company Talk / Review Answer)
+- **Answer** on company Talk and Review opens the in-app composer: send from connected personal or team mail when you have rights, with Open mail as fallback
+
+## 1.6.125 - 2026-08-15
+
+### Fix (Sales Inbox layout)
+- Full-width message list; clicking a row opens the preview directly underneath (company Talk pattern)
+
+## 1.6.124 - 2026-08-15
+
+### Fix (Tools nav)
+- **My email** sits under Tools next to Sales Inbox (not a ghost link on the inbox toolbar)
+- **Team & mailbox** in Tools is managers-only
+
+## 1.6.123 - 2026-08-15
+
+### Added (My email settings page)
+- Dedicated **/settings/my-email** for every member to connect their personal inbox, folders, and signature
+- **/settings/mailbox** (Team mailbox) is managers-only again: members, personal-sync policy, shared team inbox, limits
+
+## 1.6.122 - 2026-08-15
+
+### Fix (Sales Inbox labels)
+- Tab **Personal** (not Mine) vs action **Email settings** — no more Meine / Meine E-Mail clash
+
+## 1.6.121 - 2026-08-15
+
+### Fix (Sales Inbox compose spacing)
+- Recipients band: Send to + Add Cc on one row; tighter field rhythm; no stacked form-group margins
+- Attachments header inline with Add file; Cc panel opens as a compact inset
+
+## 1.6.120 - 2026-08-15
+
+### Fix (rich mail width)
+- Compose / signature editors and quote panel use full available width (no shrink-wrapped columns)
+
+## 1.6.119 - 2026-08-15
+
+### Fix (Sales Inbox / signature composer UX)
+- Compact rich-mail toolbar (accessible short labels); signature editors use a lean toolbar (B/I/U/list/link)
+- Reply quote visible + editable; strip MIME debris from previews; “Send to” instead of ambiguous “To”/„Bis“
+- Cache-bust for rich-mail-composer.js (version bump)
+
+## 1.6.118 - 2026-08-15
+
+### Share-cancel keeps sync folder (Aristoteles)
+
+- **P1:** Cancelling the share disclosure no longer omits the folder from the folders PUT — payload keeps `shareWithWorkspace: false` so `replacePersonalFolders` cannot delete the sync row
+- Companion: drop unused `shareConfirm` opt (payload builder already stamps SHARE on shared Inbox/Sent)
+- Contracts + mutation for share-cancel keep
+
+## 1.6.117 - 2026-08-15
+
+### Disconnect + companion folder ack (Aristoteles)
+
+- **P1:** Web quarantine reconnect keeps **Disconnect** visible (hide Sync/folders/signature only) so erase / email-switch works under `PERSONAL_MAIL_MAX_PER_USER=1` + email-rebind guard
+- **P1:** Companion folder PUT stamps `shareAck` / `SHARE` on **every** shared row (sibling under-ack no longer fail-closes Sync toggles after Inbox share)
+- Contracts + Jest for folder payload builder
+
+### Localization (Hermes — personal mail / Sales Inbox)
+
+- Server: SHARE confirm fallback + folder-row `Sync` native in all secondary locales; DE SHARE uses “Team” not “Workspace”
+- Mobile: `myEmail.emptyBody` + `salesInbox.reconnectBody` OAuth-first plain copy (da/de/es/fr/it/nb/nl/pl/pt/sv)
+- Report: `planning/app-ideas/customercheck/HERMES-PERSONAL-MAIL-LOCALIZATION-1.6.117.md`
+
+## 1.6.116 - 2026-08-15
+
+### Bachus P1 closeout (Aristoteles)
+
+- **P1:** Auto-open IMAP/app-password disclosure when no OAuth providers are configured (Connect CTA no longer buried)
+- **P1:** Typed confirm in `confirmDialog` is case-insensitive (`share` ≡ `SHARE`) — matches server/mobile
+- **P1:** OAuth callback `?personalMailError=` / `?personalMail=connected` surfaced in My email (then scrubbed from the URL); access_denied → cancelled copy
+- Contracts + mutations for the three fixes
+
+## 1.6.115 - 2026-08-15
+
+### Bachus — personal-mail UX radical simplify
+
+- **My email:** DSGVO ack sits above OAuth; IMAP/app-password collapsed behind one disclosure; username optional (defaults to email); hosts no longer HTML-`required` inside closed `<details>`
+- **Share Inbox/Sent:** one dialog (checkbox + typed SHARE) — no stacked `prompt()`
+- **Sales Inbox Reconnect:** deep-links `#crm-ws-personal-mail-mine` with focus; clearer “synced mail stays” copy
+- **Connected chrome:** signature in `<details>`; Sync is the primary large CTA; folder/signature chrome hidden while reconnecting
+- **Companion:** share disclosure moves into the share modal (no permanent switch clutter); OAuth-first empty/reconnect copy
+- Contracts + Playwright/Vitest/axe gauntlet
+
+## 1.6.114 - 2026-08-15
+
+### Email-rebind guard + atomic auth_fail (Aristoteles)
+
+- **P1:** IMAP reconnect heal refuses `id` + different email (server `assertOwnedPersonalEmailUnchanged`; heal UPDATE no longer rewrites `email_address`); web passes `id` only when form email matches the quarantined box
+- **P2:** `recordAuthFailure` atomically increments `auth_fail_count` (`auth_fail_count + 1`) and notifies only when the counter first hits **3** (concurrent dials cannot under-count quarantine)
+- Contracts + mutations for rebind guard / atomic increment; l10n for disconnect-first copy
+
+## 1.6.113 - 2026-08-15
+
+### IMAP heal + mobile DSGVO (Aristoteles — US-002 parity)
+
+- **P1:** IMAP `connectImap` resolves same-email owned mailbox and heals in place (clears OAuth tokens + quarantine); web passes `id` on reconnect
+- **P1:** Companion shows DSGVO ack next to OAuth reconnect buttons (no longer buried in collapsed IMAP form)
+- OAuth heal clears leftover `secret_enc`; web prefills email/username on reconnect
+- Contracts + mutation for IMAP same-email heal; gauntlet **44/44**
+
+## 1.6.112 - 2026-08-15
+
+### OAuth quarantine heal (Aristoteles — US-002 ok⇄error)
+
+- **P1:** OAuth `completeAuthorize` heals an owned personal mailbox with the **same email** in place (tokens + `status=ok` + clear auth_fail / dial cooldown) — no Disconnect wipe required
+- Web My email: quarantine shows reconnect OAuth strip + clear “synced mail stays” copy
+- Companion: OAuth buttons when empty or quarantined; AuthSession cancel uses `login.cancelled` (not “complete in browser”)
+- Contracts + mutation for heal path; gauntlet **43/43** mutations
+
+## 1.6.111 - 2026-08-15
+
+### Residual hardening (Aristoteles — auth vs network / send UX)
+
+- **php-imap sync:** only `classifyError === auth` calls `recordAuthFailure`; network/cert/unknown → dial backoff (`status=network|error`), not reconnect quarantine
+- **OAuth refresh:** transport failure (`status=network`) and missing app config do **not** bump auth_fail; only provider auth rejection does
+- **Send path:** personal/OAuth credential failures surface My email reconnect copy (not Team & mailbox)
+- Live-probe auth returns `error` when quarantined; native OAuth callback unit test; mutations **42/42**
+
+## 1.6.110 - 2026-08-15
+
+### Spec closeout residual (Aristoteles — US-002 / US-008 races)
+
+- **US-002 AC-3:** Auth quarantine notify centralized on `MailboxService::recordAuthFailure` so OAuth refresh + live-probe ×3 notify the owner (not only php-imap dial)
+- **US-008 AC-3 race:** Companion OAuth `client=native` → web callback stays passive (`DataDisplayResponse`); state/code redeemed only via `POST …/oauth/complete`
+- OAuth connect fallback returns full `PersonalMailboxAccount` shape; Sales Inbox compose focuses **To** first; preview keeps `role=article`
+- Unit + integration + Vitest contracts; mutation needles for native state / owner notify
+
+## 1.6.109 - 2026-08-15
+
+### Spec closeout (Aristoteles — PERSONAL-EMAIL-SYNC + audit trail)
+
+- **US-002 AC-3:** Personal mailbox auth quarantine notifies **owner only** (team still workspace fan-out)
+- **US-008 AC-3:** Companion OAuth via `AuthSession` + `POST …/oauth/complete` (Basic auth; workspace-bound state)
+- **§6 Observability:** `personal_mail.sync_fail_rate` when exception rate >10% of attempted dials in a syncAll run
+- **Bugfix:** syncAll dial cooldown used `$this->time` (undefined) → `$this->timeFactory`
+- Contracts + mutations for owner notify / OAuth workspace bind; FAC-09 companion HTML tags asserted
+
+## 1.6.108 - 2026-08-15
+
+### Localization (Hermes — personal mail / Sales Inbox)
+
+- Mobile companion: native `salesInbox.*` + `nav.salesInbox` for da/de/es/fr/it/nb/nl/pl/pt/sv (informal register)
+- Server l10n: personal-mail leftovers (`Reconnect`, Review personal-mail errors, sync hint, …) for all suite locales + `pt_BR`
+- Soft Legal Q1 path: plain privacy-notice ack copy in `myEmail` (manager confirms notice; no invented DPA gate)
+- DE register cleanup: Sie→du mix fixed in Sales Inbox empty states
+- Validated: `check-l10n-parity`, placeholders, mobile `localeParity` Jest
+
+## 1.6.107 - 2026-08-15
+
+### Architecture / Ops (Aristoteles gauntlet — Zeus SF-01…SF-05)
+
+- **SF-01:** UNIQUE `(mailbox_id, message_id)` after empty→NULL normalize + duplicate clear (`Version1017`/`1018`)
+- **SF-02:** Cron IMAP dial exponential cooldown (`sync_fail_streak` / `sync_cooldown_until`); manual Sync now still runs
+- **SF-03:** Real failures emit `personal_mail.sync_fail`; policy-off is `personal_mail.sync_skip` (ops can alert correctly)
+- **SF-04:** Failed-draft 90d TTL + hollow unacked claim 24h purge via `MailRetentionPurgeJob`
+- **SF-05:** UNIQUE `(workspace_id, owner_user_id, kind)` after retiring duplicate personal rows
+- **UX/a11y:** Sales Inbox message list is `listbox`/`option` with ArrowUp/Down/Home/End + `aria-activedescendant`
+- Contracts: `AristotelesPersonalMailHardeningContractTest`; dial + draft purge units; mutations +3
+
+## 1.6.106 - 2026-08-15
+
+### Architecture (Zeus FULL AUDIT — personal mail)
+
+- **P0:** Define `MAIL_SYNC_MAX_MESSAGES` (= `MAILBOX_SYNC_CAP`) — OAuth/live-probe sync no longer fatals on undefined constant
+- **P0:** Idempotency replay requires `smtp_acked` or outbound CRM row — unacked claims under send lock are abandoned (no fake `sent: true`)
+- **P0/P1:** Outbound CRM index takes `crm_mbox_*` lock; skip insert when `outbound:{idem}` already exists
+- **P1:** OAuth personal mailbox cap re-checked inside email connect lock
+- **P2:** Timeline/touch failures after SMTP no longer fail the HTTP send; CAS release on draft claim; sync service doc corrected
+- Migration `Version1016` adds `crm_mail_dft.smtp_acked` + backfill from existing outbound rows
+- Contracts: `ZeusPersonalMailArchitectureContractTest`; mutations extended
+
+## 1.6.105 - 2026-08-15
+
+### Security / Hardened (Aristoteles — Argus residual closeout)
+
+- **SF-01 / AS-12:** Personal unmatched list metadata (subject/from/snippet/preview/mailbox labels) redacted without write/triage — Sales Inbox `listInbox` + `unmatchedMail`
+- **SF-02:** IMAP/app-password personal connect rate-limited (`pm_imap_connect`, 20/h) before dial
+- **P1:** `reuseDraftId` / `claimFailedDraft` enforces failed-draft actor ACL (no peer hijack)
+- **P2:** Personal send fail-closed without `workspace_id`; orphan draft kind fail-closed; OAuth `sessionUserId` required
+- **UX/a11y:** Tab + list roving tabindex; quiet auto-sync still announces failures to live region; Needs triage badge (web + companion)
+- Contracts + mutations extended (29 focused kills target)
+
+## 1.6.104 - 2026-08-15
+
+### Security (Argus FULL AUDIT — personal mail Absolute No-Gos)
+
+- **NG:** `MobileMailController` CSRF gate verifies Basic credentials (`checkPassword` + UID match); presence-only `Authorization` no longer bypasses CSRF
+- **NG:** Failed drafts list/get/delete/resend scoped by actor — personal SMTP failures are owner-only (not any `mail.read`)
+- **NG:** `unmatchedMail` redacts personal `preview` for callers without write/triage (AS-12)
+- **MF:** OAuth `completeAuthorize` binds session UID to state `userId` (`hash_equals`)
+- **MF:** Personal send / send-account list respect `personalMailEnabled`
+- **MF:** Team mailbox `save` lowercases email addresses (parity with personal connect)
+- Contracts: `ArgusPersonalMailSecurityContractTest`; mutations extended
+
+## 1.6.103 - 2026-08-15
+
+### Security / Hardened (Personal mail P0 — Aristoteles)
+
+- **P0:** Review discard/spam never dials personal IMAP; CRM-close only for `personal_mail_shared_unmatched`
+- **P0:** Team mailbox DELETE refuses `kind=personal` (owner disconnect still works with `allowPersonal`)
+- **P0:** `replyMail` / preview use `MailAclLogic` + real write/triage flag; AS-12 personal unmatched bodies need triage
+- **P0:** `triageAssign` refuses `visibility=private`; `syncWorkspace` / peer team sync are team-only
+- **P1:** Sales Inbox preview generation guard; quiet auto-sync only sticks on success; reply prefers message `mailboxId`; mobile personal sync rate-limited
+- Contracts + focused mutations for the new gates
+
+## 1.6.102 - 2026-08-15
+
+### Changed (Bachus — Sales Inbox personal-mail UX simplify)
+
+- **Sales Inbox:** One-line disclosure, giant Mine/Team/Unmatched tabs, quiet status line, account filter only when 2+ accounts
+- **Empty Mine:** Primary **Connect my email** CTA; first visit auto-updates personal mail quietly
+- **Compose:** Cc behind **Add Cc** disclosure; Reply/Send use large primary targets
+- **Companion:** Matching empty CTA → My email, collapsed Cc, larger tabs, one quiet auto-sync on Mine focus
+- Contracts: `BachusPersonalMailUxContractTest`, Vitest + Playwright axe journeys updated
+
+## 1.6.101 - 2026-08-15
+
+### Fixed / Hardened (Personal Email Sync — Sent dedupe + OAuth HTML + Inbox IA)
+
+- **P0:** SMTP sends real `Message-ID`; CRM outbound stores it; IMAP Sent re-ingest merges by Message-ID (adopts IMAP UID) — no duplicate Talk/Inbox rows
+- **P0 / MH-05:** Live-probe / OAuth sync persists `bodyHtml` via `peekBodiesForUids` (parts 2 / 1.2), not plain-only
+- **US-004 AC-3:** Sales Inbox shows **Shared folders: …** banner (web + companion)
+- **§7 IA:** Account filter switcher + auth-error Reconnect CTA on Sales Inbox (web + companion)
+- Mutations: Message-ID header, live-probe `bodyHtml`, outbound share visibility
+
+## 1.6.100 - 2026-08-15
+
+### Fixed / Hardened (Personal Email Sync — MH-05 / MH-07 production closeout)
+
+- **MH-05 / Q7:** Sync now persists capped plain (+ HTML when present) into `body_text` / `body_html` (php-imap + live-probe), with `MAIL_SYNC_BODY_FETCH_CAP`; on-demand open backfills empty bodies
+- **MH-07:** Personal CRM outbound visibility follows Sent folder `share_with_workspace` (shared ⇒ teammates with `company.read`)
+- **IMAP peek:** `peekTextPrefixesForUids` / `fetchUidTextPreview` allow up to `MAIL_BODY_PLAIN_MAX_BYTES` (no longer hard-capped at 8 KiB / preview size)
+- **Companion:** Sales Inbox Shared / Only you badges; reply passes `mailboxId`
+- Focused mutations extended for body sync + outbound share visibility
+
+## 1.6.99 - 2026-08-15
+
+### Fixed / Hardened (Personal Email Sync — auditor residual closeout)
+
+- **NN-07 companion:** Inbox/Sent share requires typing SHARE (modal), not auto-inject
+- **AS-19 companion:** reply keeps quote in `quotedBody` (signature before quote)
+- **Q8 companion:** per-folder sync enable/disable + fuller share disclosure copy
+- **Send NFR:** plain 200 KiB / HTML 512 KiB with `MAIL_BODY_TOO_LARGE`; optional `cc[]` on SMTP + CRM
+- **Match:** personal ingest ignores forward-from hints (Team Inbox only)
+- **Schema:** `attachment_meta_json` + `signature_included` on outbound CRM index rows
+- **WCAG:** signature toggle announces; companion attach/errors use assertive live region
+- Normative error code aliases: `MAIL_SEND_FORBIDDEN`, `MAIL_ATTACH_LIMIT`, `MAIL_ATTACH_FORBIDDEN`
+
+## 1.6.98 - 2026-08-15
+
+### Fixed / Hardened (Personal Email Sync — auditor closeout)
+
+- **FAC-05/06:** Shared personal ingest sets `company_id` / Review unmatched correctly; private stays private
+- **GDPR wipe:** Disconnect Review purge includes `personal_mail_shared_unmatched` (not only `shared_mail`)
+- **FAC-15/17:** Disconnect deletes mailbox row (signatures + encrypted secrets) after children
+- **NN-05 / FAC-19:** OAuth complete calls email-conflict assert + unique-violation → 409; connect lock per workspace email
+- **MH-01 / OAuth:** Begin authorize requires member `dsgvoAck` (web + companion)
+- **NN-07 / FAC-20 companion:** `shareConfirm=SHARE` + `shareExistingAck` confirm/retry
+- **Body caps:** plain 200 KiB / HTML 512 KiB; companion safe plain fallback from sanitized HTML
+- Mutation + FAC closeout suite expanded
+
+## 1.6.97 - 2026-08-15
+
+### Added / Hardened (Personal Email Sync — FAC closeout)
+
+- **FAC-16:** Company Talk feed renders server-sanitized `bodyHtml` (same path as Sales Inbox)
+- **FAC-13:** Attachment reject keeps a failed draft (`draftId` in error fields) before SMTP
+- **FAC-07/08/10/11:** Behavioral send suite — From = mailbox email, Team picker ACL, includeSignature on/off, From-swap one signature
+- **listSendAccounts:** exposes `signaturePlain`/`signatureHtml` for From-swap UX (no concatenation)
+- **Companion:** signature PUT + OAuth begin routes; My email signature + Google/Microsoft connect
+- Detox personal-mail smoke + expanded FAC contracts / mutations
+
+## 1.6.96 - 2026-08-15
+
+### Added / Hardened (Personal Email Sync — production closeout)
+
+- **Q12:** Web My email + Team signature editors use rich HTML twin (`signatureHtml` + plain)
+- **OAuth secrets:** Google/Microsoft client secrets encrypted at rest via `ICrypto` (legacy plaintext readable until re-save)
+- **FAC-16 / NN-10:** Preview re-sanitizes `bodyHtml` on read; Sales Inbox renders sanitized HTML (plain fallback)
+- **MH-13 companion:** in-app My email IMAP connect / share / sync / disconnect; NC Files attachable browser; compose toolbar h2/h3/ol/quote
+- Mobile routes: personal-mailbox mutations + `/mail/attachable-files`
+- FAC/NN contracts for HTML read path, signature wiring, mobile routes; OAuth encrypt + path-traversal unit tests
+
+## 1.6.95 - 2026-08-15
+
+### Added / Hardened (Personal Email Sync — v1 closeout)
+
+- **NN-07 / FAC-20:** Share disclosure requires an explicit checkbox ack (existing + new share)
+- **OAuth:** refresh/expiry failure bumps `auth_fail_count` and fails closed (no stale bearer)
+- **Race:** folder share/save takes the same `crm_mbox_{id}` lock as sync
+- **MH-16 / MH-18 companion:** markdown-lite rich toolbar + device→Files stage attach API (`/mail/attachments`)
+- **E2E:** Playwright Sales Inbox + My email + share-checkbox contract
+- **l10n:** DE strings for Sales Inbox / share disclosure / OAuth / compose
+
+## 1.6.94 - 2026-08-15
+
+### Added / Hardened (Personal Email Sync — M6 closeout)
+
+- **Drafts (US-006 AC-2):** failed-send drafts retain HTML body, signature toggle, Files attachment ids, and quoted text (`Version1014`)
+- **MH-18 Sales Inbox:** Files attach UI on reply compose (folder picker + `attachmentFileIds`)
+- **MH-02 admin UX:** App settings section for Google/Microsoft OAuth client credentials + redirect URI
+- **NN-06:** personal sync skips when workspace personal mail is disabled (API + `doSync` gate + rate limit)
+- **FAC-01 / FAC-19:** `PERSONAL_MAIL_DISABLED` → HTTP 403; `MAIL_ACCOUNT_CONFLICT` → HTTP 409
+- **FAC-04:** preview ACL no longer invents `company.read` from `company_id` alone
+- **Observability:** `personal_mail.connected|sync_ok|sync_fail|share_folder|disconnected|sent`
+- **Companion AS-20:** deep-links to web My email / Sales Inbox for signature + rich/Files compose
+- Rich composer: subheading + clear formatting; company shared-send rich path retained
+- FAC/NN contract tests + expanded personal-mail mutation gauntlet
+
+## 1.6.93 - 2026-08-15
+
+### Fixed / Hardened (Personal Email Sync — M5)
+
+- **XOAUTH2:** IMAP sync/preview and SMTP send resolve OAuth tokens via `MailboxAuthService` (refresh + SASL)
+- **AS-12:** Review / unmatched promote only shared-visibility mail; personal shared unmatched uses `personal_mail_shared_unmatched`
+- **AS-16:** `shareExistingAck` before flipping existing private messages; folder upsert keeps folder ids
+- **AS-19:** Send assembly is content → signature → quoted original
+- **MH-16 / Q12:** Rich HTML composer on Sales Inbox reply; Include signature; Team signature API + settings
+- **NN-10 / AS-18:** Normative HTML allowlist; https `img` only in signature sanitize
+- Send success returns `contentType` + `signatureIncluded`
+
+## 1.6.92 - 2026-08-15
+
+### Added (Personal Email Sync — M1–M4 product cut)
+
+- Workspace gate UI + API: enable personal sync with DSGVO ack; My email IMAP connect / folders / share disclosure / disconnect / signature
+- Sales Inbox (Mine / Team / Unmatched) with ACL-safe preview
+- Send From picker: personal owned + Team with `mail.send`; HTML sanitize + multipart/alternative; per-mailbox signature insert
+- OAuth Google/Microsoft connect path (admin-configured client credentials)
+- Companion mobile inbox / message / send-accounts / send APIs
+- Signature columns on `crm_mailbox`; HtmlSanitizeService (NN-10); MailAcl + personal-send mutation gauntlets
+
+### Security
+
+- Private personal mail: owner-only on Talk/preview/inbox
+- Personal send-as: owner-only; Team still requires mail.send
+- Stored HTML bodies sanitized on ingest and compose
+
+## 1.6.91 - 2026-08-15
+
+### Added (Personal Email Sync — M1.1 schema)
+
+- Mailbox accounts gain `kind` (`personal`|`team`), `owner_user_id`, OAuth token columns (`auth_kind`, `token_enc`, `refresh_enc`)
+- Folders gain `share_with_workspace` + share acknowledgement stamps (default private for new personal folders; existing Team folders backfilled shared)
+- Messages gain `visibility`, `owner_user_id`, `body_text` / `body_html`, `cc_addrs`, `forward_from_hints`
+- Workspace settings: `personal_mail_enabled` + DSGVO ack columns
+- `MailAclLogic` — private = owner only; shared+linked = company.read; shared unmatched = mail rights
+
+## 1.6.90 - 2026-08-14
+
+### Fix (auto-match after reopen — forward hints from preview)
+
+- **Hint backfill:** open mail with stored preview but empty `forward_from_hints` now extracts customer email before rematch (no IMAP required when body text exists)
+- **Repair pipeline:** IMAP repair includes hint-empty rows even when To/preview are populated; body probe runs when hints still missing after preview parse
+- **Rematch:** persists forward hints extracted during reconcile so the next pass does not re-parse
+- **Sync cap:** post-sync repair raised to 40 probes; DB hint backfill up to 500 rows per pass
+
+## 1.6.89 - 2026-08-14
+
+### Fix (Review suggestions on Thunderbird forwards)
+
+- **Review Vorschlag** scores embedded customer (`gattinger@banss.at`), not team forwarder (`alex@…`) — no more wrong “Julian Groshaupt Development” hits when alex is listed on multiple companies
+- **Thunderbird forward block** without email on `From:`/`To:` lines: recover customer address from signature before nested `*Von:*` quotes
+
+## 1.6.88 - 2026-08-14
+
+### Fix (team forwards misfiled on internal company)
+
+- **Match order:** forward hints beat envelope From; team-domain senders no longer auto-file as `person_email` on internal companies where the forwarder is listed as a contact
+- **Sync now:** reopens already-matched team forwards (`Fwd:` / `WG:` + team From filed as `person_email`) so repair + rematch can file on the embedded customer (e.g. Banss)
+
+## 1.6.87 - 2026-08-14
+
+### Fix (Outlook / Thunderbird / Nextcloud Mail — forward & redirect)
+
+- **Redirect:** RFC `Resent-From` is the redirector (team), not the customer — no longer blocks body probing or mis-files
+- **Thunderbird 91+ redirect:** `Reply-To` header parsed and used as original-sender hint when envelope From is team
+- **Outlook / Thunderbird forward:** additional body markers (`-------- Forwarded Message --------`, German variants)
+- **IMAP fetch:** `Reply-To` included in header peek alongside `Resent-From` / `X-Original-From`
+- **needsBodyProbe:** skips body peek only when actionable (non-team) header hints exist
+
+## 1.6.86 - 2026-08-14
+
+### Fix (shared mail sync — production reliability)
+
+- **Sync now** reports only truly new index rows (not every IMAP duplicate); header backfills count separately
+- Matched mail on **archived companies** is reopened and returned to Review so active customer records can receive it
+- Post-sync Review pass is bounded (fast HTTP): reopen archived matches → repair headers → file known customers → promote to Review
+- Sync summary stays visible after reload (“Filed N…”, “Added N to Review…”) instead of reverting to the idle mailbox line
+- Manual triage rejects archived companies; matched rows can be reopened for rematch
+
+## 1.6.85 - 2026-08-14
+
+### Fix (shared mail — production rematch)
+
+- Body probes now persist a plain-text `preview` at ingest so Review rematch can re-extract forward hints from older indexed mail
+- Open mail missing To/CC, preview, or forward hints is backfilled from IMAP before known-customer reconcile (capped per run)
+- **Sync now** promotes open shared mail into Review and auto-files known contacts immediately (no Review page visit required)
+- Outlook forward blocks without a `Gesendet:` / `Sent:` line between `Von:` and `An:` are parsed correctly
+- Person index for ingest/rematch excludes archived companies
+
+## 1.6.84 - 2026-08-14
+
+### Fix (shared mail — forwarded customer mail)
+
+- Outlook-style forwards (`Von:` / `Gesendet:` / `An:`) now file onto known contacts even without a “Weitergeleitete Nachricht” marker
+- When the quoted block shows team on `Von:` and the customer on `An:`, rematch uses the customer address
+- Forward sender hints are stored on indexed mail and re-used on Review rematch (also re-extracted from preview when missing)
+
+### Fix (email normalization)
+
+- Mail ingest stores trimmed, lowercased From/To/CC addresses; forward hints normalized the same way
+- Person emails trimmed + lowercased on insert/update; lookup compares `TRIM(LOWER(email))` so legacy padded rows still match
+- Import-created contacts lowercased to match Person API behaviour
+
+## 1.6.83 - 2026-08-14
+
+### Fix (shared mail sync)
+
+- Re-sync no longer ignores already-indexed messages: open rows with empty To/CC get header backfill and recipient rematch (CC’d / team-sent copies can land on customers again)
+- Review promotion drains all open unmatched mail by id (not only the newest 200 by sent date), so older or late-indexed messages still appear for assignment
+- Review reconcile uses each message’s `matched_how` (e.g. recipient_email) when auto-closing assigned rows
+
+### Fix (GDPR erase)
+
+- Restore agreement edit-conflict cancellation on company erase (mutation debris removed)
+
+## 1.6.82 - 2026-08-13
+
+### Changed
+
+- Packaging release: version bump for ready4upload / production archive (local install already at 1.6.81).
+
+## 1.6.81 - 2026-08-13
+
+### Fix (Review inbox)
+
+- Open Review rows for shared mail that is already deleted/discarded no longer linger as “ghost” messages after you delete others
+- List window uses a stable queue (not recently-touched order), so deletes show the next real messages instead of a random slice
+- Clearer count (“Showing X of Y…”) and refresh announcement after delete
+
+## 1.6.80 - 2026-08-13
+
+### UX (Talk / company 360)
+
+- Search the Gespräch / Talk message list by from, subject, date, or snippet (live filter + Search button)
+- Shows match count while filtering; clear empty state when nothing matches
+- Search query survives mailbox sync / board reload on the same company page
+
+## 1.6.79 - 2026-08-13
+
+### Fix (dates / display)
+
+- Locale date labels no longer render as 1 January 1970: Nextcloud `IL10N::l()` receives a Unix timestamp instead of `DateTimeImmutable`
+- JS “today” / due defaults use local calendar `YYYY-MM-DD` (no UTC day shift via `toISOString`)
+
+### Fix (import / duplicates)
+
+- Import never auto-links onto archived companies; blocked/taken slugs get a fresh unique suggestion instead of `SLUG_TAKEN`
+- Companies list flags case-insensitive name twins and points to **Merge into…**
+- Import ambiguous matches show slug + match reason so same-name twins are distinguishable
+
+### Fix (mail preview)
+
+- Multipart IMAP bodies prefer decoded `text/plain` (no more MIME soup / quoted-printable headers in the reader)
+- Message body is explicitly selectable; **Copy message** button with clipboard fallback
+
+### UX (shared mailboxes)
+
+- Up to three team inboxes: Sync now / background sync already hit every healthy box — status and settings copy now say so clearly
+- Partial sync success reports when some mailboxes need attention
+
+## 1.6.78 - 2026-08-13
+
+### Fix (Review / shared mail)
+
+- Review suggestion catalog paginates the full company book (no more silent 500-company cap) so known contacts get suggestions
+- Open shared mail that `MailMatchLogic` can uniquely place is rematched on Review sync / person create-update and leaves Review automatically
+- From headers like `Name <email@domain>` normalize for exact person match
+- Orphan open Review rows whose mail is already `matched` are closed on reconcile
+
+### Fix (Mail preview)
+
+- Invalid UTF-8 in IMAP bodies no longer turns `JSONResponse` into an HTML HTTP 500 — sanitize preview text and use `JSON_INVALID_UTF8_SUBSTITUTE` on API JSON
+- Clearer client message + inline reader error (`role="alert"`) when a preview still fails
+
+### UX
+
+- My Accounts: **Add customer** header button and empty-state CTA
+- Talk / Review: second click on the selected mail row closes the reader (accordion)
+- Review empty state explains that only unplaceable mail stays in the inbox
+
+## 1.6.77 - 2026-08-13
+
+### Packaging
+
+- Production upload packaging for website-order import expansion, multi-agreement apply coalesce, and dedicated company postal address fields (1.6.75–1.6.76)
+
+## 1.6.76 - 2026-08-13
+
+### UX / Import
+
+- Dedicated company postal address fields (street, postcode, city, country) under Advanced — shown on company 360
+- Website-order free-text `address` parses into those fields (no longer stuffed into notes when parse succeeds)
+- Order webhook stores / fills empty address fields on create or email match
+
+## 1.6.75 - 2026-08-13
+
+### Fix (Import)
+
+- Website-order JSON (top-level `companyName` + `agreements` with `seats`/`devices`) expands into one import row per license instead of collapsing into a broken `custom` onetime row
+- Multi-agreement paste (GDPR / website-order) reuses the company created earlier in the same apply — no more `SLUG_TAKEN` / “1 row error(s)” on the second product
+- Import summary lists concrete row error messages (not only the count)
+
+## 1.6.74 - 2026-08-13
+
+### Security / reliability
+
+- GDPR company erase no longer builds SQL `IN()` lists from named-parameter tokens (`ceid0` / `pid0`) — that caused `SQLSTATE 42S22` and HTTP 500 on `DELETE /companies/{id}` when open edit conflicts or account plans existed
+- Coaching bulk reassign filters use the same `PARAM_INT_ARRAY` / `PARAM_STR_ARRAY` pattern
+
+### UX (l10n)
+
+- German company status **Churned** is **Abgewandert** (was wrong MT “Aufgewühlt”)
+
+## 1.6.73 - 2026-08-13
+
+### UX (Strategy / Plans board)
+
+- Strategy page matches Team/Companies: card shell, glance stats, quick filters, responsive table
+- Goal-first inline edit with labelled fields and progressive “Priority, owner & review”
+- Open plan deep-links to company 360 `#crm-account-plan`; cancel restores the form snapshot
+- Race-safe reload token and busy Save (no double-submit paint races)
+
+### Security / reliability (account plans)
+
+- Upsert rejects unknown plan status values (active / paused / done only)
+- Board hydrate exposes `priorityLabel`, `statusLabel`, and `openMoves`; attention-first sort
+
 ## 1.6.66 - 2026-08-12
 
 ### Security (Aristoteles audit — mail + checklist)

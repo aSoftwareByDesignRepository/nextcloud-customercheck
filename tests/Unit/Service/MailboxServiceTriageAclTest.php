@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace OCA\CustomerCheck\Tests\Unit\Service;
 
+use OCA\CustomerCheck\Service\HtmlSanitizeService;
+
 use OCA\CustomerCheck\Constants;
 use OCA\CustomerCheck\Exception\NotFoundException;
 use OCA\CustomerCheck\Exception\ValidationException;
@@ -51,6 +53,7 @@ final class MailboxServiceTriageAclTest extends TestCase
 			$this->createMock(ICrypto::class),
 			$this->createMock(ITimeFactory::class),
 			$l10n,
+			new HtmlSanitizeService(),
 		);
 
 		$this->expectException(NotFoundException::class);
@@ -69,6 +72,7 @@ final class MailboxServiceTriageAclTest extends TestCase
 			$this->createMock(ICrypto::class),
 			$this->createMock(ITimeFactory::class),
 			$l10n,
+			new HtmlSanitizeService(),
 		);
 
 		$this->expectException(ValidationException::class);

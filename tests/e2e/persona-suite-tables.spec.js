@@ -46,19 +46,20 @@ test.describe('Persona suite tables + human labels', () => {
     expect(addSerious, JSON.stringify(addSerious, null, 2)).toEqual([]);
   });
 
-  test('Review inbox uses suite table shell (mail-triage redirects)', async ({ page }) => {
+  test('Review inbox uses suite table shell (mail-triage redirects into Inbox Unassigned)', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await login(page, credsFromEnv('ADMIN'));
     await page.goto('/apps/customercheck/mail-triage?workspaceId=1');
     await page.waitForSelector('#crm-main-content', { timeout: 30000 });
-    await expect(page).toHaveURL(/\/review/);
-    await expect(page.locator('#app-content.crm-app.crm-app--review')).toBeVisible();
-    await expect(page.locator('[data-crm-persona-mount="review"]')).toBeVisible({ timeout: 20000 });
-    await expect(page.locator('[data-crm-review-body] table.table, [data-crm-review-body] .crm-callout, [data-crm-persona-mount="review"] .crm-muted').first()).toBeVisible({ timeout: 20000 });
-    await expect(page.locator('[data-crm-persona-mount="review"] ul.crm-list')).toHaveCount(0);
+    await expect(page).toHaveURL(/\/sales-inbox/);
+    await expect(page).toHaveURL(/tab=unmatched/);
+    await expect(page.locator('#app-content.crm-app.crm-app--sales-inbox, #crm-sales-inbox-root')).toBeVisible();
+    await expect(page.locator('#crm-sales-inbox-panel')).toBeVisible({ timeout: 20000 });
+    await expect(page.locator('#crm-sales-inbox-list, #crm-sales-inbox-empty').first()).toBeVisible({ timeout: 20000 });
+    await expect(page.locator('[data-crm-persona-mount="review"]')).toHaveCount(0);
 
     const results = await new AxeBuilder({ page })
-      .include('[data-crm-persona-mount="review"]')
+      .include('#crm-sales-inbox-root')
       .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
       .analyze();
     const serious = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');

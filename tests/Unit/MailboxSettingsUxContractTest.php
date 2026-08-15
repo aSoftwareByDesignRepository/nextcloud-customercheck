@@ -17,7 +17,14 @@ final class MailboxSettingsUxContractTest extends TestCase
 		$this->assertStringContainsString('crm-mailbox-settings__stack', $html);
 		$this->assertStringContainsString('id="crm-ws-limits-card"', $html);
 		$this->assertStringContainsString('id="crm-ws-members-card"', $html);
+		$this->assertStringContainsString('id="crm-ws-personal-mail-policy"', $html);
+		$this->assertStringNotContainsString('id="crm-ws-personal-mail-mine"', $html);
 		$this->assertStringContainsString('id="crm-ws-mailbox-card"', $html);
+		$this->assertStringContainsString('crm-mailbox-settings__jump', $html);
+		$this->assertStringContainsString('href="#crm-ws-mailbox-card"', $html);
+		$this->assertStringContainsString('id="crm-mailbox-compose"', $html);
+		$this->assertStringContainsString('id="crm-ws-member-add"', $html);
+		$this->assertStringContainsString('Add or edit mailbox', $html);
 		$this->assertStringContainsString('id="crm-mailbox-form"', $html);
 		$this->assertStringContainsString('crm-form crm-form--stack', $html);
 		$this->assertStringContainsString('crm-callout--warning', $html);
@@ -26,6 +33,8 @@ final class MailboxSettingsUxContractTest extends TestCase
 		$this->assertStringContainsString('id="crm-mailbox-empty"', $html);
 		$this->assertStringContainsString('No shared mailbox yet', $html);
 		$this->assertStringContainsString('id="crm-mailbox-list"', $html);
+		$this->assertStringContainsString('Up to three shared team inboxes', $html);
+		$this->assertStringContainsString('Sync now refreshes every healthy mailbox', $html);
 		$this->assertStringContainsString('crm-fieldset', $html);
 		$this->assertStringContainsString('Inbox', $html);
 		$this->assertStringContainsString('Mail servers', $html);
@@ -39,7 +48,8 @@ final class MailboxSettingsUxContractTest extends TestCase
 		$this->assertStringContainsString('value="465"', $html);
 		$this->assertStringContainsString('Do not paste the account id in parentheses', $html);
 		$this->assertStringContainsString('Connect a team inbox only', $html);
-		$this->assertStringContainsString('Unmatched mail goes to Review', $html);
+		$this->assertStringContainsString('forward their mail here', $html);
+		$this->assertStringContainsString('never on every recipient', $html);
 		$this->assertStringNotContainsString('1 · Who', $html);
 		$this->assertStringNotContainsString('2 · Receive (IMAP)', $html);
 		$this->assertStringNotContainsString('Server settings (IMAP / SMTP)', $html);
@@ -72,6 +82,8 @@ final class MailboxSettingsUxContractTest extends TestCase
 		$this->assertStringContainsString('await refreshMailboxes()', $js);
 		$this->assertStringContainsString('resetMailboxForm()', $js);
 		$this->assertStringContainsString('fillMailboxFormFromCache', $js);
+		$this->assertStringContainsString('setMailboxComposeOpen', $js);
+		$this->assertStringContainsString('syncMailboxComposeVisibility', $js);
 		$this->assertStringContainsString('highlightSavedMailbox', $js);
 		$this->assertStringContainsString('Saved. Your mailbox is listed above', $js);
 		$this->assertStringContainsString('crm-mailbox-list__item--just-saved', $js);
@@ -125,8 +137,8 @@ final class MailboxSettingsUxContractTest extends TestCase
 		// Update path must clear error quarantine or Sync permanently skips the box.
 		$this->assertStringContainsString("->set('status', \$qb->createNamedParameter('ok'))", $src);
 		$this->assertStringContainsString("->set('auth_fail_count', \$qb->createNamedParameter(0))", $src);
-		$this->assertStringContainsString('public function delete(int $workspaceId, int $mailboxId)', $src);
-		$this->assertStringContainsString('purgeOpenSharedMailReviewForMessages', $src);
+		$this->assertStringContainsString('public function delete(int $workspaceId, int $mailboxId, bool $allowPersonal = false)', $src);
+		$this->assertStringContainsString('purgeOpenSharedMailAssignForMessages', $src);
 		$this->assertStringContainsString("->delete('crm_review_item')", $src);
 		$this->assertStringContainsString("->delete('crm_mailbox')", $src);
 		$this->assertStringContainsString("->delete('crm_mail_msg')", $src);
@@ -159,12 +171,38 @@ final class MailboxSettingsUxContractTest extends TestCase
 	{
 		$jobs = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/settings/jobs.php');
 		$mailbox = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/settings/workspace-mailbox.php');
+		$myEmail = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/settings/my-email.php');
 		$this->assertStringContainsString('crm-form--stack', $jobs);
 		$this->assertStringContainsString('server clock', $jobs);
 		$this->assertStringContainsString('Team & mailbox', $jobs);
 		$this->assertStringContainsString('Reminders & digest', $mailbox);
 		$this->assertStringContainsString('Copy calendar feed URL', $mailbox);
-		$this->assertStringNotContainsString('aria-hidden="true"', $mailbox);
+		// Signature HTML twins use visually-hidden textareas with aria-hidden — nothing else should.
+		$withoutSigMirrors = (string)preg_replace(
+			'/<textarea\\b[^>]*\\bvisually-hidden\\b[^>]*>.*?<\\/textarea>/is',
+			'',
+			$mailbox . $myEmail,
+		);
+		$this->assertStringNotContainsString('aria-hidden="true"', $withoutSigMirrors);
+		$this->assertStringContainsString('id="crm-personal-mail-signature" class="visually-hidden"', $myEmail);
+		$this->assertStringContainsString('id="crm-mbox-signature" class="visually-hidden"', $mailbox);
+		$this->assertStringContainsString('crm-advanced__body', $myEmail);
+		$this->assertMatchesRegularExpression(
+			'/id="crm-personal-mail-signature-details".*?crm-advanced__body.*?crm-personal-mail-signature-editor/s',
+			$myEmail,
+		);
+	}
+
+	public function testMyEmailPageHostsPersonalConnectCard(): void
+	{
+		$html = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/settings/my-email.php');
+		$this->assertStringContainsString('id="section-my-email"', $html);
+		$this->assertStringContainsString('class="crm-my-email-settings"', $html);
+		$this->assertStringContainsString('id="crm-ws-personal-mail-mine"', $html);
+		$this->assertStringContainsString('data-crm-bachus-pm="1"', $html);
+		$this->assertStringContainsString('Ask a manager to enable Personal email sync under Team & mailbox', $html);
+		$this->assertStringNotContainsString('id="crm-ws-personal-mail-policy"', $html);
+		$this->assertStringNotContainsString('id="crm-mailbox-form"', $html);
 	}
 
 	public function testCssDefinesMailboxListAndFieldsets(): void

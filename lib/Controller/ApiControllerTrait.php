@@ -5,6 +5,7 @@ use OCA\CustomerCheck\Constants;
 use OCA\CustomerCheck\Exception\AccessDeniedException;
 use OCA\CustomerCheck\Exception\AppAccessDeniedException;
 use OCA\CustomerCheck\Exception\ConflictException;
+use OCA\CustomerCheck\Exception\NotAuthenticatedException;
 use OCA\CustomerCheck\Exception\NotFoundException;
 use OCA\CustomerCheck\Exception\ValidationException;
 use OCP\AppFramework\Http;
@@ -18,7 +19,9 @@ trait ApiControllerTrait
 		if ($meta !== null) {
 			$payload['meta'] = $meta;
 		}
-		return new JSONResponse($payload, $status);
+		// Defense in depth: never let malformed UTF-8 (e.g. IMAP bodies) turn
+		// JSON_THROW_ON_ERROR into an HTML 500 during JSONResponse::render().
+		return new JSONResponse($payload, $status, [], JSON_INVALID_UTF8_SUBSTITUTE);
 	}
 
 	/**
@@ -46,7 +49,7 @@ trait ApiControllerTrait
 			'error' => $error,
 			'message' => $message,
 			'fields' => $fields === [] ? new \stdClass() : $fields,
-		], $status);
+		], $status, [], JSON_INVALID_UTF8_SUBSTITUTE);
 	}
 
 	protected function fromThrowable(\Throwable $e): JSONResponse
@@ -62,6 +65,10 @@ trait ApiControllerTrait
 				Constants::ERR_FILES_NOT_FOLDER,
 				Constants::ERR_FILES_NOT_FOUND,
 				Constants::ERR_FILES_PERMISSION_DENIED => Http::STATUS_UNPROCESSABLE_ENTITY,
+				// FAC-01: personal sync disabled is a policy deny, not a form validation miss.
+				\OCA\CustomerCheck\Service\PersonalMailService::ERR_PERSONAL_MAIL_DISABLED => Http::STATUS_FORBIDDEN,
+				// FAC-19: same address cannot be personal + team.
+				\OCA\CustomerCheck\Service\PersonalMailService::ERR_MAIL_ACCOUNT_CONFLICT => Http::STATUS_CONFLICT,
 				default => Http::STATUS_BAD_REQUEST,
 			};
 			return $this->fail($e->getErrorCode(), $e->getMessage(), $e->getFields(), $status);
@@ -80,6 +87,9 @@ trait ApiControllerTrait
 		}
 		if ($e instanceof AccessDeniedException || $e instanceof AppAccessDeniedException) {
 			return $this->fail(Constants::ERR_ACCESS_DENIED, $e->getMessage() !== '' ? $e->getMessage() : 'Access denied', [], Http::STATUS_FORBIDDEN);
+		}
+		if ($e instanceof NotAuthenticatedException) {
+			return $this->fail(Constants::ERR_NOT_AUTHENTICATED, $e->getMessage() !== '' ? $e->getMessage() : 'Authentication required', [], Http::STATUS_UNAUTHORIZED);
 		}
 		// Never leak internals to the client; always log for ops (DI / SQL / race bugs).
 		try {

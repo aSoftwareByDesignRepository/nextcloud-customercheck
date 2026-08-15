@@ -40,14 +40,18 @@ final class BachusExtremeSimplifyUxContractTest extends TestCase
 		$this->assertStringContainsString('role="list"', $js);
 		$this->assertStringContainsString('role="listitem"', $js);
 		$this->assertStringNotContainsString("sortBtn('status', t('Status'))", $js);
-		$this->assertStringContainsString("sortBtn('sent', t('Sent'))", $js);
+		$this->assertStringContainsString("sortBtn('sent', t('Date'))", $js);
+		$this->assertStringNotContainsString("sortBtn('sent', t('Sent'))", $js);
 		$this->assertStringNotContainsString("aria-sort=\"", $js);
 		$this->assertStringContainsString('Sorted ascending', $js);
 		$this->assertStringContainsString('crm-mail-3pane__reader crm-review-detail-row', $js);
-		$this->assertStringNotContainsString("listEl.firstElementChild.after(detailLi)", $js);
+		$this->assertStringContainsString('row.after(detailTr)', $js);
+		$this->assertStringContainsString("role', 'listitem'", $js);
+		$this->assertStringNotContainsString('role="presentation"', $js);
 		$this->assertStringContainsString('More search options', $js);
 		$this->assertStringContainsString('crm-review-toolbar__extra', $js);
-		$this->assertStringContainsString('Remove selected', $js);
+		$this->assertStringContainsString('Delete selected', $js);
+		$this->assertStringContainsString('Mark as spam', $js);
 		$this->assertStringNotContainsString('Delete / remove selected', $js);
 	}
 

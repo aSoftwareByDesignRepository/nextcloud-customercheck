@@ -45,6 +45,7 @@ final class SettingsApiSearchUsersAclTest extends TestCase
 			$this->directory,
 			$this->createMock(ProductCodeRegistry::class),
 			$this->workspaces,
+			$this->createMock(\OCA\CustomerCheck\Service\PersonalMailOAuthService::class),
 		);
 	}
 
