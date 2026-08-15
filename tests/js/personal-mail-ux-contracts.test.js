@@ -77,6 +77,8 @@ describe('personal-mail settings UX contracts', () => {
     );
     expect(core).toContain('buildSignatureLogoHtml');
     expect(core).toContain('isPublicImageUrl');
+    expect(core).toContain('^https:\\/\\/');
+    expect(core).not.toContain('^https?:\\/\\/');
   });
 
   it('signature editors mount rich HTML twin (Q12)', () => {

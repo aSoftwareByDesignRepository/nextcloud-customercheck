@@ -1,5 +1,5 @@
 /**
- * Pure helpers for signature logo insert (AS-18 http(s) img).
+ * Pure helpers for signature logo insert (AS-18 https img only — Argus SF-01).
  * No DOM — vitest + mutation friendly.
  */
 (function (global) {
@@ -10,7 +10,8 @@
     if (src === '' || src.length > 2048) {
       return false;
     }
-    if (!/^https?:\/\//i.test(src)) {
+    // https only — blocks tracking/mixed-content http logos.
+    if (!/^https:\/\//i.test(src)) {
       return false;
     }
     if (/^\s*(javascript|data|vbscript)\s*:/i.test(src)) {

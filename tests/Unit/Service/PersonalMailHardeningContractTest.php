@@ -28,6 +28,24 @@ final class PersonalMailHardeningContractTest extends TestCase
 		);
 		$this->assertStringContainsString('ImapConnection::isLiveUid', $src);
 		$this->assertStringContainsString('$mailboxId <= 0 || !ImapConnection::isLiveUid($uidRaw)', $src);
+		// Argus MF-01: ownership before CRM-only return.
+		$this->assertMatchesRegularExpression(
+			'/assertRemoteMutateAllowed[\s\S]{0,1200}mailboxId <= 0 \|\| !ImapConnection::isLiveUid/',
+			$src,
+		);
+		$this->assertMatchesRegularExpression(
+			'/assertRemoteMutateAllowed[\s\S]{0,800}assertMailMutateRateAllowed[\s\S]{0,400}mailboxId <= 0 \|\| !ImapConnection::isLiveUid/',
+			$src,
+		);
+		// Argus MF-02: blank-password test refuses personal.
+		$this->assertStringContainsString('KIND_PERSONAL', $src);
+		$this->assertStringContainsString('Leaving the password blank only reuses credentials for team mailboxes', $src);
+		// Argus SF-02 / SF-03: mutate rate limit + denial audit events.
+		$this->assertStringContainsString('assertMailMutateRateAllowed', $src);
+		$this->assertStringContainsString('MAIL_MUTATE_USER_LIMIT', $src);
+		$this->assertStringContainsString('personal_mail.mutate_denied', $src);
+		$this->assertStringContainsString('mail.mutate_rate_limited', $src);
+		$this->assertStringContainsString('personal_mail.test_blank_password_refused', $src);
 		$this->assertStringContainsString('function deleteIndexedMessageFromInbox', $src);
 		$this->assertStringContainsString('function markIndexedMessageSpamFromInbox', $src);
 		$this->assertStringNotContainsString("str_starts_with(\$uidRaw, 'outbound:')", $src);
@@ -86,10 +104,11 @@ final class PersonalMailHardeningContractTest extends TestCase
 	public function testSyncWorkspaceIsTeamOnlyAndPeerSyncRejectsPersonal(): void
 	{
 		$sync = (string)file_get_contents(dirname(__DIR__, 3) . '/lib/Service/MailboxSyncService.php');
-		$this->assertStringContainsString(
-			'listMailboxes($workspaceId, MailAclLogic::KIND_TEAM)',
-			$sync,
-		);
+		// Workspace sync may include personal mailboxes when personalMailEnabled;
+		// disabled workspaces must skip (not dial) personal secrets.
+		$this->assertStringContainsString('$kind === MailAclLogic::KIND_PERSONAL', $sync);
+		$this->assertStringContainsString('personal_mail.sync_skip', $sync);
+		$this->assertStringContainsString("'reason' => 'disabled'", $sync);
 		$ctrl = (string)file_get_contents(dirname(__DIR__, 3) . '/lib/Controller/PersonaApiController.php');
 		$this->assertStringContainsString('resolveMailboxKind($workspaceId, $id)', $ctrl);
 		$this->assertStringContainsString('Sync personal mail from My email or Inbox', $ctrl);

@@ -2,7 +2,7 @@
  * Accessible rich HTML mail composer (MH-16 / WCAG 2.1 AA).
  * Toolbar uses document.execCommand on a labeled contenteditable region.
  * No image insert in message body (AS-18) — Files attachments only.
- * Signature editors may insert http(s) logos via allowSignatureLogo (AS-18).
+ * Signature editors may insert https logos via allowSignatureLogo (AS-18 / Argus SF-01).
  * Reply quotes live in a separate editable region (US-010 AC-5 / AS-19).
  */
 (function () {
@@ -158,7 +158,7 @@
         if (C && C.alertDialog) {
           return C.alertDialog({
             title: t('Could not add logo'),
-            message: t('Use a public http or https image address (not a data: link).'),
+            message: t('Use a public https:// image address (not http or data:).'),
             variant: 'danger',
           });
         }
@@ -170,7 +170,7 @@
     if (C && typeof C.confirmDialog === 'function') {
       return C.confirmDialog({
         title: t('Add logo'),
-        message: t('Paste a public image link. Recipients load this image when they open your email.'),
+        message: t('Paste a public https image link. Recipients load this image when they open your email.'),
         requireReason: true,
         reasonLabel: t('Image address (https://…)'),
         confirmLabel: t('Insert logo'),
@@ -233,7 +233,7 @@
           ? Logo.buildSignatureLogoHtml(src, { alt: t('Logo'), width: 180 })
           : '';
         if (!html) {
-          throw new Error(t('Could not build a public image link for this file.'));
+          throw new Error(t('Logo links must use https. Serve Nextcloud over HTTPS, or paste an https:// image address.'));
         }
         insertHtmlAtCursor(editor, html);
       });

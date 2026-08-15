@@ -29,8 +29,8 @@ $cases = [
 	],
 	[
 		'file' => $root . '/lib/Service/MailboxSyncService.php',
-		'find' => "if (\$owner === null || !hash_equals(\$owner, \$actor)) {\n\t\t\tthrow new ValidationException(\n\t\t\t\tConstants::ERR_VALIDATION,\n\t\t\t\t\$this->l10n->t('Only the mailbox owner can delete or mark spam on personal mail.'),\n\t\t\t);\n\t\t}",
-		'replace' => "if (false && (\$owner === null || !hash_equals(\$owner, \$actor))) {\n\t\t\tthrow new ValidationException(\n\t\t\t\tConstants::ERR_VALIDATION,\n\t\t\t\t\$this->l10n->t('Only the mailbox owner can delete or mark spam on personal mail.'),\n\t\t\t);\n\t\t}",
+		'find' => "if (\$owner === null || !hash_equals(\$owner, \$actor)) {\n\t\t\t\$this->logger->warning('personal_mail.mutate_denied', [\n\t\t\t\t'event' => 'personal_mail.mutate_denied',\n\t\t\t\t'reason' => 'not_owner',\n\t\t\t\t'workspaceId' => \$workspaceId,\n\t\t\t\t'mailboxId' => \$mailboxId,\n\t\t\t\t'actor' => \$actor,\n\t\t\t]);\n\t\t\tthrow new ValidationException(\n\t\t\t\tConstants::ERR_VALIDATION,\n\t\t\t\t\$this->l10n->t('Only the mailbox owner can delete or mark spam on personal mail.'),\n\t\t\t);\n\t\t}",
+		'replace' => "if (false && (\$owner === null || !hash_equals(\$owner, \$actor))) {\n\t\t\t\$this->logger->warning('personal_mail.mutate_denied', [\n\t\t\t\t'event' => 'personal_mail.mutate_denied',\n\t\t\t\t'reason' => 'not_owner',\n\t\t\t\t'workspaceId' => \$workspaceId,\n\t\t\t\t'mailboxId' => \$mailboxId,\n\t\t\t\t'actor' => \$actor,\n\t\t\t]);\n\t\t\tthrow new ValidationException(\n\t\t\t\tConstants::ERR_VALIDATION,\n\t\t\t\t\$this->l10n->t('Only the mailbox owner can delete or mark spam on personal mail.'),\n\t\t\t);\n\t\t}",
 		'test' => 'Service\\PersonalMailHardeningContractTest::testDeleteIndexedMessageRefusesPersonalMailbox',
 		'label' => 'personal owner hash_equals gate disabled',
 	],

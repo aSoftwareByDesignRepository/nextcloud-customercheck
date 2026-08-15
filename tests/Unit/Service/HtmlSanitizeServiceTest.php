@@ -76,7 +76,7 @@ final class HtmlSanitizeServiceTest extends TestCase
 		$this->assertStringContainsString('Hi', $out);
 	}
 
-	public function testSignatureAllowsHttpHttpsImgNotData(): void
+	public function testSignatureAllowsHttpsImgNotHttpOrData(): void
 	{
 		$ok = $this->svc->sanitizeSignature('<p>Sig</p><img src="https://cdn.example.com/logo.png" alt="Co" width="200">');
 		$this->assertStringContainsString('<img', strtolower($ok));
@@ -84,10 +84,10 @@ final class HtmlSanitizeServiceTest extends TestCase
 		$this->assertStringContainsString('alt="Co"', $ok);
 		$this->assertStringContainsString('width="200"', $ok);
 
-		// http allowed for self-hosted Nextcloud without TLS (public File links).
+		// Argus SF-01: plain http stripped (tracking / mixed-content).
 		$http = $this->svc->sanitizeSignature('<img src="http://files.local/logo.png">');
-		$this->assertStringContainsString('<img', strtolower($http));
-		$this->assertStringContainsString('http://files.local/logo.png', $http);
+		$this->assertStringNotContainsString('<img', strtolower($http));
+		$this->assertStringNotContainsString('http://files.local/logo.png', $http);
 
 		$data = $this->svc->sanitizeSignature('<img src="data:image/png;base64,xxxx">');
 		$this->assertStringNotContainsString('<img', strtolower($data));

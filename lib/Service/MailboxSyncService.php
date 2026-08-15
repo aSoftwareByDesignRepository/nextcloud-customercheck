@@ -56,6 +56,8 @@ class MailboxSyncService
 	 * @param ?string $personalOwnerActor When set, personal mailboxes may be dialed if this
 	 *                                    actor owns the mailbox (Inbox Personal tab). Null =
 	 *                                    Assign path — personal dials stay forbidden.
+	 * @param ?string $rateLimitActor     Signed-in user for SF-02 mutate rate limits (Inbox/Assign).
+	 *                                    Defaults to $personalOwnerActor when omitted.
 	 *
 	 * @return bool true when IMAP was dialed (or UID already gone); false when CRM-only
 	 *              (synthetic outbound: / missing uid — Assign still closes)
@@ -63,13 +65,25 @@ class MailboxSyncService
 	 * @throws NotFoundException
 	 * @throws ValidationException
 	 */
-	public function deleteIndexedMessage(int $workspaceId, int $messageId, ?string $personalOwnerActor = null): bool
+	public function deleteIndexedMessage(
+		int $workspaceId,
+		int $messageId,
+		?string $personalOwnerActor = null,
+		?string $rateLimitActor = null,
+	): bool
 	{
 		$msg = $this->mailboxes->findMessageForPreview($workspaceId, $messageId);
 		if ($msg === null) {
 			throw new NotFoundException($this->l10n->t('Message not found'));
 		}
 		$mailboxId = (int)$msg['mailboxId'];
+		// Argus MF-01: personal ownership gate before CRM-only early return — otherwise any
+		// write+mail.read actor who can read a shared personal outbound row could purge CRM.
+		if ($mailboxId > 0) {
+			$this->assertRemoteMutateAllowed($workspaceId, $mailboxId, $personalOwnerActor);
+		}
+		$rateActor = trim((string)($rateLimitActor ?? $personalOwnerActor ?? ''));
+		$this->assertMailMutateRateAllowed($rateActor, $workspaceId);
 		$folder = trim((string)$msg['folderPath']) !== '' ? trim((string)$msg['folderPath']) : 'INBOX';
 		$uidRaw = trim((string)$msg['messageUid']);
 		// No mailbox / no live IMAP UID → CRM-only. Never throw “missing folder or id”
@@ -77,8 +91,6 @@ class MailboxSyncService
 		if ($mailboxId <= 0 || !ImapConnection::isLiveUid($uidRaw)) {
 			return false;
 		}
-		// Live dial only — personal mailboxes need the owning actor (Inbox Personal).
-		$this->assertRemoteMutateAllowed($workspaceId, $mailboxId, $personalOwnerActor);
 		if (!ImapConnection::isSafeImapFolder($folder)) {
 			throw new ValidationException(
 				Constants::ERR_VALIDATION,
@@ -251,6 +263,7 @@ class MailboxSyncService
 	 * @param ?string $personalOwnerActor When set, personal mailboxes may be dialed if this
 	 *                                    actor owns the mailbox (Inbox Personal tab). Null =
 	 *                                    Assign path — personal dials stay forbidden.
+	 * @param ?string $rateLimitActor     Signed-in user for SF-02 mutate rate limits.
 	 *
 	 * @return bool true when IMAP was dialed (or UID already gone); false when CRM-only
 	 *              (synthetic outbound: / missing uid — Assign still closes)
@@ -258,20 +271,30 @@ class MailboxSyncService
 	 * @throws NotFoundException
 	 * @throws ValidationException
 	 */
-	public function moveIndexedMessageToJunk(int $workspaceId, int $messageId, ?string $personalOwnerActor = null): bool
+	public function moveIndexedMessageToJunk(
+		int $workspaceId,
+		int $messageId,
+		?string $personalOwnerActor = null,
+		?string $rateLimitActor = null,
+	): bool
 	{
 		$msg = $this->mailboxes->findMessageForPreview($workspaceId, $messageId);
 		if ($msg === null) {
 			throw new NotFoundException($this->l10n->t('Message not found'));
 		}
 		$mailboxId = (int)$msg['mailboxId'];
+		// Argus MF-01: same ownership gate as delete — before CRM-only early return.
+		if ($mailboxId > 0) {
+			$this->assertRemoteMutateAllowed($workspaceId, $mailboxId, $personalOwnerActor);
+		}
+		$rateActor = trim((string)($rateLimitActor ?? $personalOwnerActor ?? ''));
+		$this->assertMailMutateRateAllowed($rateActor, $workspaceId);
 		$folder = trim((string)$msg['folderPath']) !== '' ? trim((string)$msg['folderPath']) : 'INBOX';
 		$uidRaw = trim((string)$msg['messageUid']);
 		// No mailbox / no live IMAP UID → CRM-only (same gate as deleteIndexedMessage).
 		if ($mailboxId <= 0 || !ImapConnection::isLiveUid($uidRaw)) {
 			return false;
 		}
-		$this->assertRemoteMutateAllowed($workspaceId, $mailboxId, $personalOwnerActor);
 		if (!ImapConnection::isSafeImapFolder($folder)) {
 			throw new ValidationException(
 				Constants::ERR_VALIDATION,
@@ -1551,6 +1574,13 @@ class MailboxSyncService
 		}
 		$actor = trim((string)$personalOwnerActor);
 		if ($actor === '') {
+			// Argus SF-03: detectable personal mutate from Assign / null actor.
+			$this->logger->warning('personal_mail.mutate_denied', [
+				'event' => 'personal_mail.mutate_denied',
+				'reason' => 'assign_or_empty_actor',
+				'workspaceId' => $workspaceId,
+				'mailboxId' => $mailboxId,
+			]);
 			throw new ValidationException(
 				Constants::ERR_VALIDATION,
 				$this->l10n->t('Personal mailbox messages cannot be deleted or junked from Assign. Remove the Assign item only, or ask the owner.'),
@@ -1558,9 +1588,62 @@ class MailboxSyncService
 		}
 		$owner = $this->mailboxes->resolveMailboxOwnerUserId($workspaceId, $mailboxId);
 		if ($owner === null || !hash_equals($owner, $actor)) {
+			$this->logger->warning('personal_mail.mutate_denied', [
+				'event' => 'personal_mail.mutate_denied',
+				'reason' => 'not_owner',
+				'workspaceId' => $workspaceId,
+				'mailboxId' => $mailboxId,
+				'actor' => $actor,
+			]);
 			throw new ValidationException(
 				Constants::ERR_VALIDATION,
 				$this->l10n->t('Only the mailbox owner can delete or mark spam on personal mail.'),
+			);
+		}
+	}
+
+	/**
+	 * DoS guard for delete / mark-as-spam (IMAP dial + CRM purge storms). Argus SF-02.
+	 */
+	private function assertMailMutateRateAllowed(string $actorUid, int $workspaceId): void
+	{
+		$actor = trim($actorUid);
+		if ($actor !== '') {
+			if (!$this->rateLimit->allow(
+				'crm_mail_mutate_user:' . $actor,
+				Constants::MAIL_MUTATE_USER_LIMIT,
+				Constants::MAIL_MUTATE_USER_WINDOW,
+				true,
+			)) {
+				$this->logger->warning('mail.mutate_rate_limited', [
+					'event' => 'mail.mutate_rate_limited',
+					'scope' => 'user',
+					'workspaceId' => $workspaceId,
+					'actor' => $actor,
+				]);
+				throw ValidationException::field(
+					Constants::ERR_RATE_LIMITED,
+					'rate',
+					$this->l10n->t('Too many delete or spam actions. Try again later.'),
+				);
+			}
+		}
+		if (!$this->rateLimit->allow(
+			'crm_mail_mutate_ws:' . $workspaceId,
+			Constants::MAIL_MUTATE_WS_LIMIT,
+			Constants::MAIL_MUTATE_WS_WINDOW,
+			true,
+		)) {
+			$this->logger->warning('mail.mutate_rate_limited', [
+				'event' => 'mail.mutate_rate_limited',
+				'scope' => 'workspace',
+				'workspaceId' => $workspaceId,
+				'actor' => $actor,
+			]);
+			throw ValidationException::field(
+				Constants::ERR_RATE_LIMITED,
+				'rate',
+				$this->l10n->t('Too many delete or spam actions. Try again later.'),
 			);
 		}
 	}
@@ -1586,7 +1669,8 @@ class MailboxSyncService
 		);
 		$kind = (string)($msg['mailboxKind'] ?? MailAclLogic::KIND_TEAM);
 		$personalActor = $kind === MailAclLogic::KIND_PERSONAL ? $actorUid : null;
-		$dialed = $this->deleteIndexedMessage($workspaceId, $messageId, $personalActor);
+		// Team Inbox mutate still rate-limits under the signed-in actor (SF-02).
+		$dialed = $this->deleteIndexedMessage($workspaceId, $messageId, $personalActor, $actorUid);
 		$this->mailboxes->markRemoteDeleted($workspaceId, $messageId);
 		$note = $dialed
 			? $this->l10n->t('Deleted from mailbox')
@@ -1617,7 +1701,7 @@ class MailboxSyncService
 		);
 		$kind = (string)($msg['mailboxKind'] ?? MailAclLogic::KIND_TEAM);
 		$personalActor = $kind === MailAclLogic::KIND_PERSONAL ? $actorUid : null;
-		$dialed = $this->moveIndexedMessageToJunk($workspaceId, $messageId, $personalActor);
+		$dialed = $this->moveIndexedMessageToJunk($workspaceId, $messageId, $personalActor, $actorUid);
 		$this->mailboxes->markRemoteDeleted($workspaceId, $messageId);
 		$note = $dialed
 			? $this->l10n->t('Marked as spam on mailbox')
@@ -1718,9 +1802,23 @@ class MailboxSyncService
 		}
 
 		// Re-test while editing: blank password reuses the encrypted secret for this workspace.
+		// Argus MF-02: never load personal mailbox secrets for blank-password team Test —
+		// mailbox capability must not decrypt/dial another member's IMAP credential.
 		$mailboxId = (int)($cfg['id'] ?? $cfg['mailboxId'] ?? 0);
 		$workspaceId = (int)($cfg['workspaceId'] ?? 0);
 		if ($pass === '' && $mailboxId > 0 && $workspaceId > 0) {
+			if ($this->mailboxes->resolveMailboxKind($workspaceId, $mailboxId) === MailAclLogic::KIND_PERSONAL) {
+				$this->logger->warning('personal_mail.test_blank_password_refused', [
+					'event' => 'personal_mail.test_blank_password_refused',
+					'workspaceId' => $workspaceId,
+					'mailboxId' => $mailboxId,
+				]);
+				return [
+					'ok' => false,
+					'message' => $this->l10n->t('Enter the password to test a personal mailbox. Leaving the password blank only reuses credentials for team mailboxes.'),
+					'reason' => 'validation',
+				];
+			}
 			$pass = $this->loadMailboxSecret($mailboxId, $workspaceId) ?? '';
 		}
 

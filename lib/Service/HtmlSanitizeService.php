@@ -12,7 +12,7 @@ use OCA\CustomerCheck\Constants;
  *
  * Normative allowlist (compose/body): p, br, div, span, strong, b, em, i, u,
  * ul, ol, li, a, h2, h3, blockquote, hr.
- * Signature-only (AS-18): http(s) img may appear inside signature HTML (no data:/javascript:).
+ * Signature-only (AS-18): https img may appear inside signature HTML (no http/data:/javascript:).
  */
 final class HtmlSanitizeService
 {
@@ -204,9 +204,8 @@ final class HtmlSanitizeService
 			return null;
 		}
 		$src = html_entity_decode(trim($m[2] ?? $m[1] ?? ''), ENT_QUOTES | ENT_HTML5, 'UTF-8');
-		// AS-18: remote images only (no data:/javascript:). https preferred; http allowed for
-		// self-hosted Nextcloud without TLS so local public File links still work.
-		if ($src === '' || !preg_match('#^https?://#i', $src)) {
+		// Argus SF-01 / AS-18: https remote images only (no http/data:/javascript: tracking downgrade).
+		if ($src === '' || !preg_match('#^https://#i', $src)) {
 			return null;
 		}
 		if (preg_match('#^\s*(javascript|data|vbscript)\s*:#i', $src)) {

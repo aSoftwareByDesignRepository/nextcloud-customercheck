@@ -282,6 +282,11 @@ final class Constants
 	public const MAIL_PREVIEW_USER_WINDOW = 3600;
 	public const MAIL_PREVIEW_WS_LIMIT = 120;
 	public const MAIL_PREVIEW_WS_WINDOW = 3600;
+	/** Inbox/Assign delete & mark-as-spam (IMAP dial + CRM purge storms). */
+	public const MAIL_MUTATE_USER_LIMIT = 60;
+	public const MAIL_MUTATE_USER_WINDOW = 3600;
+	public const MAIL_MUTATE_WS_LIMIT = 240;
+	public const MAIL_MUTATE_WS_WINDOW = 3600;
 	/** Shared-mailbox index retention floor + purge batch (§5.10 / §18.9). */
 	public const MAIL_RETENTION_DAYS_MIN = 30;
 	public const MAIL_PURGE_BATCH = 500;

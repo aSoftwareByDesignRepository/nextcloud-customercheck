@@ -1631,7 +1631,7 @@
     }
     host.textContent = '';
     // Same WYSIWYG shell + full toolbar as Inbox compose (layout parity).
-    // allowSignatureLogo: AS-18 — http(s) <img> only in signature HTML (not compose body).
+    // allowSignatureLogo: AS-18 / Argus SF-01 — https <img> only in signature HTML (not compose body).
     return Rich.mount(host, {
       labelledBy: labelledBy,
       hasSignature: false,

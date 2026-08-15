@@ -26,10 +26,10 @@ function loadLogoApi() {
 
 const Logo = loadLogoApi();
 
-describe('signature-logo-core (AS-18)', () => {
-  it('accepts public http(s) image URLs only', () => {
+describe('signature-logo-core (AS-18 / Argus SF-01)', () => {
+  it('accepts https image URLs only', () => {
     expect(Logo.isPublicImageUrl('https://cdn.example/logo.png')).toBe(true);
-    expect(Logo.isPublicImageUrl('http://files.local/a.jpg')).toBe(true);
+    expect(Logo.isPublicImageUrl('http://files.local/a.jpg')).toBe(false);
     expect(Logo.isPublicImageUrl('data:image/png;base64,xx')).toBe(false);
     expect(Logo.isPublicImageUrl('javascript:alert(1)')).toBe(false);
     expect(Logo.isPublicImageUrl('')).toBe(false);
@@ -44,6 +44,7 @@ describe('signature-logo-core (AS-18)', () => {
     expect(html).toContain('<img src="https://cdn.example/logo.png"');
     expect(html).toContain('alt="Acme"');
     expect(html).toContain('width="600"');
+    expect(Logo.buildSignatureLogoHtml('http://files.local/a.jpg')).toBe('');
     expect(Logo.buildSignatureLogoHtml('data:image/png;base64,x')).toBe('');
   });
 
@@ -54,6 +55,7 @@ describe('signature-logo-core (AS-18)', () => {
     expect(Logo.publicShareToImageSrc('https://nc.example/s/Token/download')).toBe(
       'https://nc.example/s/Token/download',
     );
+    expect(Logo.publicShareToImageSrc('http://nc.local/s/Token')).toBe('');
     expect(Logo.publicShareToImageSrc('data:x')).toBe('');
   });
 });

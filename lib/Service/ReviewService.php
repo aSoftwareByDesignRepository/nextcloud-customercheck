@@ -857,7 +857,7 @@ class ReviewService
 					}
 					// IMAP before CRM close — fail closed so spam is not only hidden in Assign.
 					// false = CRM-only (no live UID); still treat as remote success for markRemoteDeleted.
-					$dialedRemote = $this->mailboxSync->deleteIndexedMessage($workspaceId, $mailId);
+					$dialedRemote = $this->mailboxSync->deleteIndexedMessage($workspaceId, $mailId, null, $actor);
 					$deletedRemote = true;
 					$remoteDeleteNote = $dialedRemote
 						? $this->l10n->t('Deleted from shared mailbox')
@@ -1054,7 +1054,7 @@ class ReviewService
 				$this->l10n->t('Shared-mailbox spam marking is unavailable. Try again or ask an admin.'),
 			);
 		}
-		$dialedRemote = $this->mailboxSync->moveIndexedMessageToJunk($workspaceId, $mailId);
+		$dialedRemote = $this->mailboxSync->moveIndexedMessageToJunk($workspaceId, $mailId, null, $actor);
 		$movedRemote = true;
 
 		$this->db->beginTransaction();

@@ -762,7 +762,7 @@ final class MailboxSyncServiceTest extends TestCase
 				'messageUid' => $uid,
 				'mailboxKind' => 'team',
 			]);
-		$this->mailboxes->expects($this->never())->method('resolveMailboxKind');
+		$this->mailboxes->method('resolveMailboxKind')->willReturn('team');
 		$this->locks->expects($this->never())->method('acquireLock');
 
 		$svc = $this->service();
@@ -813,5 +813,104 @@ final class MailboxSyncServiceTest extends TestCase
 		$this->expectException(ValidationException::class);
 		$this->expectExceptionMessage('Personal mailbox messages cannot be deleted or junked from Assign');
 		$this->service()->deleteIndexedMessage(1, 8, null);
+	}
+
+	/** Argus MF-01: personal outbound CRM-only still requires owner (Assign null actor blocked). */
+	public function testPersonalOutboundCrmOnlyBlockedWithoutOwner(): void
+	{
+		$this->mailboxes->method('findMessageForPreview')->willReturn([
+			'id' => 44,
+			'mailboxId' => 3,
+			'folderPath' => 'Sent',
+			'messageUid' => 'outbound:crm-send-x',
+			'mailboxKind' => 'personal',
+		]);
+		$this->mailboxes->method('resolveMailboxKind')->willReturn('personal');
+		$this->locks->expects($this->never())->method('acquireLock');
+
+		$this->expectException(ValidationException::class);
+		$this->expectExceptionMessage('Personal mailbox messages cannot be deleted or junked from Assign');
+		$this->service()->deleteIndexedMessage(1, 44, null);
+	}
+
+	/** Argus MF-01: owner may CRM-purge personal outbound (no IMAP dial). */
+	public function testPersonalOutboundCrmOnlyAllowedForOwner(): void
+	{
+		$this->mailboxes->method('findMessageForPreview')->willReturn([
+			'id' => 45,
+			'mailboxId' => 3,
+			'folderPath' => 'Sent',
+			'messageUid' => 'outbound:crm-send-y',
+			'mailboxKind' => 'personal',
+		]);
+		$this->mailboxes->method('resolveMailboxKind')->willReturn('personal');
+		$this->mailboxes->method('resolveMailboxOwnerUserId')->with(1, 3)->willReturn('alice');
+		$this->locks->expects($this->never())->method('acquireLock');
+
+		$this->assertFalse($this->service()->deleteIndexedMessage(1, 45, 'alice'));
+		$this->assertFalse($this->service()->moveIndexedMessageToJunk(1, 45, 'alice'));
+	}
+
+	/** Argus MF-02: blank-password test must not decrypt personal mailbox secrets. */
+	public function testConnectionBlankPasswordRefusesPersonalMailbox(): void
+	{
+		$this->mailboxes->method('resolveMailboxKind')->with(1, 9)->willReturn('personal');
+		$this->crypto->expects($this->never())->method('decrypt');
+		$this->logger->expects($this->atLeastOnce())->method('warning');
+
+		$result = $this->service()->testConnection([
+			'workspaceId' => 1,
+			'id' => 9,
+			'imapHost' => 'mail.example.com',
+			'username' => 'user@example.com',
+			'password' => '',
+		]);
+
+		$this->assertFalse($result['ok']);
+		$this->assertSame('validation', $result['reason']);
+		$this->assertStringContainsString('personal mailbox', strtolower((string)$result['message']));
+	}
+
+	/** Argus SF-02: delete/spam mutate rate limit blocks CRM purge storms. */
+	public function testOutboundCrmOnlyHonorsMutateRateLimit(): void
+	{
+		$this->mailboxes->method('findMessageForPreview')->willReturn([
+			'id' => 99,
+			'mailboxId' => 7,
+			'folderPath' => 'INBOX',
+			'messageUid' => 'outbound:crm-send-rate',
+			'mailboxKind' => 'team',
+		]);
+		$this->mailboxes->method('resolveMailboxKind')->willReturn('team');
+		$this->rateLimit = $this->createMock(RateLimitService::class);
+		$this->rateLimit->method('allow')->willReturn(false);
+		$this->locks->expects($this->never())->method('acquireLock');
+
+		$this->expectException(ValidationException::class);
+		$this->expectExceptionMessage('Too many delete or spam actions');
+		$this->service()->deleteIndexedMessage(1, 99, null, 'bob');
+	}
+
+	/** Argus SF-03: non-owner personal mutate emits audit warning before throw. */
+	public function testPersonalOutboundDeniedLogsSecurityEvent(): void
+	{
+		$this->mailboxes->method('findMessageForPreview')->willReturn([
+			'id' => 44,
+			'mailboxId' => 3,
+			'folderPath' => 'Sent',
+			'messageUid' => 'outbound:crm-send-x',
+			'mailboxKind' => 'personal',
+		]);
+		$this->mailboxes->method('resolveMailboxKind')->willReturn('personal');
+		$this->logger->expects($this->once())->method('warning')->with(
+			'personal_mail.mutate_denied',
+			$this->callback(static function (array $ctx): bool {
+				return ($ctx['event'] ?? '') === 'personal_mail.mutate_denied'
+					&& ($ctx['reason'] ?? '') === 'assign_or_empty_actor';
+			}),
+		);
+
+		$this->expectException(ValidationException::class);
+		$this->service()->deleteIndexedMessage(1, 44, null);
 	}
 }

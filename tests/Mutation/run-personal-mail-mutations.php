@@ -124,8 +124,8 @@ $cases = [
 	],
 	[
 		'file' => $root . '/lib/Service/MailboxSyncService.php',
-		'find' => "if (\$this->mailboxes->resolveMailboxKind(\$workspaceId, \$mailboxId) === MailAclLogic::KIND_PERSONAL) {\n\t\t\tthrow new ValidationException(\n\t\t\t\tConstants::ERR_VALIDATION,\n\t\t\t\t\$this->l10n->t('Personal mailbox messages cannot be deleted or junked from Assign. Remove the Assign item only, or ask the owner.'),\n\t\t\t);\n\t\t}",
-		'replace' => "if (false) {\n\t\t\tthrow new ValidationException(Constants::ERR_VALIDATION, 'x');\n\t\t}",
+		'find' => "if (\$actor === '') {\n\t\t\t// Argus SF-03: detectable personal mutate from Assign / null actor.\n\t\t\t\$this->logger->warning('personal_mail.mutate_denied', [\n\t\t\t\t'event' => 'personal_mail.mutate_denied',\n\t\t\t\t'reason' => 'assign_or_empty_actor',\n\t\t\t\t'workspaceId' => \$workspaceId,\n\t\t\t\t'mailboxId' => \$mailboxId,\n\t\t\t]);\n\t\t\tthrow new ValidationException(\n\t\t\t\tConstants::ERR_VALIDATION,\n\t\t\t\t\$this->l10n->t('Personal mailbox messages cannot be deleted or junked from Assign. Remove the Assign item only, or ask the owner.'),\n\t\t\t);\n\t\t}",
+		'replace' => "if (false && \$actor === '') {\n\t\t\tthrow new ValidationException(Constants::ERR_VALIDATION, 'x');\n\t\t}",
 		'test' => 'PersonalMailHardeningContractTest::testDeleteIndexedMessageRefusesPersonalMailbox',
 		'label' => 'personal IMAP mutate gate removed',
 	],
@@ -145,8 +145,8 @@ $cases = [
 	],
 	[
 		'file' => $root . '/lib/Service/MailboxSyncService.php',
-		'find' => "\$boxes = \$this->mailboxes->listMailboxes(\$workspaceId, MailAclLogic::KIND_TEAM);",
-		'replace' => "\$boxes = \$this->mailboxes->listMailboxes(\$workspaceId, null);",
+		'find' => "if (\$kind === MailAclLogic::KIND_PERSONAL) {\n\t\t\t\$settings = \$this->workspaces->getSettings(\$workspaceId);\n\t\t\tif (empty(\$settings['personalMailEnabled'])) {\n\t\t\t\t\$this->logger->info('personal_mail.sync_skip', [\n\t\t\t\t\t'event' => 'personal_mail.sync_skip',\n\t\t\t\t\t'reason' => 'disabled',\n\t\t\t\t\t'mailboxId' => \$mailboxId,\n\t\t\t\t\t'workspaceId' => \$workspaceId,\n\t\t\t\t]);\n\t\t\t\treturn ['ingested' => 0, 'status' => 'disabled'];\n\t\t\t}\n\t\t}",
+		'replace' => "if (false && \$kind === MailAclLogic::KIND_PERSONAL) {\n\t\t\treturn ['ingested' => 0, 'status' => 'disabled'];\n\t\t}",
 		'test' => 'PersonalMailHardeningContractTest::testSyncWorkspaceIsTeamOnlyAndPeerSyncRejectsPersonal',
 		'label' => 'syncWorkspace crawls personal again',
 	],

@@ -496,9 +496,10 @@ final class MailPreviewSecurityTest extends TestCase
 			'preview, sync, and indexed delete must share crm_mbox_* lock key',
 		);
 		$this->assertStringNotContainsString('crm_mail_del_', $sync);
-		$deleteStart = strpos($sync, 'function deleteIndexedMessage(int $workspaceId, int $messageId)');
+		$deleteStart = strpos($sync, 'function deleteIndexedMessage(');
 		$this->assertNotFalse($deleteStart);
-		$deleteChunk = substr($sync, (int)$deleteStart, 4500);
+		$deleteChunk = substr($sync, (int)$deleteStart, 5500);
+		$this->assertStringContainsString('assertMailMutateRateAllowed', $deleteChunk);
 		$this->assertStringContainsString("\$lockKey = 'crm_mbox_' . \$mailboxId;", $deleteChunk);
 		$this->assertStringContainsString('Mailbox is busy (sync or another preview)', $deleteChunk);
 		$this->assertStringContainsString('Double-check cache under lock', $sync);
