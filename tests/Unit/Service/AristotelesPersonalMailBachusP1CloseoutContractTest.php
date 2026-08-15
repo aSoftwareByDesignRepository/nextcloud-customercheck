@@ -49,7 +49,7 @@ final class AristotelesPersonalMailBachusP1CloseoutContractTest extends TestCase
 		$this->assertStringContainsString("params.get('personalMailError')", $js);
 		$this->assertStringContainsString('Connection cancelled. You can try again when ready.', $js);
 		$this->assertMatchesRegularExpression(
-			'/imapDetailsEl\.open = true;\s*\n\s*}\s*\n\s*consumePersonalMailQueryFeedback\(\)/',
+			'/oauthConfiguredCount === 0[\s\S]{0,280}imapDetailsEl\.open = true[\s\S]{0,280}consumePersonalMailQueryFeedback\(\)/',
 			$js,
 		);
 		$ctrl = (string)file_get_contents($this->root . '/lib/Controller/PersonaApiController.php');

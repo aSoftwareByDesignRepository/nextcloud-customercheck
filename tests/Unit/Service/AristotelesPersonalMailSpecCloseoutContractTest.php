@@ -64,6 +64,10 @@ final class AristotelesPersonalMailSpecCloseoutContractTest extends TestCase
 		$this->assertStringContainsString('callbackUrl', $oauth);
 		$this->assertStringContainsString('function isNativeOAuthState', $oauth);
 		$this->assertStringContainsString("'client' => \$client", $oauth);
+		$this->assertMatchesRegularExpression(
+			'/function isNativeOAuthState[\s\S]{0,700}return \(\$payload\[\'client\'\] \?\? \'\'\) === \'native\';/',
+			$oauth,
+		);
 		$this->assertStringContainsString('isNativeOAuthState($state)', $persona);
 		$this->assertMatchesRegularExpression(
 			'/if \(\$this->personalMailOAuth->isNativeOAuthState\(\$state\)\) \{/',

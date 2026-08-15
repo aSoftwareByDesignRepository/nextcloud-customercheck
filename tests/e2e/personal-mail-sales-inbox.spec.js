@@ -79,13 +79,25 @@ test.describe('Personal email sync / Sales Inbox', () => {
       await expect(page.locator('#crm-personal-mail-connect-form')).toHaveAttribute('data-crm-bachus-pm', '1');
       await expect(page.locator('#crm-pm-dsgvo-wrap')).toBeAttached();
       await expect(page.locator('#crm-personal-mail-imap')).toBeAttached();
-      // When OAuth buttons are present, IMAP stays collapsed; when none, IMAP opens so Connect is visible.
+      // Bachus: DSGVO sits under OAuth (before IMAP) so the first OAuth tap is not a scroll trap.
+      const oauthBox = await page.locator('#crm-personal-mail-oauth').boundingBox();
+      const dsgvoBox = await page.locator('#crm-pm-dsgvo-wrap').boundingBox();
+      if (oauthBox && dsgvoBox) {
+        expect(dsgvoBox.y).toBeGreaterThanOrEqual(oauthBox.y);
+      }
+      // When OAuth buttons are present, IMAP stays collapsed; when none, IMAP + servers open so Connect is visible.
       const oauthVisible = await page.locator('#crm-personal-mail-oauth:not([hidden]) button').count();
       if (oauthVisible > 0) {
         await expect(page.locator('#crm-personal-mail-imap')).not.toHaveAttribute('open');
       } else if (await page.locator('#crm-personal-mail-connect-form:not([hidden])').count()) {
         await expect(page.locator('#crm-personal-mail-imap')).toHaveAttribute('open');
+        await expect(page.locator('#crm-personal-mail-servers')).toHaveAttribute('open');
       }
+      const axeMyEmail = await new AxeBuilder({ page })
+        .include('#section-my-email')
+        .disableRules(['color-contrast'])
+        .analyze();
+      expect(axeMyEmail.violations.filter((v) => v.impact === 'critical' || v.impact === 'serious')).toEqual([]);
     }
   });
 

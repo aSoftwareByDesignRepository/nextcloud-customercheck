@@ -46,6 +46,7 @@ final class AristotelesPersonalMailOAuthHealContractTest extends TestCase
 		$js = (string)file_get_contents($this->root . '/js/pages/settings.js');
 		$this->assertStringContainsString('needsReconnect', $js);
 		$this->assertStringContainsString('Needs reconnect — sign in again below. Your synced mail stays.', $js);
-		$this->assertStringContainsString('(!personalMailBox || needsReconnect)', $js);
+		// OAuth strip also shows during voluntary Update connection (editConnection).
+		$this->assertStringContainsString('(!personalMailBox || needsReconnect || editConnection)', $js);
 	}
 }

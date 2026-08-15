@@ -1630,12 +1630,12 @@
       return null;
     }
     host.textContent = '';
-    // Same WYSIWYG shell + full toolbar as Inbox compose (layout parity).
+    // Signature chrome: lean toolbar + logo (https-only). Full toolbar stays on Inbox compose.
     // allowSignatureLogo: AS-18 / Argus SF-01 — https <img> only in signature HTML (not compose body).
     return Rich.mount(host, {
       labelledBy: labelledBy,
       hasSignature: false,
-      toolbar: 'full',
+      toolbar: 'signature',
       allowSignatureLogo: true,
       initialHtml: initialHtml || '',
       initialPlain: initialPlain || '',
@@ -2470,7 +2470,118 @@
       toggles.appendChild(shareLabel);
       row.appendChild(toggles);
       host.appendChild(row);
+
+      syncInput.addEventListener('change', function () {
+        schedulePersonalFoldersAutoSave();
+      });
+      shareInput.addEventListener('change', function () {
+        schedulePersonalFoldersAutoSave();
+      });
     });
+  }
+
+  let personalFoldersSaveTimer = null;
+  let personalFoldersSaveInFlight = false;
+  let personalFoldersSaveDirty = false;
+
+  function schedulePersonalFoldersAutoSave() {
+    personalFoldersSaveDirty = true;
+    if (personalFoldersSaveTimer) {
+      clearTimeout(personalFoldersSaveTimer);
+    }
+    personalFoldersSaveTimer = setTimeout(function () {
+      personalFoldersSaveTimer = null;
+      void savePersonalFolders({ announce: true, fromAuto: true });
+    }, 350);
+  }
+
+  async function savePersonalFolders(opts) {
+    opts = opts || {};
+    if (!requireWorkspaceReady() || !personalMailBox) return false;
+    const id = parseInt(String(personalMailBox.id || 0), 10);
+    if (id < 1) return false;
+    if (personalFoldersSaveInFlight) {
+      // Coalesce: another toggle/SHARE dialog is in flight — rerun when free.
+      personalFoldersSaveDirty = true;
+      schedulePersonalFoldersAutoSave();
+      return false;
+    }
+    personalFoldersSaveInFlight = true;
+    personalFoldersSaveDirty = false;
+    showPersonalMailError('');
+    const status = document.getElementById('crm-personal-mail-folders-status');
+    if (status && opts.fromAuto) {
+      status.textContent = tr('Saving folders…');
+    }
+    try {
+      let folders = await collectPersonalFolderPayload();
+      if (!folders.length) {
+        showPersonalMailError(tr('Pick at least one folder to sync.'));
+        if (status) status.textContent = '';
+        return false;
+      }
+      // If the user flipped more toggles during SHARE/confirm, skip this PUT and resave.
+      if (personalFoldersSaveDirty) {
+        schedulePersonalFoldersAutoSave();
+        return false;
+      }
+      try {
+        await Api.put('/workspaces/' + currentWorkspaceId + '/personal-mailboxes/' + id + '/folders', { folders: folders });
+      } catch (firstErr) {
+        const code = (firstErr.payload && (firstErr.payload.error || firstErr.payload.code)) || '';
+        const field = (firstErr.payload && firstErr.payload.field) || '';
+        if (String(code).indexOf('MAIL_SHARE_EXISTING') >= 0 || field === 'shareExistingAck') {
+          const msg = (firstErr.payload && firstErr.payload.message) || firstErr.message
+            || tr('Share existing private messages with teammates?');
+          const ack = C && C.confirmDialog
+            ? await C.confirmDialog({
+              title: tr('Share existing messages?'),
+              message: msg,
+              confirmLabel: tr('Share existing messages'),
+              cancelLabel: tr('Cancel'),
+              variant: 'warning',
+              requireCheckbox: true,
+              checkboxLabel: tr('I understand these existing emails will be visible to teammates who can open the linked customer.'),
+            })
+            : { confirmed: window.confirm(msg) };
+          if (!ack || !ack.confirmed) {
+            showPersonalMailError(tr('Folders not saved — existing private messages stay private.'));
+            if (status) status.textContent = '';
+            await refreshPersonalMail();
+            return false;
+          }
+          if (personalFoldersSaveDirty) {
+            schedulePersonalFoldersAutoSave();
+            return false;
+          }
+          folders = folders.map(function (f) {
+            return Object.assign({}, f, { shareExistingAck: true });
+          });
+          await Api.put('/workspaces/' + currentWorkspaceId + '/personal-mailboxes/' + id + '/folders', { folders: folders });
+        } else {
+          throw firstErr;
+        }
+      }
+      if (personalFoldersSaveDirty) {
+        // Toggles changed during PUT — refresh then coalesce another save.
+        await refreshPersonalMail();
+        schedulePersonalFoldersAutoSave();
+        return true;
+      }
+      if (opts.announce !== false && C && C.announce) C.announce(tr('Folders saved.'));
+      if (status) status.textContent = tr('Folders saved.');
+      await refreshPersonalMail();
+      return true;
+    } catch (e) {
+      if (status) status.textContent = '';
+      showPersonalMailError((e.payload && e.payload.message) || e.message);
+      return false;
+    } finally {
+      personalFoldersSaveInFlight = false;
+      if (personalFoldersSaveDirty) {
+        schedulePersonalFoldersAutoSave();
+      }
+    }
   }
 
   function renderPersonalAccount(box) {
@@ -2616,6 +2727,8 @@
       const imapDetailsEl = document.getElementById('crm-personal-mail-imap');
       if (connectFormEl && !connectFormEl.hidden && imapDetailsEl && oauthConfiguredCount === 0) {
         imapDetailsEl.open = true;
+        const serversEl = document.getElementById('crm-personal-mail-servers');
+        if (serversEl) serversEl.open = true;
       }
       consumePersonalMailQueryFeedback();
     } catch (e) {
@@ -2686,6 +2799,9 @@
           if (inboxSent) {
             folder.shareConfirm = 'SHARE';
           }
+          // Aristoteles: mark shared on the live control so a dirty auto-save coalesce
+          // after this dialog does not re-prompt SHARE for the same folder.
+          if (shareEl) shareEl.setAttribute('data-was-shared', '1');
         } else {
           folder.shareAck = true;
           if (needsShareConfirm(path)) {
@@ -2859,10 +2975,10 @@
         renderPersonalFolders(box.folders || []);
         const added = parseInt(String(box.foldersAdded || 0), 10) || 0;
         let msg = added > 0
-          ? tr('Found %s new folder(s). Turn on Sync for the ones you want, then Save folders.', [String(added)])
-          : tr('Folder list updated. Turn on Sync for any folder you want, then Save folders.');
+          ? tr('Found %s new folder(s). Turn on Sync for the ones you want — changes save automatically.', [String(added)])
+          : tr('Folder list updated. Turn on Sync for any folder you want — changes save automatically.');
         if (box.atFolderCap) {
-          msg += ' ' + tr('You already track the maximum of %s folders. Turn Sync off and Save to free a slot before adding another.', [String(box.folderCap || 20)]);
+          msg += ' ' + tr('You already track the maximum of %s folders. Turn Sync off to free a slot before adding another.', [String(box.folderCap || 20)]);
         }
         if (status) status.textContent = msg;
         if (C && C.announce) C.announce(msg);
@@ -2878,52 +2994,7 @@
   const personalFoldersSave = document.getElementById('crm-personal-mail-folders-save');
   if (personalFoldersSave) {
     personalFoldersSave.addEventListener('click', async () => {
-      if (!requireWorkspaceReady() || !personalMailBox) return;
-      const id = parseInt(String(personalMailBox.id || 0), 10);
-      if (id < 1) return;
-      showPersonalMailError('');
-      try {
-        let folders = await collectPersonalFolderPayload();
-        if (!folders.length) {
-          showPersonalMailError(tr('Pick at least one folder to sync.'));
-          return;
-        }
-        try {
-          await Api.put('/workspaces/' + currentWorkspaceId + '/personal-mailboxes/' + id + '/folders', { folders: folders });
-        } catch (firstErr) {
-          const code = (firstErr.payload && (firstErr.payload.error || firstErr.payload.code)) || '';
-          const field = (firstErr.payload && firstErr.payload.field) || '';
-          if (String(code).indexOf('MAIL_SHARE_EXISTING') >= 0 || field === 'shareExistingAck') {
-            const msg = (firstErr.payload && firstErr.payload.message) || firstErr.message
-              || tr('Share existing private messages with teammates?');
-            const ack = C && C.confirmDialog
-              ? await C.confirmDialog({
-                title: tr('Share existing messages?'),
-                message: msg,
-                confirmLabel: tr('Share existing messages'),
-                cancelLabel: tr('Cancel'),
-                variant: 'warning',
-                requireCheckbox: true,
-                checkboxLabel: tr('I understand these existing emails will be visible to teammates who can open the linked customer.'),
-              })
-              : { confirmed: window.confirm(msg) };
-            if (!ack || !ack.confirmed) {
-              showPersonalMailError(tr('Folders not saved — existing private messages stay private.'));
-              return;
-            }
-            folders = folders.map(function (f) {
-              return Object.assign({}, f, { shareExistingAck: true });
-            });
-            await Api.put('/workspaces/' + currentWorkspaceId + '/personal-mailboxes/' + id + '/folders', { folders: folders });
-          } else {
-            throw firstErr;
-          }
-        }
-        if (C && C.announce) C.announce(tr('Folders saved.'));
-        await refreshPersonalMail();
-      } catch (e) {
-        showPersonalMailError((e.payload && e.payload.message) || e.message);
-      }
+      await savePersonalFolders({ announce: true, fromAuto: false });
     });
   }
 

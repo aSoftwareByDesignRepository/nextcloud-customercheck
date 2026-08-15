@@ -53,6 +53,11 @@ describe('Inbox Assign merge (unified chrome)', () => {
     expect(js).toContain("postInboxMutate('mark-spam'");
     expect(js).toContain("t('Could not delete')");
     expect(js).toContain("t('Could not mark as spam')");
+    expect(js).toContain("t('Try again')");
+    expect(js).toContain('/mailbox is updating/i');
+    expect(js).toContain("variant: 'warning'");
+    expect(js).toContain('handOffRetry');
+    expect(js).toContain('mailId: mid');
     expect(js).toContain('mutateActionVisibility');
     expect(js).toContain('crm-sales-compose-host');
     expect(js).not.toContain('CustomerCheckReviewBoard');

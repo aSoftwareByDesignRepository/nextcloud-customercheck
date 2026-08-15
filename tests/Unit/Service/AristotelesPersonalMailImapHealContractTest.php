@@ -37,8 +37,13 @@ final class AristotelesPersonalMailImapHealContractTest extends TestCase
 	public function testWebPassesMailboxIdOnReconnectWhenEmailMatches(): void
 	{
 		$js = (string)file_get_contents($this->root . '/js/pages/settings.js');
-		$this->assertStringContainsString('boxEmail === formEmail', $js);
-		$this->assertStringContainsString('payload.id = parseInt(String(personalMailBox.id)', $js);
+		$core = (string)file_get_contents($this->root . '/js/common/personal-mail-settings-core.js');
+		$this->assertStringContainsString('personalMailHealId', $js);
+		$this->assertStringContainsString('function personalMailHealId', $core);
+		$this->assertMatchesRegularExpression(
+			'/if \(healId > 0\) \{\s*\n\s*payload\.id = healId;/',
+			$js,
+		);
 	}
 
 	public function testOAuthHealClearsImapSecret(): void

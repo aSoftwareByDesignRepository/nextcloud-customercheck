@@ -334,7 +334,7 @@ $cases = [
 	],
 	[
 		'file' => $root . '/js/pages/settings.js',
-		'find' => "if (connectFormEl && !connectFormEl.hidden && imapDetailsEl && oauthConfiguredCount === 0) {\n        imapDetailsEl.open = true;\n      }",
+		'find' => "if (connectFormEl && !connectFormEl.hidden && imapDetailsEl && oauthConfiguredCount === 0) {\n        imapDetailsEl.open = true;\n        const serversEl = document.getElementById('crm-personal-mail-servers');\n        if (serversEl) serversEl.open = true;\n      }",
 		'replace' => "// mutant: never auto-open IMAP when OAuth missing",
 		'test' => 'AristotelesPersonalMailBachusP1CloseoutContractTest::testImapDetailsOpenWhenNoOauthProviders',
 		'label' => 'IMAP details stay closed without OAuth',
@@ -348,8 +348,8 @@ $cases = [
 	],
 	[
 		'file' => $root . '/js/pages/settings.js',
-		'find' => "if (connectFormEl && !connectFormEl.hidden && imapDetailsEl && oauthConfiguredCount === 0) {\n        imapDetailsEl.open = true;\n      }\n      consumePersonalMailQueryFeedback();",
-		'replace' => "if (connectFormEl && !connectFormEl.hidden && imapDetailsEl && oauthConfiguredCount === 0) {\n        imapDetailsEl.open = true;\n      }\n      // mutant: skip oauth query feedback",
+		'find' => "if (connectFormEl && !connectFormEl.hidden && imapDetailsEl && oauthConfiguredCount === 0) {\n        imapDetailsEl.open = true;\n        const serversEl = document.getElementById('crm-personal-mail-servers');\n        if (serversEl) serversEl.open = true;\n      }\n      consumePersonalMailQueryFeedback();",
+		'replace' => "if (connectFormEl && !connectFormEl.hidden && imapDetailsEl && oauthConfiguredCount === 0) {\n        imapDetailsEl.open = true;\n        const serversEl = document.getElementById('crm-personal-mail-servers');\n        if (serversEl) serversEl.open = true;\n      }\n      // mutant: skip oauth query feedback",
 		'test' => 'AristotelesPersonalMailBachusP1CloseoutContractTest::testOauthCallbackQueryFeedbackSurfaced',
 		'label' => 'OAuth query feedback never called',
 	],
@@ -443,6 +443,34 @@ $cases = [
 		'replace' => "const mailMsgId = item.sourceKind === 'shared_mail'\n          ? (parseInt(String(ref.mailMsgId || '0'), 10) || 0)\n          : 0;",
 		'test' => 'InboxAssignMergeContractTest',
 		'label' => 'JS preview skips personal shared mail',
+	],
+	[
+		'file' => $root . '/js/pages/sales-inbox.js',
+		'find' => "if (!handOffRetry) {\n        assignBusy = false;\n        setActionBusy(false);\n      }",
+		'replace' => "assignBusy = false;\n      setActionBusy(false);",
+		'test' => 'BachusPersonalMailSimplifyContractTest::testInboxBusyRetryDoesNotUnlockDuringHandOff',
+		'label' => 'busy_retry_finally_always_unlocks',
+	],
+	[
+		'file' => $root . '/js/pages/sales-inbox.js',
+		'find' => "return postInboxMutate(pathSuffix, { _busyRetried: true, mailId: mid });",
+		'replace' => "return postInboxMutate(pathSuffix, { _busyRetried: true });",
+		'test' => 'BachusPersonalMailSimplifyContractTest::testInboxBusyRetryDoesNotUnlockDuringHandOff',
+		'label' => 'busy_retry_drops_pinned_mail_id',
+	],
+	[
+		'file' => $root . '/js/pages/settings.js',
+		'find' => "if (shareEl) shareEl.setAttribute('data-was-shared', '1');",
+		'replace' => "/* mutated: skip data-was-shared mark */",
+		'test' => 'BachusPersonalMailSimplifyContractTest::testFolderTogglesAutoSave',
+		'label' => 'share_ack_skips_was_shared_mark',
+	],
+	[
+		'file' => $root . '/js/pages/settings.js',
+		'find' => 'let personalFoldersSaveDirty = false;',
+		'replace' => 'let personalFoldersSaveDirtyUnused = false;',
+		'test' => 'BachusPersonalMailSimplifyContractTest::testFolderTogglesAutoSave',
+		'label' => 'folder_auto_save_dirty_flag_renamed',
 	],
 ];
 

@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.6.137 - 2026-08-15
+
+### UX (Bachus — personal mail / Sales Inbox simplify)
+- Signature editors use a lean toolbar (logo kept; no reply chrome)
+- My email: DSGVO ack sits under OAuth; IMAP-only opens mail servers; Disconnect under Remove inbox
+- Folder Sync/Share auto-saves (Save folders hidden); shorter folder help
+- Sales Inbox busy mailbox: warning + Try again (not a hard danger failure)
+- Touch targets for rich-mail tools and folder toggles use 44px (not rem)
+
+### Fix (Aristoteles — race hardenings)
+- Busy delete/spam retry: pin mail id; do not unlock `assignBusy` while handing off the retry
+- Folder auto-save: dirty coalesce during SHARE dialogs; mark `data-was-shared` after ack so coalesce does not re-prompt
+- `isNativeOAuthState`: return true when OAuth state `client=native` (was always false — companion AuthSession footgun)
+
 ## 1.6.133 - 2026-08-15
 
 ### Fix (Sales Inbox / Assign delete & spam)

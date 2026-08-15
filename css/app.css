@@ -6543,8 +6543,9 @@ dialog.crm-native-dialog label.crm-check {
 }
 #app-content.crm-app .crm-rich-mail__toolbar .crm-btn,
 #app-content.crm-app .crm-rich-mail__tool {
-	min-height: 2.5rem;
-	min-width: 2.5rem;
+	/* px: Nextcloud root is often 15px — rem would shrink under WCAG 2.5.5 */
+	min-height: 44px;
+	min-width: 44px;
 	padding: 0.35rem 0.55rem;
 	font-weight: 700;
 	font-size: 0.95rem;
@@ -6958,9 +6959,15 @@ dialog.crm-native-dialog label.crm-check {
 	justify-content: flex-end;
 }
 #app-content.crm-app .crm-personal-mail-folder .crm-check {
-	min-height: 2.5rem;
+	min-height: 44px;
 	align-items: center;
 	margin: 0;
+}
+#app-content.crm-app .crm-personal-mail-remove {
+	margin-top: var(--crm-space-3, 0.75rem);
+}
+#app-content.crm-app .crm-personal-mail-remove .crm-btn--danger {
+	min-height: 44px;
 }
 @media (max-width: 40rem) {
 	#app-content.crm-app .crm-personal-mail-folder {

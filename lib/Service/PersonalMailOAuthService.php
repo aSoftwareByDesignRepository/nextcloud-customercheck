@@ -146,7 +146,7 @@ class PersonalMailOAuthService
 			return false;
 		}
 
-		return false;
+		return ($payload['client'] ?? '') === 'native';
 	}
 
 	/**

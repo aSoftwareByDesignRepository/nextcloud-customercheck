@@ -37,11 +37,20 @@ final class AristotelesPersonalMailEmailRebindGuardContractTest extends TestCase
 	public function testWebPassesIdOnlyWhenEmailsMatch(): void
 	{
 		$js = (string)file_get_contents($this->root . '/js/pages/settings.js');
-		$this->assertStringContainsString('boxEmail === formEmail', $js);
+		$core = (string)file_get_contents($this->root . '/js/common/personal-mail-settings-core.js');
+		$this->assertStringContainsString('personalMailHealId', $js);
+		$this->assertStringContainsString('personalMailHealId', $core);
 		$this->assertMatchesRegularExpression(
-			'/boxEmail === formEmail[\s\S]{0,120}payload\.id = parseInt/',
+			'/personalMailHealId\(personalMailBox, emailAddress\)/',
 			$js,
 		);
+		$this->assertMatchesRegularExpression(
+			'/if \(healId > 0\) \{\s*\n\s*payload\.id = healId;/',
+			$js,
+		);
+		// Core must refuse heal when form email ≠ existing box (no id rebind).
+		$this->assertStringContainsString('boxEmail !== form', $core);
+		$this->assertStringContainsString('.toLowerCase()', $core);
 	}
 
 	public function testAuthFailCountIncrementsAtomically(): void

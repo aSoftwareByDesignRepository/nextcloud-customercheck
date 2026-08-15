@@ -22,7 +22,7 @@ final class BachusPersonalMailUxContractTest extends TestCase
 		$this->assertStringContainsString('Add Cc', $html);
 		$this->assertStringContainsString('id="crm-sales-compose-cc-wrap" hidden', $html);
 		$this->assertStringContainsString('id="crm-sales-inbox-account-wrap" hidden', $html);
-		$this->assertStringContainsString('crm-sr-only" id="crm-sales-inbox-status"', $html);
+		$this->assertStringContainsString('id="crm-sales-inbox-status"', $html);
 		$this->assertStringContainsString('Update mail', $html);
 		$this->assertStringContainsString('Tap a message to read it.', $html);
 		$this->assertStringContainsString('crm-btn--lg', $html);
@@ -39,7 +39,7 @@ final class BachusPersonalMailUxContractTest extends TestCase
 		$this->assertStringContainsString('crm-sales-compose-cc-toggle', $js);
 		$this->assertStringContainsString('crm-sales-inbox-empty-cta', $js);
 		$this->assertStringContainsString('Connect my email', $js);
-		$this->assertStringContainsString("accounts.length <= 1", $js);
+		$this->assertStringContainsString('accountFilterVisible', $js);
 		$this->assertStringContainsString('closeSalesPreview', $js);
 		$this->assertStringContainsString('aria-expanded', $js);
 		$this->assertStringContainsString('snippetUseful', $js);

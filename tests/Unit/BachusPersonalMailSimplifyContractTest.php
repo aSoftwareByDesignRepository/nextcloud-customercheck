@@ -18,7 +18,7 @@ final class BachusPersonalMailSimplifyContractTest extends TestCase
 		$this->root = dirname(__DIR__, 2);
 	}
 
-	public function testMyEmailConnectPutsDsgvoAboveConnect(): void
+	public function testMyEmailConnectPutsDsgvoUnderOauthBeforeImap(): void
 	{
 		$html = (string)file_get_contents($this->root . '/templates/settings/my-email.php');
 		$this->assertStringContainsString('data-crm-bachus-pm="1"', $html);
@@ -26,17 +26,24 @@ final class BachusPersonalMailSimplifyContractTest extends TestCase
 		$imap = strpos($html, 'id="crm-personal-mail-imap"');
 		$oauth = strpos($html, 'id="crm-personal-mail-oauth"');
 		$connect = strpos($html, 'id="crm-personal-mail-connect"');
+		$remove = strpos($html, 'id="crm-personal-mail-remove"');
 		$this->assertNotFalse($dsgvo);
 		$this->assertNotFalse($imap);
 		$this->assertNotFalse($oauth);
 		$this->assertNotFalse($connect);
-		$this->assertLessThan($imap, $oauth, 'OAuth strip must sit above collapsed IMAP');
-		$this->assertLessThan($dsgvo, $imap, 'IMAP fields come before DSGVO + Connect');
-		$this->assertLessThan($connect, $dsgvo, 'DSGVO sits directly above Connect (team-mailbox pattern)');
+		$this->assertNotFalse($remove);
+		$this->assertLessThan($dsgvo, $oauth, 'OAuth strip must sit above DSGVO ack');
+		$this->assertLessThan($imap, $dsgvo, 'DSGVO sits under OAuth before collapsed IMAP (no scroll trap)');
+		$this->assertLessThan($connect, $imap, 'IMAP panel comes before Connect CTA');
 		$this->assertStringContainsString('Use email and app password', $html);
 		$this->assertStringContainsString('Username (if different)', $html);
 		$this->assertStringContainsString('Signature (optional)', $html);
+		$this->assertStringContainsString('Remove inbox', $html);
 		$this->assertStringContainsString('crm-btn--lg" id="crm-personal-mail-sync"', $html);
+		$this->assertMatchesRegularExpression(
+			'/id="crm-personal-mail-folders-save"[^>]*\bhidden\b/',
+			$html,
+		);
 		// Flat connect: one IMAP panel, servers as divider — not box-in-box fieldsets.
 		$this->assertStringContainsString('crm-personal-mail-imap__body', $html);
 		$this->assertStringContainsString('crm-personal-mail-servers__body', $html);
@@ -57,6 +64,26 @@ final class BachusPersonalMailSimplifyContractTest extends TestCase
 			'/id="crm-pm-smtp-host"[^>]*required/',
 			$html,
 		);
+	}
+
+	public function testFolderTogglesAutoSave(): void
+	{
+		$js = (string)file_get_contents($this->root . '/js/pages/settings.js');
+		$this->assertStringContainsString('schedulePersonalFoldersAutoSave', $js);
+		$this->assertStringContainsString('savePersonalFolders', $js);
+		$this->assertStringContainsString('personalFoldersSaveDirty', $js);
+		$this->assertStringContainsString('changes save automatically', $js);
+		$this->assertStringContainsString('serversEl.open = true', $js);
+		$this->assertStringContainsString("shareEl.setAttribute('data-was-shared', '1')", $js);
+	}
+
+	public function testInboxBusyRetryDoesNotUnlockDuringHandOff(): void
+	{
+		$js = (string)file_get_contents($this->root . '/js/pages/sales-inbox.js');
+		$this->assertStringContainsString('handOffRetry', $js);
+		$this->assertStringContainsString('mailId: mid', $js);
+		$this->assertStringContainsString('if (!handOffRetry)', $js);
+		$this->assertStringContainsString('_busyRetried', $js);
 	}
 
 	public function testShareInboxSentIsSingleTypedDialog(): void
@@ -94,6 +121,15 @@ final class BachusPersonalMailSimplifyContractTest extends TestCase
 		$this->assertStringContainsString('min-height: 52px', $css);
 		$this->assertStringContainsString('.crm-personal-mail-imap__body', $css);
 		$this->assertStringContainsString('.crm-personal-mail-servers', $css);
+		$this->assertStringContainsString('.crm-rich-mail__tool', $css);
+		$this->assertMatchesRegularExpression(
+			'/\.crm-rich-mail__tool\s*\{[^}]*min-height:\s*44px/',
+			$css,
+		);
+		$this->assertMatchesRegularExpression(
+			'/\.crm-personal-mail-folder \.crm-check\s*\{[^}]*min-height:\s*44px/',
+			$css,
+		);
 		$this->assertMatchesRegularExpression(
 			'/\.crm-personal-mail-servers\s*\{[^}]*border-top:\s*1px solid/',
 			$css,

@@ -44,26 +44,29 @@ describe('personal-mail settings UX contracts', () => {
     expect(js).toContain("'h3'");
   });
 
-  it('signature editors use Sales Inbox WYSIWYG layout (full toolbar)', () => {
+  it('signature editors use lean signature toolbar + https logo', () => {
     const settings = readFileSync(join(root, 'js/pages/settings.js'), 'utf8');
     const rich = readFileSync(join(root, 'js/common/rich-mail-composer.js'), 'utf8');
     const teamTpl = readFileSync(join(root, 'templates/settings/workspace-mailbox.php'), 'utf8');
     const myEmailTpl = readFileSync(join(root, 'templates/settings/my-email.php'), 'utf8');
     const css = readFileSync(join(root, 'css/app.css'), 'utf8');
-    expect(settings).toContain("toolbar: 'full'");
+    expect(settings).toContain("toolbar: 'signature'");
     expect(settings).toContain('allowSignatureLogo: true');
-    expect(settings).toContain('Same WYSIWYG shell + full toolbar as Inbox compose');
-    expect(settings).not.toContain("toolbar: 'signature'");
-    expect(rich).toContain("toolbarBtn(uid + '-h2', 'formatBlock', t('Heading'), 'h2', 'H')");
+    expect(settings).toContain('lean toolbar + logo');
+    expect(settings).not.toContain("toolbar: 'full'");
+    expect(rich).toContain("toolbarMode === 'signature'");
     expect(rich).toContain("insertLogo");
     expect(rich).toContain("insertLogoFile");
     expect(rich).toContain('allowSignatureLogo');
+    expect(rich).toContain("confirmLabel: t('Choose from Files')");
+    expect(rich).toContain("cancelLabel: t('Cancel')");
+    expect(rich).toContain('promptInsertLogoLink');
     expect(myEmailTpl).toContain('crm-signature-editor');
     expect(myEmailTpl).toContain('crm-sales-compose__label');
     expect(myEmailTpl).toContain("\$l->t('Your signature')");
-    expect(myEmailTpl).toContain('You can add a logo via a public image link or from Files');
+    expect(myEmailTpl).toContain('Add a logo from Files or a public https image link');
     expect(teamTpl).toContain('crm-mbox-signature-editor');
-    expect(teamTpl).toContain('You can add a logo via a public image link or from Files');
+    expect(teamTpl).toContain('Add a logo from Files or a public https image link');
     expect(css).toMatch(
       /\.crm-signature-editor__mount \.crm-rich-mail__editor\s*\{[\s\S]*?min-height:\s*10rem/,
     );
@@ -265,19 +268,43 @@ describe('personal-mail settings UX contracts', () => {
     expect(js).not.toContain("bodyEl.removeAttribute('role')");
   });
 
-  it('Bachus My email: OAuth then IMAP, DSGVO above Connect, single SHARE dialog', () => {
+  it('Aristoteles: busy-retry pins mail id and does not unlock during hand-off', () => {
+    const js = readFileSync(join(root, 'js/pages/sales-inbox.js'), 'utf8');
+    expect(js).toContain('handOffRetry');
+    expect(js).toContain('mailId: mid');
+    expect(js).toContain('if (!handOffRetry)');
+    expect(js).toContain("opts.mailId");
+    expect(js).toContain('_busyRetried: true');
+    expect(js).toContain('/mailbox is updating/i');
+  });
+
+  it('Aristoteles: folder auto-save coalesces dirty toggles during SHARE dialogs', () => {
+    const js = readFileSync(join(root, 'js/pages/settings.js'), 'utf8');
+    expect(js).toContain('personalFoldersSaveDirty');
+    expect(js).toContain('schedulePersonalFoldersAutoSave');
+    expect(js).toContain("shareEl.setAttribute('data-was-shared', '1')");
+    expect(js).toContain('if (personalFoldersSaveDirty)');
+  });
+
+  it('Bachus My email: OAuth then DSGVO then IMAP, single SHARE dialog, auto-save folders', () => {
     const tpl = readFileSync(join(root, 'templates/settings/my-email.php'), 'utf8');
     const js = readFileSync(join(root, 'js/pages/settings.js'), 'utf8');
     expect(tpl).toContain('data-crm-bachus-pm="1"');
-    expect(tpl.indexOf('id="crm-personal-mail-oauth"')).toBeLessThan(tpl.indexOf('id="crm-personal-mail-imap"'));
-    expect(tpl.indexOf('id="crm-personal-mail-imap"')).toBeLessThan(tpl.indexOf('id="crm-pm-dsgvo"'));
-    expect(tpl.indexOf('id="crm-pm-dsgvo"')).toBeLessThan(tpl.indexOf('id="crm-personal-mail-connect"'));
+    expect(tpl.indexOf('id="crm-personal-mail-oauth"')).toBeLessThan(tpl.indexOf('id="crm-pm-dsgvo"'));
+    expect(tpl.indexOf('id="crm-pm-dsgvo"')).toBeLessThan(tpl.indexOf('id="crm-personal-mail-imap"'));
+    expect(tpl.indexOf('id="crm-personal-mail-imap"')).toBeLessThan(tpl.indexOf('id="crm-personal-mail-connect"'));
     expect(tpl).toContain('Use email and app password');
     expect(tpl).toContain('crm-personal-mail-imap__body');
     expect(tpl).toContain('crm-personal-mail-servers__body');
+    expect(tpl).toContain('crm-personal-mail-remove');
+    expect(tpl).toContain('Remove inbox');
+    expect(tpl).toContain('id="crm-personal-mail-folders-save" hidden');
     expect(tpl).not.toMatch(/id="crm-personal-mail-imap"[\s\S]*?<fieldset class="crm-fieldset"/);
     expect(js).toContain('requireTypedConfirm: !!inboxSent');
     expect(js).toContain("typedConfirmPhrase: 'SHARE'");
+    expect(js).toContain('schedulePersonalFoldersAutoSave');
+    expect(js).toContain('savePersonalFolders');
+    expect(js).toContain('changes save automatically');
   });
 
   it('Sales Inbox reconnect deep-links My email (Bachus)', () => {

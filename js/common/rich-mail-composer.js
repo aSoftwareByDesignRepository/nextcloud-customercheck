@@ -197,17 +197,18 @@
     if (!Picker || typeof Picker.pickFile !== 'function') {
       return promptInsertLogoLink(editor);
     }
+    // One ack dialog → Files picker. Paste-link stays on the Logo toolbar button.
     const ack = C && typeof C.confirmDialog === 'function'
       ? C.confirmDialog({
-        title: t('Add logo from Files'),
-        message: t('We create a public view link so recipients can see your logo in email. Only pick a logo image you are happy to share publicly.'),
+        title: t('Add logo'),
+        message: t('Pick an image from Files (creates a public https link) or paste a public https image address afterward if the picker is unavailable.'),
         requireCheckbox: true,
         checkboxLabel: t('I understand this creates a public link to the image.'),
-        confirmLabel: t('Choose image'),
+        confirmLabel: t('Choose from Files'),
         cancelLabel: t('Cancel'),
-        variant: 'warning',
+        variant: 'info',
       })
-      : Promise.resolve(true);
+      : Promise.resolve({ confirmed: true });
     return ack.then(function (ok) {
       if (ok === false) return null;
       if (ok && typeof ok === 'object' && !ok.confirmed) return null;
@@ -216,15 +217,9 @@
         title: t('Choose a logo image'),
       });
     }).then(function (picked) {
+      if (picked == null) return null;
       if (!picked || picked.unavailable) {
-        if (picked && picked.unavailable && C && C.alertDialog) {
-          return C.alertDialog({
-            title: t('Files picker unavailable'),
-            message: t('Paste an image link instead.'),
-            variant: 'warning',
-          }).then(function () { return promptInsertLogoLink(editor); });
-        }
-        return null;
+        return promptInsertLogoLink(editor);
       }
       const path = String(picked.path || '').trim();
       if (!path) return null;

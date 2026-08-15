@@ -1761,9 +1761,11 @@
       if (it) openCompose(it, bodyText);
     });
   }
-  async function postInboxMutate(pathSuffix) {
+  async function postInboxMutate(pathSuffix, opts) {
+    opts = opts || {};
+    const pinnedMid = parseInt(String(opts.mailId || 0), 10);
     const it = selectedItem();
-    const mid = it ? parseInt(String(it.id || 0), 10) : 0;
+    const mid = pinnedMid > 0 ? pinnedMid : (it ? parseInt(String(it.id || 0), 10) : 0);
     const ws = workspaceId();
     if (!(ws > 0) || !(mid > 0) || assignBusy) return false;
     if (!shellCan('write')) {
@@ -1773,6 +1775,9 @@
     assignBusy = true;
     setActionBusy(true);
     setStatus(t('Saving…'));
+    // Aristoteles: when handing off to a busy-retry call, skip finally unlock so the
+    // nested attempt owns assignBusy (avoids double-click delete/spam during retry).
+    let handOffRetry = false;
     try {
       await Api.post('/workspaces/' + ws + '/mail/' + mid + '/' + pathSuffix, {});
       const live = document.getElementById('crm-live-region');
@@ -1789,18 +1794,39 @@
       const failTitle = pathSuffix === 'mark-spam'
         ? t('Could not mark as spam')
         : (pathSuffix === 'delete' ? t('Could not delete') : t('Could not save'));
+      const busy = /mailbox is updating/i.test(String(msg));
       setStatus(msg);
+      if (busy && !opts._busyRetried && C && typeof C.confirmDialog === 'function') {
+        assignBusy = false;
+        setActionBusy(false);
+        const retry = await C.confirmDialog({
+          title: failTitle,
+          message: msg,
+          confirmLabel: t('Try again'),
+          cancelLabel: t('Not now'),
+          variant: 'warning',
+        });
+        const wantsRetry = retry === true || (retry && retry.confirmed);
+        if (wantsRetry) {
+          handOffRetry = true;
+          // Pin mail id — selection may change while the busy dialog is open.
+          return postInboxMutate(pathSuffix, { _busyRetried: true, mailId: mid });
+        }
+        return false;
+      }
       if (C && C.alertDialog) {
         await C.alertDialog({
           title: failTitle,
           message: msg,
-          variant: 'danger',
+          variant: busy ? 'warning' : 'danger',
         });
       }
       return false;
     } finally {
-      assignBusy = false;
-      setActionBusy(false);
+      if (!handOffRetry) {
+        assignBusy = false;
+        setActionBusy(false);
+      }
     }
   }
 
