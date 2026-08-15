@@ -628,7 +628,12 @@ class MailSendService
 		$existing = $lr->fetch();
 		$lr->closeCursor();
 		if ($existing === false
-			|| false
+			|| !MailAclLogic::actorMayAccessFailedDraft(
+				$actor,
+				isset($existing['mailbox_kind']) ? (string)$existing['mailbox_kind'] : null,
+				isset($existing['created_by']) ? (string)$existing['created_by'] : null,
+				isset($existing['mailbox_owner']) ? (string)$existing['mailbox_owner'] : null,
+			)
 		) {
 			throw new NotFoundException($this->l10n->t('This draft no longer exists (or was already sent).'));
 		}

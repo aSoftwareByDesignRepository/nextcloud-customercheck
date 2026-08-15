@@ -585,7 +585,7 @@ class PersonalMailOAuthService
 
 			return;
 		}
-		$this->appConfig->setValueString(Application::APP_ID, $key, $plain);
+		$this->appConfig->setValueString(Application::APP_ID, $key, $this->crypto->encrypt($plain));
 	}
 
 	/**

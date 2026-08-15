@@ -407,6 +407,31 @@ describe('personal-mail settings UX contracts', () => {
     expect(js).toContain('Intl.DateTimeFormat');
   });
 
+  it('My email + Sales Inbox CSS use NC mobile ≤767px stacking (desktop base untouched)', () => {
+    const css = readFileSync(join(root, 'css/app.css'), 'utf8');
+    expect(css).toMatch(
+      /@media \(max-width:\s*767px\) \{\s*\n\s*#app-content\.crm-app \.crm-personal-mail-connected-actions/,
+    );
+    expect(css).toMatch(
+      /@media \(max-width:\s*767px\) \{\s*\n\s*#app-content\.crm-app \.crm-personal-mail-folder \{[\s\S]*?\* 0\.85rem/,
+    );
+    expect(css).toMatch(
+      /@media \(max-width:\s*767px\) \{\s*\n\s*#app-content\.crm-app \.crm-sales-inbox__toolbar[\s\S]*?crm-sales-inbox__actions-bar[\s\S]*?crm-sales-compose__cc-toggle/,
+    );
+    expect(css).toMatch(
+      /@media \(max-width:\s*1023px\) \{\s*\n\s*#app-content\.crm-app \.crm-personal-mail-folders/,
+    );
+    expect(css).toMatch(
+      /#app-content\.crm-app \.crm-sales-inbox__toolbar \{\s*\n\s*display:\s*flex;\s*\n\s*flex-wrap:\s*wrap;/,
+    );
+    expect(css).not.toMatch(
+      /#app-content\.crm-app \.crm-sales-inbox__toolbar \{\s*\n\s*display:\s*flex;\s*\n\s*flex-direction:\s*column/,
+    );
+    expect(css).toContain('var(--crm-folder-depth, 0) * 1.75rem');
+    expect(css).toContain('#crm-personal-mail-sync.crm-btn--lg');
+    expect(css).toContain('min-height: 52px');
+  });
+
   it('Talk/Review Answer uses hardened prepared-mail dialog', () => {
     const shared = readFileSync(join(root, 'js/common/shared-mail-send.js'), 'utf8');
     const company = readFileSync(join(root, 'js/pages/company-detail.js'), 'utf8');

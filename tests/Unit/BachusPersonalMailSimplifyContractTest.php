@@ -72,6 +72,10 @@ final class BachusPersonalMailSimplifyContractTest extends TestCase
 		$this->assertStringContainsString('schedulePersonalFoldersAutoSave', $js);
 		$this->assertStringContainsString('savePersonalFolders', $js);
 		$this->assertStringContainsString('personalFoldersSaveDirty', $js);
+		$this->assertMatchesRegularExpression(
+			'/function schedulePersonalFoldersAutoSave\(\) \{\s*personalFoldersSaveDirty = true;/',
+			$js,
+		);
 		$this->assertStringContainsString('changes save automatically', $js);
 		$this->assertStringContainsString('serversEl.open = true', $js);
 		$this->assertStringContainsString("shareEl.setAttribute('data-was-shared', '1')", $js);
@@ -132,6 +136,63 @@ final class BachusPersonalMailSimplifyContractTest extends TestCase
 		);
 		$this->assertMatchesRegularExpression(
 			'/\.crm-personal-mail-servers\s*\{[^}]*border-top:\s*1px solid/',
+			$css,
+		);
+		// Responsiveness: NC mobile ≤767px stacks My email actions; desktop base unchanged.
+		$this->assertMatchesRegularExpression(
+			'/@media \(max-width:\s*767px\) \{\s*\n\s*#app-content\.crm-app \.crm-personal-mail-connected-actions/',
+			$css,
+		);
+		$this->assertMatchesRegularExpression(
+			'/@media \(max-width:\s*767px\) \{\s*\n\s*#app-content\.crm-app \.crm-personal-mail-folder \{[\s\S]*?\* 0\.85rem/',
+			$css,
+		);
+		$this->assertMatchesRegularExpression(
+			'/@media \(max-width:\s*767px\) \{\s*\n\s*#app-content\.crm-app \.crm-sales-inbox__toolbar[\s\S]*?crm-sales-inbox__actions-bar/',
+			$css,
+		);
+		$this->assertMatchesRegularExpression(
+			'/@media \(max-width:\s*1023px\) \{\s*\n\s*#app-content\.crm-app \.crm-personal-mail-folders/',
+			$css,
+		);
+	}
+
+	public function testResponsiveDesktopSacredDoesNotStackInBaseRules(): void
+	{
+		$css = (string)file_get_contents($this->root . '/css/app.css');
+		// Desktop sacred: base toolbar stays row flex — column only inside ≤767 MQ.
+		$this->assertMatchesRegularExpression(
+			'/#app-content\.crm-app \.crm-sales-inbox__toolbar \{\s*\n\s*display:\s*flex;\s*\n\s*flex-wrap:\s*wrap;/',
+			$css,
+		);
+		$this->assertDoesNotMatchRegularExpression(
+			'/#app-content\.crm-app \.crm-sales-inbox__toolbar \{\s*\n\s*display:\s*flex;\s*\n\s*flex-direction:\s*column/',
+			$css,
+		);
+		$this->assertMatchesRegularExpression(
+			'/@media \(max-width:\s*767px\) \{[\s\S]*?\.crm-sales-inbox__toolbar \{\s*\n\s*flex-direction:\s*column;/',
+			$css,
+		);
+		// Connected actions: base never forces column; mobile MQ does.
+		$this->assertMatchesRegularExpression(
+			'/#app-content\.crm-app \.crm-personal-mail-connected-actions \{\s*\n\s*margin-top:[^}]*flex-wrap:\s*wrap;/',
+			$css,
+		);
+		$this->assertDoesNotMatchRegularExpression(
+			'/#app-content\.crm-app \.crm-personal-mail-connected-actions \{\s*\n\s*margin-top:[^}]*flex-direction:\s*column/',
+			$css,
+		);
+		$this->assertMatchesRegularExpression(
+			'/@media \(max-width:\s*767px\) \{[\s\S]*?\.crm-personal-mail-connected-actions,[\s\S]*?flex-direction:\s*column;/',
+			$css,
+		);
+		// Folder depth multiplier stays 1.75rem on desktop; 0.85rem only under ≤767.
+		$this->assertMatchesRegularExpression(
+			'/var\(--crm-folder-depth,\s*0\) \* 1\.75rem/',
+			$css,
+		);
+		$this->assertMatchesRegularExpression(
+			'/@media \(max-width:\s*767px\) \{[\s\S]*?var\(--crm-folder-depth,\s*0\) \* 0\.85rem/',
 			$css,
 		);
 	}

@@ -6494,9 +6494,46 @@ dialog.crm-native-dialog label.crm-check {
 #app-content.crm-app .crm-personal-mail-connect[hidden] {
 	display: none !important;
 }
+/* ≤640px: Sync CTA full-bleed (legacy phone width). Desktop (≥641px) unchanged. */
 @media (max-width: 640px) {
 	#app-content.crm-app .crm-personal-mail-connected-actions .crm-btn--lg {
 		width: 100%;
+	}
+}
+/* ≤767px: NC mobile — stack all My email action rows; Sync already full-width above. */
+@media (max-width: 767px) {
+	#app-content.crm-app .crm-personal-mail-connected-actions,
+	#app-content.crm-app .crm-personal-mail-connect__actions,
+	#app-content.crm-app #crm-personal-mail-folders-wrap .crm-form-actions,
+	#app-content.crm-app .crm-personal-mail-remove .crm-form-actions,
+	#app-content.crm-app .crm-signature-editor__actions {
+		flex-direction: column;
+		align-items: stretch;
+	}
+	#app-content.crm-app .crm-personal-mail-connected-actions .crm-btn,
+	#app-content.crm-app .crm-personal-mail-connect__actions .crm-btn,
+	#app-content.crm-app #crm-personal-mail-folders-wrap .crm-form-actions .crm-btn,
+	#app-content.crm-app .crm-personal-mail-remove .crm-btn,
+	#app-content.crm-app .crm-signature-editor__actions .crm-btn {
+		width: 100%;
+		min-height: 44px;
+		box-sizing: border-box;
+	}
+	#app-content.crm-app .crm-personal-mail-panel,
+	#app-content.crm-app .crm-personal-mail-connect {
+		/* Tighter card padding on phones; desktop padding stays 1rem. */
+		padding: var(--crm-space-3, 0.75rem);
+	}
+	#app-content.crm-app #crm-personal-mail-oauth .crm-btn {
+		/* One OAuth provider per row under 768 (NC mobile). */
+		flex: 1 1 100%;
+	}
+	#app-content.crm-app #crm-pm-dsgvo-wrap {
+		align-items: flex-start;
+		min-width: 0;
+		max-width: 100%;
+		overflow-wrap: anywhere;
+		word-break: break-word;
 	}
 }
 #app-content.crm-app .crm-form-actions--center {
@@ -6907,6 +6944,52 @@ dialog.crm-native-dialog label.crm-check {
 		align-items: flex-start;
 	}
 }
+/* ≤767px: NC mobile — Sales Inbox chrome (tabs/actions/decide) without changing ≥768 desktop. */
+@media (max-width: 767px) {
+	#app-content.crm-app .crm-sales-inbox__toolbar {
+		flex-direction: column;
+		align-items: stretch;
+	}
+	#app-content.crm-app .crm-sales-inbox__tabs {
+		width: 100%;
+	}
+	#app-content.crm-app .crm-sales-inbox__tab {
+		min-width: 0;
+		min-height: 48px;
+	}
+	#app-content.crm-app .crm-sales-inbox__actions,
+	#app-content.crm-app .crm-sales-inbox__actions-bar {
+		width: 100%;
+		flex-direction: column;
+		align-items: stretch;
+	}
+	#app-content.crm-app .crm-sales-inbox__actions .crm-btn,
+	#app-content.crm-app .crm-sales-inbox__actions .crm-input--lg,
+	#app-content.crm-app .crm-sales-inbox__actions-bar .crm-btn {
+		width: 100%;
+		min-height: 44px;
+		box-sizing: border-box;
+	}
+	#app-content.crm-app .crm-sales-inbox__decide {
+		padding: var(--crm-space-3, 0.75rem);
+	}
+	#app-content.crm-app .crm-sales-compose__cc-toggle {
+		/* WCAG 2.5.5 on mobile; desktop keeps compact 2rem toggle. */
+		min-height: 44px;
+		min-width: 44px;
+	}
+	#app-content.crm-app .crm-sales-compose__actions .crm-btn {
+		flex: 1 1 100%;
+		width: 100%;
+	}
+	#app-content.crm-app #crm-sales-inbox-root,
+	#app-content.crm-app #crm-sales-inbox-panel,
+	#app-content.crm-app .crm-sales-compose {
+		max-width: 100%;
+		min-width: 0;
+		box-sizing: border-box;
+	}
+}
 #app-content.crm-app .crm-personal-mail-folders {
 	display: flex;
 	flex-direction: column;
@@ -6969,6 +7052,7 @@ dialog.crm-native-dialog label.crm-check {
 #app-content.crm-app .crm-personal-mail-remove .crm-btn--danger {
 	min-height: 44px;
 }
+/* ≤640px (40rem): stack Sync/Share under folder name (phones). Desktop grid unchanged. */
 @media (max-width: 40rem) {
 	#app-content.crm-app .crm-personal-mail-folder {
 		grid-template-columns: minmax(0, 1fr);
@@ -6976,6 +7060,24 @@ dialog.crm-native-dialog label.crm-check {
 	}
 	#app-content.crm-app .crm-personal-mail-folder__toggles {
 		justify-content: flex-start;
+	}
+}
+/* ≤767px: NC mobile — cut nested folder indent so depth×1.75rem cannot overflow 320px. */
+@media (max-width: 767px) {
+	#app-content.crm-app .crm-personal-mail-folder {
+		padding-inline-start: calc(
+			var(--crm-space-3, 0.75rem)
+			+ (var(--crm-folder-depth, 0) * 0.85rem)
+		);
+	}
+}
+/* ≤1023px: NC tablet+phone — deep folder trees scroll inside the picker; ≥1024 desktop unchanged. */
+@media (max-width: 1023px) {
+	#app-content.crm-app .crm-personal-mail-folders,
+	#app-content.crm-app .crm-folder-picker {
+		max-width: 100%;
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
 	}
 }
 /* Sales Inbox: full-width list; preview expands under the selected row (not a side pane).

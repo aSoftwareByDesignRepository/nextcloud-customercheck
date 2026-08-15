@@ -40,7 +40,7 @@ $cases = [
 	],
 	[
 		'file' => $root . '/lib/Service/MailboxService.php',
-		'find' => "// AS-12: never promote private personal mail into Review / unmatched UI.\n\t\t// Legacy rows without visibility column value are treated as shared (Team Inbox era).\n\t\t\$qb->andWhere(\$qb->expr()->orX(\n\t\t\t\$qb->expr()->eq('m.visibility', \$qb->createNamedParameter(MailAclLogic::VISIBILITY_SHARED)),\n\t\t\t\$qb->expr()->isNull('m.visibility'),\n\t\t\t\$qb->expr()->eq('m.visibility', \$qb->createNamedParameter('')),\n\t\t));",
+		'find' => "// AS-12: never promote private personal mail into Assign / unmatched UI.\n\t\t// Legacy rows without visibility column value are treated as shared (Team Inbox era).\n\t\t\$qb->andWhere(\$qb->expr()->orX(\n\t\t\t\$qb->expr()->eq('m.visibility', \$qb->createNamedParameter(MailAclLogic::VISIBILITY_SHARED)),\n\t\t\t\$qb->expr()->isNull('m.visibility'),\n\t\t\t\$qb->expr()->eq('m.visibility', \$qb->createNamedParameter('')),\n\t\t));",
 		'replace' => "// MUTANT: promote all open triage including private\n\t\t;",
 		'test' => 'PersonalMailReviewLeakContractTest',
 		'label' => 'unmatchedPage promotes private personal mail',
@@ -467,10 +467,38 @@ $cases = [
 	],
 	[
 		'file' => $root . '/js/pages/settings.js',
-		'find' => 'let personalFoldersSaveDirty = false;',
-		'replace' => 'let personalFoldersSaveDirtyUnused = false;',
+		'find' => "function schedulePersonalFoldersAutoSave() {\n    personalFoldersSaveDirty = true;",
+		'replace' => "function schedulePersonalFoldersAutoSave() {\n    /* mutated: never mark dirty before debounce */",
 		'test' => 'BachusPersonalMailSimplifyContractTest::testFolderTogglesAutoSave',
 		'label' => 'folder_auto_save_dirty_flag_renamed',
+	],
+	[
+		'file' => $root . '/css/app.css',
+		'find' => "/* ≤767px: NC mobile — stack all My email action rows; Sync already full-width above. */\n@media (max-width: 767px) {\n\t#app-content.crm-app .crm-personal-mail-connected-actions,",
+		'replace' => "/* mutant: drop My email mobile stack */\n@media (max-width: 1px) {\n\t#app-content.crm-app .crm-personal-mail-connected-actions,",
+		'test' => 'BachusPersonalMailSimplifyContractTest::testCssGiantPersonalMailTargets',
+		'label' => 'my_email_mobile_stack_mq_removed',
+	],
+	[
+		'file' => $root . '/css/app.css',
+		'find' => "/* ≤767px: NC mobile — Sales Inbox chrome (tabs/actions/decide) without changing ≥768 desktop. */\n@media (max-width: 767px) {\n\t#app-content.crm-app .crm-sales-inbox__toolbar {\n\t\tflex-direction: column;",
+		'replace' => "/* mutant: Sales Inbox always row */\n@media (max-width: 767px) {\n\t#app-content.crm-app .crm-sales-inbox__toolbar {\n\t\tflex-direction: row;",
+		'test' => 'BachusPersonalMailSimplifyContractTest::testResponsiveDesktopSacredDoesNotStackInBaseRules',
+		'label' => 'sales_inbox_mobile_toolbar_not_column',
+	],
+	[
+		'file' => $root . '/css/app.css',
+		'find' => '+ (var(--crm-folder-depth, 0) * 0.85rem)',
+		'replace' => '+ (var(--crm-folder-depth, 0) * 1.75rem)',
+		'test' => 'BachusPersonalMailSimplifyContractTest::testResponsiveDesktopSacredDoesNotStackInBaseRules',
+		'label' => 'folder_mobile_indent_not_reduced',
+	],
+	[
+		'file' => $root . '/css/app.css',
+		'find' => "/* ≤1023px: NC tablet+phone — deep folder trees scroll inside the picker; ≥1024 desktop unchanged. */\n@media (max-width: 1023px) {\n\t#app-content.crm-app .crm-personal-mail-folders,",
+		'replace' => "/* mutant: no tablet folder scroll wrapper */\n@media (max-width: 1px) {\n\t#app-content.crm-app .crm-personal-mail-folders,",
+		'test' => 'BachusPersonalMailSimplifyContractTest::testCssGiantPersonalMailTargets',
+		'label' => 'folder_tablet_overflow_mq_removed',
 	],
 ];
 

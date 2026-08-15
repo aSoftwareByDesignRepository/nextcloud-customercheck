@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.6.138 - 2026-08-15
+
+### Security (Aristoteles)
+- Restore `reuseDraftId` ACL: `claimFailedDraft` again calls `MailAclLogic::actorMayAccessFailedDraft` (was `|| false` — peer personal draft hijack)
+- Encrypt OAuth Google/Microsoft client secrets at rest via `ICrypto` in `storeClientSecret` (was plaintext appconfig)
+
+### Responsive (Bachus / Aristoteles — My email / Sales Inbox)
+- Mobile ≤767px: stack My email and Sales Inbox action rows; full-width ≥44px touch targets; OAuth one-per-row; DSGVO wraps; compose Cc ≥44×44
+- Nested folder indent reduced on phones; folder picker scrolls horizontally on tablet/phone (≤1023px)
+- Desktop ≥1024px base layout unchanged (additive max-width media only; NC nav toggle unchanged)
+- Contracts + Playwright overflow/toolbar-direction checks at 320–1280; personal-mail mutation needles for responsive CSS
+
 ## 1.6.137 - 2026-08-15
 
 ### UX (Bachus — personal mail / Sales Inbox simplify)

@@ -142,4 +142,75 @@ test.describe('Personal email sync / Sales Inbox', () => {
     expect(js).toContain('requireTypedConfirm: !!inboxSent');
     expect(js).toContain("typedConfirmPhrase: 'SHARE'");
   });
+
+  for (const viewport of [
+    { name: 'phone-320', width: 320, height: 640 },
+    { name: 'phone-375', width: 375, height: 812 },
+    { name: 'phone-414', width: 414, height: 896 },
+    { name: 'tablet-768', width: 768, height: 1024 },
+    { name: 'desktop-1024', width: 1024, height: 768 },
+    { name: 'desktop-1280', width: 1280, height: 900 },
+  ]) {
+    test(`Sales Inbox + My email: no overflow at ${viewport.name}`, async ({ page }) => {
+      test.setTimeout(120000);
+      await page.setViewportSize({ width: viewport.width, height: viewport.height });
+      await login(page, credsFromEnv('ADMIN'));
+
+      await page.goto('/apps/customercheck/sales-inbox');
+      await page.waitForSelector('#crm-sales-inbox-root[data-crm-bachus-mail="1"]', { timeout: 30000 });
+      await expect(page.locator('#crm-sales-inbox-root')).toBeVisible();
+      const inboxOverflow = await page.evaluate(() => {
+        const doc = document.scrollingElement || document.documentElement;
+        const root = document.getElementById('crm-sales-inbox-root');
+        return {
+          doc: doc.scrollWidth - doc.clientWidth,
+          root: root ? root.scrollWidth - root.clientWidth : 0,
+        };
+      });
+      expect(inboxOverflow.doc, `inbox doc overflow @ ${viewport.name}`).toBeLessThanOrEqual(2);
+      expect(inboxOverflow.root, `inbox root overflow @ ${viewport.name}`).toBeLessThanOrEqual(2);
+
+      const toolbarDir = await page.evaluate(() => {
+        const el = document.querySelector('#app-content.crm-app .crm-sales-inbox__toolbar');
+        return el ? getComputedStyle(el).flexDirection : '';
+      });
+      if (viewport.width < 768) {
+        expect(toolbarDir, `toolbar stacks on mobile @ ${viewport.name}`).toBe('column');
+        const tabs = page.locator('#crm-sales-inbox-tabs [role="tab"]');
+        const count = await tabs.count();
+        for (let i = 0; i < count; i++) {
+          const box = await tabs.nth(i).boundingBox();
+          expect(box, `tab ${i} box @ ${viewport.name}`).toBeTruthy();
+          expect(box.height, `tab ${i} height @ ${viewport.name}`).toBeGreaterThanOrEqual(44);
+        }
+      } else {
+        // Desktop/tablet sacred: row toolbar (≥768) — mobile MQ is max-width 767 only.
+        expect(toolbarDir, `toolbar stays row @ ${viewport.name}`).toBe('row');
+      }
+
+      await page.goto('/apps/customercheck/settings/my-email#crm-ws-personal-mail-mine');
+      await page.waitForSelector('#section-my-email, #crm-ws-personal-mail-mine', { timeout: 30000 });
+      const mailOverflow = await page.evaluate(() => {
+        const doc = document.scrollingElement || document.documentElement;
+        const section = document.getElementById('section-my-email')
+          || document.getElementById('crm-ws-personal-mail-mine');
+        return {
+          doc: doc.scrollWidth - doc.clientWidth,
+          section: section ? section.scrollWidth - section.clientWidth : 0,
+        };
+      });
+      expect(mailOverflow.doc, `my-email doc overflow @ ${viewport.name}`).toBeLessThanOrEqual(2);
+      expect(mailOverflow.section, `my-email section overflow @ ${viewport.name}`).toBeLessThanOrEqual(2);
+
+      if (viewport.width >= 1024) {
+        // Desktop sacred: when connected, Sync stays a large primary (not mobile full-bleed stack).
+        // Button may exist in DOM but stay hidden until an inbox is linked — only assert when shown.
+        const sync = page.locator('#crm-personal-mail-sync');
+        if (await sync.count() && await sync.isVisible()) {
+          const box = await sync.boundingBox();
+          expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+        }
+      }
+    });
+  }
 });
