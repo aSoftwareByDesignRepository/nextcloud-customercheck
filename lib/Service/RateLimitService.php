@@ -59,7 +59,15 @@ class RateLimitService
 			$windowStart = is_array($decoded) ? (int)($decoded['start'] ?? 0) : 0;
 			$count = is_array($decoded) ? (int)($decoded['count'] ?? 0) : 0;
 
-			if ($windowStart === 0 || ($now - $windowStart) >= $windowSeconds) {
+			$expired = $windowStart === 0 || ($now - $windowStart) >= $windowSeconds;
+			if ($expired) {
+				// Zeus SF-03: drop stale blobs; peeks must not rewrite zeroed keys forever.
+				if ($raw !== '') {
+					$this->config->deleteAppValue(Application::APP_ID, $key);
+				}
+				if (!$charge) {
+					return true;
+				}
 				$windowStart = $now;
 				$count = 0;
 			}
@@ -78,5 +86,36 @@ class RateLimitService
 		} finally {
 			$this->locking->releaseLock($lockKey, ILockingProvider::LOCK_EXCLUSIVE);
 		}
+	}
+
+	/**
+	 * Delete expired rl_* AppConfig counters (Zeus SF-03). Called from cron syncAll.
+	 *
+	 * @return int number of keys removed
+	 */
+	public function purgeExpiredKeys(int $maxAgeSeconds): int
+	{
+		$maxAgeSeconds = max(60, $maxAgeSeconds);
+		$now = $this->timeFactory->getTime();
+		$purged = 0;
+		foreach ($this->config->getAppKeys(Application::APP_ID) as $key) {
+			if (!str_starts_with($key, 'rl_')) {
+				continue;
+			}
+			$raw = $this->config->getAppValue(Application::APP_ID, $key, '');
+			if ($raw === '') {
+				$this->config->deleteAppValue(Application::APP_ID, $key);
+				$purged++;
+				continue;
+			}
+			$decoded = json_decode($raw, true);
+			$start = is_array($decoded) ? (int)($decoded['start'] ?? 0) : 0;
+			if ($start <= 0 || ($now - $start) >= $maxAgeSeconds) {
+				$this->config->deleteAppValue(Application::APP_ID, $key);
+				$purged++;
+			}
+		}
+
+		return $purged;
 	}
 }

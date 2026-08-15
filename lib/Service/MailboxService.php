@@ -553,34 +553,7 @@ class MailboxService
 		}
 		$actor = trim($actor);
 		$note = mb_substr(trim($note), 0, 500);
-		$qb = $this->db->getQueryBuilder();
-		// Narrow candidates: source_ref JSON embeds mailMsgId (avoid full open-mail scan at scale).
-		$likeExact = '%"mailMsgId":' . $mailMsgId . '%';
-		$qb->select('id', 'source_ref')->from('crm_review_item')
-			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, IQueryBuilder::PARAM_INT)))
-			->andWhere($qb->expr()->in(
-				'source_kind',
-				$qb->createNamedParameter(
-					['shared_mail', 'personal_mail_shared_unmatched'],
-					IQueryBuilder::PARAM_STR_ARRAY,
-				),
-			))
-			->andWhere($qb->expr()->in(
-				'status',
-				$qb->createNamedParameter(['open', 'follow_up', 'snoozed'], IQueryBuilder::PARAM_STR_ARRAY),
-			))
-			->andWhere($qb->expr()->like('source_ref', $qb->createNamedParameter($likeExact)));
-		$r = $qb->executeQuery();
-		$ids = [];
-		while ($row = $r->fetch()) {
-			$ref = json_decode((string)($row['source_ref'] ?? ''), true);
-			$mid = is_array($ref) ? (int)($ref['mailMsgId'] ?? 0) : 0;
-			// Exact int match — LIKE can collide on prefix ids (12 vs 123).
-			if ($mid === $mailMsgId) {
-				$ids[] = (int)$row['id'];
-			}
-		}
-		$r->closeCursor();
+		$ids = $this->findOpenAssignIdsForMailMessage($workspaceId, $mailMsgId);
 		if ($ids === []) {
 			return 0;
 		}
@@ -604,6 +577,88 @@ class MailboxService
 		}
 
 		return $closed;
+	}
+
+	/**
+	 * Zeus SF-04: prefer indexed mail_msg_id; fall back to source_ref parse for pre-migration rows.
+	 *
+	 * @return list<int>
+	 */
+	private function findOpenAssignIdsForMailMessage(int $workspaceId, int $mailMsgId): array
+	{
+		$qb = $this->db->getQueryBuilder();
+		if ($this->reviewHasMailMsgIdColumn()) {
+			$qb->select('id')->from('crm_review_item')
+				->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, IQueryBuilder::PARAM_INT)))
+				->andWhere($qb->expr()->eq('mail_msg_id', $qb->createNamedParameter($mailMsgId, IQueryBuilder::PARAM_INT)))
+				->andWhere($qb->expr()->in(
+					'source_kind',
+					$qb->createNamedParameter(
+						['shared_mail', 'personal_mail_shared_unmatched'],
+						IQueryBuilder::PARAM_STR_ARRAY,
+					),
+				))
+				->andWhere($qb->expr()->in(
+					'status',
+					$qb->createNamedParameter(['open', 'follow_up', 'snoozed'], IQueryBuilder::PARAM_STR_ARRAY),
+				));
+			$r = $qb->executeQuery();
+			$ids = [];
+			while ($row = $r->fetch()) {
+				$ids[] = (int)$row['id'];
+			}
+			$r->closeCursor();
+
+			return $ids;
+		}
+
+		// Pre-migration fallback (LIKE + exact JSON int match).
+		$likeExact = '%"mailMsgId":' . $mailMsgId . '%';
+		$qb->select('id', 'source_ref')->from('crm_review_item')
+			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, IQueryBuilder::PARAM_INT)))
+			->andWhere($qb->expr()->in(
+				'source_kind',
+				$qb->createNamedParameter(
+					['shared_mail', 'personal_mail_shared_unmatched'],
+					IQueryBuilder::PARAM_STR_ARRAY,
+				),
+			))
+			->andWhere($qb->expr()->in(
+				'status',
+				$qb->createNamedParameter(['open', 'follow_up', 'snoozed'], IQueryBuilder::PARAM_STR_ARRAY),
+			))
+			->andWhere($qb->expr()->like('source_ref', $qb->createNamedParameter($likeExact)));
+		$r = $qb->executeQuery();
+		$ids = [];
+		while ($row = $r->fetch()) {
+			$ref = json_decode((string)($row['source_ref'] ?? ''), true);
+			$mid = is_array($ref) ? (int)($ref['mailMsgId'] ?? 0) : 0;
+			if ($mid === $mailMsgId) {
+				$ids[] = (int)$row['id'];
+			}
+		}
+		$r->closeCursor();
+
+		return $ids;
+	}
+
+	private function reviewHasMailMsgIdColumn(): bool
+	{
+		static $ready = null;
+		if ($ready !== null) {
+			return $ready;
+		}
+		try {
+			$qb = $this->db->getQueryBuilder();
+			$qb->select('mail_msg_id')->from('crm_review_item')->setMaxResults(1);
+			$r = $qb->executeQuery();
+			$r->closeCursor();
+			$ready = true;
+		} catch (\Throwable) {
+			$ready = false;
+		}
+
+		return $ready;
 	}
 
 	/**

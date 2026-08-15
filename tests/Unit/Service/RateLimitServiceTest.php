@@ -89,6 +89,53 @@ final class RateLimitServiceTest extends TestCase
 		$this->assertFalse($svc->allow('mail_preview_u:alex', 5, 60, false));
 	}
 
+	public function testExpiredPeekDeletesStaleKeyWithoutRewrite(): void
+	{
+		$config = $this->createMock(IConfig::class);
+		$key = 'rl_' . substr(hash('sha256', 'mail_preview_u:alex'), 0, 40);
+		$store = [$key => json_encode(['start' => 1_700_000_000 - 120, 'count' => 5], JSON_THROW_ON_ERROR)];
+		$config->method('getAppValue')->willReturnCallback(
+			static function (string $app, string $k, string $default = '') use (&$store): string {
+				return $store[$k] ?? $default;
+			}
+		);
+		$config->expects($this->once())->method('deleteAppValue')->with(Application::APP_ID, $key);
+		$config->expects($this->never())->method('setAppValue');
+
+		$time = $this->createMock(ITimeFactory::class);
+		$time->method('getTime')->willReturn(1_700_000_000);
+		$locking = $this->createMock(ILockingProvider::class);
+
+		$svc = new RateLimitService($config, $time, $locking);
+		$this->assertTrue($svc->allow('mail_preview_u:alex', 5, 60, false));
+	}
+
+	public function testPurgeExpiredKeysRemovesStaleRlEntries(): void
+	{
+		$config = $this->createMock(IConfig::class);
+		$stale = 'rl_' . substr(hash('sha256', 'old'), 0, 40);
+		$fresh = 'rl_' . substr(hash('sha256', 'new'), 0, 40);
+		$store = [
+			$stale => json_encode(['start' => 1_000_000_000, 'count' => 1], JSON_THROW_ON_ERROR),
+			$fresh => json_encode(['start' => 1_700_000_000, 'count' => 1], JSON_THROW_ON_ERROR),
+			'other' => 'x',
+		];
+		$config->method('getAppKeys')->willReturn(array_keys($store));
+		$config->method('getAppValue')->willReturnCallback(
+			static function (string $app, string $k, string $default = '') use (&$store): string {
+				return $store[$k] ?? $default;
+			}
+		);
+		$config->expects($this->once())->method('deleteAppValue')->with(Application::APP_ID, $stale);
+
+		$time = $this->createMock(ITimeFactory::class);
+		$time->method('getTime')->willReturn(1_700_000_000);
+		$locking = $this->createMock(ILockingProvider::class);
+
+		$svc = new RateLimitService($config, $time, $locking);
+		$this->assertSame(1, $svc->purgeExpiredKeys(3600));
+	}
+
 	public function testContestedLockFailsClosed(): void
 	{
 		$config = $this->createMock(IConfig::class);

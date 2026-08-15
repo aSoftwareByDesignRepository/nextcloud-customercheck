@@ -1356,7 +1356,7 @@ OC.L10N.register(
 		"Mail servers (from your hoster)": "Mail servers (from your hoster)",
 		"Mail triage": "Mail triage",
 		"Mailbox": "Mailbox",
-		"Mailbox is busy (sync or another preview). Try again in a moment.": "Mailbox is busy (sync or another preview). Try again in a moment.",
+		"This mailbox is updating. Wait a few seconds, then try again.": "This mailbox is updating. Wait a few seconds, then try again.",
 		"Mailbox not found": "Mailbox not found",
 		"Mailbox not found in this workspace.": "Mailbox not found in this workspace.",
 		"Mailbox not found.": "Mailbox not found.",

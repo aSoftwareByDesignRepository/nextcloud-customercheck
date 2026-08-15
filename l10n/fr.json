@@ -1316,7 +1316,7 @@
     "Mail servers (from your hoster)": "Serveurs mail (de ton hébergeur)",
     "Mail triage": "Tri du courrier",
     "Mailbox": "Boîte aux lettres",
-    "Mailbox is busy (sync or another preview). Try again in a moment.": "La boîte mail est occupée (sync ou autre aperçu). Réessaie dans un instant.",
+    "This mailbox is updating. Wait a few seconds, then try again.": "La boîte mail est occupée (sync ou autre aperçu). Réessaie dans un instant.",
     "Mailbox not found": "Boîte mail introuvable",
     "Mailbox not found in this workspace.": "Boîte mail introuvable dans cette équipe.",
     "Mailbox not found.": "Boîte aux lettres introuvable.",

@@ -1317,7 +1317,7 @@ OC.L10N.register(
 		"Mail servers (from your hoster)": "Serwery poczty (od twojego hosta)",
 		"Mail triage": "Triage pocztowy",
 		"Mailbox": "Skrzynka pocztowa",
-		"Mailbox is busy (sync or another preview). Try again in a moment.": "Skrzynka jest zajęta (synchronizacja lub inny podgląd). Spróbuj za chwilę.",
+		"This mailbox is updating. Wait a few seconds, then try again.": "Skrzynka jest zajęta (synchronizacja lub inny podgląd). Spróbuj za chwilę.",
 		"Mailbox not found": "Nie znaleziono skrzynki",
 		"Mailbox not found in this workspace.": "Nie znaleziono skrzynki w tym obszarze roboczym.",
 		"Mailbox not found.": "Nie znaleziono skrzynki pocztowej.",

@@ -903,12 +903,14 @@ class MailSendService
 				}
 			}
 			if (!$heldMboxLock) {
-				$this->logger->warning('personal_mail.outbound_index_unlocked', [
-					'event' => 'personal_mail.outbound_index_unlocked',
+				// Zeus SF-02: never write crm_mail_msg without the mailbox lock (race with sync/delete).
+				$this->logger->warning('personal_mail.outbound_index_deferred', [
+					'event' => 'personal_mail.outbound_index_deferred',
 					'workspaceId' => $workspaceId,
 					'mailboxId' => $mailboxId,
+					'reason' => 'mbox_lock_busy',
 				]);
-				$mboxLock = '';
+				return;
 			}
 		}
 		try {

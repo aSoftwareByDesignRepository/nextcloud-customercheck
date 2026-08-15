@@ -116,7 +116,7 @@ final class MailPreviewSecurityTest extends TestCase
 			$svc->previewIndexedMessage(1, 9, 'alex');
 			$this->fail('Expected lock contention ValidationException');
 		} catch (ValidationException $e) {
-			$this->assertStringContainsString('Mailbox is busy', $e->getMessage());
+			$this->assertStringContainsString('This mailbox is updating', $e->getMessage());
 		}
 	}
 
@@ -501,11 +501,11 @@ final class MailPreviewSecurityTest extends TestCase
 		$deleteChunk = substr($sync, (int)$deleteStart, 5500);
 		$this->assertStringContainsString('assertMailMutateRateAllowed', $deleteChunk);
 		$this->assertStringContainsString("\$lockKey = 'crm_mbox_' . \$mailboxId;", $deleteChunk);
-		$this->assertStringContainsString('Mailbox is busy (sync or another preview)', $deleteChunk);
+		$this->assertStringContainsString('This mailbox is updating', $deleteChunk);
 		$this->assertStringContainsString('Double-check cache under lock', $sync);
 		$this->assertStringContainsString('Rate limits run *after* lock', $sync);
 		$this->assertStringContainsString('Sign in to load a message preview.', $sync);
-		$this->assertStringContainsString('Mailbox is busy (sync or another preview)', $sync);
+		$this->assertStringContainsString('This mailbox is updating', $sync);
 		$this->assertStringContainsString('Peek only — charge after a successful fetch', $sync);
 		$this->assertStringContainsString('Charge only after a successful fetch', $sync);
 		$this->assertStringContainsString('Open the target folder directly', $sync);

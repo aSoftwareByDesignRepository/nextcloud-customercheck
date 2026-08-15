@@ -1475,11 +1475,13 @@ class ReviewService
 		$sugParam = ($suggestions === [] || $suggestions === null)
 			? $ins->createNamedParameter(null, IQueryBuilder::PARAM_NULL)
 			: $ins->createNamedParameter(json_encode($suggestions, JSON_THROW_ON_ERROR));
-		$ins->insert('crm_review_item')->values([
+		$sourceRef = is_array($data['source_ref'] ?? null) ? $data['source_ref'] : [];
+		$mailMsgId = (int)($sourceRef['mailMsgId'] ?? 0);
+		$values = [
 			'workspace_id' => $ins->createNamedParameter((int)$data['workspace_id'], IQueryBuilder::PARAM_INT),
 			'source_kind' => $ins->createNamedParameter((string)$data['source_kind']),
 			'source_fingerprint' => $ins->createNamedParameter((string)$data['source_fingerprint']),
-			'source_ref' => $ins->createNamedParameter(json_encode($data['source_ref'], JSON_THROW_ON_ERROR)),
+			'source_ref' => $ins->createNamedParameter(json_encode($sourceRef, JSON_THROW_ON_ERROR)),
 			'subject' => $ins->createNamedParameter(mb_substr(MimeHeader::decode((string)($data['subject'] ?? '')), 0, 512)),
 			'snippet' => $ins->createNamedParameter(mb_substr(MimeHeader::decode((string)($data['snippet'] ?? '')), 0, 2000)),
 			'status' => $ins->createNamedParameter((string)($data['status'] ?? 'open')),
@@ -1487,7 +1489,22 @@ class ReviewService
 			'suggestion_json' => $sugParam,
 			'created_at' => $ins->createNamedParameter($now),
 			'updated_at' => $ins->createNamedParameter($now),
-		])->executeStatement();
+		];
+		// Zeus SF-04: denormalized mail id for Indexed Assign close (column from Version1019).
+		if ($this->db->tableExists('crm_review_item')) {
+			try {
+				$probe = $this->db->getQueryBuilder();
+				$probe->select('mail_msg_id')->from('crm_review_item')->setMaxResults(1);
+				$pr = $probe->executeQuery();
+				$pr->closeCursor();
+				$values['mail_msg_id'] = $mailMsgId > 0
+					? $ins->createNamedParameter($mailMsgId, IQueryBuilder::PARAM_INT)
+					: $ins->createNamedParameter(null, IQueryBuilder::PARAM_NULL);
+			} catch (\Throwable) {
+				// Pre-migration installs — source_ref only.
+			}
+		}
+		$ins->insert('crm_review_item')->values($values)->executeStatement();
 	}
 
 	private function fingerprint(string $kind, int $workspaceId, string $ref): string

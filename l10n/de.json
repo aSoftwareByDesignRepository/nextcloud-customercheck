@@ -1150,7 +1150,7 @@
         "Mail servers (from your hoster)": "Mailserver (von deinem Hoster)",
         "Mail triage": "Mail-Triage",
         "Mailbox": "Postfach",
-        "Mailbox is busy (sync or another preview). Try again in a moment.": "Postfach ist beschäftigt (Sync oder andere Vorschau). Bitte gleich nochmal versuchen.",
+        "This mailbox is updating. Wait a few seconds, then try again.": "Dieses Postfach wird gerade aktualisiert. Warte ein paar Sekunden und versuche es erneut.",
         "Mailbox not found": "Postfach nicht gefunden",
         "Mailbox not found in this workspace.": "Postfach in diesem Arbeitsbereich nicht gefunden.",
         "Mailbox not found.": "Postfach nicht gefunden.",

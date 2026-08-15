@@ -332,7 +332,7 @@ final class ReviewInboxUxContractTest extends TestCase
 		$this->assertStringContainsString('MailPreviewText::toPlainPreview', $sync);
 		$this->assertStringContainsString('ImapLiveProbe::fetchUidTextPreview', $sync);
 		$this->assertStringContainsString('Rate limits run *after* lock', $sync);
-		$this->assertStringContainsString('Mailbox is busy (sync or another preview)', $sync);
+		$this->assertStringContainsString('This mailbox is updating', $sync);
 		$this->assertStringContainsString('never imap_body()', $sync);
 		$this->assertStringNotContainsString('@imap_body', $sync);
 		$this->assertStringNotContainsString('imap_body($', $sync);

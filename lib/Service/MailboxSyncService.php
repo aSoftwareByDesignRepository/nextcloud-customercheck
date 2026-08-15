@@ -145,7 +145,7 @@ class MailboxSyncService
 		} catch (\Throwable) {
 			throw new ValidationException(
 				Constants::ERR_VALIDATION,
-				$this->l10n->t('Mailbox is busy (sync or another preview). Try again in a moment.'),
+				$this->l10n->t('This mailbox is updating. Wait a few seconds, then try again.'),
 			);
 		}
 		try {
@@ -348,7 +348,7 @@ class MailboxSyncService
 		} catch (\Throwable) {
 			throw new ValidationException(
 				Constants::ERR_VALIDATION,
-				$this->l10n->t('Mailbox is busy (sync or another preview). Try again in a moment.'),
+				$this->l10n->t('This mailbox is updating. Wait a few seconds, then try again.'),
 			);
 		}
 		try {
@@ -650,7 +650,7 @@ class MailboxSyncService
 			throw ValidationException::field(
 				Constants::ERR_VALIDATION,
 				'mailbox',
-				$this->l10n->t('Mailbox is busy (sync or another preview). Try again in a moment.'),
+				$this->l10n->t('This mailbox is updating. Wait a few seconds, then try again.'),
 			);
 		}
 
@@ -946,6 +946,16 @@ class MailboxSyncService
 		// Retention purge runs after sync so a concurrent ingest cannot race a
 		// mid-flight message into a half-deleted state for the same batch.
 		$purge = $this->purgeExpiredAcrossWorkspaces();
+		try {
+			$this->rateLimit->purgeExpiredKeys(max(
+				Constants::MAIL_MUTATE_USER_WINDOW,
+				Constants::MAIL_PREVIEW_USER_WINDOW,
+				Constants::MAIL_SEND_USER_WINDOW,
+				Constants::PERSONAL_MAIL_SYNC_USER_WINDOW,
+			) * 2);
+		} catch (\Throwable) {
+			// Best-effort AppConfig hygiene (Zeus SF-03).
+		}
 		return [
 			'mailboxes' => $mailboxes,
 			'messages' => $messages,
@@ -1550,7 +1560,7 @@ class MailboxSyncService
 			throw ValidationException::field(
 				Constants::ERR_VALIDATION,
 				'id',
-				$this->l10n->t('Sync already running for this mailbox. Try again in a moment.'),
+				$this->l10n->t('This mailbox is updating. Wait a few seconds, then try again.'),
 			);
 		}
 		try {
@@ -2305,8 +2315,13 @@ class MailboxSyncService
 		$refreshed = 0;
 		$forwardBodyProbes = 0;
 		$bodyFetches = 0;
+		$sliceDeadline = $this->timeFactory->getTime() + Constants::MAILBOX_SYNC_SLICE_SECONDS;
 		try {
 			foreach ($folders as $folder) {
+				// Zeus SF-01: release crm_mbox_* promptly so delete/preview/spam can run.
+				if ($this->timeFactory->getTime() >= $sliceDeadline) {
+					break;
+				}
 				$folderPath = (string)$folder['folder_path'];
 				if (!ImapConnection::isSafeImapFolder($folderPath)) {
 					$this->logger->warning('CustomerCheck mailbox sync skipped unsafe IMAP folder', [
@@ -2332,6 +2347,9 @@ class MailboxSyncService
 				$start = max(1, $n - Constants::MAILBOX_SYNC_CAP + 1);
 				$scanned = 0;
 				for ($i = $n; $i >= $start && $scanned < Constants::MAILBOX_SYNC_CAP; $i--) {
+					if ($this->timeFactory->getTime() >= $sliceDeadline) {
+						break 2;
+					}
 					try {
 						$hdr = @imap_headerinfo($stream, $i);
 						if ($hdr === false) {
@@ -2513,7 +2531,11 @@ class MailboxSyncService
 		$folders = $this->enabledFolders($mailboxId);
 		$ingested = 0;
 		$refreshed = 0;
+		$sliceDeadline = $this->timeFactory->getTime() + Constants::MAILBOX_SYNC_SLICE_SECONDS;
 		foreach ($folders as $folder) {
+			if ($this->timeFactory->getTime() >= $sliceDeadline) {
+				break;
+			}
 			if ($ingested + $refreshed >= Constants::MAILBOX_SYNC_CAP) {
 				break;
 			}

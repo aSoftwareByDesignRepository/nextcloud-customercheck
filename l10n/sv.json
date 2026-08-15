@@ -1316,7 +1316,7 @@
     "Mail servers (from your hoster)": "E-postservrar (från din leverantör)",
     "Mail triage": "Mejltriage",
     "Mailbox": "Brevlåda",
-    "Mailbox is busy (sync or another preview). Try again in a moment.": "Brevlådan är upptagen (synk eller annan förhandsvisning). Försök igen om en stund.",
+    "This mailbox is updating. Wait a few seconds, then try again.": "Brevlådan är upptagen (synk eller annan förhandsvisning). Försök igen om en stund.",
     "Mailbox not found": "Brevlåda hittades inte",
     "Mailbox not found in this workspace.": "Brevlåda hittades inte i den här arbetsytan.",
     "Mailbox not found.": "Mailbox hittade inte.",

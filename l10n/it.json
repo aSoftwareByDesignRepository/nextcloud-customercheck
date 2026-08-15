@@ -1316,7 +1316,7 @@
     "Mail servers (from your hoster)": "Server di posta (dal tuo hoster)",
     "Mail triage": "Triage di posta",
     "Mailbox": "Casella",
-    "Mailbox is busy (sync or another preview). Try again in a moment.": "La casella è occupata (sync o altra anteprima). Riprova tra poco.",
+    "This mailbox is updating. Wait a few seconds, then try again.": "La casella è occupata (sync o altra anteprima). Riprova tra poco.",
     "Mailbox not found": "Casella non trovata",
     "Mailbox not found in this workspace.": "Casella non trovata in questo team.",
     "Mailbox not found.": "Mailbox non trovato.",

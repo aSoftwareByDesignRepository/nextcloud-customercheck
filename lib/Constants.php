@@ -294,6 +294,11 @@ final class Constants
 	public const MAIL_PURGE_MAX_ROUNDS = 100;
 	/** Soft wall-clock budget (seconds) for one purge pass across all workspaces. */
 	public const MAIL_PURGE_BUDGET_SECONDS = 12;
+	/**
+	 * Soft wall-clock budget for one mailbox syncOne hold of crm_mbox_* (Zeus SF-01).
+	 * Releases the lock so delete/preview/spam can run; next cron continues.
+	 */
+	public const MAILBOX_SYNC_SLICE_SECONDS = 8;
 
 	/** Mail send rate limits (§14.3 / §17.4). */
 	public const MAIL_SEND_USER_LIMIT = 30;

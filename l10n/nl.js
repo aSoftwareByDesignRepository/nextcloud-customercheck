@@ -1317,7 +1317,7 @@ OC.L10N.register(
 		"Mail servers (from your hoster)": "Mailservers (van je hoster)",
 		"Mail triage": "Posttriage",
 		"Mailbox": "Postvak",
-		"Mailbox is busy (sync or another preview). Try again in a moment.": "Mailbox is bezig (sync of ander voorbeeld). Probeer zo opnieuw.",
+		"This mailbox is updating. Wait a few seconds, then try again.": "Mailbox is bezig (sync of ander voorbeeld). Probeer zo opnieuw.",
 		"Mailbox not found": "Mailbox niet gevonden",
 		"Mailbox not found in this workspace.": "Mailbox niet gevonden in deze werkruimte.",
 		"Mailbox not found.": "Postbus niet gevonden.",

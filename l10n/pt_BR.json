@@ -1316,7 +1316,7 @@
     "Mail servers (from your hoster)": "Servidores de correio (do seu hoster)",
     "Mail triage": "Triagem de correio",
     "Mailbox": "Caixa de correio",
-    "Mailbox is busy (sync or another preview). Try again in a moment.": "A caixa de correio está ocupada (sincronização ou outra visualização). Tente novamente em alguns instantes.",
+    "This mailbox is updating. Wait a few seconds, then try again.": "A caixa de correio está ocupada (sincronização ou outra visualização). Tente novamente em alguns instantes.",
     "Mailbox not found": "Caixa de correio não encontrada",
     "Mailbox not found in this workspace.": "Caixa de correio não encontrada neste espaço de trabalho.",
     "Mailbox not found.": "Caixa de correio não encontrada.",

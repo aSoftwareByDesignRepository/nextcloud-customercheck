@@ -50,6 +50,10 @@ final class PersonalMailHardeningContractTest extends TestCase
 		$this->assertStringContainsString('function markIndexedMessageSpamFromInbox', $src);
 		$this->assertStringContainsString('function finishInboxRemoteMutate', $src);
 		$this->assertStringContainsString('Best-effort compensate', $src);
+		$this->assertStringContainsString('MAILBOX_SYNC_SLICE_SECONDS', (string)file_get_contents(dirname(__DIR__, 3) . '/lib/Constants.php'));
+		$this->assertStringContainsString('outbound_index_deferred', (string)file_get_contents(dirname(__DIR__, 3) . '/lib/Service/MailSendService.php'));
+		$this->assertStringContainsString('purgeExpiredKeys', (string)file_get_contents(dirname(__DIR__, 3) . '/lib/Service/RateLimitService.php'));
+		$this->assertStringContainsString('mail_msg_id', (string)file_get_contents(dirname(__DIR__, 3) . '/lib/Service/MailboxService.php'));
 		$this->assertStringNotContainsString("str_starts_with(\$uidRaw, 'outbound:')", $src);
 	}
 

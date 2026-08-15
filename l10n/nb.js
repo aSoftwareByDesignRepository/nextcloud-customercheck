@@ -1317,7 +1317,7 @@ OC.L10N.register(
 		"Mail servers (from your hoster)": "E-postservere (fra leverandøren din)",
 		"Mail triage": "E-posttriage",
 		"Mailbox": "Postboks",
-		"Mailbox is busy (sync or another preview). Try again in a moment.": "Postkassen er opptatt (synk eller annen forhåndsvisning). Prøv igjen om et øyeblikk.",
+		"This mailbox is updating. Wait a few seconds, then try again.": "Postkassen er opptatt (synk eller annen forhåndsvisning). Prøv igjen om et øyeblikk.",
 		"Mailbox not found": "Postkasse ikke funnet",
 		"Mailbox not found in this workspace.": "Postkasse ikke funnet i dette arbeidsområdet.",
 		"Mailbox not found.": "Postkasse ikke funnet.",

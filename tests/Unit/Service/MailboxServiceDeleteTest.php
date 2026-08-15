@@ -98,8 +98,8 @@ final class MailboxServiceDeleteTest extends TestCase
 		$this->assertStringContainsString('function deleteMailbox(int $workspaceId, int $mailboxId, bool $allowPersonal = false)', $src);
 		$this->assertStringContainsString("\$lockKey = 'crm_mbox_' . \$mailboxId;", $src);
 		$this->assertStringContainsString('$this->mailboxes->delete($workspaceId, $mailboxId, $allowPersonal)', $src);
-		$this->assertStringContainsString('assertTeamMailboxForRemoteMutate', $src);
-		$this->assertStringContainsString('Sync already running for this mailbox', $src);
+		$this->assertStringContainsString('assertRemoteMutateAllowed', $src);
+		$this->assertStringContainsString('This mailbox is updating', $src);
 		$controller = (string)file_get_contents(dirname(__DIR__, 3) . '/lib/Controller/PersonaApiController.php');
 		$this->assertStringContainsString('$this->mailboxSync->deleteMailbox($workspaceId, $id)', $controller);
 		$personal = (string)file_get_contents(dirname(__DIR__, 3) . '/lib/Service/PersonalMailService.php');
