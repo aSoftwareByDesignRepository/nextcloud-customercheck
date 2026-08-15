@@ -84,7 +84,7 @@ final class HtmlSanitizeServiceTest extends TestCase
 		$this->assertStringContainsString('alt="Co"', $ok);
 		$this->assertStringContainsString('width="200"', $ok);
 
-		// Argus SF-01: plain http stripped (tracking / mixed-content).
+		// Argus SF-01: third-party http stripped (tracking / mixed-content).
 		$http = $this->svc->sanitizeSignature('<img src="http://files.local/logo.png">');
 		$this->assertStringNotContainsString('<img', strtolower($http));
 		$this->assertStringNotContainsString('http://files.local/logo.png', $http);
@@ -94,5 +94,25 @@ final class HtmlSanitizeServiceTest extends TestCase
 
 		$js = $this->svc->sanitizeSignature('<img src="javascript:alert(1)">');
 		$this->assertStringNotContainsString('<img', strtolower($js));
+	}
+
+	public function testSignatureAllowsSameOriginHttpPublicShareWhenHostsConfigured(): void
+	{
+		$svc = new HtmlSanitizeService(null, null, ['localhost:8081']);
+		$ok = $svc->sanitizeSignature(
+			'<p>Sig</p><img src="http://localhost:8081/s/AbCdEfGh/download" alt="Logo" width="180">',
+		);
+		$this->assertStringContainsString('<img', strtolower($ok));
+		$this->assertStringContainsString('http://localhost:8081/s/AbCdEfGh/download', $ok);
+
+		$evil = $svc->sanitizeSignature(
+			'<img src="http://evil.example/s/AbCdEfGh/download" alt="x">',
+		);
+		$this->assertStringNotContainsString('<img', strtolower($evil));
+
+		$dav = $svc->sanitizeSignature(
+			'<img src="http://localhost:8081/remote.php/dav/files/admin/x.png" alt="x">',
+		);
+		$this->assertStringNotContainsString('<img', strtolower($dav));
 	}
 }

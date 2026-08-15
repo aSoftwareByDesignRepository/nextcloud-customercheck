@@ -1069,6 +1069,10 @@
     if (resetBtn) resetBtn.hidden = true;
     syncMailboxPasswordRequired();
     setMailboxComposeOpen(true);
+    // Keep WYSIWYG mounted (Logo → Files) even when not editing a saved mailbox.
+    remountTeamSignatureEditor('', '');
+    const sigSave = document.getElementById('crm-mbox-signature-save');
+    if (sigSave) sigSave.disabled = true;
   }
 
   /**
@@ -1094,13 +1098,7 @@
     setVal('crm-mbox-user', box.username || '');
     setVal('crm-mbox-pass', '');
     setVal('crm-mbox-signature', box.signaturePlain || box.signatureHtml || '');
-    if (teamSigApi && teamSigApi.destroy) teamSigApi.destroy();
-    teamSigApi = mountSignatureEditor(
-      'crm-mbox-signature-editor',
-      'crm-mbox-signature-label',
-      box.signatureHtml || '',
-      box.signaturePlain || '',
-    );
+    remountTeamSignatureEditor(box.signatureHtml || '', box.signaturePlain || '');
     const sigSave = document.getElementById('crm-mbox-signature-save');
     if (sigSave) sigSave.disabled = false;
     const imapEncEl = document.getElementById('crm-mbox-imap-enc');
@@ -1640,6 +1638,22 @@
       initialHtml: initialHtml || '',
       initialPlain: initialPlain || '',
     });
+  }
+
+  function remountTeamSignatureEditor(initialHtml, initialPlain) {
+    if (teamSigApi && teamSigApi.destroy) teamSigApi.destroy();
+    teamSigApi = mountSignatureEditor(
+      'crm-mbox-signature-editor',
+      'crm-mbox-signature-label',
+      initialHtml || '',
+      initialPlain || '',
+    );
+    return teamSigApi;
+  }
+
+  // Team & mailbox: always show WYSIWYG (Logo → Files) — not only after Edit.
+  if (document.getElementById('crm-mbox-signature-editor')) {
+    remountTeamSignatureEditor('', '');
   }
 
   function syncHiddenSignature(textareaId, api) {

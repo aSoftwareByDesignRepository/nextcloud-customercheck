@@ -261,7 +261,6 @@ OC.L10N.register(
 		"Added %n message to Assign.": "Dodano %n wiadomość do Przeglądu.",
 		"Added %n messages to Assign.": "Dodano %n wiadomości do Przeglądu.",
 		"Added 1 new company": "Dodano 1 nową firmę",
-		"Added when you send from this account. Add a logo from Files or a public https image link.": "Dodawane przy wysyłce z tego konta. Dodaj logo z Plików lub publiczny link https do obrazu.",
 		"Additional invoiceable options": "Dodatkowe opcje do fakturowania",
 		"Address book": "Książka adresowa",
 		"Adds everyone in that group now. Not live sync — run again if the group changes.": "Dodaje teraz wszystkich z tej grupy. To nie live sync — uruchom ponownie, gdy grupa się zmieni.",
@@ -2151,7 +2150,6 @@ OC.L10N.register(
 		"Save signature": "Zapisz podpis",
 		"Save team settings": "Zapisz ustawienia zespołu",
 		"Save template": "Zapisz szablon",
-		"Saved separately from the mailbox connection. Members who send as this inbox can include it. Add a logo from Files or a public https image link.": "Zapisane osobno od połączenia skrzynki. Osoby wysyłające jako ta skrzynka mogą to dołączyć. Dodaj logo z Plików lub publiczny link https.",
 		"Saved.": "Zapisano.",
 		"Saved. Updating list…": "Zapisano. Aktualizowanie listy…",
 		"Saved. Your mailbox is listed above. Change something only after you test the connection again.": "Zapisano. Twoja skrzynka jest na liście powyżej. Zmieniaj coś dopiero po ponownym teście połączenia.",
@@ -2858,7 +2856,17 @@ OC.L10N.register(
 		"promises": "obietnice",
 		"record": "zapis",
 		"this workspace": "to miejsce pracy",
-		"valid": "ważne"
+		"valid": "ważne",
+		"Fetch new messages for this tab": "Pobierz nowe wiadomości dla tej karty",
+		"Fetch new messages from the team inbox": "Pobierz nowe wiadomości ze skrzynki zespołu",
+		"Team mail sync finished.": "Synchronizacja poczty zespołu zakończona.",
+		"Added when you send from this account. Use Logo to pick an image from Files (creates a public link so recipients can see it).": "Dodawane przy wysyłce z tego konta. Użyj Logo, by wybrać obraz z Plików (tworzy publiczny link, żeby odbiorcy mogli go zobaczyć).",
+		"Saved separately from the mailbox connection. Members who send as this inbox can include it. Use Logo to pick an image from Files (creates a public link so recipients can see it).": "Zapisane osobno od połączenia skrzynki. Osoby wysyłające jako ta skrzynka mogą to dołączyć. Użyj Logo, by wybrać obraz z Plików (tworzy publiczny link, żeby odbiorcy mogli go zobaczyć).",
+		"Add logo from Files": "Dodaj logo z Plików",
+		"The Files picker is not available. Upload your logo to Files, then try again.": "Wybór Plików jest niedostępny. Najpierw wgraj logo do Plików, potem spróbuj ponownie.",
+		"Could not use this image as a logo. Pick a Files image on this Nextcloud (creates a public link).": "Nie udało się użyć tego obrazu jako logo. Wybierz obraz z Plików na tym Nextcloud (tworzy publiczny link).",
+		"Adding logo…": "Dodawanie logo…",
+		"Logo added": "Dodano logo"
 	},
 	"nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);"
 );

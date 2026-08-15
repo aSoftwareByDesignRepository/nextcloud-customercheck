@@ -1,7 +1,7 @@
 {
     "name": "customercheck",
     "private": true,
-    "version": "1.6.141",
+    "version": "1.6.146",
     "type": "module",
     "description": "CustomerCheck Playwright / frontend tooling",
     "scripts": {
@@ -17,7 +17,7 @@
         "test:mutation:l10n-de": "php tests/Mutation/run-l10n-de-quality-mutations.php",
         "test:mutation:bachus": "php tests/Mutation/run-bachus-simplicity-mutations.php",
         "test:mutation:zeus-bachus-shouldfix": "php tests/Mutation/run-zeus-bachus-shouldfix-mutations.php",
-        "test:mutation:argus-bachus-mail": "php tests/Mutation/run-argus-bachus-mail-security-mutations.php",
+        "test:mutation:signature-logo": "php tests/Mutation/run-signature-logo-mutations.php",
         "test:mutation:talk-answer-send": "php tests/Mutation/run-talk-answer-send-mutations.php",
         "test:mutation:mail-attach-picker": "php tests/Mutation/run-mail-attach-picker-mutations.php",
         "test:mutation:outbound-assign": "php tests/Mutation/run-outbound-assign-mutations.php",

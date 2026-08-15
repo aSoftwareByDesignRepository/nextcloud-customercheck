@@ -5,7 +5,49 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.6.146 - 2026-08-15
+
+### Harden (Signature logo — Aristoteles gauntlet)
+- Single-flight Logo insert (busy gate + `aria-busy` + live “Adding logo…/Logo added”) — no double-share race
+- Reuse only passwordless, downloadable public shares from OCS list payloads
+- Share-token path allows `_`/`-`; OCS parse helpers unit-tested in `signature-logo-core`
+- Integration: container `HtmlSanitizeService` same-origin http share allow / evil host block
+- E2E: Team + personal signature Logo toolbar touch target + axe on Team signature wrap
+- Mutation MSI extended (busy gate, reusable-share helper)
+
+## 1.6.145 - 2026-08-15
+
+### Fix (Signature logo on HTTP Nextcloud)
+- Root cause: local Docker is `http://localhost:8081`, but logos required `https://` — Files pick created a public link that the editor then rejected
+- Allow **same-origin** Nextcloud public-share download URLs over http (this instance only); still block third-party http / data / javascript
+- Shared policy: `SignatureLogoUrlPolicy` (PHP) ↔ `signature-logo-core.js`; sanitize + editor stay in lockstep
+- Vitest + PHPUnit + mutation gauntlet (`run-signature-logo-mutations.php`)
+
+## 1.6.144 - 2026-08-15
+
+### Fix (Team signature logo)
+- Team signature WYSIWYG mounts on page load and after Reset (not only after Edit)
+- Same Logo → Files picker as personal signature (1.6.143 share-API fix)
+
+## 1.6.143 - 2026-08-15
+
+### Fix (Signature logo — real Files pick)
+- **Logo** opens the Nextcloud Files picker immediately (no URL paste, no extra ack dialog)
+- Public share create uses form-urlencoded OCS (JSON body never reached the Share API — Files insert was broken)
+- Reuses an existing public link when present; restores caret after the picker so the image lands in the signature
+- Help copy: pick from Files; recipients need a public https link under the hood
+
+## 1.6.142 - 2026-08-15
+
+### Inbox (Update mail — granny UX)
+- **Why it vanished:** `Update mail` was gated to Personal only (`activeTab === 'mine'`), so Team/Unassigned hid it
+- Show on **Personal and Team** when that tab has syncable mailboxes; still hidden on **Unassigned** (decide queue, not a folder)
+- Team sync uses `/mailboxes/{id}/sync`; Personal keeps `/personal-mailboxes/{id}/sync`; filter scopes sync; `syncInFlight` + captured tab prevent races
+- Account filter options/aria use PHP `data-crm-*` labels so first paint stays native (no English leftovers from JS `t()` lag)
+- Contracts + personal-mail mutation needle; e2e asserts Unassigned keeps sync hidden
+
 ## 1.6.141 - 2026-08-15
+
 
 ### l10n (native mail / CRM — Aristoteles)
 - Synced live `$l->t` / `t()` literals into catalogs (2858 keys; parity across en/de/da/es/fr/it/nb/nl/pl/sv/pt_BR)

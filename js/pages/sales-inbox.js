@@ -48,6 +48,8 @@
   let personalBoxes = [];
   /** @type {Array<Record<string, mixed>>} */
   let accounts = [];
+  /** Prevents overlapping Update-mail clicks (race with tab switch). */
+  let syncInFlight = false;
   /** @type {Array<string>} */
   let sharedFolders = [];
   let personalMailEnabled = false;
@@ -647,11 +649,47 @@
     });
   }
 
+  /**
+   * Mailboxes the Update-mail control can refresh for the active tab.
+   * Personal → personal IMAP; Team → shared/team boxes; Unassigned → none (queue, not a folder).
+   * @returns {Array<Record<string, mixed>>}
+   */
+  function syncableBoxesForActiveTab() {
+    const M = window.CustomerCheckInboxAssignMap;
+    if (activeTab === 'unmatched') {
+      return [];
+    }
+    if (activeTab === 'mine') {
+      if (!personalMailEnabled) {
+        return [];
+      }
+      return (M && typeof M.accountsForInboxTab === 'function')
+        ? M.accountsForInboxTab(accounts, 'mine')
+        : personalBoxes.slice();
+    }
+    if (activeTab === 'team') {
+      return (M && typeof M.accountsForInboxTab === 'function')
+        ? M.accountsForInboxTab(accounts, 'team')
+        : accounts.filter(function (a) {
+          return String(a.kind || '') !== 'personal' && parseInt(String(a.id || 0), 10) > 0;
+        });
+    }
+    return [];
+  }
+
   function syncButtonVisibility() {
     const btn = document.getElementById('crm-sales-inbox-sync');
     if (!btn) return;
-    const show = personalMailEnabled && personalBoxes.length > 0 && activeTab === 'mine';
+    // Granny UX: same control on Personal and Team. Hidden only on Unassigned
+    // (that tab is a decide-queue — sync belongs on Personal/Team).
+    const boxes = syncableBoxesForActiveTab();
+    const show = boxes.length > 0;
     btn.hidden = !show;
+    if (show) {
+      btn.title = activeTab === 'team'
+        ? t('Fetch new messages from the team inbox')
+        : t('Fetch new messages for this tab');
+    }
   }
 
   function renderSharedFoldersBanner() {
@@ -714,9 +752,10 @@
     sel.textContent = '';
     const all = document.createElement('option');
     all.value = '0';
-    all.textContent = activeTab === 'team'
-      ? t('All team accounts')
-      : t('All personal accounts');
+    // Prefer PHP-baked labels so the first paint stays native even if JS t() lags.
+    const allPersonal = sel.getAttribute('data-crm-all-personal') || t('All personal accounts');
+    const allTeam = sel.getAttribute('data-crm-all-team') || t('All team accounts');
+    all.textContent = activeTab === 'team' ? allTeam : allPersonal;
     sel.appendChild(all);
     scoped.forEach((acc) => {
       const id = parseInt(String(acc.id || 0), 10);
@@ -735,11 +774,10 @@
     if (wrap) {
       wrap.hidden = !show;
     }
-    // Aria: clarify what the filter does in this tab.
-    sel.setAttribute(
-      'aria-label',
-      activeTab === 'team' ? t('Filter by team account') : t('Filter by personal account'),
-    );
+    // Aria: clarify what the filter does in this tab (PHP data-* first, then t()).
+    const ariaPersonal = sel.getAttribute('data-crm-aria-personal') || t('Filter by personal account');
+    const ariaTeam = sel.getAttribute('data-crm-aria-team') || t('Filter by team account');
+    sel.setAttribute('aria-label', activeTab === 'team' ? ariaTeam : ariaPersonal);
   }
 
   function syncUrlState() {
@@ -1549,7 +1587,7 @@
       syncToolbarForTab();
       // Bachus: one silent auto-update on first Mine visit — Sync stays available.
       if (!autoSyncedOnce && activeTab === 'mine' && personalMailEnabled && personalBoxes.length > 0) {
-        void syncPersonal({ quiet: true }).then(function (ok) {
+        void syncPersonal({ quiet: true, tab: 'mine' }).then(function (ok) {
           if (ok) autoSyncedOnce = true;
         });
       }
@@ -1563,26 +1601,60 @@
     }
   }
 
+  /**
+   * Refresh IMAP for the active tab (Personal or Team). Unassigned has no sync target.
+   * @param {{quiet?: boolean, tab?: string}} [opts]
+   * @returns {Promise<boolean>}
+   */
   async function syncPersonal(opts) {
     const quiet = !!(opts && opts.quiet);
+    const tab = (opts && opts.tab) || activeTab;
     const ws = workspaceId();
     const btn = document.getElementById('crm-sales-inbox-sync');
-    if (!(ws > 0) || !personalBoxes.length) return false;
+    if (!(ws > 0) || tab === 'unmatched') return false;
+    if (syncInFlight) return false;
+
+    const M = window.CustomerCheckInboxAssignMap;
+    let boxes = (M && typeof M.accountsForInboxTab === 'function')
+      ? M.accountsForInboxTab(accounts, tab)
+      : (tab === 'mine' ? personalBoxes.slice() : []);
+    if (tab === 'mine' && !personalMailEnabled) {
+      boxes = [];
+    }
+    if (mailboxFilter > 0) {
+      boxes = boxes.filter(function (b) {
+        return parseInt(String(b.id || 0), 10) === mailboxFilter;
+      });
+    }
+    if (!boxes.length) return false;
+
+    syncInFlight = true;
     if (btn) {
       btn.disabled = true;
       btn.setAttribute('aria-busy', 'true');
     }
     if (!quiet) setStatus(t('Updating mail…'));
     try {
-      for (let i = 0; i < personalBoxes.length; i++) {
-        const id = parseInt(String(personalBoxes[i].id || 0), 10);
-        if (id > 0) {
+      for (let i = 0; i < boxes.length; i++) {
+        const id = parseInt(String(boxes[i].id || 0), 10);
+        if (!(id > 0)) continue;
+        const isPersonal = String(boxes[i].kind || '') === 'personal';
+        if (isPersonal) {
           await Api.post('/workspaces/' + ws + '/personal-mailboxes/' + id + '/sync', {});
+        } else {
+          await Api.post('/workspaces/' + ws + '/mailboxes/' + id + '/sync', {});
         }
       }
       const live = document.getElementById('crm-live-region');
-      if (live && !quiet) live.textContent = t('Personal mail sync finished.');
-      await loadInbox();
+      if (live && !quiet) {
+        live.textContent = tab === 'team'
+          ? t('Team mail sync finished.')
+          : t('Personal mail sync finished.');
+      }
+      // Only reload if the user did not switch tabs mid-sync.
+      if (activeTab === tab) {
+        await loadInbox();
+      }
       return true;
     } catch (e) {
       // Always announce failures (even quiet auto-sync) so screen-reader users are not left guessing.
@@ -1601,6 +1673,7 @@
       }
       return false;
     } finally {
+      syncInFlight = false;
       if (btn) {
         btn.disabled = false;
         btn.removeAttribute('aria-busy');
@@ -1622,7 +1695,8 @@
   const syncBtn = document.getElementById('crm-sales-inbox-sync');
   if (syncBtn) {
     syncBtn.addEventListener('click', () => {
-      void syncPersonal();
+      // Capture tab at click — user may switch tabs while IMAP is still running.
+      void syncPersonal({ tab: activeTab });
     });
   }
 

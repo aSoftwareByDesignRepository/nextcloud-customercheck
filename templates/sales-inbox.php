@@ -29,11 +29,23 @@ include __DIR__ . '/common/page-start.php';
 		<div class="crm-inline-actions crm-sales-inbox__actions">
 			<label class="crm-field crm-field--inline" for="crm-sales-inbox-account" id="crm-sales-inbox-account-wrap" hidden>
 				<span class="visually-hidden"><?php p($l->t('Account')); ?></span>
-				<select id="crm-sales-inbox-account" class="crm-input crm-input--lg" aria-label="<?php p($l->t('Filter by account')); ?>">
+				<select
+					id="crm-sales-inbox-account"
+					class="crm-input crm-input--lg"
+					aria-label="<?php p($l->t('Filter by account')); ?>"
+					data-crm-all-personal="<?php p($l->t('All personal accounts')); ?>"
+					data-crm-all-team="<?php p($l->t('All team accounts')); ?>"
+					data-crm-aria-personal="<?php p($l->t('Filter by personal account')); ?>"
+					data-crm-aria-team="<?php p($l->t('Filter by team account')); ?>">
 					<option value="0"><?php p($l->t('All accounts')); ?></option>
 				</select>
 			</label>
-			<button type="button" class="crm-btn crm-btn--secondary" id="crm-sales-inbox-sync" hidden><?php p($l->t('Update mail')); ?></button>
+			<button
+				type="button"
+				class="crm-btn crm-btn--secondary"
+				id="crm-sales-inbox-sync"
+				hidden
+				title="<?php p($l->t('Fetch new messages for this tab')); ?>"><?php p($l->t('Update mail')); ?></button>
 		</div>
 	</div>
 

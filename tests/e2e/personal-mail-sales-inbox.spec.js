@@ -38,6 +38,14 @@ test.describe('Personal email sync / Sales Inbox', () => {
 
     await page.locator('#crm-sales-tab-team').click();
     await expect(page.locator('#crm-sales-tab-team')).toHaveAttribute('aria-selected', 'true');
+    // Update mail is tab-aware: may show for Team when shared boxes exist; must stay hidden on Unassigned.
+    await page.locator('#crm-sales-tab-unmatched').click();
+    await expect(page.locator('#crm-sales-tab-unmatched')).toHaveAttribute('aria-selected', 'true');
+    await expect(page.locator('#crm-sales-inbox-sync')).toBeHidden();
+    await page.locator('#crm-sales-tab-mine').click();
+    await expect(page.locator('#crm-sales-tab-mine')).toHaveAttribute('aria-selected', 'true');
+    // Account filter labels are PHP-baked for native first paint (not English leftovers).
+    await expect(page.locator('#crm-sales-inbox-account')).toHaveAttribute('data-crm-all-personal', /.+/);
     await page.locator('#crm-sales-tab-unmatched').click();
     await expect(page.locator('#crm-sales-tab-unmatched')).toHaveAttribute('aria-selected', 'true');
     await expect(page.locator('#crm-sales-inbox-panel')).toBeVisible();
@@ -150,6 +158,61 @@ test.describe('Personal email sync / Sales Inbox', () => {
         .disableRules(['color-contrast'])
         .analyze();
       expect(axeMyEmail.violations.filter((v) => v.impact === 'critical' || v.impact === 'serious')).toEqual([]);
+    }
+  });
+
+  test('Signature editors: Logo is Files-pick WYSIWYG (WCAG toolbar)', async ({ page }) => {
+    await page.setViewportSize({ width: 1100, height: 900 });
+    await login(page, credsFromEnv('ADMIN'));
+
+    await page.goto('/apps/customercheck/settings/my-email#crm-ws-personal-mail-mine');
+    await page.waitForSelector('#section-my-email, #crm-ws-personal-mail-mine', { timeout: 30000 });
+    const personalDetails = page.locator('#crm-personal-mail-signature-details');
+    if (await personalDetails.count()) {
+      await personalDetails.evaluate((el) => {
+        if (el instanceof HTMLDetailsElement) el.open = true;
+      });
+      const logo = page.locator('#crm-personal-mail-signature-editor [data-crm-rich-cmd="insertLogo"]');
+      // Connected inbox mounts the editor; connect form alone has no signature chrome.
+      if (await logo.count()) {
+        await expect(logo).toBeVisible();
+        await expect(logo).toHaveAttribute('aria-label', /logo/i);
+        const box = await logo.boundingBox();
+        expect(box, 'Logo touch target').toBeTruthy();
+        expect(box.height).toBeGreaterThanOrEqual(44);
+        expect(box.width).toBeGreaterThanOrEqual(44);
+        await expect(page.locator('#crm-personal-mail-signature-editor [data-crm-logo-live]')).toHaveCount(1);
+        await expect(page.locator('#crm-personal-mail-signature-editor [data-crm-rich-cmd="insertLogoFile"]')).toHaveCount(0);
+      }
+    }
+
+    await page.goto('/apps/customercheck/settings/mailbox');
+    await page.waitForSelector('#section-workspace-mailbox, #crm-mailbox-form', { timeout: 30000 });
+    const compose = page.locator('#crm-mailbox-compose');
+    if (await compose.count()) {
+      await compose.evaluate((el) => {
+        if (el instanceof HTMLDetailsElement) el.open = true;
+      });
+    }
+    const teamDetails = page.locator('#crm-mbox-signature-details');
+    if (await teamDetails.count()) {
+      await teamDetails.evaluate((el) => {
+        if (el instanceof HTMLDetailsElement) el.open = true;
+      });
+      const teamLogo = page.locator('#crm-mbox-signature-editor [data-crm-rich-cmd="insertLogo"]');
+      await expect(teamLogo).toBeAttached({ timeout: 15000 });
+      await teamLogo.scrollIntoViewIfNeeded();
+      await expect(teamLogo).toBeVisible({ timeout: 15000 });
+      await expect(teamLogo).toHaveAttribute('aria-label', /logo/i);
+      const tbox = await teamLogo.boundingBox();
+      expect(tbox).toBeTruthy();
+      expect(tbox.height).toBeGreaterThanOrEqual(44);
+      await expect(page.locator('#crm-mbox-signature-help')).toContainText(/Files|Dateien|Archivos|Fichiers|File/i);
+      const axeTeam = await new AxeBuilder({ page })
+        .include('#crm-mbox-signature-wrap')
+        .disableRules(['color-contrast'])
+        .analyze();
+      expect(axeTeam.violations.filter((v) => v.impact === 'critical' || v.impact === 'serious')).toEqual([]);
     }
   });
 

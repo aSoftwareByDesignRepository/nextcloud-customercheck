@@ -35,7 +35,11 @@ final class BachusPersonalMailUxContractTest extends TestCase
 	{
 		$js = (string)file_get_contents(dirname(__DIR__, 2) . '/js/pages/sales-inbox.js');
 		$this->assertStringContainsString('autoSyncedOnce', $js);
-		$this->assertStringContainsString('syncPersonal({ quiet: true })', $js);
+		$this->assertStringContainsString("syncPersonal({ quiet: true, tab: 'mine' })", $js);
+		$this->assertStringContainsString('syncableBoxesForActiveTab', $js);
+		$this->assertStringContainsString("'/mailboxes/' + id + '/sync'", $js);
+		$this->assertStringContainsString('syncInFlight', $js);
+		$this->assertStringContainsString("data-crm-all-personal", (string)file_get_contents(dirname(__DIR__, 2) . '/templates/sales-inbox.php'));
 		$this->assertStringContainsString('crm-sales-compose-cc-toggle', $js);
 		$this->assertStringContainsString('crm-sales-inbox-empty-cta', $js);
 		$this->assertStringContainsString('Connect my email', $js);

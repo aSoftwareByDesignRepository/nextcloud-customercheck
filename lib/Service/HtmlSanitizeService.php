@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace OCA\CustomerCheck\Service;
 
 use OCA\CustomerCheck\Constants;
+use OCP\IConfig;
+use OCP\IURLGenerator;
 
 /**
  * Allowlist HTML sanitizer for compose, signatures, and stored inbound body_html.
@@ -12,7 +14,8 @@ use OCA\CustomerCheck\Constants;
  *
  * Normative allowlist (compose/body): p, br, div, span, strong, b, em, i, u,
  * ul, ol, li, a, h2, h3, blockquote, hr.
- * Signature-only (AS-18): https img may appear inside signature HTML (no http/data:/javascript:).
+ * Signature-only (AS-18): img via SignatureLogoUrlPolicy (https anywhere; http only
+ * for this instance's Nextcloud public share download paths).
  */
 final class HtmlSanitizeService
 {
@@ -40,6 +43,22 @@ final class HtmlSanitizeService
 		'img' => true,
 	];
 
+	/** @var list<string>|null */
+	private ?array $httpHostCache = null;
+
+	/**
+	 * Optional DI: when resolved from the container, instance hosts unlock same-origin
+	 * http public-share logos on HTTP Nextcloud installs. Unit tests may omit both.
+	 *
+	 * @param list<string>|null $httpHostOverride explicit hosts for tests (e.g. localhost:8081)
+	 */
+	public function __construct(
+		private readonly ?IURLGenerator $urlGenerator = null,
+		private readonly ?IConfig $config = null,
+		private readonly ?array $httpHostOverride = null,
+	) {
+	}
+
 	/**
 	 * Sanitize compose / inbound body HTML.
 	 */
@@ -49,7 +68,7 @@ final class HtmlSanitizeService
 	}
 
 	/**
-	 * Sanitize signature HTML (allows https img — AS-18).
+	 * Sanitize signature HTML (allows policy-safe img — AS-18).
 	 */
 	public function sanitizeSignature(?string $html): string
 	{
@@ -162,7 +181,7 @@ final class HtmlSanitizeService
 			}
 		}
 		if ($name === 'img' && $allowSignatureImg && isset($m[2])) {
-			$src = $this->extractHttpsSrc($m[2]);
+			$src = $this->extractSignatureImgSrc($m[2]);
 			if ($src === null) {
 				return '';
 			}
@@ -197,26 +216,70 @@ final class HtmlSanitizeService
 		return $href;
 	}
 
-	private function extractHttpsSrc(string $attrBlob): ?string
+	private function extractSignatureImgSrc(string $attrBlob): ?string
 	{
 		if (!preg_match('/\bsrc\s*=\s*(["\'])(.*?)\1/i', $attrBlob, $m)
 			&& !preg_match('/\bsrc\s*=\s*([^\s>]+)/i', $attrBlob, $m)) {
 			return null;
 		}
 		$src = html_entity_decode(trim($m[2] ?? $m[1] ?? ''), ENT_QUOTES | ENT_HTML5, 'UTF-8');
-		// Argus SF-01 / AS-18: https remote images only (no http/data:/javascript: tracking downgrade).
-		if ($src === '' || !preg_match('#^https://#i', $src)) {
-			return null;
-		}
-		if (preg_match('#^\s*(javascript|data|vbscript)\s*:#i', $src)) {
-			return null;
-		}
-		// Refuse absurd / DoS URLs.
-		if (strlen($src) > 2048) {
+		if (!SignatureLogoUrlPolicy::isAllowedSrc($src, $this->allowedHttpLogoHosts())) {
 			return null;
 		}
 
 		return $src;
+	}
+
+	/**
+	 * @return list<string>
+	 */
+	private function allowedHttpLogoHosts(): array
+	{
+		if ($this->httpHostOverride !== null) {
+			return array_values(array_filter(array_map(
+				static fn ($h) => strtolower(trim((string)$h)),
+				$this->httpHostOverride,
+			), static fn (string $h): bool => $h !== ''));
+		}
+		if ($this->httpHostCache !== null) {
+			return $this->httpHostCache;
+		}
+		$hosts = [];
+		if ($this->urlGenerator !== null) {
+			$abs = $this->urlGenerator->getAbsoluteURL('/');
+			$host = self::hostPortFromUrl($abs);
+			if ($host !== null) {
+				$hosts[] = $host;
+			}
+		}
+		if ($this->config !== null) {
+			$cli = trim((string)$this->config->getSystemValue('overwrite.cli.url', ''));
+			$host = self::hostPortFromUrl($cli);
+			if ($host !== null) {
+				$hosts[] = $host;
+			}
+		}
+		$this->httpHostCache = array_values(array_unique($hosts));
+
+		return $this->httpHostCache;
+	}
+
+	private static function hostPortFromUrl(string $url): ?string
+	{
+		$url = trim($url);
+		if ($url === '') {
+			return null;
+		}
+		$parts = parse_url($url);
+		if (!is_array($parts) || empty($parts['host'])) {
+			return null;
+		}
+		$host = strtolower((string)$parts['host']);
+		if (isset($parts['port'])) {
+			$host .= ':' . (int)$parts['port'];
+		}
+
+		return $host;
 	}
 
 	private function extractImgAlt(string $attrBlob): string

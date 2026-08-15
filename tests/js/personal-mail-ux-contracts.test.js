@@ -44,7 +44,7 @@ describe('personal-mail settings UX contracts', () => {
     expect(js).toContain("'h3'");
   });
 
-  it('signature editors use lean signature toolbar + https logo', () => {
+  it('signature editors use lean signature toolbar + https logo from Files', () => {
     const settings = readFileSync(join(root, 'js/pages/settings.js'), 'utf8');
     const rich = readFileSync(join(root, 'js/common/rich-mail-composer.js'), 'utf8');
     const teamTpl = readFileSync(join(root, 'templates/settings/workspace-mailbox.php'), 'utf8');
@@ -56,17 +56,19 @@ describe('personal-mail settings UX contracts', () => {
     expect(settings).not.toContain("toolbar: 'full'");
     expect(rich).toContain("toolbarMode === 'signature'");
     expect(rich).toContain("insertLogo");
-    expect(rich).toContain("insertLogoFile");
+    expect(rich).toContain('pickLogoFromFiles');
+    expect(rich).toContain('application/x-www-form-urlencoded');
+    expect(rich).toContain('saveEditorSelection');
+    expect(rich).not.toContain('insertLogoFile');
+    expect(rich).not.toContain('promptInsertLogoLink');
     expect(rich).toContain('allowSignatureLogo');
-    expect(rich).toContain("confirmLabel: t('Choose from Files')");
-    expect(rich).toContain("cancelLabel: t('Cancel')");
-    expect(rich).toContain('promptInsertLogoLink');
+    expect(rich).toContain("title: t('Choose a logo image')");
     expect(myEmailTpl).toContain('crm-signature-editor');
     expect(myEmailTpl).toContain('crm-sales-compose__label');
     expect(myEmailTpl).toContain("\$l->t('Your signature')");
-    expect(myEmailTpl).toContain('Add a logo from Files or a public https image link');
+    expect(myEmailTpl).toContain('Use Logo to pick an image from Files');
     expect(teamTpl).toContain('crm-mbox-signature-editor');
-    expect(teamTpl).toContain('Add a logo from Files or a public https image link');
+    expect(teamTpl).toContain('Use Logo to pick an image from Files');
     expect(css).toMatch(
       /\.crm-signature-editor__mount \.crm-rich-mail__editor\s*\{[\s\S]*?min-height:\s*10rem/,
     );
@@ -75,13 +77,23 @@ describe('personal-mail settings UX contracts', () => {
   it('settings loads signature-logo-core before rich composer (AS-18)', () => {
     const page = readFileSync(join(root, 'lib/Controller/PageController.php'), 'utf8');
     const core = readFileSync(join(root, 'js/common/signature-logo-core.js'), 'utf8');
+    const rich = readFileSync(join(root, 'js/common/rich-mail-composer.js'), 'utf8');
     expect(page).toContain(
       "'common/folder-picker', 'common/signature-logo-core', 'common/personal-mail-settings-core', 'common/rich-mail-composer'",
     );
     expect(core).toContain('buildSignatureLogoHtml');
     expect(core).toContain('isPublicImageUrl');
+    expect(core).toContain('isNextcloudPublicSharePath');
+    expect(core).toContain('pageOrigin');
     expect(core).toContain('^https:\\/\\/');
-    expect(core).not.toContain('^https?:\\/\\/');
+    expect(rich).toContain('pageOrigin: origin');
+    expect(rich).toContain('Could not use this image as a logo');
+    expect(rich).toContain('data-crm-logo-busy');
+    expect(rich).toContain("getAttribute('data-crm-logo-busy') === '1'");
+    expect(rich).toContain('data-crm-logo-live');
+    expect(rich).toContain('setLogoInsertBusy');
+    expect(core).toContain('shareUrlFromOcsData');
+    expect(core).toContain('isReusablePublicShareRow');
   });
 
   it('signature editors mount rich HTML twin (Q12)', () => {
@@ -89,6 +101,7 @@ describe('personal-mail settings UX contracts', () => {
     const teamTpl = readFileSync(join(root, 'templates/settings/workspace-mailbox.php'), 'utf8');
     const myEmailTpl = readFileSync(join(root, 'templates/settings/my-email.php'), 'utf8');
     expect(js).toContain('mountSignatureEditor');
+    expect(js).toContain('remountTeamSignatureEditor');
     expect(js).toContain('signatureHtml');
     expect(myEmailTpl).toContain('crm-personal-mail-signature-editor');
     expect(teamTpl).toContain('crm-mbox-signature-editor');
@@ -199,7 +212,10 @@ describe('personal-mail settings UX contracts', () => {
     expect(tpl).toContain('crm-sales-inbox-empty-cta');
     expect(tpl).toContain('crm-sales-inbox-account-wrap" hidden');
     expect(js).toContain('autoSyncedOnce');
-    expect(js).toContain('syncPersonal({ quiet: true })');
+    expect(js).toContain("syncPersonal({ quiet: true, tab: 'mine' })");
+    expect(js).toContain('syncableBoxesForActiveTab');
+    expect(js).toContain("'/mailboxes/' + id + '/sync'");
+    expect(js).toContain('syncInFlight');
     expect(js).toContain('accountsForInboxTab');
     expect(js).toContain('All personal accounts');
     expect(js).toContain('All team accounts');

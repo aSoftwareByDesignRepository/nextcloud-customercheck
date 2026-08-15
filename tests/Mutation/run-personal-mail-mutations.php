@@ -507,6 +507,13 @@ $cases = [
 		'test' => 'ThemeFeatureCssZeroHexContractTest::testFeatureStylesheetsContainNoHexLiterals',
 		'label' => 'mail_css_hardcodes_muted_hex',
 	],
+	[
+		'file' => $root . '/js/pages/sales-inbox.js',
+		'find' => "function syncButtonVisibility() {\n    const btn = document.getElementById('crm-sales-inbox-sync');\n    if (!btn) return;\n    // Granny UX: same control on Personal and Team. Hidden only on Unassigned\n    // (that tab is a decide-queue — sync belongs on Personal/Team).\n    const boxes = syncableBoxesForActiveTab();\n    const show = boxes.length > 0;\n    btn.hidden = !show;",
+		'replace' => "function syncButtonVisibility() {\n    const btn = document.getElementById('crm-sales-inbox-sync');\n    if (!btn) return;\n    const show = personalMailEnabled && personalBoxes.length > 0 && activeTab === 'mine';\n    btn.hidden = !show;",
+		'test' => 'SalesInboxSyncToolbarContractTest::testSyncVisibilityIsNotMineOnly',
+		'label' => 'sync_button_mine_only_regression',
+	],
 ];
 
 $failed = 0;

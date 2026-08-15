@@ -261,7 +261,6 @@ OC.L10N.register(
 		"Added %n message to Assign.": "%n messaggio aggiunto a Revisione.",
 		"Added %n messages to Assign.": "%n messaggi aggiunti a Revisione.",
 		"Added 1 new company": "1 nuova azienda aggiunta",
-		"Added when you send from this account. Add a logo from Files or a public https image link.": "Aggiunto quando invii da questo account. Aggiungi un logo da File o un link https pubblico a un’immagine.",
 		"Additional invoiceable options": "Ulteriori opzioni fatturabili",
 		"Address book": "Rubrica",
 		"Adds everyone in that group now. Not live sync — run again if the group changes.": "Aggiunge subito tutti di quel gruppo. Nessuna sync live — riesegui se il gruppo cambia.",
@@ -2151,7 +2150,6 @@ OC.L10N.register(
 		"Save signature": "Salva firma",
 		"Save team settings": "Salva impostazioni del team",
 		"Save template": "Salva modello",
-		"Saved separately from the mailbox connection. Members who send as this inbox can include it. Add a logo from Files or a public https image link.": "Salvato separatamente dalla connessione della casella. Chi invia come questa casella può includerlo. Aggiungi un logo da File o un link https pubblico.",
 		"Saved.": "Salvato.",
 		"Saved. Updating list…": "Salvato. Aggiornamento elenco…",
 		"Saved. Your mailbox is listed above. Change something only after you test the connection again.": "Salvato. La tua casella è elencata sopra. Cambia qualcosa solo dopo aver ritestato la connessione.",
@@ -2858,7 +2856,17 @@ OC.L10N.register(
 		"promises": "promesse",
 		"record": "scheda",
 		"this workspace": "questo spazio di lavoro",
-		"valid": "valido"
+		"valid": "valido",
+		"Fetch new messages for this tab": "Recupera i nuovi messaggi di questa scheda",
+		"Fetch new messages from the team inbox": "Recupera i nuovi messaggi dalla casella del team",
+		"Team mail sync finished.": "Sync posta del team completata.",
+		"Added when you send from this account. Use Logo to pick an image from Files (creates a public link so recipients can see it).": "Aggiunto quando invii da questo account. Usa Logo per scegliere un’immagine da File (crea un link pubblico così i destinatari possono vederla).",
+		"Saved separately from the mailbox connection. Members who send as this inbox can include it. Use Logo to pick an image from Files (creates a public link so recipients can see it).": "Salvato separatamente dalla connessione della casella. Chi invia come questa casella può includerlo. Usa Logo per scegliere un’immagine da File (crea un link pubblico così i destinatari possono vederla).",
+		"Add logo from Files": "Aggiungi logo da File",
+		"The Files picker is not available. Upload your logo to Files, then try again.": "Il selettore File non è disponibile. Carica il logo in File e riprova.",
+		"Could not use this image as a logo. Pick a Files image on this Nextcloud (creates a public link).": "Impossibile usare questa immagine come logo. Scegli un’immagine da File su questo Nextcloud (crea un link pubblico).",
+		"Adding logo…": "Aggiunta del logo…",
+		"Logo added": "Logo aggiunto"
 	},
 	"nplurals=2; plural=(n != 1);"
 );

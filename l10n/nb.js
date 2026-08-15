@@ -261,7 +261,6 @@ OC.L10N.register(
 		"Added %n message to Assign.": "La til %n melding i Gjennomgang.",
 		"Added %n messages to Assign.": "La til %n meldinger i Gjennomgang.",
 		"Added 1 new company": "1 nytt firma lagt til",
-		"Added when you send from this account. Add a logo from Files or a public https image link.": "Legges til når du sender fra denne kontoen. Legg til en logo fra Filer eller en offentlig https-bildelenke.",
 		"Additional invoiceable options": "Andre fakturerbare alternativer",
 		"Address book": "Adressebok",
 		"Adds everyone in that group now. Not live sync — run again if the group changes.": "Legger til alle i den gruppen nå. Ikke live-synk — kjør igjen hvis gruppen endres.",
@@ -2151,7 +2150,6 @@ OC.L10N.register(
 		"Save signature": "Lagre signatur",
 		"Save team settings": "Lagre teaminnstillinger",
 		"Save template": "Lagre mal",
-		"Saved separately from the mailbox connection. Members who send as this inbox can include it. Add a logo from Files or a public https image link.": "Lagret separat fra postkassetilkoblingen. Medlemmer som sender som denne innboksen kan ta den med. Legg til logo fra Filer eller en offentlig https-bildelenke.",
 		"Saved.": "Lagret.",
 		"Saved. Updating list…": "Lagret. Oppdaterer liste…",
 		"Saved. Your mailbox is listed above. Change something only after you test the connection again.": "Lagret. Postkassen din står i listen over. Endre noe først etter at du har testet tilkoblingen igjen.",
@@ -2858,7 +2856,17 @@ OC.L10N.register(
 		"promises": "Lover",
 		"record": "rekord",
 		"this workspace": "dette arbeidsområdet",
-		"valid": "gyldig"
+		"valid": "gyldig",
+		"Fetch new messages for this tab": "Hent nye meldinger for denne fanen",
+		"Fetch new messages from the team inbox": "Hent nye meldinger fra teaminnboksen",
+		"Team mail sync finished.": "Team-e-postsynk ferdig.",
+		"Added when you send from this account. Use Logo to pick an image from Files (creates a public link so recipients can see it).": "Legges til når du sender fra denne kontoen. Bruk Logo for å velge et bilde fra Filer (lager en offentlig lenke så mottakere kan se den).",
+		"Saved separately from the mailbox connection. Members who send as this inbox can include it. Use Logo to pick an image from Files (creates a public link so recipients can see it).": "Lagret separat fra postkassetilkoblingen. Medlemmer som sender som denne innboksen kan ta den med. Bruk Logo for å velge et bilde fra Filer (lager en offentlig lenke så mottakere kan se den).",
+		"Add logo from Files": "Legg til logo fra Filer",
+		"The Files picker is not available. Upload your logo to Files, then try again.": "Filvelgeren er ikke tilgjengelig. Last opp logoen til Filer, og prøv igjen.",
+		"Could not use this image as a logo. Pick a Files image on this Nextcloud (creates a public link).": "Kunne ikke bruke dette bildet som logo. Velg et bilde fra Filer på denne Nextcloud (lager en offentlig lenke).",
+		"Adding logo…": "Legger til logo…",
+		"Logo added": "Logo lagt til"
 	},
 	"nplurals=2; plural=(n != 1);"
 );

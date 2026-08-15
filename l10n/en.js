@@ -261,7 +261,6 @@ OC.L10N.register(
 		"Added %n message to Assign.": "Added %n message to Assign.",
 		"Added %n messages to Assign.": "Added %n messages to Assign.",
 		"Added 1 new company": "Added 1 new company",
-		"Added when you send from this account. Add a logo from Files or a public https image link.": "Added when you send from this account. Add a logo from Files or a public https image link.",
 		"Additional invoiceable options": "Additional invoiceable options",
 		"Address book": "Address book",
 		"Adds everyone in that group now. Not live sync — run again if the group changes.": "Adds everyone in that group now. Not live sync — run again if the group changes.",
@@ -2151,7 +2150,6 @@ OC.L10N.register(
 		"Save signature": "Save signature",
 		"Save team settings": "Save team settings",
 		"Save template": "Save template",
-		"Saved separately from the mailbox connection. Members who send as this inbox can include it. Add a logo from Files or a public https image link.": "Saved separately from the mailbox connection. Members who send as this inbox can include it. Add a logo from Files or a public https image link.",
 		"Saved.": "Saved.",
 		"Saved. Updating list…": "Saved. Updating list…",
 		"Saved. Your mailbox is listed above. Change something only after you test the connection again.": "Saved. Your mailbox is listed above. Change something only after you test the connection again.",
@@ -2858,7 +2856,17 @@ OC.L10N.register(
 		"promises": "promises",
 		"record": "record",
 		"this workspace": "this workspace",
-		"valid": "valid"
+		"valid": "valid",
+		"Fetch new messages for this tab": "Fetch new messages for this tab",
+		"Fetch new messages from the team inbox": "Fetch new messages from the team inbox",
+		"Team mail sync finished.": "Team mail sync finished.",
+		"Added when you send from this account. Use Logo to pick an image from Files (creates a public link so recipients can see it).": "Added when you send from this account. Use Logo to pick an image from Files (creates a public link so recipients can see it).",
+		"Saved separately from the mailbox connection. Members who send as this inbox can include it. Use Logo to pick an image from Files (creates a public link so recipients can see it).": "Saved separately from the mailbox connection. Members who send as this inbox can include it. Use Logo to pick an image from Files (creates a public link so recipients can see it).",
+		"Add logo from Files": "Add logo from Files",
+		"The Files picker is not available. Upload your logo to Files, then try again.": "The Files picker is not available. Upload your logo to Files, then try again.",
+		"Could not use this image as a logo. Pick a Files image on this Nextcloud (creates a public link).": "Could not use this image as a logo. Pick a Files image on this Nextcloud (creates a public link).",
+		"Adding logo…": "Adding logo…",
+		"Logo added": "Logo added"
 	},
 	"nplurals=2; plural=(n != 1);"
 );

@@ -261,7 +261,6 @@ OC.L10N.register(
 		"Added %n message to Assign.": "Lade till %n meddelande i Granskning.",
 		"Added %n messages to Assign.": "Lade till %n meddelanden i Granskning.",
 		"Added 1 new company": "1 nytt företag tillagt",
-		"Added when you send from this account. Add a logo from Files or a public https image link.": "Läggs till när du skickar från det här kontot. Lägg till en logo från Filer eller en offentlig https-bildlänk.",
 		"Additional invoiceable options": "Ytterligare faktiska alternativ",
 		"Address book": "Adressbok",
 		"Adds everyone in that group now. Not live sync — run again if the group changes.": "Lägger till alla i den gruppen nu. Inte live-synk — kör igen om gruppen ändras.",
@@ -2151,7 +2150,6 @@ OC.L10N.register(
 		"Save signature": "Spara signatur",
 		"Save team settings": "Spara teaminställningar",
 		"Save template": "Spara mall",
-		"Saved separately from the mailbox connection. Members who send as this inbox can include it. Add a logo from Files or a public https image link.": "Sparat separat från brevlådeanslutningen. Medlemmar som skickar som den här inkorgen kan ta med den. Lägg till logo från Filer eller en offentlig https-bildlänk.",
 		"Saved.": "Sparat.",
 		"Saved. Updating list…": "Sparat. Uppdaterar lista…",
 		"Saved. Your mailbox is listed above. Change something only after you test the connection again.": "Sparat. Din brevlåda står i listan ovan. Ändra något först efter att du testat anslutningen igen.",
@@ -2858,7 +2856,17 @@ OC.L10N.register(
 		"promises": "Löften",
 		"record": "rekord",
 		"this workspace": "Denna arbetsyta",
-		"valid": "giltigt"
+		"valid": "giltigt",
+		"Fetch new messages for this tab": "Hämta nya meddelanden för den här fliken",
+		"Fetch new messages from the team inbox": "Hämta nya meddelanden från teaminboxen",
+		"Team mail sync finished.": "Team-e-postsynk klar.",
+		"Added when you send from this account. Use Logo to pick an image from Files (creates a public link so recipients can see it).": "Läggs till när du skickar från det här kontot. Använd Logo för att välja en bild från Filer (skapar en offentlig länk så mottagare kan se den).",
+		"Saved separately from the mailbox connection. Members who send as this inbox can include it. Use Logo to pick an image from Files (creates a public link so recipients can see it).": "Sparat separat från brevlådeanslutningen. Medlemmar som skickar som den här inkorgen kan ta med den. Använd Logo för att välja en bild från Filer (skapar en offentlig länk så mottagare kan se den).",
+		"Add logo from Files": "Lägg till logo från Filer",
+		"The Files picker is not available. Upload your logo to Files, then try again.": "Filväljaren är inte tillgänglig. Ladda upp din logo till Filer och försök igen.",
+		"Could not use this image as a logo. Pick a Files image on this Nextcloud (creates a public link).": "Kunde inte använda den här bilden som logo. Välj en bild från Filer på den här Nextcloud (skapar en offentlig länk).",
+		"Adding logo…": "Lägger till logo…",
+		"Logo added": "Logo tillagd"
 	},
 	"nplurals=2; plural=(n != 1);"
 );

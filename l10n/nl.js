@@ -261,7 +261,6 @@ OC.L10N.register(
 		"Added %n message to Assign.": "%n bericht toegevoegd aan Beoordeling.",
 		"Added %n messages to Assign.": "%n berichten toegevoegd aan Beoordeling.",
 		"Added 1 new company": "1 nieuw bedrijf toegevoegd",
-		"Added when you send from this account. Add a logo from Files or a public https image link.": "Wordt toegevoegd als je vanaf dit account verzendt. Voeg een logo toe uit Bestanden of een openbare https-afbeeldingslink.",
 		"Additional invoiceable options": "Aanvullende factureerbare opties",
 		"Address book": "Adresboek",
 		"Adds everyone in that group now. Not live sync — run again if the group changes.": "Voegt nu iedereen uit die groep toe. Geen live sync — voer opnieuw uit als de groep verandert.",
@@ -2151,7 +2150,6 @@ OC.L10N.register(
 		"Save signature": "Handtekening opslaan",
 		"Save team settings": "Teaminstellingen opslaan",
 		"Save template": "Sjabloon opslaan",
-		"Saved separately from the mailbox connection. Members who send as this inbox can include it. Add a logo from Files or a public https image link.": "Apart opgeslagen van de mailboxverbinding. Leden die als deze inbox verzenden kunnen hem opnemen. Voeg een logo toe uit Bestanden of een openbare https-link.",
 		"Saved.": "Opgeslagen.",
 		"Saved. Updating list…": "Opgeslagen. Lijst bijwerken…",
 		"Saved. Your mailbox is listed above. Change something only after you test the connection again.": "Opgeslagen. Je mailbox staat hierboven in de lijst. Wijzig iets pas nadat je de verbinding opnieuw hebt getest.",
@@ -2858,7 +2856,17 @@ OC.L10N.register(
 		"promises": "beloftes",
 		"record": "gegevensrecord",
 		"this workspace": "deze werkruimte",
-		"valid": "geldig"
+		"valid": "geldig",
+		"Fetch new messages for this tab": "Nieuwe berichten voor dit tabblad ophalen",
+		"Fetch new messages from the team inbox": "Nieuwe berichten uit de teaminbox ophalen",
+		"Team mail sync finished.": "Teammail-sync klaar.",
+		"Added when you send from this account. Use Logo to pick an image from Files (creates a public link so recipients can see it).": "Wordt toegevoegd als je vanaf dit account verzendt. Gebruik Logo om een afbeelding uit Bestanden te kiezen (maakt een openbare link zodat ontvangers die kunnen zien).",
+		"Saved separately from the mailbox connection. Members who send as this inbox can include it. Use Logo to pick an image from Files (creates a public link so recipients can see it).": "Apart opgeslagen van de mailboxverbinding. Leden die als deze inbox verzenden kunnen hem opnemen. Gebruik Logo om een afbeelding uit Bestanden te kiezen (maakt een openbare link zodat ontvangers die kunnen zien).",
+		"Add logo from Files": "Logo toevoegen uit Bestanden",
+		"The Files picker is not available. Upload your logo to Files, then try again.": "De Bestanden-kiezer is niet beschikbaar. Upload je logo naar Bestanden en probeer opnieuw.",
+		"Could not use this image as a logo. Pick a Files image on this Nextcloud (creates a public link).": "Deze afbeelding kon niet als logo worden gebruikt. Kies een afbeelding uit Bestanden op deze Nextcloud (maakt een openbare link).",
+		"Adding logo…": "Logo toevoegen…",
+		"Logo added": "Logo toegevoegd"
 	},
 	"nplurals=2; plural=(n != 1);"
 );

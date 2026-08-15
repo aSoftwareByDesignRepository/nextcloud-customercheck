@@ -6587,6 +6587,10 @@ dialog.crm-native-dialog label.crm-check {
 	font-weight: 700;
 	font-size: var(--crm-fs-sm);
 }
+#app-content.crm-app .crm-rich-mail[data-crm-logo-busy="1"] [data-crm-rich-cmd="insertLogo"] {
+	opacity: 0.55;
+	cursor: wait;
+}
 #app-content.crm-app .crm-rich-mail__editor,
 #app-content.crm-app .crm-rich-mail__quote {
 	display: block;

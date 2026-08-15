@@ -294,7 +294,7 @@ $canManageWorkspace = !empty($_['canManageWorkspace']);
 							<summary class="crm-advanced__summary"><?php p($l->t('Team signature')); ?></summary>
 							<div class="form-group crm-signature-editor" id="crm-mbox-signature-wrap">
 								<span class="form-label crm-sales-compose__label visually-hidden" id="crm-mbox-signature-label"><?php p($l->t('Team signature')); ?></span>
-								<p class="form-help" id="crm-mbox-signature-help"><?php p($l->t('Saved separately from the mailbox connection. Members who send as this inbox can include it. Add a logo from Files or a public https image link.')); ?></p>
+								<p class="form-help" id="crm-mbox-signature-help"><?php p($l->t('Saved separately from the mailbox connection. Members who send as this inbox can include it. Use Logo to pick an image from Files (creates a public link so recipients can see it).')); ?></p>
 								<textarea id="crm-mbox-signature" class="visually-hidden" rows="1" aria-hidden="true" tabindex="-1"></textarea>
 								<div id="crm-mbox-signature-editor" class="crm-signature-editor__mount" aria-labelledby="crm-mbox-signature-label" aria-describedby="crm-mbox-signature-help"></div>
 								<div class="crm-form-actions crm-signature-editor__actions">

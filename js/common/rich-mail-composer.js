@@ -2,7 +2,7 @@
  * Accessible rich HTML mail composer (MH-16 / WCAG 2.1 AA).
  * Toolbar uses document.execCommand on a labeled contenteditable region.
  * No image insert in message body (AS-18) — Files attachments only.
- * Signature editors may insert https logos via allowSignatureLogo (AS-18 / Argus SF-01).
+ * Signature editors: Logo opens Files picker (WYSIWYG); public https share under the hood (AS-18 / Argus SF-01).
  * Reply quotes live in a separate editable region (US-010 AC-5 / AS-19).
  */
 (function () {
@@ -75,9 +75,37 @@
     return window.CustomerCheckSignatureLogo || null;
   }
 
-  function insertHtmlAtCursor(editor, html) {
-    if (!editor || !html) return;
+  function saveEditorSelection(editor) {
+    if (!editor || !window.getSelection) return null;
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return null;
+    const range = sel.getRangeAt(0);
+    if (!editor.contains(range.commonAncestorContainer)) return null;
+    return range.cloneRange();
+  }
+
+  function restoreEditorSelection(editor, range) {
+    if (!editor) return;
     editor.focus();
+    const sel = window.getSelection && window.getSelection();
+    if (!sel) return;
+    sel.removeAllRanges();
+    if (range) {
+      try {
+        sel.addRange(range);
+        return;
+      } catch (_e) { /* fall through to end */ }
+    }
+    // Caret at end so insertHTML still lands in the signature.
+    const end = document.createRange();
+    end.selectNodeContents(editor);
+    end.collapse(false);
+    sel.addRange(end);
+  }
+
+  function insertHtmlAtCursor(editor, html, savedRange) {
+    if (!editor || !html) return;
+    restoreEditorSelection(editor, savedRange || null);
     try {
       if (document.queryCommandSupported && document.queryCommandSupported('insertHTML')) {
         document.execCommand('insertHTML', false, html);
@@ -97,8 +125,67 @@
     return (window.OC && OC.requestToken) ? String(OC.requestToken) : '';
   }
 
+  function sharesApiUrl(query) {
+    const ocsBase = (window.OC && typeof OC.linkToOCS === 'function')
+      ? OC.linkToOCS('apps/files_sharing/api/v1', 2)
+      : '/ocs/v2.php/apps/files_sharing/api/v1';
+    const base = String(ocsBase).replace(/\/?$/, '/') + 'shares';
+    const q = query ? String(query).replace(/^\?/, '') : 'format=json';
+    return base + (base.indexOf('?') >= 0 ? '&' : '?') + q;
+  }
+
+  function ocsHeaders() {
+    return {
+      'OCS-APIREQUEST': 'true',
+      requesttoken: requestToken(),
+      Accept: 'application/json',
+    };
+  }
+
+  function absoluteShareSrc(shareUrl) {
+    const Logo = logoApi();
+    const origin = (window.location && window.location.origin) ? String(window.location.origin) : '';
+    const opts = { pageOrigin: origin };
+    let src = Logo && Logo.publicShareToImageSrc
+      ? Logo.publicShareToImageSrc(shareUrl, opts)
+      : '';
+    if (!src && shareUrl) {
+      let abs = String(shareUrl).trim().replace(/\/+$/, '');
+      if (abs && abs.indexOf('http') !== 0 && origin) {
+        abs = origin + (abs.charAt(0) === '/' ? abs : '/' + abs);
+      }
+      if (abs && !/\/download$/i.test(abs)) {
+        abs += '/download';
+      }
+      src = Logo && Logo.publicShareToImageSrc
+        ? Logo.publicShareToImageSrc(abs, opts)
+        : (Logo && Logo.isPublicImageUrl && Logo.isPublicImageUrl(abs, opts) ? abs : '');
+    }
+    return src;
+  }
+
+  function shareUrlFromOcsPayload(data) {
+    const Logo = logoApi();
+    if (Logo && typeof Logo.shareUrlFromOcsData === 'function') {
+      return Logo.shareUrlFromOcsData(data);
+    }
+    if (!data || !data.ocs || data.ocs.data == null) return '';
+    const payload = data.ocs.data;
+    if (Array.isArray(payload)) {
+      for (let i = 0; i < payload.length; i += 1) {
+        const row = payload[i];
+        if (row && Number(row.share_type) === 3 && row.url) {
+          return String(row.url);
+        }
+      }
+      return '';
+    }
+    return String(payload.url || '');
+  }
+
   /**
-   * Create a public read link for a Files path so email clients can load the logo.
+   * Public read link for a Files path so email clients can load the logo.
+   * OCS Share create expects form-urlencoded (not JSON).
    * @param {string} path
    * @returns {Promise<string>} absolute image src or ''
    */
@@ -107,86 +194,70 @@
     if (!filePath) {
       return Promise.resolve('');
     }
-    const Logo = logoApi();
-    const ocsBase = (window.OC && typeof OC.linkToOCS === 'function')
-      ? OC.linkToOCS('apps/files_sharing/api/v1', 2)
-      : '/ocs/v2.php/apps/files_sharing/api/v1';
-    const url = String(ocsBase).replace(/\/?$/, '/') + 'shares';
-    const body = {
-      path: filePath.charAt(0) === '/' ? filePath : ('/' + filePath),
-      shareType: 3,
-      permissions: 1,
-    };
-    return fetch(url, {
-      method: 'POST',
+    const normalized = filePath.charAt(0) === '/' ? filePath : ('/' + filePath);
+    const listUrl = sharesApiUrl(
+      'format=json&path=' + encodeURIComponent(normalized) + '&reshares=true',
+    );
+    return fetch(listUrl, {
+      method: 'GET',
       credentials: 'same-origin',
-      headers: {
-        'Content-Type': 'application/json',
-        'OCS-APIREQUEST': 'true',
-        requesttoken: requestToken(),
-      },
-      body: JSON.stringify(body),
-    }).then(function (res) {
-      return res.json().then(function (data) {
-        if (!res.ok) {
-          throw new Error((data && data.ocs && data.ocs.meta && data.ocs.meta.message) || t('Could not create a public link for this file.'));
+      headers: ocsHeaders(),
+    }).then(function (listRes) {
+      return listRes.json().catch(function () { return null; }).then(function (listData) {
+        const existing = listRes.ok ? shareUrlFromOcsPayload(listData) : '';
+        if (existing) {
+          return absoluteShareSrc(existing);
         }
-        const shareUrl = data && data.ocs && data.ocs.data ? String(data.ocs.data.url || '') : '';
-        let src = Logo && Logo.publicShareToImageSrc
-          ? Logo.publicShareToImageSrc(shareUrl)
-          : (shareUrl ? (shareUrl.replace(/\/+$/, '') + '/download') : '');
-        if (src && src.indexOf('http') !== 0 && window.location && window.location.origin) {
-          src = window.location.origin + (src.charAt(0) === '/' ? src : '/' + src);
-        }
-        return src;
+        const body = new URLSearchParams();
+        body.set('path', normalized);
+        body.set('shareType', '3');
+        body.set('permissions', '1');
+        return fetch(sharesApiUrl('format=json'), {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: Object.assign({}, ocsHeaders(), {
+            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+          }),
+          body: body.toString(),
+        }).then(function (res) {
+          return res.json().then(function (data) {
+            const status = data && data.ocs && data.ocs.meta ? Number(data.ocs.meta.statuscode) : 0;
+            if (!res.ok || (status && status >= 400)) {
+              throw new Error(
+                (data && data.ocs && data.ocs.meta && data.ocs.meta.message)
+                  || t('Could not create a public link for this file.'),
+              );
+            }
+            const shareUrl = shareUrlFromOcsPayload(data);
+            if (!shareUrl) {
+              throw new Error(t('Could not create a public link for this file.'));
+            }
+            return absoluteShareSrc(shareUrl);
+          });
+        });
       });
     });
   }
 
-  /**
-   * @param {HTMLElement} editor
-   * @returns {Promise<void>}
-   */
-  function promptInsertLogoLink(editor) {
-    const Logo = logoApi();
-    const C = window.CustomerCheckComponents;
-    const finish = function (rawUrl) {
-      const html = Logo && Logo.buildSignatureLogoHtml
-        ? Logo.buildSignatureLogoHtml(rawUrl, { alt: t('Logo'), width: 180 })
-        : '';
-      if (!html) {
-        if (C && C.alertDialog) {
-          return C.alertDialog({
-            title: t('Could not add logo'),
-            message: t('Use a public https:// image address (not http or data:).'),
-            variant: 'danger',
-          });
-        }
-        return Promise.resolve();
-      }
-      insertHtmlAtCursor(editor, html);
-      return Promise.resolve();
-    };
-    if (C && typeof C.confirmDialog === 'function') {
-      return C.confirmDialog({
-        title: t('Add logo'),
-        message: t('Paste a public https image link. Recipients load this image when they open your email.'),
-        requireReason: true,
-        reasonLabel: t('Image address (https://…)'),
-        confirmLabel: t('Insert logo'),
-        cancelLabel: t('Cancel'),
-        variant: 'info',
-      }).then(function (result) {
-        if (!result || !result.confirmed) return;
-        return finish(result.reason || '');
-      });
+  function setLogoInsertBusy(editor, busy) {
+    const shell = editor && editor.closest ? editor.closest('[data-crm-rich-mail]') : null;
+    if (!shell) return;
+    shell.setAttribute('data-crm-logo-busy', busy ? '1' : '0');
+    const btn = shell.querySelector('[data-crm-rich-cmd="insertLogo"]');
+    if (btn) {
+      btn.disabled = !!busy;
+      btn.setAttribute('aria-busy', busy ? 'true' : 'false');
     }
-    const url = window.prompt(t('Image address (https://…)'), 'https://');
-    if (!url) return Promise.resolve();
-    return finish(url);
+    const live = shell.querySelector('[data-crm-logo-live]');
+    // Only announce "Adding…" while busy — success text is set by the insert path.
+    if (live && busy) {
+      live.textContent = t('Adding logo…');
+    }
   }
 
   /**
+   * WYSIWYG logo insert: open Files picker, public-share the image, insert <img>.
+   * Single-flight: ignores re-entry while a pick/share is in progress (race/double-click).
    * @param {HTMLElement} editor
    * @returns {Promise<void>}
    */
@@ -194,43 +265,44 @@
     const Picker = window.CustomerCheckFolderPicker;
     const Logo = logoApi();
     const C = window.CustomerCheckComponents;
-    if (!Picker || typeof Picker.pickFile !== 'function') {
-      return promptInsertLogoLink(editor);
+    const shell = editor && editor.closest ? editor.closest('[data-crm-rich-mail]') : null;
+    if (shell && shell.getAttribute('data-crm-logo-busy') === '1') {
+      return Promise.resolve();
     }
-    // One ack dialog → Files picker. Paste-link stays on the Logo toolbar button.
-    const ack = C && typeof C.confirmDialog === 'function'
-      ? C.confirmDialog({
-        title: t('Add logo'),
-        message: t('Pick an image from Files (creates a public https link) or paste a public https image address afterward if the picker is unavailable.'),
-        requireCheckbox: true,
-        checkboxLabel: t('I understand this creates a public link to the image.'),
-        confirmLabel: t('Choose from Files'),
-        cancelLabel: t('Cancel'),
-        variant: 'info',
-      })
-      : Promise.resolve({ confirmed: true });
-    return ack.then(function (ok) {
-      if (ok === false) return null;
-      if (ok && typeof ok === 'object' && !ok.confirmed) return null;
-      return Picker.pickFile({
-        mimeTypes: ['image/png', 'image/jpeg', 'image/jpg'],
-        title: t('Choose a logo image'),
-      });
+    const savedRange = saveEditorSelection(editor);
+    if (!Picker || typeof Picker.pickFile !== 'function') {
+      if (C && C.alertDialog) {
+        return C.alertDialog({
+          title: t('Could not add logo'),
+          message: t('The Files picker is not available. Upload your logo to Files, then try again.'),
+          variant: 'danger',
+        });
+      }
+      return Promise.resolve();
+    }
+    setLogoInsertBusy(editor, true);
+    // Real editor flow: click Logo → pick file → image appears at caret (no URL dialog).
+    return Picker.pickFile({
+      mimeTypes: ['image/png', 'image/jpeg', 'image/gif', 'image/webp'],
+      title: t('Choose a logo image'),
     }).then(function (picked) {
       if (picked == null) return null;
       if (!picked || picked.unavailable) {
-        return promptInsertLogoLink(editor);
+        throw new Error(t('The Files picker is not available. Upload your logo to Files, then try again.'));
       }
       const path = String(picked.path || '').trim();
       if (!path) return null;
       return createPublicLogoSrc(path).then(function (src) {
+        const origin = (window.location && window.location.origin) ? String(window.location.origin) : '';
         const html = Logo && Logo.buildSignatureLogoHtml
-          ? Logo.buildSignatureLogoHtml(src, { alt: t('Logo'), width: 180 })
+          ? Logo.buildSignatureLogoHtml(src, { alt: t('Logo'), width: 180, pageOrigin: origin })
           : '';
         if (!html) {
-          throw new Error(t('Logo links must use https. Serve Nextcloud over HTTPS, or paste an https:// image address.'));
+          throw new Error(t('Could not use this image as a logo. Pick a Files image on this Nextcloud (creates a public link).'));
         }
-        insertHtmlAtCursor(editor, html);
+        insertHtmlAtCursor(editor, html, savedRange);
+        const live = shell && shell.querySelector('[data-crm-logo-live]');
+        if (live) live.textContent = t('Logo added');
       });
     }).catch(function (err) {
       const msg = (err && err.message) ? String(err.message) : t('Could not add logo from Files.');
@@ -238,6 +310,8 @@
         return C.alertDialog({ title: t('Could not add logo'), message: msg, variant: 'danger' });
       }
       return undefined;
+    }).finally(function () {
+      setLogoInsertBusy(editor, false);
     });
   }
 
@@ -272,14 +346,14 @@
     let toolbarHtml = '';
     if (toolbarMode === 'signature') {
       // Signature: essentials only — name/title/link/logo (Q12), not mail-reply chrome.
+      // Logo = Files picker (WYSIWYG), not a paste-URL dialog.
       toolbarHtml =
         toolbarBtn(uid + '-b', 'bold', t('Bold'), null, 'B') +
         toolbarBtn(uid + '-i', 'italic', t('Italic'), null, 'I') +
         toolbarBtn(uid + '-u', 'underline', t('Underline'), null, 'U') +
         toolbarBtn(uid + '-ul', 'insertUnorderedList', t('Bullet list'), null, '•') +
         toolbarBtn(uid + '-link', 'createLink', t('Link'), null, 'URL') +
-        toolbarBtn(uid + '-logo', 'insertLogo', t('Add logo'), null, t('Logo')) +
-        toolbarBtn(uid + '-logo-file', 'insertLogoFile', t('Logo from Files'), null, t('File')) +
+        toolbarBtn(uid + '-logo', 'insertLogo', t('Add logo from Files'), null, t('Logo')) +
         toolbarBtn(uid + '-clear', 'removeFormat', t('Clear formatting'), null, '×');
     } else {
       toolbarHtml =
@@ -293,10 +367,7 @@
         toolbarBtn(uid + '-h3', 'formatBlock', t('Subheading'), 'h3', 'h') +
         toolbarBtn(uid + '-link', 'createLink', t('Link'), null, 'URL') +
         (allowLogo
-          ? (
-            toolbarBtn(uid + '-logo', 'insertLogo', t('Add logo'), null, t('Logo')) +
-            toolbarBtn(uid + '-logo-file', 'insertLogoFile', t('Logo from Files'), null, t('File'))
-          )
+          ? toolbarBtn(uid + '-logo', 'insertLogo', t('Add logo from Files'), null, t('Logo'))
           : '') +
         toolbarBtn(uid + '-clear', 'removeFormat', t('Clear formatting'), null, '×');
     }
@@ -311,6 +382,9 @@
       'aria-multiline="true" ' +
       (opts.labelledBy ? 'aria-labelledby="' + esc(opts.labelledBy) + '" ' : 'aria-label="' + esc(t('Message')) + '" ') +
       'spellcheck="true"></div>' +
+      (allowLogo
+        ? '<span class="crm-sr-only" data-crm-logo-live="1" aria-live="polite"></span>'
+        : '') +
       (hasSig
         ? '<label class="crm-check crm-rich-mail__sig"><input type="checkbox" id="' + uid + '-sig"' +
           (includeDefault ? ' checked' : '') + '> <span>' + esc(t('Include signature')) + '</span></label>' +
@@ -351,10 +425,6 @@
         if (!editor) return;
         editor.focus();
         if (cmd === 'insertLogo') {
-          void promptInsertLogoLink(editor);
-          return;
-        }
-        if (cmd === 'insertLogoFile') {
           void pickLogoFromFiles(editor);
           return;
         }

@@ -72,7 +72,7 @@ $teamMailboxUrl = (string)($settingsSections['mailbox'] ?? '');
 						<div class="crm-advanced__body">
 							<div class="form-group crm-signature-editor">
 								<span class="form-label crm-sales-compose__label" id="crm-personal-mail-signature-label"><?php p($l->t('Your signature')); ?></span>
-								<p class="form-help" id="crm-personal-mail-signature-help"><?php p($l->t('Added when you send from this account. Add a logo from Files or a public https image link.')); ?></p>
+								<p class="form-help" id="crm-personal-mail-signature-help"><?php p($l->t('Added when you send from this account. Use Logo to pick an image from Files (creates a public link so recipients can see it).')); ?></p>
 								<div id="crm-personal-mail-signature-editor" class="crm-signature-editor__mount" aria-labelledby="crm-personal-mail-signature-label" aria-describedby="crm-personal-mail-signature-help"></div>
 								<textarea id="crm-personal-mail-signature" class="visually-hidden" rows="1" aria-hidden="true" tabindex="-1"></textarea>
 								<div class="crm-form-actions crm-signature-editor__actions">

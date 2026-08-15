@@ -261,7 +261,6 @@ OC.L10N.register(
 		"Added %n message to Assign.": "Tilføjede %n besked til Gennemgang.",
 		"Added %n messages to Assign.": "Tilføjede %n beskeder til Gennemgang.",
 		"Added 1 new company": "1 nyt firma tilføjet",
-		"Added when you send from this account. Add a logo from Files or a public https image link.": "Tilføjes, når du sender fra denne konto. Tilføj et logo fra Filer eller et offentligt https-billedlink.",
 		"Additional invoiceable options": "Yderligere fakturerbare muligheder",
 		"Address book": "Adressebog",
 		"Adds everyone in that group now. Not live sync — run again if the group changes.": "Tilføjer alle i den gruppe nu. Ikke live-synk — kør igen, hvis gruppen ændrer sig.",
@@ -2151,7 +2150,6 @@ OC.L10N.register(
 		"Save signature": "Gem signatur",
 		"Save team settings": "Gem teamindstillinger",
 		"Save template": "Gem skabelon",
-		"Saved separately from the mailbox connection. Members who send as this inbox can include it. Add a logo from Files or a public https image link.": "Gemt separat fra postkasseforbindelsen. Medlemmer, der sender som denne indbakke, kan medtage den. Tilføj et logo fra Filer eller et offentligt https-billedlink.",
 		"Saved.": "Gemt.",
 		"Saved. Updating list…": "Gemt. Opdaterer liste…",
 		"Saved. Your mailbox is listed above. Change something only after you test the connection again.": "Gemt. Din postkasse står på listen ovenfor. Ændr først noget, når du har testet forbindelsen igen.",
@@ -2858,7 +2856,17 @@ OC.L10N.register(
 		"promises": "løfter",
 		"record": "optage",
 		"this workspace": "dette arbejdsområde",
-		"valid": "gyldig"
+		"valid": "gyldig",
+		"Fetch new messages for this tab": "Hent nye beskeder til denne fane",
+		"Fetch new messages from the team inbox": "Hent nye beskeder fra team-indbakken",
+		"Team mail sync finished.": "Team-mail-synk færdig.",
+		"Added when you send from this account. Use Logo to pick an image from Files (creates a public link so recipients can see it).": "Tilføjes, når du sender fra denne konto. Brug Logo til at vælge et billede fra Filer (opretter et offentligt link, så modtagere kan se det).",
+		"Saved separately from the mailbox connection. Members who send as this inbox can include it. Use Logo to pick an image from Files (creates a public link so recipients can see it).": "Gemt separat fra postkasseforbindelsen. Medlemmer, der sender som denne indbakke, kan medtage den. Brug Logo til at vælge et billede fra Filer (opretter et offentligt link, så modtagere kan se det).",
+		"Add logo from Files": "Tilføj logo fra Filer",
+		"The Files picker is not available. Upload your logo to Files, then try again.": "Filvælgeren er ikke tilgængelig. Upload dit logo til Filer, og prøv igen.",
+		"Could not use this image as a logo. Pick a Files image on this Nextcloud (creates a public link).": "Billedet kunne ikke bruges som logo. Vælg et billede fra Filer på denne Nextcloud (opretter et offentligt link).",
+		"Adding logo…": "Tilføjer logo…",
+		"Logo added": "Logo tilføjet"
 	},
 	"nplurals=2; plural=(n != 1);"
 );
