@@ -22,8 +22,12 @@ $crmCompaniesHref = static function (array $extra = []) use ($companiesUrl, $wor
 	return $query === [] ? $companiesUrl : ($companiesUrl . '?' . http_build_query($query));
 };
 $filterPanelOpen = ($filterStatus !== '' || $filterArchived);
-include __DIR__ . '/common/page-start.php';
+$crmListFragment = !empty($_['crmListFragment']);
+if (!$crmListFragment) {
+	include __DIR__ . '/common/page-start.php';
+}
 ?>
+<?php if (!$crmListFragment): ?>
 <div class="crm-page-actions-source header-actions" hidden>
 	<?php if (!empty($_['canWrite'])): ?>
 	<a class="crm-btn crm-btn--primary" href="<?php p($_['urls']['companyNew'] ?? '#'); ?>"><?php p($l->t('Add company')); ?></a>
@@ -31,12 +35,14 @@ include __DIR__ . '/common/page-start.php';
 	<button type="button" class="crm-btn crm-btn--secondary" id="crm-companies-filter-toggle" aria-expanded="<?php p($filterPanelOpen ? 'true' : 'false'); ?>" aria-controls="crm-companies-filter"><?php p($l->t('More filters')); ?></button>
 </div>
 <div class="crm-page-stack">
+<?php endif; ?>
 	<nav class="crm-quick-filters" data-crm-filter-swap="nav" aria-label="<?php p($l->t('Quick filters')); ?>">
 		<a class="crm-quick-filter<?php if ($filterStatus === '' && !$filterArchived): ?> is-active<?php endif; ?>" href="<?php p($crmCompaniesHref($filterQ !== '' ? ['q' => $filterQ] : [])); ?>"<?php if ($filterStatus === '' && !$filterArchived): ?> aria-current="page"<?php endif; ?>><?php p($l->t('All')); ?></a>
 		<a class="crm-quick-filter<?php if ($filterStatus === 'active' && !$filterArchived): ?> is-active<?php endif; ?>" href="<?php p($crmCompaniesHref(array_filter(['status' => 'active', 'q' => $filterQ !== '' ? $filterQ : null]))); ?>"<?php if ($filterStatus === 'active' && !$filterArchived): ?> aria-current="page"<?php endif; ?>><?php p($l->t('Active')); ?></a>
 		<a class="crm-quick-filter<?php if ($filterStatus === 'lead' && !$filterArchived): ?> is-active<?php endif; ?>" href="<?php p($crmCompaniesHref(array_filter(['status' => 'lead', 'q' => $filterQ !== '' ? $filterQ : null]))); ?>"<?php if ($filterStatus === 'lead' && !$filterArchived): ?> aria-current="page"<?php endif; ?>><?php p($l->t('Leads')); ?></a>
 		<a class="crm-quick-filter<?php if ($filterArchived): ?> is-active<?php endif; ?>" href="<?php p($crmCompaniesHref(array_filter(['archived' => '1', 'q' => $filterQ !== '' ? $filterQ : null]))); ?>"<?php if ($filterArchived): ?> aria-current="page"<?php endif; ?>><?php p($l->t('Archived')); ?></a>
 	</nav>
+<?php if (!$crmListFragment): ?>
 
 	<form method="get" class="crm-companies-search" action="<?php p($companiesUrl); ?>" data-crm-live-filter role="search" aria-labelledby="crm-companies-search-title" novalidate>
 		<?php if ($workspaceId > 0): ?>
@@ -107,6 +113,7 @@ include __DIR__ . '/common/page-start.php';
 			</form>
 		</div>
 	</section>
+<?php endif; ?>
 
 	<div data-crm-filter-swap="main" id="crm-companies-results" data-crm-filter-empty="<?php p($l->t('No companies match')); ?>" data-crm-filter-done="<?php p($l->t('Search results')); ?>" data-crm-filter-failed="<?php p($l->t('Could not update the list. Press Search.')); ?>">
 	<?php
@@ -243,5 +250,7 @@ include __DIR__ . '/common/page-start.php';
 		</div>
 	</section>
 	</div>
+<?php if (!$crmListFragment): ?>
 </div>
 <?php include __DIR__ . '/common/page-end.php'; ?>
+<?php endif; ?>

@@ -5,7 +5,9 @@ use OCA\CustomerCheck\Service\AppSettingsSectionCatalog;
 use OCA\CustomerCheck\Service\FrontEndAssetService;
 use OCA\CustomerCheck\Service\WorkspaceCapability;
 use OCA\CustomerCheck\Service\WorkspaceSettingsSectionCatalog;
+use OCA\CustomerCheck\Support\ListFragmentRequest;
 use OCA\CustomerCheck\Support\WorkspaceSwitchUrlBuilder;
+use OCP\AppFramework\Http\TemplateResponse;
 
 trait PageShellTrait
 {
@@ -185,6 +187,103 @@ trait PageShellTrait
 	protected function registerFrontEndAssets(string $pageScript = '', ?string $pageStyle = null, array $extraStyles = [], array $extraScripts = []): void
 	{
 		FrontEndAssetService::registerPage($pageScript, $pageStyle, $extraStyles, $extraScripts);
+	}
+
+	protected function wantsListFragment(): bool
+	{
+		return ListFragmentRequest::wants($this->request ?? null);
+	}
+
+	protected function registerListPageAssets(string $pageScript): void
+	{
+		if ($this->wantsListFragment()) {
+			return;
+		}
+		$this->registerFrontEndAssets($pageScript);
+	}
+
+	/**
+	 * Island params: same ACL (canWrite/canDelete) as the full page, without
+	 * nav catalogs, workspace switcher maps, or settings URL grids.
+	 *
+	 * @return array<string, mixed>
+	 */
+	protected function buildFragmentShellParams(): array
+	{
+		$userId = '';
+		try {
+			$userId = $this->accessControl->currentUserIdOrEmpty();
+		} catch (\Throwable) {
+		}
+		$isAdmin = $userId !== '' && $this->accessControl->isAppAdmin($userId);
+		$workspaceRole = $isAdmin ? 'manager' : 'viewer';
+		$isAppAdminCtx = $isAdmin;
+		$workspaceId = 0;
+		if ($userId !== '' && isset($this->workspaceAccess)) {
+			try {
+				$ctx = $this->workspaceAccess->resolveForUser($userId);
+				$workspaceId = (int)$ctx['workspace']->getId();
+				$isAppAdminCtx = !empty($ctx['isAppAdmin']) || $isAdmin;
+				$workspaceRole = WorkspaceCapability::normalizeRole((string)($ctx['role'] ?? 'viewer'));
+			} catch (\Throwable) {
+			}
+		}
+		$g = $this->urlGenerator;
+
+		return [
+			'urlGenerator' => $this->urlGenerator,
+			'l' => $this->l10n,
+			'labels' => $this->labels,
+			'canWrite' => WorkspaceCapability::allows($workspaceRole, 'write', $isAppAdminCtx),
+			'canDelete' => WorkspaceCapability::allows($workspaceRole, 'delete', $isAppAdminCtx),
+			'workspaceId' => $workspaceId,
+			'urls' => [
+				'companyNew' => $g->linkToRoute('customercheck.page.companyNew'),
+				'import' => $g->linkToRoute('customercheck.page.import'),
+				'companies' => $g->linkToRoute('customercheck.page.companies'),
+				'today' => $g->linkToRoute('customercheck.page.today'),
+				'agreements' => $g->linkToRoute('customercheck.page.agreements'),
+			],
+			'crmListFragment' => true,
+		];
+	}
+
+	/**
+	 * @param array<string, mixed> $pageData
+	 * @return array<string, mixed>
+	 */
+	protected function mergeListPageParams(string $pageId, string $title, string $help = '', array $pageData = []): array
+	{
+		if ($this->wantsListFragment()) {
+			return array_merge($this->buildFragmentShellParams(), $pageData);
+		}
+
+		return $this->mergeShellPageParams($pageId, $title, $help, $pageData);
+	}
+
+	/**
+	 * @param array<string, mixed> $params
+	 */
+	protected function listPageResponse(string $template, array $params): TemplateResponse
+	{
+		$fragment = $this->wantsListFragment();
+		if ($fragment) {
+			$params['crmListFragment'] = true;
+		}
+		$response = new TemplateResponse(
+			'customercheck',
+			$template,
+			$params,
+			$fragment ? TemplateResponse::RENDER_AS_BLANK : TemplateResponse::RENDER_AS_USER,
+		);
+		if ($fragment) {
+			$response->addHeader('Cache-Control', 'no-store, private');
+			$response->addHeader('Vary', ListFragmentRequest::varyValue());
+			$response->addHeader(ListFragmentRequest::HEADER, '1');
+			$response->addHeader('X-Content-Type-Options', 'nosniff');
+		}
+
+		return $response;
 	}
 
 	/** @return array<string,string> */

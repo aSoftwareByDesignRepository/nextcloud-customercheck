@@ -12,8 +12,12 @@ $statuses = ['draft', 'active', 'expiring', 'expired', 'superseded', 'cancelled'
 $labels = $_['labels'] ?? null;
 $agreementsUrl = $urlGenerator->linkToRoute('customercheck.page.agreements');
 $canWrite = !empty($_['canWrite']);
-include __DIR__ . '/common/page-start.php';
+$crmListFragment = !empty($_['crmListFragment']);
+if (!$crmListFragment) {
+	include __DIR__ . '/common/page-start.php';
+}
 ?>
+<?php if (!$crmListFragment): ?>
 <div class="crm-page-actions-source header-actions" hidden>
 	<?php if ($canWrite): ?>
 	<a class="crm-btn crm-btn--primary" href="<?php p($urlGenerator->linkToRoute('customercheck.page.agreementNew')); ?>"><?php p($l->t('New agreement')); ?></a>
@@ -21,12 +25,14 @@ include __DIR__ . '/common/page-start.php';
 	<button type="button" class="crm-btn crm-btn--secondary" id="crm-agreements-filter-toggle" aria-expanded="<?php p($filterOpen ? 'true' : 'false'); ?>" aria-controls="crm-agreements-filter"><?php p($l->t('More filters')); ?></button>
 </div>
 <div class="crm-page-stack">
+<?php endif; ?>
 	<nav class="crm-quick-filters" data-crm-filter-swap="nav" aria-label="<?php p($l->t('Quick filters')); ?>">
 		<a class="crm-quick-filter<?php if ($filterKind === '' && $filterStatus === '' && $filterExpiry === ''): ?> is-active<?php endif; ?>" href="<?php p($agreementsUrl); ?>"<?php if ($filterKind === '' && $filterStatus === '' && $filterExpiry === ''): ?> aria-current="page"<?php endif; ?>><?php p($l->t('All')); ?></a>
 		<a class="crm-quick-filter<?php if ($filterKind === 'license'): ?> is-active<?php endif; ?>" href="<?php p($agreementsUrl); ?>?kind=license"<?php if ($filterKind === 'license'): ?> aria-current="page"<?php endif; ?>><?php p($l->t('Licenses')); ?></a>
 		<a class="crm-quick-filter<?php if ($filterKind === 'partner'): ?> is-active<?php endif; ?>" href="<?php p($agreementsUrl); ?>?kind=partner"<?php if ($filterKind === 'partner'): ?> aria-current="page"<?php endif; ?>><?php p($l->t('Partner')); ?></a>
 		<a class="crm-quick-filter<?php if ($filterExpiry === '60'): ?> is-active<?php endif; ?>" href="<?php p($agreementsUrl); ?>?expiry=60"<?php if ($filterExpiry === '60'): ?> aria-current="page"<?php endif; ?>><?php p($l->t('Expiring soon')); ?></a>
 	</nav>
+<?php if (!$crmListFragment): ?>
 	<section id="crm-agreements-filter" class="crm-card crm-filter-panel" <?php if (!$filterOpen): ?>hidden<?php endif; ?> aria-labelledby="crm-agreements-filter-title">
 		<header class="crm-filter-panel__head">
 			<h2 id="crm-agreements-filter-title"><?php p($l->t('Filter agreements')); ?></h2>
@@ -73,6 +79,7 @@ include __DIR__ . '/common/page-start.php';
 			</form>
 		</div>
 	</section>
+<?php endif; ?>
 	<div data-crm-filter-swap="main" id="crm-agreements-results" data-crm-filter-empty="<?php p($l->t('No agreements yet')); ?>" data-crm-filter-done="<?php p($l->t('List updated.')); ?>" data-crm-filter-failed="<?php p($l->t('Could not update the list. Try again.')); ?>">
 	<section class="crm-card">
 		<header class="crm-card__header"><h2 class="crm-card__title"><?php p($l->t('All agreements')); ?></h2></header>
@@ -157,5 +164,7 @@ include __DIR__ . '/common/page-start.php';
 		</div>
 	</section>
 	</div>
+<?php if (!$crmListFragment): ?>
 </div>
 <?php include __DIR__ . '/common/page-end.php'; ?>
+<?php endif; ?>

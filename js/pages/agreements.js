@@ -60,6 +60,14 @@
     form.querySelector('[data-cancel]').addEventListener('click', close);
     form.addEventListener('submit', async (ev) => {
       ev.preventDefault();
+      const submitBtn = form.querySelector('button[type="submit"]');
+      if (submitBtn && (submitBtn.disabled || submitBtn.getAttribute('aria-busy') === 'true')) {
+        return;
+      }
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.setAttribute('aria-busy', 'true');
+      }
       let minutes = parseInt(form.elements.minutes.value, 10);
       if (!Number.isFinite(minutes) || minutes < 15) minutes = 15;
       minutes = Math.round(minutes / 15) * 15;
@@ -70,8 +78,18 @@
           topic: form.elements.topic.value,
         });
         close();
-        location.reload();
+        const live = document.getElementById('crm-live-region');
+        if (live) live.textContent = t('Hours logged');
+        if (window.CustomerCheckFilterLive && typeof window.CustomerCheckFilterLive.refresh === 'function') {
+          await window.CustomerCheckFilterLive.refresh();
+        } else {
+          location.reload();
+        }
       } catch (e) {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.removeAttribute('aria-busy');
+        }
         await C.alertDialog({ title: t('Could not log hours'), message: (e.payload && e.payload.message) || e.message, variant: 'danger' });
       }
     });

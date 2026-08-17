@@ -10,17 +10,23 @@ $filterOpen = ($filterType !== '' || $filterScope !== 'open');
 $labels = $_['labels'] ?? null;
 $activitiesUrl = $urlGenerator->linkToRoute('customercheck.page.activities');
 $canWrite = !empty($_['canWrite']);
-include __DIR__ . '/common/page-start.php';
+$crmListFragment = !empty($_['crmListFragment']);
+if (!$crmListFragment) {
+	include __DIR__ . '/common/page-start.php';
+}
 ?>
+<?php if (!$crmListFragment): ?>
 <div class="crm-page-actions-source header-actions" hidden>
 	<button type="button" class="crm-btn crm-btn--secondary" id="crm-activities-filter-toggle" aria-expanded="<?php p($filterOpen ? 'true' : 'false'); ?>" aria-controls="crm-activities-filter"><?php p($l->t('More filters')); ?></button>
 </div>
 <div class="crm-page-stack">
+<?php endif; ?>
 	<nav class="crm-quick-filters" data-crm-filter-swap="nav" aria-label="<?php p($l->t('Quick filters')); ?>">
 		<a class="crm-quick-filter<?php if ($filterScope === 'open' && $filterType === ''): ?> is-active<?php endif; ?>" href="<?php p($activitiesUrl); ?>"<?php if ($filterScope === 'open' && $filterType === ''): ?> aria-current="page"<?php endif; ?>><?php p($l->t('Open')); ?></a>
 		<a class="crm-quick-filter<?php if ($filterScope === 'done'): ?> is-active<?php endif; ?>" href="<?php p($activitiesUrl); ?>?scope=done"<?php if ($filterScope === 'done'): ?> aria-current="page"<?php endif; ?>><?php p($l->t('Done')); ?></a>
 		<a class="crm-quick-filter<?php if ($filterScope === 'all'): ?> is-active<?php endif; ?>" href="<?php p($activitiesUrl); ?>?scope=all"<?php if ($filterScope === 'all'): ?> aria-current="page"<?php endif; ?>><?php p($l->t('All')); ?></a>
 	</nav>
+<?php if (!$crmListFragment): ?>
 	<section id="crm-activities-filter" class="crm-card crm-filter-panel" <?php if (!$filterOpen): ?>hidden<?php endif; ?> aria-labelledby="crm-activities-filter-title">
 		<header class="crm-filter-panel__head">
 			<h2 id="crm-activities-filter-title"><?php p($l->t('Filter activities')); ?></h2>
@@ -56,6 +62,7 @@ include __DIR__ . '/common/page-start.php';
 			</form>
 		</div>
 	</section>
+<?php endif; ?>
 	<div data-crm-filter-swap="main" id="crm-activities-results" data-crm-filter-empty="<?php p($l->t('Nothing open right now')); ?>" data-crm-filter-done="<?php p($l->t('List updated.')); ?>" data-crm-filter-failed="<?php p($l->t('Could not update the list. Try again.')); ?>">
 	<?php
 	$sections = [
@@ -149,5 +156,7 @@ include __DIR__ . '/common/page-start.php';
 	</section>
 	<?php endif; ?>
 	</div>
+<?php if (!$crmListFragment): ?>
 </div>
 <?php include __DIR__ . '/common/page-end.php'; ?>
+<?php endif; ?>

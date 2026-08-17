@@ -302,7 +302,7 @@ class PageController extends Controller
 	#[NoCSRFRequired]
 	public function companies(): TemplateResponse
 	{
-		$this->registerFrontEndAssets('pages/companies');
+		$this->registerListPageAssets('pages/companies');
 		$wsId = $this->resolvedWorkspaceId();
 		$search = \OCA\CustomerCheck\Support\CompanyListSearch::normalize(
 			(string)$this->request->getParam('q', '')
@@ -358,7 +358,7 @@ class PageController extends Controller
 		foreach ($this->directory->resolveUsers(array_values(array_unique($ownerUids))) as $u) {
 			$ownerDisplayNames[$u['id']] = (string)($u['displayName'] ?? $u['id']);
 		}
-		return new TemplateResponse('customercheck', 'companies', $this->mergeShellPageParams(
+		return $this->listPageResponse('companies', $this->mergeListPageParams(
 			'companies',
 			$this->l10n->t('Companies'),
 			$this->l10n->t('Your customer registry.'),
@@ -833,7 +833,7 @@ class PageController extends Controller
 	#[NoCSRFRequired]
 	public function agreements(): TemplateResponse
 	{
-		$this->registerFrontEndAssets('pages/agreements');
+		$this->registerListPageAssets('pages/agreements');
 		$kind = trim((string)$this->request->getParam('kind', ''));
 		$status = trim((string)$this->request->getParam('status', ''));
 		$expiry = trim((string)$this->request->getParam('expiry', ''));
@@ -877,7 +877,7 @@ class PageController extends Controller
 				: $this->labels->unknownCompany();
 		}
 		unset($row);
-		return new TemplateResponse('customercheck', 'agreements', $this->mergeShellPageParams(
+		return $this->listPageResponse('agreements', $this->mergeListPageParams(
 			'agreements',
 			$this->l10n->t('Agreements'),
 			$this->l10n->t('Licenses, Partner packages and one-time items.'),
@@ -946,7 +946,7 @@ class PageController extends Controller
 	#[NoCSRFRequired]
 	public function money(): TemplateResponse
 	{
-		$this->registerFrontEndAssets('pages/money');
+		$this->registerListPageAssets('pages/money');
 		$state = trim((string)$this->request->getParam('state', ''));
 		// Workspace scope is mandatory — never blend foreign-book € (§3.3 / §15.3 / §20).
 		$overview = $this->money->overview(
@@ -954,7 +954,7 @@ class PageController extends Controller
 			$state !== '' ? $state : null,
 			$this->resolvedWorkspaceId(),
 		);
-		return new TemplateResponse('customercheck', 'money', $this->mergeShellPageParams(
+		return $this->listPageResponse('money', $this->mergeListPageParams(
 			'money',
 			$this->l10n->t('Money'),
 			$this->l10n->t('Overdue, unpaid, paid and unknown invoice states.'),
@@ -969,7 +969,7 @@ class PageController extends Controller
 	#[NoCSRFRequired]
 	public function activities(): TemplateResponse
 	{
-		$this->registerFrontEndAssets('pages/activities');
+		$this->registerListPageAssets('pages/activities');
 		$type = trim((string)$this->request->getParam('type', ''));
 		$scope = trim((string)$this->request->getParam('scope', 'open'));
 		$filters = [];
@@ -1019,7 +1019,7 @@ class PageController extends Controller
 			}
 		}
 		$list = array_merge($groups['overdue'], $groups['today'], $groups['later'], $groups['done']);
-		return new TemplateResponse('customercheck', 'activities', $this->mergeShellPageParams(
+		return $this->listPageResponse('activities', $this->mergeListPageParams(
 			'activities',
 			$this->l10n->t('Activities'),
 			$this->l10n->t('Calls, emails, meetings and to-dos.'),

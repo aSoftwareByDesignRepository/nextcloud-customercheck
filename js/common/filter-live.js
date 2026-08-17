@@ -227,24 +227,26 @@
 
   /**
    * @param {URL} url
-   * @param {{ immediate?: boolean }} [opts]
+   * @param {{ immediate?: boolean, force?: boolean }} [opts]
+   * @returns {Promise<boolean>|undefined}
    */
   function applyUrl(url, opts) {
     const immediate = !!(opts && opts.immediate);
+    const force = !!(opts && opts.force);
     if (searchTimer) {
       clearTimeout(searchTimer);
       searchTimer = null;
     }
     const run = function () {
       if (!url) {
-        return;
+        return Promise.resolve(false);
       }
       if (!Core.canSwapInPlace(document) || !Core.isSafeFilterUrl(url, window.location)) {
-        return;
+        return Promise.resolve(false);
       }
       const href = url.pathname + url.search;
-      if (Core.urlsEqual(href, lastAppliedHref) || Core.urlsEqual(url.href, window.location.href)) {
-        return;
+      if (!force && (Core.urlsEqual(href, lastAppliedHref) || Core.urlsEqual(url.href, window.location.href))) {
+        return Promise.resolve(true);
       }
       const my = ++generation;
       if (inflight) {
@@ -257,12 +259,12 @@
       }
       announce(Core.statusMessage(Object.assign({ busy: true, t: t }, statusCopy())));
       const focusId = document.activeElement && document.activeElement.id ? document.activeElement.id : '';
-      const headers = { Accept: 'text/html', 'X-Requested-With': 'XMLHttpRequest' };
+      const headers = Core.fragmentRequestHeaders();
       const init = { method: 'GET', credentials: 'same-origin', headers: headers };
       if (inflight) {
         init.signal = inflight.signal;
       }
-      fetch(url.href, init).then(function (res) {
+      return fetch(url.href, init).then(function (res) {
         if (my !== generation) {
           return null;
         }
@@ -272,7 +274,7 @@
         return res.text();
       }).then(function (html) {
         if (html === null || my !== generation) {
-          return;
+          return false;
         }
         if (typeof html !== 'string' || html === '') {
           throw new Error('empty');
@@ -299,32 +301,60 @@
             }
           }
         }
+        return true;
       }).catch(function (err) {
         if (err && err.name === 'AbortError') {
-          return;
+          return false;
         }
         if (my !== generation) {
-          return;
+          return false;
         }
         announce(Core.statusMessage(Object.assign({ failed: true, t: t }, statusCopy())));
-        if (immediate) {
+        if (immediate && !force) {
           window.location.assign(url.href);
         }
-      }).then(function () {
-        if (my !== generation) {
-          return;
+        return false;
+      }).then(function (ok) {
+        if (my === generation) {
+          const liveMain = document.querySelector('[data-crm-filter-swap="main"]');
+          if (liveMain) {
+            liveMain.removeAttribute('aria-busy');
+          }
         }
-        const liveMain = document.querySelector('[data-crm-filter-swap="main"]');
-        if (liveMain) {
-          liveMain.removeAttribute('aria-busy');
-        }
+        return !!ok;
       });
     };
     if (immediate) {
-      run();
-      return;
+      return run();
     }
     searchTimer = setTimeout(run, Core.SEARCH_DEBOUNCE_MS);
+  }
+
+  /**
+   * Re-fetch the current list after a write. URL is often unchanged, so force
+   * must skip the urlsEqual early-out. Falls back to a full reload only when
+   * this page has no swap island.
+   *
+   * @returns {Promise<boolean>}
+   */
+  function refresh() {
+    if (!Core.canSwapInPlace(document)) {
+      window.location.reload();
+      return Promise.resolve(false);
+    }
+    let url;
+    try {
+      url = new URL(window.location.href);
+    } catch (e) {
+      window.location.reload();
+      return Promise.resolve(false);
+    }
+    url.hash = '';
+    if (!Core.isSafeFilterUrl(url, window.location)) {
+      window.location.reload();
+      return Promise.resolve(false);
+    }
+    return applyUrl(url, { immediate: true, force: true }) || Promise.resolve(false);
   }
 
   /**
@@ -446,5 +476,5 @@
     init();
   }
 
-  window.CustomerCheckFilterLive = { init: init, wireLiveFilter: wireLiveFilter };
+  window.CustomerCheckFilterLive = { init: init, wireLiveFilter: wireLiveFilter, refresh: refresh };
 })();

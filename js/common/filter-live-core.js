@@ -11,6 +11,10 @@
   /** Pause after the last key before fetching. Slow typists must not reload per char. */
   const SEARCH_DEBOUNCE_MS = 450;
   const MAX_FILTER_URL_LENGTH = 2048;
+  /** Header-only: never a query flag (that would bookmark a chrome-less page). */
+  const FRAGMENT_HEADER = 'X-CustomerCheck-Fragment';
+  const PREFER_HEADER = 'Prefer';
+  const PREFER_MINIMAL = 'return=minimal';
 
   /**
    * @param {unknown} ev
@@ -365,9 +369,27 @@
     return !!liveRoot.querySelector('[data-crm-filter-swap="main"]');
   }
 
+  /**
+   * Same-origin GET for list islands. Header-only opt-in — never a query flag.
+   *
+   * @returns {Record<string, string>}
+   */
+  function fragmentRequestHeaders() {
+    const headers = {
+      Accept: 'text/html',
+      'X-Requested-With': 'XMLHttpRequest',
+    };
+    headers[PREFER_HEADER] = PREFER_MINIMAL;
+    headers[FRAGMENT_HEADER] = '1';
+    return headers;
+  }
+
   const api = {
     SEARCH_DEBOUNCE_MS: SEARCH_DEBOUNCE_MS,
     MAX_FILTER_URL_LENGTH: MAX_FILTER_URL_LENGTH,
+    FRAGMENT_HEADER: FRAGMENT_HEADER,
+    PREFER_HEADER: PREFER_HEADER,
+    PREFER_MINIMAL: PREFER_MINIMAL,
     isComposingEvent: isComposingEvent,
     buildFilterUrl: buildFilterUrl,
     isSafeFilterUrl: isSafeFilterUrl,
@@ -383,6 +405,7 @@
     hiddenFilterValue: hiddenFilterValue,
     extractSwapNames: extractSwapNames,
     canSwapInPlace: canSwapInPlace,
+    fragmentRequestHeaders: fragmentRequestHeaders,
   };
 
   if (typeof module !== 'undefined' && module.exports) {

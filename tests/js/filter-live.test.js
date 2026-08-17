@@ -165,4 +165,18 @@ describe('filter-live-core debounce + safety', () => {
     expect(Core.urlsEqual('', HERE)).toBe(false);
     expect(Core.urlsEqual(null, HERE)).toBe(false);
   });
+
+  it('sends the fragment header and RFC 7240 Prefer: return=minimal', () => {
+    expect(Core.FRAGMENT_HEADER).toBe('X-CustomerCheck-Fragment');
+    expect(Core.PREFER_HEADER).toBe('Prefer');
+    expect(Core.PREFER_MINIMAL).toBe('return=minimal');
+    const headers = Core.fragmentRequestHeaders();
+    expect(headers[Core.FRAGMENT_HEADER]).toBe('1');
+    expect(headers[Core.PREFER_HEADER]).toBe('return=minimal');
+    expect(headers.Accept).toBe('text/html');
+    expect(headers['X-Requested-With']).toBe('XMLHttpRequest');
+    expect(Object.keys(headers).sort()).toEqual(
+      ['Accept', 'Prefer', 'X-CustomerCheck-Fragment', 'X-Requested-With'].sort(),
+    );
+  });
 });
