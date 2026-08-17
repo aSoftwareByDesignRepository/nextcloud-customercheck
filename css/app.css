@@ -2690,6 +2690,16 @@ dialog.crm-native-dialog .crm-pre {
 	line-height: 1.4;
 	color: var(--crm-muted);
 }
+#app-content.crm-app [data-crm-filter-swap="main"][aria-busy="true"] {
+	opacity: 0.72;
+	transition: opacity 0.15s ease;
+	cursor: progress;
+}
+@media (prefers-reduced-motion: reduce) {
+	#app-content.crm-app [data-crm-filter-swap="main"][aria-busy="true"] {
+		transition: none;
+	}
+}
 #app-content.crm-app .crm-quick-filters {
 	display: flex;
 	flex-wrap: wrap;

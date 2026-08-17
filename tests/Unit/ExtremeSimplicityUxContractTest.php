@@ -413,6 +413,8 @@ final class ExtremeSimplicityUxContractTest extends TestCase
 		$this->assertStringContainsString("'archived' => '1'", $html);
 		$this->assertStringContainsString('data-crm-live-filter', $html);
 		$this->assertStringContainsString('crm-companies-search', $html);
+		$this->assertStringContainsString('data-crm-filter-swap="main"', $html);
+		$this->assertStringContainsString('id="crm-companies-q"', $html);
 	}
 
 	public function testCompanyDetailCollapsesEmptyLinkedApps(): void
@@ -436,6 +438,13 @@ final class ExtremeSimplicityUxContractTest extends TestCase
 			$html = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/' . $file);
 			$this->assertStringContainsString('crm-quick-filters', $html, $file);
 			$this->assertStringContainsString('data-crm-live-filter', $html, $file);
+			$this->assertStringContainsString('data-crm-filter-swap="main"', $html, $file);
+			$this->assertStringContainsString('data-crm-filter-swap="nav"', $html, $file);
+			$formPos = strpos($html, 'data-crm-live-filter');
+			$mainPos = strpos($html, 'data-crm-filter-swap="main"');
+			$this->assertNotFalse($formPos, $file);
+			$this->assertNotFalse($mainPos, $file);
+			$this->assertLessThan($mainPos, $formPos, $file . ': filter form must stay outside swapped results');
 		}
 	}
 
@@ -584,10 +593,13 @@ final class ExtremeSimplicityUxContractTest extends TestCase
 	public function testFilterLiveScriptIsRegistered(): void
 	{
 		$src = (string)file_get_contents(dirname(__DIR__, 2) . '/lib/Service/FrontEndAssetService.php');
-		$this->assertStringContainsString("addScript(Application::APP_ID, 'common/filter-live')", $src);
+		$this->assertStringContainsString("addScript(Application::APP_ID, 'common/filter-live-core')", $src);
+		$this->assertStringContainsString("common/filter-live'", $src);
 		$js = (string)file_get_contents(dirname(__DIR__, 2) . '/js/common/filter-live.js');
-		$this->assertStringContainsString('requestSubmit', $js);
-		$this->assertStringContainsString('crm-filter-panel__form', $js);
+		$this->assertMatchesRegularExpression('/(?<![\\w.])fetch\\(url\\.href/', $js);
+		$this->assertStringContainsString('AbortController', $js);
+		$this->assertStringContainsString('data-crm-live-filter', $js);
+		$this->assertStringContainsString('Search-as-you-type must never requestSubmit', $js);
 	}
 
 	public function testJumpNavRevealsCollapsedLinkedBundle(): void

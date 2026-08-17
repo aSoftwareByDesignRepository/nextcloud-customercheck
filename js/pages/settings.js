@@ -144,6 +144,7 @@
       clearTimeout(timer);
       const q = search.value.trim();
       if (q.length < 2) {
+        searchGeneration += 1;
         suggest.hidden = true;
         suggest.innerHTML = '';
         search.setAttribute('aria-expanded', 'false');
@@ -269,6 +270,7 @@
     const suggest = document.getElementById(opts.suggestId);
     const userSearch = document.getElementById(opts.searchId);
     let searchTimer = null;
+    let searchGeneration = 0;
 
     function selectedUids() {
       if (!chipList) return [];
@@ -301,13 +303,19 @@
         clearTimeout(searchTimer);
         const q = userSearch.value.trim();
         if (q.length < 2) {
+          searchGeneration += 1;
           suggest.hidden = true;
           suggest.innerHTML = '';
           return;
         }
+        searchGeneration += 1;
+        const myGeneration = searchGeneration;
         searchTimer = setTimeout(async () => {
           try {
             const res = await Api.get('/settings/users?q=' + encodeURIComponent(q));
+            if (myGeneration !== searchGeneration) {
+              return;
+            }
             const users = (res.data && res.data.users) || [];
             suggest.innerHTML = '';
             users.forEach((u) => {

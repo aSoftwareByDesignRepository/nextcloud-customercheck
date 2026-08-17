@@ -27,16 +27,28 @@
     }
   }
 
-  document.querySelectorAll('[data-crm-complete-activity]').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      btn.disabled = true;
-      await markDone(btn.getAttribute('data-crm-complete-activity'), true, btn.getAttribute('data-updated-at'));
-    });
-  });
-
-  document.querySelectorAll('[data-crm-undo-activity]').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      await markDone(btn.getAttribute('data-crm-undo-activity'), false, btn.getAttribute('data-updated-at'));
-    });
+  document.addEventListener('click', async (ev) => {
+    const target = ev.target;
+    if (!target || typeof target.closest !== 'function') {
+      return;
+    }
+    const complete = target.closest('[data-crm-complete-activity]');
+    const undo = target.closest('[data-crm-undo-activity]');
+    const btn = complete || undo;
+    if (!btn) {
+      return;
+    }
+    ev.preventDefault();
+    if (btn.disabled || btn.getAttribute('aria-busy') === 'true') {
+      return;
+    }
+    btn.disabled = true;
+    btn.setAttribute('aria-busy', 'true');
+    const id = complete
+      ? btn.getAttribute('data-crm-complete-activity')
+      : btn.getAttribute('data-crm-undo-activity');
+    await markDone(id, !!complete, btn.getAttribute('data-updated-at'));
+    btn.disabled = false;
+    btn.removeAttribute('aria-busy');
   });
 })();

@@ -77,71 +77,90 @@
     });
   }
 
-  document.querySelectorAll('[data-crm-partner-session], [data-crm-partner-mail]').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      const agreementId = btn.getAttribute('data-crm-partner-session') || btn.getAttribute('data-crm-partner-mail');
-      const skipConfirm = btn.hasAttribute('data-crm-partner-session');
-      try {
-        const res = await Api.post('/agreements/' + agreementId + '/partner-mail', { promptHours: true });
-        const data = res.data || res;
-        const companyId = parseInt(String(btn.getAttribute('data-company-id') || '0'), 10);
-        if (SharedMail) {
-          await SharedMail.offerPreparedMail(data, { companyId: companyId, title: t('Partner mail') });
-        } else if (data.mailAppUrl) {
-          window.open(data.mailAppUrl, '_blank');
-        } else if (data.mailtoUrl) {
-          window.location.href = data.mailtoUrl;
-        }
-        const live = document.getElementById('crm-live-region');
-        if (live) live.textContent = t('Partner mail prepared.');
-        if (data.promptHours) {
-          if (skipConfirm) {
-            await openLogHours(agreementId);
-          } else if (C) {
-            const log = await C.confirmDialog({
-              title: t('Log hours?'),
-              message: t('Log hours for this Partner session?'),
-              confirmLabel: t('Log hours'),
-              cancelLabel: t('Not now'),
-              variant: 'info',
-            });
-            if (log && log.confirmed) await openLogHours(agreementId);
-          }
-        }
-      } catch (e) {
-        if (C) await C.alertDialog({ title: t('Partner mail'), message: (e.payload && e.payload.message) || e.message, variant: 'danger' });
+  document.addEventListener('click', async (ev) => {
+    const target = ev.target;
+    if (!target || typeof target.closest !== 'function') {
+      return;
+    }
+    const partner = target.closest('[data-crm-partner-session], [data-crm-partner-mail]');
+    const hours = target.closest('[data-crm-log-hours]');
+    const pack = target.closest('[data-crm-delivery-pack]');
+    if (hours && !partner && !pack) {
+      ev.preventDefault();
+      await openLogHours(hours.getAttribute('data-crm-log-hours'));
+      return;
+    }
+    if (pack && !partner) {
+      ev.preventDefault();
+      if (pack.getAttribute('aria-busy') === 'true') {
+        return;
       }
-    });
-  });
-
-  document.querySelectorAll('[data-crm-log-hours]').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      await openLogHours(btn.getAttribute('data-crm-log-hours'));
-    });
-  });
-
-  document.querySelectorAll('[data-crm-delivery-pack]').forEach((btn) => {
-    btn.addEventListener('click', async () => {
+      pack.setAttribute('aria-busy', 'true');
       try {
-        const res = await Api.post('/agreements/' + btn.getAttribute('data-crm-delivery-pack') + '/delivery-pack', {});
-        const pack = res.data || {};
+        const res = await Api.post('/agreements/' + pack.getAttribute('data-crm-delivery-pack') + '/delivery-pack', {});
+        const packData = res.data || {};
         if (!C) return;
-        const companyId = parseInt(String(btn.getAttribute('data-company-id') || '0'), 10);
+        const companyId = parseInt(String(pack.getAttribute('data-company-id') || '0'), 10);
         if (SharedMail) {
-          await SharedMail.offerPreparedMail(pack, { companyId: companyId, title: t('Delivery pack') });
+          await SharedMail.offerPreparedMail(packData, { companyId: companyId, title: t('Delivery pack') });
           return;
         }
         await C.openDialog({
           id: 'crm-delivery-pack',
           title: t('Delivery pack'),
           content: (typeof C.buildMailPackDialogHtml === 'function')
-            ? C.buildMailPackDialogHtml(pack, { t: t })
-            : ('<p><strong>' + (C._escapeHtml ? C._escapeHtml(pack.subject || '') : '') + '</strong></p>'),
+            ? C.buildMailPackDialogHtml(packData, { t: t })
+            : ('<p><strong>' + (C._escapeHtml ? C._escapeHtml(packData.subject || '') : '') + '</strong></p>'),
           size: 'md',
         });
       } catch (e) {
         if (C) await C.alertDialog({ title: t('Delivery pack failed'), message: (e.payload && e.payload.message) || e.message, variant: 'danger' });
+      } finally {
+        pack.removeAttribute('aria-busy');
       }
-    });
+      return;
+    }
+    if (!partner) {
+      return;
+    }
+    ev.preventDefault();
+    if (partner.getAttribute('aria-busy') === 'true') {
+      return;
+    }
+    partner.setAttribute('aria-busy', 'true');
+    const agreementId = partner.getAttribute('data-crm-partner-session') || partner.getAttribute('data-crm-partner-mail');
+    const skipConfirm = partner.hasAttribute('data-crm-partner-session');
+    try {
+      const res = await Api.post('/agreements/' + agreementId + '/partner-mail', { promptHours: true });
+      const data = res.data || res;
+      const companyId = parseInt(String(partner.getAttribute('data-company-id') || '0'), 10);
+      if (SharedMail) {
+        await SharedMail.offerPreparedMail(data, { companyId: companyId, title: t('Partner mail') });
+      } else if (data.mailAppUrl) {
+        window.open(data.mailAppUrl, '_blank');
+      } else if (data.mailtoUrl) {
+        window.location.href = data.mailtoUrl;
+      }
+      const live = document.getElementById('crm-live-region');
+      if (live) live.textContent = t('Partner mail prepared.');
+      if (data.promptHours) {
+        if (skipConfirm) {
+          await openLogHours(agreementId);
+        } else if (C) {
+          const log = await C.confirmDialog({
+            title: t('Log hours?'),
+            message: t('Log hours for this Partner session?'),
+            confirmLabel: t('Log hours'),
+            cancelLabel: t('Not now'),
+            variant: 'info',
+          });
+          if (log && log.confirmed) await openLogHours(agreementId);
+        }
+      }
+    } catch (e) {
+      if (C) await C.alertDialog({ title: t('Partner mail'), message: (e.payload && e.payload.message) || e.message, variant: 'danger' });
+    } finally {
+      partner.removeAttribute('aria-busy');
+    }
   });
 })();

@@ -369,6 +369,7 @@
       return { selectedUid: () => '' };
     }
     let timer = null;
+    let searchGeneration = 0;
     const nav = (window.CustomerCheckUserPickerNav && window.CustomerCheckUserPickerNav.bindListboxKeyboard)
       ? window.CustomerCheckUserPickerNav.bindListboxKeyboard(search, suggest)
       : { reset: function () {} };
@@ -399,12 +400,15 @@
       clearTimeout(timer);
       const q = search.value.trim();
       if (q.length < 2) {
+        searchGeneration += 1;
         suggest.hidden = true;
         suggest.innerHTML = '';
         search.setAttribute('aria-expanded', 'false');
         nav.reset();
         return;
       }
+      searchGeneration += 1;
+      const myGeneration = searchGeneration;
       timer = setTimeout(async () => {
         try {
           let url = '/settings/users?q=' + encodeURIComponent(q);
@@ -413,6 +417,9 @@
             url += '&workspaceId=' + encodeURIComponent(String(wid));
           }
           const res = await Api.get(url);
+          if (myGeneration !== searchGeneration) {
+            return;
+          }
           const users = (res.data && res.data.users) || [];
           suggest.innerHTML = '';
           users.forEach((u) => {

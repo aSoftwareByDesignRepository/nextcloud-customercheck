@@ -1074,6 +1074,7 @@
       return;
     }
     let timer = null;
+    let searchGeneration = 0;
     const nav = (window.CustomerCheckUserPickerNav && window.CustomerCheckUserPickerNav.bindListboxKeyboard)
       ? window.CustomerCheckUserPickerNav.bindListboxKeyboard(search, suggest)
       : { reset: function () {} };
@@ -1100,12 +1101,15 @@
       clearTimeout(timer);
       const q = search.value.trim();
       if (q.length < 2) {
+        searchGeneration += 1;
         suggest.hidden = true;
         suggest.innerHTML = '';
         search.setAttribute('aria-expanded', 'false');
         nav.reset();
         return;
       }
+      searchGeneration += 1;
+      const myGeneration = searchGeneration;
       timer = setTimeout(async function () {
         try {
           const ws = typeof opts.workspaceIdFn === 'function' ? opts.workspaceIdFn() : 0;
@@ -1114,6 +1118,9 @@
             path += '&workspaceId=' + encodeURIComponent(String(ws));
           }
           const data = await apiGet(path);
+          if (myGeneration !== searchGeneration) {
+            return;
+          }
           const users = (data && data.users) || [];
           suggest.innerHTML = '';
           users.forEach(function (u) {
@@ -2170,6 +2177,7 @@
           ? window.CustomerCheckUserPickerNav.bindListboxKeyboard(search, suggest)
           : { reset: function () {} };
         let timer = null;
+        let searchGeneration = 0;
         search.addEventListener('input', function () {
           if (hidden.value) {
             hidden.value = '';
@@ -2177,15 +2185,21 @@
           clearTimeout(timer);
           const q = search.value.trim();
           if (q.length < 2) {
+            searchGeneration += 1;
             suggest.hidden = true;
             suggest.innerHTML = '';
             search.setAttribute('aria-expanded', 'false');
             nav.reset();
             return;
           }
+          searchGeneration += 1;
+          const myGeneration = searchGeneration;
           timer = setTimeout(async function () {
             try {
               const data = await apiGet('/api/v1/companies?q=' + encodeURIComponent(q) + '&limit=20&workspaceId=' + encodeURIComponent(String(ws)));
+              if (myGeneration !== searchGeneration) {
+                return;
+              }
               const list = Array.isArray(data) ? data : [];
               suggest.innerHTML = '';
               list.forEach(function (c) {

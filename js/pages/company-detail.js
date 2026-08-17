@@ -3196,6 +3196,7 @@
       const ownerHidden = document.getElementById('crm-plan-owner');
       const ownerClear = document.getElementById('crm-plan-owner-clear');
       let ownerTimer = null;
+      let ownerSearchGeneration = 0;
       const workspaceId = (function () {
         const root = document.querySelector('.crm-page-stack[data-workspace-id]');
         const id = root ? parseInt(root.getAttribute('data-workspace-id') || '0', 10) : 0;
@@ -3234,12 +3235,15 @@
           clearTimeout(ownerTimer);
           const q = ownerSearch.value.trim();
           if (q.length < 2) {
+            ownerSearchGeneration += 1;
             ownerSuggest.hidden = true;
             ownerSuggest.innerHTML = '';
             ownerSearch.setAttribute('aria-expanded', 'false');
             ownerNav.reset();
             return;
           }
+          ownerSearchGeneration += 1;
+          const myGeneration = ownerSearchGeneration;
           ownerTimer = setTimeout(async () => {
             try {
               let url = '/settings/users?q=' + encodeURIComponent(q);
@@ -3247,6 +3251,9 @@
                 url += '&workspaceId=' + encodeURIComponent(String(workspaceId));
               }
               const res = await Api.get(url);
+              if (myGeneration !== ownerSearchGeneration) {
+                return;
+              }
               const users = (res.data && res.data.users) || [];
               ownerSuggest.innerHTML = '';
               users.forEach((u) => {

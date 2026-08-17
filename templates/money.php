@@ -16,7 +16,7 @@ include __DIR__ . '/common/page-start.php';
 	<button type="button" class="crm-btn crm-btn--secondary" id="crm-money-filter-toggle" aria-expanded="<?php p($filterOpen ? 'true' : 'false'); ?>" aria-controls="crm-money-filter"><?php p($l->t('More filters')); ?></button>
 </div>
 <div class="crm-page-stack">
-	<nav class="crm-quick-filters" aria-label="<?php p($l->t('Quick filters')); ?>">
+	<nav class="crm-quick-filters" data-crm-filter-swap="nav" aria-label="<?php p($l->t('Quick filters')); ?>">
 		<a class="crm-quick-filter<?php if ($filterState === ''): ?> is-active<?php endif; ?>" href="<?php p($moneyUrl); ?>"<?php if ($filterState === ''): ?> aria-current="page"<?php endif; ?>><?php p($l->t('All')); ?></a>
 		<a class="crm-quick-filter<?php if ($filterState === 'overdue'): ?> is-active<?php endif; ?>" href="<?php p($moneyUrl); ?>?state=overdue"<?php if ($filterState === 'overdue'): ?> aria-current="page"<?php endif; ?>><?php p($l->t('Overdue')); ?></a>
 		<a class="crm-quick-filter<?php if ($filterState === 'sent'): ?> is-active<?php endif; ?>" href="<?php p($moneyUrl); ?>?state=sent"<?php if ($filterState === 'sent'): ?> aria-current="page"<?php endif; ?>><?php p($l->t('Unpaid')); ?></a>
@@ -49,6 +49,7 @@ include __DIR__ . '/common/page-start.php';
 			</form>
 		</div>
 	</section>
+	<div data-crm-filter-swap="main" id="crm-money-results" data-crm-filter-empty="<?php p($l->t('Nothing in this group')); ?>" data-crm-filter-done="<?php p($l->t('List updated.')); ?>" data-crm-filter-failed="<?php p($l->t('Could not update the list. Try again.')); ?>">
 	<?php
 	$sections = [
 		'overdue' => [$l->t('Overdue'), $l->t('Past due — send a payment reminder.'), 'danger'],
@@ -151,5 +152,6 @@ include __DIR__ . '/common/page-start.php';
 		</div>
 	</section>
 	<?php endif; ?>
+	</div>
 </div>
 <?php include __DIR__ . '/common/page-end.php'; ?>

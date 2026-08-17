@@ -31,7 +31,7 @@ include __DIR__ . '/common/page-start.php';
 	<button type="button" class="crm-btn crm-btn--secondary" id="crm-companies-filter-toggle" aria-expanded="<?php p($filterPanelOpen ? 'true' : 'false'); ?>" aria-controls="crm-companies-filter"><?php p($l->t('More filters')); ?></button>
 </div>
 <div class="crm-page-stack">
-	<nav class="crm-quick-filters" aria-label="<?php p($l->t('Quick filters')); ?>">
+	<nav class="crm-quick-filters" data-crm-filter-swap="nav" aria-label="<?php p($l->t('Quick filters')); ?>">
 		<a class="crm-quick-filter<?php if ($filterStatus === '' && !$filterArchived): ?> is-active<?php endif; ?>" href="<?php p($crmCompaniesHref($filterQ !== '' ? ['q' => $filterQ] : [])); ?>"<?php if ($filterStatus === '' && !$filterArchived): ?> aria-current="page"<?php endif; ?>><?php p($l->t('All')); ?></a>
 		<a class="crm-quick-filter<?php if ($filterStatus === 'active' && !$filterArchived): ?> is-active<?php endif; ?>" href="<?php p($crmCompaniesHref(array_filter(['status' => 'active', 'q' => $filterQ !== '' ? $filterQ : null]))); ?>"<?php if ($filterStatus === 'active' && !$filterArchived): ?> aria-current="page"<?php endif; ?>><?php p($l->t('Active')); ?></a>
 		<a class="crm-quick-filter<?php if ($filterStatus === 'lead' && !$filterArchived): ?> is-active<?php endif; ?>" href="<?php p($crmCompaniesHref(array_filter(['status' => 'lead', 'q' => $filterQ !== '' ? $filterQ : null]))); ?>"<?php if ($filterStatus === 'lead' && !$filterArchived): ?> aria-current="page"<?php endif; ?>><?php p($l->t('Leads')); ?></a>
@@ -64,37 +64,10 @@ include __DIR__ . '/common/page-start.php';
 				aria-describedby="crm-companies-q-hint"
 			/>
 			<button type="submit" class="crm-btn crm-btn--secondary"><?php p($l->t('Search')); ?></button>
-			<?php if ($filterQ !== '' || $filterStatus !== '' || $filterArchived): ?>
-			<a class="crm-btn crm-btn--ghost" href="<?php p($crmCompaniesHref()); ?>"><?php p($l->t('Clear')); ?></a>
-			<?php endif; ?>
+			<a class="crm-btn crm-btn--ghost" id="crm-companies-search-clear" href="<?php p($crmCompaniesHref()); ?>"<?php if ($filterQ === '' && $filterStatus === '' && !$filterArchived): ?> hidden<?php endif; ?>><?php p($l->t('Clear')); ?></a>
 		</div>
-		<p class="crm-companies-search__hint" id="crm-companies-q-hint"><?php p($l->t('Finds company name, people, owner, status, open callbacks, and recent talk.')); ?></p>
+		<p class="crm-companies-search__hint" id="crm-companies-q-hint"><?php p($l->t('Finds company name, people, owner, status, open callbacks, and recent talk.')); ?> <?php p($l->t('Results update as you type.')); ?></p>
 	</form>
-
-	<?php
-	$duplicateNameKeys = is_array($_['duplicateNameKeys'] ?? null) ? $_['duplicateNameKeys'] : [];
-	$duplicateNameCount = count($duplicateNameKeys);
-	if (!$filterArchived && $duplicateNameCount > 0):
-	?>
-	<section class="crm-callout crm-callout--warning crm-semantic-panel crm-semantic-panel--warning" role="status" aria-labelledby="crm-companies-dup-title">
-		<div class="crm-callout__body">
-			<p class="crm-callout__title" id="crm-companies-dup-title"><?php
-				p($l->n(
-					'%n company name appears more than once',
-					'%n company names appear more than once',
-					$duplicateNameCount
-				));
-			?></p>
-			<p class="crm-callout__text"><?php
-				if (!empty($_['canDelete'])) {
-					p($l->t('Open a twin, then choose Merge into… to keep one company and archive the other. People, deals, and history move to the company you keep.'));
-				} else {
-					p($l->t('Ask someone with delete permission to open a twin and use Merge into… so one company remains.'));
-				}
-			?></p>
-		</div>
-	</section>
-	<?php endif; ?>
 
 	<section id="crm-companies-filter" class="crm-card crm-filter-panel" <?php if (!$filterPanelOpen): ?>hidden<?php endif; ?> aria-labelledby="crm-companies-filter-title">
 		<header class="crm-filter-panel__head">
@@ -106,9 +79,7 @@ include __DIR__ . '/common/page-start.php';
 				<?php if ($workspaceId > 0): ?>
 				<input type="hidden" name="workspaceId" value="<?php p((string)$workspaceId); ?>" />
 				<?php endif; ?>
-				<?php if ($filterQ !== ''): ?>
 				<input type="hidden" name="q" value="<?php p($filterQ); ?>" />
-				<?php endif; ?>
 				<div class="crm-filter-grid" role="group">
 					<div class="crm-filter-field">
 						<label for="crm-filter-status" class="form-label"><?php p($l->t('Status')); ?></label>
@@ -136,6 +107,33 @@ include __DIR__ . '/common/page-start.php';
 			</form>
 		</div>
 	</section>
+
+	<div data-crm-filter-swap="main" id="crm-companies-results" data-crm-filter-empty="<?php p($l->t('No companies match')); ?>" data-crm-filter-done="<?php p($l->t('Search results')); ?>" data-crm-filter-failed="<?php p($l->t('Could not update the list. Press Search.')); ?>">
+	<?php
+	$duplicateNameKeys = is_array($_['duplicateNameKeys'] ?? null) ? $_['duplicateNameKeys'] : [];
+	$duplicateNameCount = count($duplicateNameKeys);
+	if (!$filterArchived && $duplicateNameCount > 0):
+	?>
+	<section class="crm-callout crm-callout--warning crm-semantic-panel crm-semantic-panel--warning" role="status" aria-labelledby="crm-companies-dup-title">
+		<div class="crm-callout__body">
+			<p class="crm-callout__title" id="crm-companies-dup-title"><?php
+				p($l->n(
+					'%n company name appears more than once',
+					'%n company names appear more than once',
+					$duplicateNameCount
+				));
+			?></p>
+			<p class="crm-callout__text"><?php
+				if (!empty($_['canDelete'])) {
+					p($l->t('Open a twin, then choose Merge into… to keep one company and archive the other. People, deals, and history move to the company you keep.'));
+				} else {
+					p($l->t('Ask someone with delete permission to open a twin and use Merge into… so one company remains.'));
+				}
+			?></p>
+		</div>
+	</section>
+	<?php endif; ?>
+
 	<section class="crm-card">
 		<header class="crm-card__header"><h2 class="crm-card__title"><?php
 			if ($filterQ !== '') {
@@ -146,7 +144,7 @@ include __DIR__ . '/common/page-start.php';
 		?></h2></header>
 		<div class="crm-card__body">
 			<div class="table-container crm-table--responsive">
-				<table class="table table--hover">
+				<table class="table table--hover" id="crm-companies-table">
 					<thead><tr>
 						<th scope="col"><?php p($l->t('Name')); ?></th>
 						<th scope="col"><?php p($l->t('Owner')); ?></th>
@@ -244,5 +242,6 @@ include __DIR__ . '/common/page-start.php';
 			</div>
 		</div>
 	</section>
+	</div>
 </div>
 <?php include __DIR__ . '/common/page-end.php'; ?>

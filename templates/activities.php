@@ -16,7 +16,7 @@ include __DIR__ . '/common/page-start.php';
 	<button type="button" class="crm-btn crm-btn--secondary" id="crm-activities-filter-toggle" aria-expanded="<?php p($filterOpen ? 'true' : 'false'); ?>" aria-controls="crm-activities-filter"><?php p($l->t('More filters')); ?></button>
 </div>
 <div class="crm-page-stack">
-	<nav class="crm-quick-filters" aria-label="<?php p($l->t('Quick filters')); ?>">
+	<nav class="crm-quick-filters" data-crm-filter-swap="nav" aria-label="<?php p($l->t('Quick filters')); ?>">
 		<a class="crm-quick-filter<?php if ($filterScope === 'open' && $filterType === ''): ?> is-active<?php endif; ?>" href="<?php p($activitiesUrl); ?>"<?php if ($filterScope === 'open' && $filterType === ''): ?> aria-current="page"<?php endif; ?>><?php p($l->t('Open')); ?></a>
 		<a class="crm-quick-filter<?php if ($filterScope === 'done'): ?> is-active<?php endif; ?>" href="<?php p($activitiesUrl); ?>?scope=done"<?php if ($filterScope === 'done'): ?> aria-current="page"<?php endif; ?>><?php p($l->t('Done')); ?></a>
 		<a class="crm-quick-filter<?php if ($filterScope === 'all'): ?> is-active<?php endif; ?>" href="<?php p($activitiesUrl); ?>?scope=all"<?php if ($filterScope === 'all'): ?> aria-current="page"<?php endif; ?>><?php p($l->t('All')); ?></a>
@@ -56,6 +56,7 @@ include __DIR__ . '/common/page-start.php';
 			</form>
 		</div>
 	</section>
+	<div data-crm-filter-swap="main" id="crm-activities-results" data-crm-filter-empty="<?php p($l->t('Nothing open right now')); ?>" data-crm-filter-done="<?php p($l->t('List updated.')); ?>" data-crm-filter-failed="<?php p($l->t('Could not update the list. Try again.')); ?>">
 	<?php
 	$sections = [
 		'overdue' => $l->t('Overdue'),
@@ -147,5 +148,6 @@ include __DIR__ . '/common/page-start.php';
 		</div>
 	</section>
 	<?php endif; ?>
+	</div>
 </div>
 <?php include __DIR__ . '/common/page-end.php'; ?>

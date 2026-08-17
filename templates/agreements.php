@@ -21,7 +21,7 @@ include __DIR__ . '/common/page-start.php';
 	<button type="button" class="crm-btn crm-btn--secondary" id="crm-agreements-filter-toggle" aria-expanded="<?php p($filterOpen ? 'true' : 'false'); ?>" aria-controls="crm-agreements-filter"><?php p($l->t('More filters')); ?></button>
 </div>
 <div class="crm-page-stack">
-	<nav class="crm-quick-filters" aria-label="<?php p($l->t('Quick filters')); ?>">
+	<nav class="crm-quick-filters" data-crm-filter-swap="nav" aria-label="<?php p($l->t('Quick filters')); ?>">
 		<a class="crm-quick-filter<?php if ($filterKind === '' && $filterStatus === '' && $filterExpiry === ''): ?> is-active<?php endif; ?>" href="<?php p($agreementsUrl); ?>"<?php if ($filterKind === '' && $filterStatus === '' && $filterExpiry === ''): ?> aria-current="page"<?php endif; ?>><?php p($l->t('All')); ?></a>
 		<a class="crm-quick-filter<?php if ($filterKind === 'license'): ?> is-active<?php endif; ?>" href="<?php p($agreementsUrl); ?>?kind=license"<?php if ($filterKind === 'license'): ?> aria-current="page"<?php endif; ?>><?php p($l->t('Licenses')); ?></a>
 		<a class="crm-quick-filter<?php if ($filterKind === 'partner'): ?> is-active<?php endif; ?>" href="<?php p($agreementsUrl); ?>?kind=partner"<?php if ($filterKind === 'partner'): ?> aria-current="page"<?php endif; ?>><?php p($l->t('Partner')); ?></a>
@@ -73,6 +73,7 @@ include __DIR__ . '/common/page-start.php';
 			</form>
 		</div>
 	</section>
+	<div data-crm-filter-swap="main" id="crm-agreements-results" data-crm-filter-empty="<?php p($l->t('No agreements yet')); ?>" data-crm-filter-done="<?php p($l->t('List updated.')); ?>" data-crm-filter-failed="<?php p($l->t('Could not update the list. Try again.')); ?>">
 	<section class="crm-card">
 		<header class="crm-card__header"><h2 class="crm-card__title"><?php p($l->t('All agreements')); ?></h2></header>
 		<div class="crm-card__body">
@@ -155,5 +156,6 @@ include __DIR__ . '/common/page-start.php';
 			<?php endif; ?>
 		</div>
 	</section>
+	</div>
 </div>
 <?php include __DIR__ . '/common/page-end.php'; ?>

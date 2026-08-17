@@ -1,7 +1,7 @@
 {
     "name": "customercheck",
     "private": true,
-    "version": "1.6.157",
+    "version": "1.6.159",
     "type": "module",
     "description": "CustomerCheck Playwright / frontend tooling",
     "scripts": {
@@ -23,6 +23,7 @@
         "test:mutation:outbound-assign": "php tests/Mutation/run-outbound-assign-mutations.php",
         "test:mutation:deal-checklist": "php tests/Mutation/run-deal-checklist-mutations.php",
         "test:mutation:company360-focus": "php tests/Mutation/run-company360-focus-mutations.php",
+        "test:mutation:filter-live": "php tests/Mutation/run-filter-live-mutations.php",
         "test:mutation:strategy-board": "php tests/Mutation/run-strategy-board-mutations.php",
         "test:mutation:gdpr-erase-in-clause": "php tests/Mutation/run-gdpr-erase-in-clause-mutations.php"
     },

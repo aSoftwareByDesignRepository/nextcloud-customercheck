@@ -37,6 +37,7 @@ final class FrontEndAssetService
 		Util::addScript(Application::APP_ID, 'common/user-picker-nav');
 		Util::addScript(Application::APP_ID, 'common/navigation');
 		Util::addScript(Application::APP_ID, 'common/navigation-icons');
+		Util::addScript(Application::APP_ID, 'common/filter-live-core');
 		Util::addScript(Application::APP_ID, 'common/filter-live');
 	}
 
