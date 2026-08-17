@@ -67,11 +67,105 @@ test.describe('Personal email sync / Sales Inbox', () => {
 
     await expect(page.locator('#crm-sales-inbox-list')).toHaveAttribute('role', 'listbox');
 
+    // Paging chrome is present but hidden until hasMore (granny: no dead controls).
+    await expect(page.locator('#crm-sales-inbox-more-wrap')).toBeHidden();
+    await expect(page.locator('#crm-sales-inbox-more')).toHaveCount(1);
+    await expect(page.locator('#crm-sales-inbox-more-hint')).toBeAttached();
+
     const results = await new AxeBuilder({ page })
       .include('#crm-sales-inbox-root')
       .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
       .analyze();
     expect(results.violations.filter((v) => v.impact === 'critical' || v.impact === 'serious')).toEqual([]);
+  });
+
+  test('Sales Inbox Load older messages: cursor pages append without duplicates', async ({ page }) => {
+    test.skip(!process.env.NC_ADMIN_USER, 'Requires NC_ADMIN_USER / NC_ADMIN_PASS');
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await login(page, credsFromEnv('ADMIN'));
+
+    let inboxCalls = 0;
+    await page.route('**/apps/customercheck/api/**/mail/inbox**', async (route) => {
+      const url = new URL(route.request().url());
+      const cursor = url.searchParams.get('cursor') || '';
+      inboxCalls += 1;
+      const mk = (id, subject) => ({
+        id,
+        subject,
+        from: `user${id}@example.test`,
+        snippet: `snippet ${id}`,
+        sentAt: `2026-08-${String(Math.max(1, 16 - Math.floor(id / 10))).padStart(2, '0')} 12:00:00`,
+        visibility: 'private',
+        private: true,
+        mailboxId: 1,
+        mailboxKind: 'personal',
+        mailboxLabel: 'Me',
+        mailboxEmail: 'me@example.test',
+        triageStatus: 'open',
+        companyId: null,
+      });
+      if (!cursor) {
+        const items = Array.from({ length: 50 }, (_, i) => mk(100 - i, `Page1 ${100 - i}`));
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            success: true,
+            data: {
+              items,
+              nextCursor: '2026-08-11 12:00:00|51',
+              hasMore: true,
+              personalMailEnabled: true,
+              sharedFolders: [],
+              accounts: [{ id: 1, kind: 'personal', label: 'Me', email: 'me@example.test', status: 'ok' }],
+              authAlerts: [],
+            },
+          }),
+        });
+        return;
+      }
+      const items = Array.from({ length: 20 }, (_, i) => mk(50 - i, `Page2 ${50 - i}`));
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          data: {
+            items,
+            nextCursor: null,
+            hasMore: false,
+            personalMailEnabled: true,
+            sharedFolders: [],
+            accounts: [{ id: 1, kind: 'personal', label: 'Me', email: 'me@example.test', status: 'ok' }],
+            authAlerts: [],
+          },
+        }),
+      });
+    });
+
+    await page.goto('/apps/customercheck/sales-inbox?tab=mine');
+    await page.waitForSelector('#crm-sales-inbox-root[data-crm-bachus-mail="1"]', { timeout: 30000 });
+    await expect(page.locator('#crm-sales-inbox-list .crm-mail-thread-row')).toHaveCount(50, { timeout: 20000 });
+    await expect(page.locator('#crm-sales-inbox-more-wrap')).toBeVisible();
+    await expect(page.locator('#crm-sales-inbox-more')).toBeEnabled();
+    // Locale-agnostic: status shows loaded count + “more” signal (EN/DE/…).
+    await expect(page.locator('#crm-sales-inbox-status')).toContainText('50');
+    await expect(page.locator('#crm-sales-inbox-status')).not.toHaveText(/^50$/);
+
+    await page.locator('#crm-sales-inbox-more').click();
+    await expect(page.locator('#crm-sales-inbox-list .crm-mail-thread-row')).toHaveCount(70, { timeout: 20000 });
+    await expect(page.locator('#crm-sales-inbox-more-wrap')).toBeHidden();
+    expect(inboxCalls).toBeGreaterThanOrEqual(2);
+
+    const ids = await page.locator('#crm-sales-inbox-list .crm-mail-thread-row').evaluateAll((rows) =>
+      rows.map((r) => r.getAttribute('data-crm-mail-id')));
+    expect(new Set(ids).size).toBe(ids.length);
+
+    const axe = await new AxeBuilder({ page })
+      .include('#crm-sales-inbox-root')
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
+      .analyze();
+    expect(axe.violations.filter((v) => v.impact === 'critical' || v.impact === 'serious')).toEqual([]);
   });
 
   for (const theme of ['light', 'dark', 'light-highcontrast', 'dark-highcontrast']) {

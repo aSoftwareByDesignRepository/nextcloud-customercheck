@@ -222,7 +222,7 @@ class PageController extends Controller
 			'pages/sales-inbox',
 			null,
 			[],
-			['common/mail-sync-now', 'common/folder-picker', 'common/rich-mail-composer', 'common/shared-mail-send', 'common/user-picker-nav', 'common/inbox-assign-map'],
+			['common/mail-sync-now', 'common/folder-picker', 'common/rich-mail-composer', 'common/shared-mail-send', 'common/user-picker-nav', 'common/inbox-assign-map', 'common/inbox-page-core'],
 		);
 
 		return new TemplateResponse('customercheck', 'sales-inbox', $this->mergeShellPageParams(

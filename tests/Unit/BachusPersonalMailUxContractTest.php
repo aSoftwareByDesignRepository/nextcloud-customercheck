@@ -24,6 +24,9 @@ final class BachusPersonalMailUxContractTest extends TestCase
 		$this->assertStringContainsString('id="crm-sales-inbox-account-wrap" hidden', $html);
 		$this->assertStringContainsString('id="crm-sales-inbox-status"', $html);
 		$this->assertStringContainsString('Update mail', $html);
+		$this->assertStringContainsString('id="crm-sales-inbox-more"', $html);
+		$this->assertStringContainsString('Load older messages', $html);
+		$this->assertStringContainsString('crm-sales-inbox-more-hint', $html);
 		$this->assertStringContainsString('Tap a message to read it.', $html);
 		$this->assertStringContainsString('crm-btn--lg', $html);
 		// Tabs must not use the tiny sm variant (touch targets).
@@ -45,8 +48,13 @@ final class BachusPersonalMailUxContractTest extends TestCase
 		$this->assertStringContainsString('Connect my email', $js);
 		$this->assertStringContainsString('accountFilterVisible', $js);
 		$this->assertStringContainsString('closeSalesPreview', $js);
-		$this->assertStringContainsString('aria-expanded', $js);
+		$this->assertStringContainsString('Preview open', $js);
+		$this->assertStringNotContainsString("li.setAttribute('aria-expanded'", $js);
 		$this->assertStringContainsString('snippetUseful', $js);
+		$this->assertStringContainsString('loadMoreInbox', $js);
+		$this->assertStringContainsString('inboxNextCursor', $js);
+		$this->assertStringContainsString('CustomerCheckInboxPage', $js);
+		$this->assertStringContainsString('cursor=', $js);
 		$this->assertStringContainsString('Second click / Enter on the open row collapses', $js);
 	}
 
@@ -56,6 +64,7 @@ final class BachusPersonalMailUxContractTest extends TestCase
 		$this->assertStringContainsString('.crm-sales-inbox__tab', $css);
 		$this->assertStringContainsString('min-height: 48px', $css);
 		$this->assertStringContainsString('#crm-sales-inbox-reply.crm-btn--lg', $css);
+		$this->assertStringContainsString('.crm-sales-inbox__more', $css);
 		$this->assertStringContainsString('.crm-rich-mail__quote', $css);
 		$this->assertStringContainsString('.crm-sales-compose__hint', $css);
 		$this->assertStringContainsString('.crm-sales-compose__field-head', $css);

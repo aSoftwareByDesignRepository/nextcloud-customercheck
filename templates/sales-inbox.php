@@ -84,6 +84,15 @@ include __DIR__ . '/common/page-start.php';
 				<button type="button" class="crm-sales-inbox__col-head crm-sales-inbox__sort is-active" data-crm-inbox-sort="sent" aria-pressed="true"><?php p($l->t('Date')); ?></button>
 			</div>
 			<ul class="crm-mail-thread crm-sales-inbox__table" id="crm-sales-inbox-list" role="listbox" aria-label="<?php p($l->t('Message list')); ?>" aria-activedescendant=""></ul>
+			<p class="crm-form-actions crm-form-actions--center crm-sales-inbox__more" id="crm-sales-inbox-more-wrap" hidden>
+				<button
+					type="button"
+					class="crm-btn crm-btn--secondary crm-btn--lg"
+					id="crm-sales-inbox-more"
+					aria-controls="crm-sales-inbox-list"
+					aria-describedby="crm-sales-inbox-more-hint crm-sales-inbox-status"><?php p($l->t('Load older messages')); ?></button>
+				<span class="crm-muted crm-sales-inbox__more-hint" id="crm-sales-inbox-more-hint"><?php p($l->t('Shows the next older messages in this tab.')); ?></span>
+			</p>
 			<div class="crm-empty-state crm-sales-inbox__empty" id="crm-sales-inbox-empty" role="status" hidden>
 				<h2 class="crm-empty-state__title" id="crm-sales-inbox-empty-title"><?php p($l->t('No messages here')); ?></h2>
 				<p class="crm-empty-state__text" id="crm-sales-inbox-empty-text"><?php p($l->t('Nothing to show in this tab yet.')); ?></p>

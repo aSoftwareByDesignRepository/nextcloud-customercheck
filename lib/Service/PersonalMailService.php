@@ -698,6 +698,8 @@ class PersonalMailService
 	 *
 	 * @return array{
 	 *   items: list<array<string, mixed>>,
+	 *   nextCursor: ?string,
+	 *   hasMore: bool,
 	 *   personalMailEnabled: bool,
 	 *   sharedFolders: list<string>,
 	 *   accounts: list<array<string, mixed>>,
@@ -711,11 +713,14 @@ class PersonalMailService
 		string $tab = 'mine',
 		int $mailboxIdFilter = 0,
 		bool $canTriage = false,
+		?string $cursor = null,
 	): array {
 		$settings = $this->workspaces->getSettings($workspaceId);
 		$enabled = !empty($settings['personalMailEnabled']);
 		$emptyMeta = [
 			'items' => [],
+			'nextCursor' => null,
+			'hasMore' => false,
 			'personalMailEnabled' => $enabled,
 			'sharedFolders' => [],
 			'accounts' => [],
@@ -724,8 +729,8 @@ class PersonalMailService
 		if (!$this->db->tableExists('crm_mail_msg')) {
 			return $emptyMeta;
 		}
-		$limit = max(1, min(100, $limit));
-		$tab = strtolower(trim($tab));
+		$limit = MailInboxPageLogic::clampLimit($limit);
+		$tab = MailInboxPageLogic::normalizeTab($tab);
 		$accounts = $this->inboxAccountSummaries($workspaceId, $userId);
 		$sharedFolders = $this->sharedFolderLabelsForUser($workspaceId, $userId);
 		$authAlerts = [];
@@ -742,76 +747,126 @@ class PersonalMailService
 			}
 		}
 
-		$qb = $this->db->getQueryBuilder();
-		$qb->select('m.id', 'm.subject', 'm.from_addr', 'm.snippet', 'm.sent_at', 'm.visibility',
-			'm.owner_user_id', 'm.company_id', 'm.triage_status', 'm.mailbox_id', 'b.kind', 'b.label', 'b.email_address')
-			->from('crm_mail_msg', 'm')
-			->leftJoin('m', 'crm_mailbox', 'b', $qb->expr()->eq('m.mailbox_id', 'b.id'))
-			->where($qb->expr()->eq('m.workspace_id', $qb->createNamedParameter($workspaceId, IQueryBuilder::PARAM_INT)))
-			->orderBy('m.sent_at', 'DESC')
-			->addOrderBy('m.id', 'DESC')
-			->setMaxResults($limit * 3);
+		$accepted = [];
+		$want = $limit + 1;
+		$passCursor = $cursor;
+		$fetchWindow = MailInboxPageLogic::fetchWindow($limit);
+		for ($pass = 0; $pass < MailInboxPageLogic::MAX_FETCH_PASSES && count($accepted) < $want; $pass++) {
+			$qb = $this->db->getQueryBuilder();
+			$qb->select('m.id', 'm.subject', 'm.from_addr', 'm.snippet', 'm.sent_at', 'm.visibility',
+				'm.owner_user_id', 'm.company_id', 'm.triage_status', 'm.mailbox_id', 'b.kind', 'b.label', 'b.email_address')
+				->from('crm_mail_msg', 'm')
+				->leftJoin('m', 'crm_mailbox', 'b', $qb->expr()->eq('m.mailbox_id', 'b.id'))
+				->where($qb->expr()->eq('m.workspace_id', $qb->createNamedParameter($workspaceId, IQueryBuilder::PARAM_INT)))
+				->orderBy('m.sent_at', 'DESC')
+				->addOrderBy('m.id', 'DESC')
+				->setMaxResults($fetchWindow);
 
-		if ($mailboxIdFilter > 0) {
-			$qb->andWhere($qb->expr()->eq('m.mailbox_id', $qb->createNamedParameter($mailboxIdFilter, IQueryBuilder::PARAM_INT)));
-		}
-
-		if ($tab === 'mine') {
-			$qb->andWhere($qb->expr()->orX(
-				$qb->expr()->eq('m.owner_user_id', $qb->createNamedParameter($userId)),
-				$qb->expr()->andX(
-					$qb->expr()->eq('b.kind', $qb->createNamedParameter(MailAclLogic::KIND_PERSONAL)),
-					$qb->expr()->eq('b.owner_user_id', $qb->createNamedParameter($userId)),
-				),
-			));
-		} elseif ($tab === 'team') {
-			$qb->andWhere($qb->expr()->eq('b.kind', $qb->createNamedParameter(MailAclLogic::KIND_TEAM)));
-		} elseif ($tab === 'unmatched') {
-			$qb->andWhere($qb->expr()->eq('m.triage_status', $qb->createNamedParameter('open')));
-			$qb->andWhere($qb->expr()->eq('m.visibility', $qb->createNamedParameter(MailAclLogic::VISIBILITY_SHARED)));
-		}
-
-		$r = $qb->executeQuery();
-		$items = [];
-		while ($row = $r->fetch()) {
-			$visibility = MailAclLogic::normalizeVisibility((string)($row['visibility'] ?? 'shared'));
-			$owner = (string)($row['owner_user_id'] ?? '');
-			$companyId = isset($row['company_id']) && $row['company_id'] !== null ? (int)$row['company_id'] : 0;
-			// Inbox list: owner sees own; team/unmatched require shared visibility (already filtered).
-			if ($tab === 'mine') {
-				if ($owner !== '' && !hash_equals($owner, $userId) && (string)($row['kind'] ?? '') === MailAclLogic::KIND_PERSONAL) {
-					continue;
+			$parsedCursor = MailInboxPageLogic::decodeCursor($passCursor);
+			if ($parsedCursor !== null) {
+				$cAt = $parsedCursor['sentAt'];
+				$cId = $parsedCursor['id'];
+				// Strictly older than cursor in (sent_at DESC, id DESC) order.
+				if ($cAt === '') {
+					$qb->andWhere($qb->expr()->andX(
+						$qb->expr()->orX(
+							$qb->expr()->isNull('m.sent_at'),
+							$qb->expr()->eq('m.sent_at', $qb->createNamedParameter('')),
+						),
+						$qb->expr()->lt('m.id', $qb->createNamedParameter($cId, IQueryBuilder::PARAM_INT)),
+					));
+				} else {
+					$qb->andWhere($qb->expr()->orX(
+						$qb->expr()->lt('m.sent_at', $qb->createNamedParameter($cAt)),
+						$qb->expr()->andX(
+							$qb->expr()->eq('m.sent_at', $qb->createNamedParameter($cAt)),
+							$qb->expr()->lt('m.id', $qb->createNamedParameter($cId, IQueryBuilder::PARAM_INT)),
+						),
+					));
 				}
 			}
-			$items[] = [
-				'id' => (int)$row['id'],
-				'subject' => (string)($row['subject'] ?? ''),
-				'from' => (string)($row['from_addr'] ?? ''),
-				'snippet' => (string)($row['snippet'] ?? ''),
-				'sentAt' => $row['sent_at'] ?? null,
-				'visibility' => $visibility,
-				'companyId' => $companyId > 0 ? $companyId : null,
-				'triageStatus' => (string)($row['triage_status'] ?? ''),
-				'mailboxId' => (int)($row['mailbox_id'] ?? 0),
-				'mailboxKind' => (string)($row['kind'] ?? MailAclLogic::KIND_TEAM),
-				'mailboxLabel' => (string)($row['label'] ?? ''),
-				'mailboxEmail' => (string)($row['email_address'] ?? ''),
-				'private' => $visibility === MailAclLogic::VISIBILITY_PRIVATE,
-			];
-			if ($tab === 'unmatched' && !$canTriage) {
-				$items[array_key_last($items)] = MailAclLogic::redactPersonalUnmatchedListItem(
-					$items[array_key_last($items)],
-					$this->l10n->t('Needs triage'),
-				);
+
+			if ($mailboxIdFilter > 0) {
+				$qb->andWhere($qb->expr()->eq('m.mailbox_id', $qb->createNamedParameter($mailboxIdFilter, IQueryBuilder::PARAM_INT)));
 			}
-			if (count($items) >= $limit) {
+
+			if ($tab === 'mine') {
+				$qb->andWhere($qb->expr()->orX(
+					$qb->expr()->eq('m.owner_user_id', $qb->createNamedParameter($userId)),
+					$qb->expr()->andX(
+						$qb->expr()->eq('b.kind', $qb->createNamedParameter(MailAclLogic::KIND_PERSONAL)),
+						$qb->expr()->eq('b.owner_user_id', $qb->createNamedParameter($userId)),
+					),
+				));
+			} elseif ($tab === 'team') {
+				$qb->andWhere($qb->expr()->eq('b.kind', $qb->createNamedParameter(MailAclLogic::KIND_TEAM)));
+			} else {
+				// unmatched only (normalizeTab collapses unknowns to mine)
+				$qb->andWhere($qb->expr()->eq('m.triage_status', $qb->createNamedParameter('open')));
+				$qb->andWhere($qb->expr()->eq('m.visibility', $qb->createNamedParameter(MailAclLogic::VISIBILITY_SHARED)));
+			}
+
+			$r = $qb->executeQuery();
+			$rawCount = 0;
+			$lastScannedId = 0;
+			$lastScannedSentAt = '';
+			while ($row = $r->fetch()) {
+				$rawCount++;
+				$lastScannedId = (int)($row['id'] ?? 0);
+				$lastScannedSentAt = MailInboxPageLogic::normalizeSentAtForCursor($row['sent_at'] ?? null);
+				$visibility = MailAclLogic::normalizeVisibility((string)($row['visibility'] ?? 'shared'));
+				$owner = (string)($row['owner_user_id'] ?? '');
+				$companyId = isset($row['company_id']) && $row['company_id'] !== null ? (int)$row['company_id'] : 0;
+				// Inbox list: owner sees own; team/unmatched require shared visibility (already filtered).
+				if ($tab === 'mine') {
+					if ($owner !== '' && !hash_equals($owner, $userId) && (string)($row['kind'] ?? '') === MailAclLogic::KIND_PERSONAL) {
+						continue;
+					}
+				}
+				$item = [
+					'id' => (int)$row['id'],
+					'subject' => (string)($row['subject'] ?? ''),
+					'from' => (string)($row['from_addr'] ?? ''),
+					'snippet' => (string)($row['snippet'] ?? ''),
+					'sentAt' => $lastScannedSentAt !== '' ? $lastScannedSentAt : null,
+					'visibility' => $visibility,
+					'companyId' => $companyId > 0 ? $companyId : null,
+					'triageStatus' => (string)($row['triage_status'] ?? ''),
+					'mailboxId' => (int)($row['mailbox_id'] ?? 0),
+					'mailboxKind' => (string)($row['kind'] ?? MailAclLogic::KIND_TEAM),
+					'mailboxLabel' => (string)($row['label'] ?? ''),
+					'mailboxEmail' => (string)($row['email_address'] ?? ''),
+					'private' => $visibility === MailAclLogic::VISIBILITY_PRIVATE,
+				];
+				if ($tab === 'unmatched' && !$canTriage) {
+					$item = MailAclLogic::redactPersonalUnmatchedListItem(
+						$item,
+						$this->l10n->t('Needs triage'),
+					);
+				}
+				$accepted[] = $item;
+				if (count($accepted) >= $want) {
+					break;
+				}
+			}
+			$r->closeCursor();
+
+			if ($rawCount === 0 || $lastScannedId <= 0) {
+				break;
+			}
+			// Advance past the last scanned row (including skips) so the next pass does not re-read.
+			$passCursor = MailInboxPageLogic::encodeCursor($lastScannedSentAt, $lastScannedId);
+			if ($passCursor === null || $rawCount < $fetchWindow) {
 				break;
 			}
 		}
-		$r->closeCursor();
+
+		$page = MailInboxPageLogic::pageResult($accepted, $limit);
 
 		return [
-			'items' => $items,
+			'items' => $page['items'],
+			'nextCursor' => $page['nextCursor'],
+			'hasMore' => $page['hasMore'],
 			'personalMailEnabled' => $enabled,
 			'sharedFolders' => $sharedFolders,
 			'accounts' => $accounts,

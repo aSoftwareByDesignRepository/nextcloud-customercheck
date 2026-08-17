@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.6.148 - 2026-08-16
+
+### Harden (Sales Inbox pagination — Aristoteles gauntlet)
+- Unknown `tab` falls closed to Personal (never unscoped workspace dump)
+- Multi-pass fetch when ACL skips thin a page — no silent early end of “Load older”
+- Stable `sentAt` cursor normalization (DateTime / ISO); reject malformed cursors
+- Client: `inbox-page-core` merge/meta helpers; clear stale list on load error; focus + live region on Load older
+- UX: divider + hint under **Load older messages**; search-empty copy when more pages exist
+- A11y: listbox `option` rows no longer set invalid `aria-expanded` (state in accessible name)
+- Gauntlet: unit + integration + vitest + mutation (`run-inbox-paging-mutations.php`) + E2E route mock
+
+## 1.6.147 - 2026-08-16
+
+### Added (Sales Inbox pagination)
+- Personal and Team tabs load 50 messages per page with cursor-based **Load older messages**
+- API: `GET …/mail/inbox` accepts `cursor` and returns `nextCursor` / `hasMore`
+- Status line notes when more mail is available; screen reader announces each page loaded
+
 ## 1.6.146 - 2026-08-15
 
 ### Harden (Signature logo — Aristoteles gauntlet)

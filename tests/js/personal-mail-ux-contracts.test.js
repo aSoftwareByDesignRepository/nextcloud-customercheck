@@ -417,7 +417,8 @@ describe('personal-mail settings UX contracts', () => {
     expect(js).toContain('parkSalesReaderUnderSelection');
     expect(js).toContain('crm-sales-inbox-reader-host');
     expect(js).toContain('closeSalesPreview');
-    expect(js).toContain('aria-expanded');
+    expect(js).toContain('Preview open');
+    expect(js).not.toContain("li.setAttribute('aria-expanded'");
     expect(js).toContain('snippetUseful');
     expect(js).toContain('Second click / Enter on the open row collapses');
     expect(js).toContain('Intl.DateTimeFormat');

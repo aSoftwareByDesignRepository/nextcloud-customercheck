@@ -6191,6 +6191,26 @@ dialog.crm-native-dialog label.crm-check {
 	opacity: 0.72;
 	pointer-events: none;
 }
+#app-content.crm-app .crm-sales-inbox__more {
+	margin: var(--crm-space-3, 0.75rem) 0 var(--crm-space-4, 1rem);
+	padding: var(--crm-space-3, 0.75rem) var(--crm-space-2, 0.5rem) 0;
+	border-top: 1px solid var(--color-border, rgba(0, 0, 0, 0.12));
+	flex-direction: column;
+	align-items: center;
+	gap: var(--crm-space-2, 0.5rem);
+}
+#app-content.crm-app .crm-sales-inbox__more .crm-btn--lg {
+	min-height: 48px;
+	min-width: 12rem;
+	width: min(100%, 22rem);
+}
+#app-content.crm-app .crm-sales-inbox__more-hint {
+	display: block;
+	max-width: 22rem;
+	text-align: center;
+	font-size: var(--crm-fs-sm, 0.875rem);
+	line-height: 1.35;
+}
 #app-content.crm-app .crm-sales-inbox__actions-bar {
 	display: flex;
 	flex-wrap: wrap;

@@ -854,6 +854,8 @@ class PersonaApiController extends Controller
 			$tab = (string)$this->request->getParam('tab', 'mine');
 			$limit = (int)$this->request->getParam('limit', 50);
 			$mailboxId = (int)$this->request->getParam('mailboxId', 0);
+			$cursorRaw = $this->request->getParam('cursor', null);
+			$cursor = is_string($cursorRaw) ? $cursorRaw : null;
 			$canTriage = false;
 			try {
 				$this->workspaces->assertCapability($uid, $workspaceId, 'write');
@@ -862,7 +864,7 @@ class PersonaApiController extends Controller
 				$canTriage = false;
 			}
 
-			return $this->ok($this->personalMail->listInbox($workspaceId, $uid, $limit, $tab, $mailboxId, $canTriage));
+			return $this->ok($this->personalMail->listInbox($workspaceId, $uid, $limit, $tab, $mailboxId, $canTriage, $cursor));
 		} catch (\Throwable $e) {
 			return $this->fromThrowable($e);
 		}

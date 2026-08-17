@@ -1,0 +1,102 @@
+/**
+ * Pure Sales Inbox paging helpers (cursor pages + merge).
+ * No DOM — vitest + mutation friendly.
+ */
+(function (global) {
+  'use strict';
+
+  /**
+   * @param {unknown} existing
+   * @param {unknown} incoming
+   * @returns {Array<Record<string, mixed>>}
+   */
+  function mergeInboxItems(existing, incoming) {
+    const seen = Object.create(null);
+    const out = [];
+    const push = function (row) {
+      if (!row || typeof row !== 'object') return;
+      const id = parseInt(String(row.id || 0), 10);
+      if (!(id > 0) || seen[id]) return;
+      seen[id] = true;
+      out.push(row);
+    };
+    (Array.isArray(existing) ? existing : []).forEach(push);
+    (Array.isArray(incoming) ? incoming : []).forEach(push);
+    return out;
+  }
+
+  /**
+   * @param {unknown} nextCursor
+   * @param {unknown} hasMore
+   * @returns {{ nextCursor: string|null, hasMore: boolean }}
+   */
+  function normalizePagingMeta(nextCursor, hasMore) {
+    const cursor = typeof nextCursor === 'string' && nextCursor !== '' ? nextCursor : null;
+    return {
+      nextCursor: cursor,
+      hasMore: !!hasMore && !!cursor,
+    };
+  }
+
+  /**
+   * @param {{ tab?: string, hasMore?: boolean, loadedCount?: number, visibleCount?: number, moreBusy?: boolean }} opts
+   */
+  function shouldShowLoadMore(opts) {
+    const o = opts && typeof opts === 'object' ? opts : {};
+    const tab = String(o.tab || '');
+    if (tab === 'unmatched') return false;
+    if (!o.hasMore) return false;
+    const loaded = parseInt(String(o.loadedCount || 0), 10) || 0;
+    if (loaded <= 0) return false;
+    return true;
+  }
+
+  /**
+   * @param {{ count?: number, hasMore?: boolean, tab?: string, filteredEmpty?: boolean, t?: Function }} opts
+   */
+  function inboxStatusText(opts) {
+    const o = opts && typeof opts === 'object' ? opts : {};
+    const t = typeof o.t === 'function' ? o.t : function (m) { return m; };
+    const n = parseInt(String(o.count || 0), 10) || 0;
+    if (n === 0) {
+      if (o.filteredEmpty && o.hasMore && String(o.tab || '') !== 'unmatched') {
+        return t('No matches in loaded messages — load older to search further');
+      }
+      return t('No messages');
+    }
+    const base = n === 1 ? t('1 message') : t('%s messages', [String(n)]);
+    if (String(o.tab || '') !== 'unmatched' && o.hasMore) {
+      return base + ' — ' + t('more available');
+    }
+    return base;
+  }
+
+  /**
+   * @param {string|null|undefined} cursor
+   * @returns {boolean}
+   */
+  function looksLikeInboxCursor(cursor) {
+    const c = String(cursor || '').trim();
+    if (c === '' || c.indexOf('|') < 0 || c.length > 96) return false;
+    const parts = c.split('|');
+    if (parts.length !== 2) return false;
+    const id = parts[1];
+    if (!/^\d+$/.test(id) || parseInt(id, 10) <= 0) return false;
+    const at = parts[0];
+    if (at === '') return true;
+    return /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(at);
+  }
+
+  const api = {
+    mergeInboxItems: mergeInboxItems,
+    normalizePagingMeta: normalizePagingMeta,
+    shouldShowLoadMore: shouldShowLoadMore,
+    inboxStatusText: inboxStatusText,
+    looksLikeInboxCursor: looksLikeInboxCursor,
+  };
+
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = api;
+  }
+  global.CustomerCheckInboxPage = api;
+})(typeof window !== 'undefined' ? window : globalThis);

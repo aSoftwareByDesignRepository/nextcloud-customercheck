@@ -59,6 +59,10 @@
   let loadGeneration = 0;
   let previewGeneration = 0;
   let autoSyncedOnce = false;
+  /** Opaque server cursor for Personal/Team inbox pages (sentAt|id). */
+  let inboxNextCursor = null;
+  let inboxHasMore = false;
+  let inboxMoreBusy = false;
   let searchTimer = null;
   let companyPanel = null;
   /** @type {Array<{id:number,name:string}>} */
@@ -125,6 +129,96 @@
       list.classList.toggle('is-busy', !!busy);
     }
     if (tools) tools.classList.toggle('is-busy', !!busy);
+  }
+
+  function resetInboxPaging() {
+    inboxNextCursor = null;
+    inboxHasMore = false;
+  }
+
+  function pageCore() {
+    return window.CustomerCheckInboxPage || null;
+  }
+
+  function syncMoreButton() {
+    const wrap = document.getElementById('crm-sales-inbox-more-wrap');
+    const btn = document.getElementById('crm-sales-inbox-more');
+    if (!wrap || !btn) return;
+    const P = pageCore();
+    const show = P && typeof P.shouldShowLoadMore === 'function'
+      ? P.shouldShowLoadMore({
+        tab: activeTab,
+        hasMore: inboxHasMore,
+        loadedCount: itemsRaw.length,
+        visibleCount: items.length,
+        moreBusy: inboxMoreBusy,
+      })
+      : (activeTab !== 'unmatched' && inboxHasMore && itemsRaw.length > 0);
+    wrap.hidden = !show;
+    btn.disabled = !!inboxMoreBusy;
+    if (inboxMoreBusy) {
+      btn.setAttribute('aria-busy', 'true');
+      btn.textContent = t('Loading older messages…');
+    } else {
+      btn.removeAttribute('aria-busy');
+      btn.textContent = t('Load older messages');
+    }
+  }
+
+  function inboxStatusText(count) {
+    const P = pageCore();
+    const qEl = document.getElementById('crm-sales-inbox-q');
+    const q = qEl ? String(qEl.value || '').trim() : '';
+    const n = parseInt(String(count || 0), 10) || 0;
+    if (P && typeof P.inboxStatusText === 'function') {
+      return P.inboxStatusText({
+        count: n,
+        hasMore: inboxHasMore,
+        tab: activeTab,
+        filteredEmpty: q !== '' && n === 0 && itemsRaw.length > 0,
+        t: t,
+      });
+    }
+    if (n === 0) {
+      return t('No messages');
+    }
+    const base = n === 1 ? t('1 message') : t('%s messages', [String(n)]);
+    if (activeTab !== 'unmatched' && inboxHasMore) {
+      return base + ' — ' + t('more available');
+    }
+    return base;
+  }
+
+  function mergeInboxItems(existing, incoming) {
+    const P = pageCore();
+    if (P && typeof P.mergeInboxItems === 'function') {
+      return P.mergeInboxItems(existing, incoming);
+    }
+    const seen = Object.create(null);
+    const out = [];
+    const push = function (row) {
+      const id = parseInt(String(row && row.id || 0), 10);
+      if (!(id > 0) || seen[id]) return;
+      seen[id] = true;
+      out.push(row);
+    };
+    (Array.isArray(existing) ? existing : []).forEach(push);
+    (Array.isArray(incoming) ? incoming : []).forEach(push);
+    return out;
+  }
+
+  function applyPagingMeta(data) {
+    const P = pageCore();
+    if (P && typeof P.normalizePagingMeta === 'function') {
+      const meta = P.normalizePagingMeta(data && data.nextCursor, data && data.hasMore);
+      inboxNextCursor = meta.nextCursor;
+      inboxHasMore = meta.hasMore;
+      return;
+    }
+    inboxNextCursor = typeof (data && data.nextCursor) === 'string' && data.nextCursor !== ''
+      ? data.nextCursor
+      : null;
+    inboxHasMore = !!(data && data.hasMore) && !!inboxNextCursor;
   }
 
   function setActionBusy(busy) {
@@ -905,6 +999,7 @@
     if (!items.length) {
       empty.hidden = false;
       setColsVisible(false);
+      syncMoreButton();
       const copy = emptyCopy(activeTab);
       const emptyTitle = document.getElementById('crm-sales-inbox-empty-title');
       if (emptyTitle) emptyTitle.textContent = copy.title;
@@ -979,13 +1074,20 @@
       if (badges) accountBits.push(badges);
 
       const fromText = from || (redacted ? t('Hidden until triage') : '');
-      li.setAttribute('aria-expanded', open ? 'true' : 'false');
+      // role=option must not use aria-expanded (axe aria-allowed-attr / WCAG).
+      // Put open state in the accessible name instead.
       li.setAttribute('aria-label', [
         fromText,
         subject,
         label,
         whenLabel,
+        open ? t('Preview open') : '',
       ].filter(Boolean).join(' — '));
+      if (open) {
+        li.setAttribute('aria-controls', 'crm-sales-inbox-reader');
+      } else {
+        li.removeAttribute('aria-controls');
+      }
       li.innerHTML =
         '<span class="crm-sales-inbox__cell crm-sales-inbox__cell--from" data-crm-col="' + escapeHtml(t('From')) + '">' +
         '<span class="crm-mail-thread-row__from">' + escapeHtml(fromText) + '</span></span>' +
@@ -1435,6 +1537,8 @@
       itemsRaw = [];
       items = [];
       canWriteAssign = false;
+      resetInboxPaging();
+      syncMoreButton();
       renderList();
       return;
     }
@@ -1456,6 +1560,7 @@
       const data = res.data || {};
       const raw = Array.isArray(data.items) ? data.items : [];
       canWriteAssign = data.canWrite !== false && !!shellCan('write');
+      resetInboxPaging();
       itemsRaw = raw
         .map(mapReviewItemToRow)
         .filter(function (row) {
@@ -1473,6 +1578,7 @@
       const actions = document.getElementById('crm-sales-inbox-actions');
       if (actions) actions.hidden = true;
       applyListView();
+      syncMoreButton();
       const n = items.length;
       setStatus(n === 0
         ? t('Nothing unassigned')
@@ -1484,6 +1590,8 @@
       itemsRaw = [];
       items = [];
       canWriteAssign = false;
+      resetInboxPaging();
+      syncMoreButton();
       renderList();
     } finally {
       if (gen === loadGeneration) setListBusy(false);
@@ -1548,6 +1656,8 @@
     if (!(ws > 0)) {
       setStatus(t('No workspace selected.'));
       items = [];
+      resetInboxPaging();
+      syncMoreButton();
       renderList();
       return;
     }
@@ -1565,6 +1675,7 @@
         personalMailEnabled = data.personalMailEnabled;
       }
       itemsRaw = Array.isArray(data.items) ? data.items : [];
+      applyPagingMeta(data);
       sharedFolders = Array.isArray(data.sharedFolders) ? data.sharedFolders.map(String) : [];
       accounts = Array.isArray(data.accounts) ? data.accounts : [];
       personalBoxes = accounts.filter((a) => String(a.kind || '') === 'personal');
@@ -1580,10 +1691,8 @@
       renderSharedFoldersBanner();
       renderAuthAlert(Array.isArray(data.authAlerts) ? data.authAlerts : []);
       applyListView();
-      const n = items.length;
-      setStatus(n === 0
-        ? t('No messages')
-        : (n === 1 ? t('1 message') : t('%s messages', [String(n)])));
+      syncMoreButton();
+      setStatus(inboxStatusText(items.length));
       syncToolbarForTab();
       // Bachus: one silent auto-update on first Mine visit — Sync stays available.
       if (!autoSyncedOnce && activeTab === 'mine' && personalMailEnabled && personalBoxes.length > 0) {
@@ -1595,9 +1704,74 @@
       if (gen !== loadGeneration || activeTab === 'unmatched') return;
       setStatus((e.payload && e.payload.message) || e.message || t('Could not load inbox.'));
       items = [];
+      itemsRaw = [];
+      resetInboxPaging();
+      syncMoreButton();
       renderList();
     } finally {
       if (gen === loadGeneration) setListBusy(false);
+    }
+  }
+
+  /**
+   * Append the next Personal/Team inbox page (cursor from prior response).
+   * @returns {Promise<boolean>}
+   */
+  async function loadMoreInbox() {
+    if (activeTab === 'unmatched' || !inboxHasMore || !inboxNextCursor || inboxMoreBusy) {
+      return false;
+    }
+    const P = pageCore();
+    if (P && typeof P.looksLikeInboxCursor === 'function' && !P.looksLikeInboxCursor(inboxNextCursor)) {
+      resetInboxPaging();
+      syncMoreButton();
+      setStatus(t('Could not load older messages.'));
+      return false;
+    }
+    const ws = workspaceId();
+    if (!(ws > 0)) return false;
+    const gen = loadGeneration;
+    const cursor = inboxNextCursor;
+    inboxMoreBusy = true;
+    syncMoreButton();
+    setStatus(t('Loading older messages…'));
+    try {
+      let url = '/workspaces/' + ws + '/mail/inbox?tab=' + encodeURIComponent(activeTab)
+        + '&limit=50&cursor=' + encodeURIComponent(cursor);
+      if (mailboxFilter > 0) {
+        url += '&mailboxId=' + encodeURIComponent(String(mailboxFilter));
+      }
+      const res = await Api.get(url);
+      if (gen !== loadGeneration || activeTab === 'unmatched') return false;
+      const data = res.data || {};
+      const incoming = Array.isArray(data.items) ? data.items : [];
+      const before = itemsRaw.length;
+      itemsRaw = mergeInboxItems(itemsRaw, incoming);
+      applyPagingMeta(data);
+      applyListView();
+      syncMoreButton();
+      const added = Math.max(0, itemsRaw.length - before);
+      const live = document.getElementById('crm-live-region');
+      if (live) {
+        live.textContent = added === 1
+          ? t('1 older message loaded')
+          : t('%s older messages loaded', [String(added)]);
+      }
+      setStatus(inboxStatusText(items.length));
+      // Keep keyboard focus on the control granny just used.
+      const more = document.getElementById('crm-sales-inbox-more');
+      if (more && !more.hidden && !more.disabled && typeof more.focus === 'function') {
+        more.focus();
+      }
+      return true;
+    } catch (e) {
+      if (gen !== loadGeneration || activeTab === 'unmatched') return false;
+      setStatus((e.payload && e.payload.message) || e.message || t('Could not load older messages.'));
+      syncMoreButton();
+      return false;
+    } finally {
+      inboxMoreBusy = false;
+      if (gen === loadGeneration) syncMoreButton();
     }
   }
 
@@ -1700,6 +1874,13 @@
     });
   }
 
+  const moreBtn = document.getElementById('crm-sales-inbox-more');
+  if (moreBtn) {
+    moreBtn.addEventListener('click', () => {
+      void loadMoreInbox();
+    });
+  }
+
   const accountSel = document.getElementById('crm-sales-inbox-account');
   if (accountSel) {
     accountSel.addEventListener('change', () => {
@@ -1719,10 +1900,7 @@
           void loadAssignInbox();
         } else {
           applyListView();
-          const n = items.length;
-          setStatus(n === 0
-            ? t('No messages')
-            : (n === 1 ? t('1 message') : t('%s messages', [String(n)])));
+          setStatus(inboxStatusText(items.length));
         }
       }, 280);
     });
