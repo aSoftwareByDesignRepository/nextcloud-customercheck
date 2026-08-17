@@ -17,21 +17,23 @@ test.describe('Contacts link (Command Center)', () => {
     await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
 
     await page.locator('#crm-persons').scrollIntoViewIfNeeded();
-    await page.locator('#crm-add-person').click({ force: true });
-    const form = page.locator('form[id^="crm-prompt-"]');
+    await page.locator('#crm-add-person').click();
+    const form = page.locator('#crm-person-form');
     await expect(form).toBeVisible({ timeout: 10000 });
-    await form.locator('[name="name"]').fill(`Ada ${suffix}`);
-    await form.locator('[name="email"]').fill(`ada-${suffix}@example.com`);
+    await form.locator('#crm-person-name').fill(`Ada ${suffix}`);
+    await form.locator('#crm-person-email').fill(`ada-${suffix}@example.com`);
     await form.locator('button[type="submit"]').click();
     await page.waitForLoadState('networkidle');
 
     await expect(page.locator('#crm-persons-table')).toBeVisible();
     await expect(page.locator('#crm-persons-table thead th')).toHaveCount(3);
     await expect(page.locator('#crm-persons-table .crm-person-more').first()).toBeVisible();
-    await page.locator('#crm-persons-table .crm-person-more > summary').first().click();
+    await expect(page.locator('#crm-persons-table .crm-person-more').first()).toHaveAttribute('open', '');
+    await expect(page.locator('#crm-persons-table .crm-person-more__body').first()).toBeVisible();
     await expect(page.locator('#crm-persons-table .crm-person-more__body').first()).toContainText(/Last touch|Letzter Kontakt|Address book|Adressbuch/i);
     await expect(page.locator('#crm-persons-table tbody tr').first()).toContainText(/No touch yet|Noch kein Kontakt/i);
     await expect(page.locator('#crm-persons-table tbody tr').first()).toContainText(/Not linked|Nicht verknüpft/i);
+    await expect(page.locator('#crm-persons-table [data-crm-edit-person]').first()).toBeVisible();
     await expect(page.locator('#crm-persons-table [data-crm-remove-person]').first()).toBeVisible();
 
     // Cockpit Log email is wired (AC communication actions).

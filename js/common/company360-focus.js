@@ -115,11 +115,22 @@
   }
 
   /**
+   * People-row landmarks (`#crm-person-12`) — numeric id only.
+   * Must not match `#crm-person-form` / `#crm-person-email` (identity widgets).
+   *
+   * @param {string|null|undefined} sectionId
+   * @returns {boolean}
+   */
+  function isPersonRowDeepLinkSectionId(sectionId) {
+    return typeof sectionId === 'string' && /^crm-person-\d+$/.test(sectionId);
+  }
+
+  /**
    * @param {string|null|undefined} sectionId
    * @returns {boolean}
    */
   function isFocusDeepLinkSectionId(sectionId) {
-    return tabForSectionId(sectionId) !== null;
+    return tabForSectionId(sectionId) !== null || isPersonRowDeepLinkSectionId(sectionId);
   }
 
   /**

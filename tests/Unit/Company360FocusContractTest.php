@@ -85,8 +85,12 @@ final class Company360FocusContractTest extends TestCase
 		$this->assertStringContainsString("if (id.indexOf('/') !== -1 || id.indexOf('%') !== -1 || id.indexOf(':') !== -1) {", $core);
 		$this->assertStringContainsString('isFocusDeepLinkSectionId', $boot);
 		$this->assertStringContainsString('isFocusDeepLinkSectionId', $core);
-		$this->assertStringContainsString('return tabForSectionId(sectionId) !== null;', $boot);
-		$this->assertStringContainsString('return tabForSectionId(sectionId) !== null;', $core);
+		$this->assertStringContainsString('return tabForSectionId(sectionId) !== null || isPersonRowDeepLinkSectionId(sectionId);', $boot);
+		$this->assertStringContainsString('return tabForSectionId(sectionId) !== null || isPersonRowDeepLinkSectionId(sectionId);', $core);
+		$this->assertStringContainsString('isPersonRowDeepLinkSectionId', $boot);
+		$this->assertStringContainsString('isPersonRowDeepLinkSectionId', $core);
+		$this->assertStringContainsString('/^crm-person-\\d+$/', $boot);
+		$this->assertStringContainsString('/^crm-person-\\d+$/', $core);
 		$this->assertStringContainsString('/^[A-Za-z][A-Za-z0-9_-]*$/', $boot);
 		$this->assertStringContainsString('/^[A-Za-z][A-Za-z0-9_-]*$/', $core);
 		$this->assertStringNotContainsString('if (false && (id.indexOf', $boot);
@@ -184,7 +188,11 @@ final class Company360FocusContractTest extends TestCase
 		$this->assertStringContainsString('forced-colors', $css);
 		$this->assertStringContainsString('prefers-reduced-motion', $css);
 		$this->assertStringContainsString('prefers-reduced-transparency', $css);
-		$this->assertStringContainsString('border-width: 3px', $css);
+		$this->assertMatchesRegularExpression(
+			'/crm-360-focus__tab\[aria-selected="true"\][^{]*\{[^}]*border-width:\s*3px/s',
+			$css,
+			'Selected focus tab must use thicker border as non-color cue (WCAG 1.4.1)',
+		);
 		// Selected tab uses thicker border (WCAG 1.4.1 non-color cue) — not double-line inset underline chrome.
 		$this->assertStringNotContainsString('inset 0 -4px 0', $css);
 		$this->assertStringContainsString('position: sticky', $css);

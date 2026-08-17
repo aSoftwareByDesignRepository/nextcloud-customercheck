@@ -102,18 +102,18 @@ final class PromptFieldControlUxContractTest extends TestCase
 		$this->assertStringNotContainsString("type: 'textarea'", $subjectChunk);
 		$this->assertStringContainsString("name: 'snippet', label: t('Short note (optional)'), type: 'textarea'", $js);
 
-		// Folder search / person identity stay single-line.
 		$this->assertStringContainsString("name: 'q', label: t('Search folder by name'), type: 'text', required: true", $js);
-		$addPersonStart = strpos($js, "promptFields(t('Add person')");
-		$this->assertNotFalse($addPersonStart);
-		$addPersonChunk = substr($js, (int)$addPersonStart, 700);
-		$namePos = strpos($addPersonChunk, "name: 'name'");
-		$emailPos = strpos($addPersonChunk, "name: 'email'");
-		$this->assertNotFalse($namePos);
-		$this->assertNotFalse($emailPos);
-		$this->assertGreaterThan($namePos, $emailPos);
-		$nameOnly = substr($addPersonChunk, (int)$namePos, (int)$emailPos - (int)$namePos);
-		$this->assertStringNotContainsString("type: 'textarea'", $nameOnly);
+
+		// Person identity stays single-line on the inline 360 form (no prompt modal).
+		$this->assertStringNotContainsString("promptFields(t('Add person')", $js);
+		$html = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/company-detail.php');
+		$this->assertStringContainsString('id="crm-person-name"', $html);
+		$this->assertStringContainsString('id="crm-person-email"', $html);
+		$this->assertStringContainsString('type="email"', $html);
+		$this->assertDoesNotMatchRegularExpression(
+			'/<textarea[^>]+id="crm-person-name"/',
+			$html,
+		);
 	}
 
 	public function testTodoListTitlesWrapMultilinePromptText(): void

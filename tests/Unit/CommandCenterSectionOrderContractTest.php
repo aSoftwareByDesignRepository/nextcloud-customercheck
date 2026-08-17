@@ -16,6 +16,7 @@ final class CommandCenterSectionOrderContractTest extends TestCase
 		$html = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/company-detail.php');
 		$required = [
 			'crm-glance',
+			'crm-identity',
 			'crm-communication',
 			'crm-persons',
 			'crm-next-steps',

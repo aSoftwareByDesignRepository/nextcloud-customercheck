@@ -42,7 +42,7 @@ final class DealNotesUxContractTest extends TestCase
 		$this->assertStringContainsString('id="crm-deals-table"', $html);
 		$this->assertStringContainsString("\$l->t('More deal actions')", $html);
 		$dealsStart = strpos($html, 'id="crm-deals"');
-		$dealsEnd = strpos($html, 'id="crm-next-steps"', (int)$dealsStart);
+		$dealsEnd = strpos($html, 'id="crm-contracts"', (int)$dealsStart);
 		$chunk = substr($html, (int)$dealsStart, (int)$dealsEnd - (int)$dealsStart);
 		$this->assertStringContainsString('data-crm-edit-chase', $chunk);
 		$this->assertStringContainsString('data-crm-dismiss-followups', $chunk);

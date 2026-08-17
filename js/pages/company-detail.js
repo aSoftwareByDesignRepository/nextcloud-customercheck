@@ -357,84 +357,364 @@
     if (target) target.click();
   });
 
+  function companyUpdatedAt() {
+    return root ? (root.getAttribute('data-updated-at') || '') : '';
+  }
+
+  const PHONE_RE = /^[0-9+()\/.\s-]{4,64}$/;
+  let identitySaveBusy = false;
+  let personContactsUid = '';
+  let identityFormOpener = null;
+  let contactsSuggestGen = 0;
+
+  function fieldValue(id) {
+    const el = document.getElementById(id);
+    return el && typeof el.value === 'string' ? el.value.trim() : '';
+  }
+
+  function setFieldValue(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.value = value == null ? '' : String(value);
+  }
+
+  function showIdentityError(boxId, err) {
+    const errBox = document.getElementById(boxId);
+    if (!errBox) return;
+    const msg = (err && err.payload && err.payload.message) || (err && err.message) || t('Could not save.');
+    errBox.hidden = false;
+    errBox.textContent = '';
+    errBox.appendChild(document.createTextNode(msg));
+    if (err && Number(err.status) === 409) {
+      const reload = document.createElement('button');
+      reload.type = 'button';
+      reload.className = 'crm-btn crm-btn--secondary crm-btn--lg';
+      reload.textContent = t('Reload page');
+      reload.addEventListener('click', () => location.reload());
+      const hint = document.createElement('p');
+      hint.className = 'form-help';
+      hint.textContent = t('This page is out of date. Reload and try again.');
+      errBox.appendChild(hint);
+      errBox.appendChild(reload);
+    }
+    errBox.focus();
+  }
+
+  function clearIdentityError(boxId) {
+    const errBox = document.getElementById(boxId);
+    if (!errBox) return;
+    errBox.hidden = true;
+    errBox.textContent = '';
+  }
+
+  function rememberIdentityOpener(el) {
+    identityFormOpener = el instanceof HTMLElement ? el : null;
+  }
+
+  function restoreIdentityOpenerFocus() {
+    const el = identityFormOpener;
+    identityFormOpener = null;
+    if (el && document.contains(el) && typeof el.focus === 'function') {
+      el.focus();
+    }
+  }
+
+  function bumpContactsSuggest() {
+    contactsSuggestGen += 1;
+  }
+
+  function setFormOpen(form, btn, open, focusId) {
+    if (!form) return;
+    form.hidden = !open;
+    if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open) {
+      const focusEl = focusId ? document.getElementById(focusId) : null;
+      if (focusEl && typeof focusEl.focus === 'function') {
+        focusEl.focus();
+      }
+      if (typeof form.scrollIntoView === 'function') {
+        form.scrollIntoView({ block: 'nearest' });
+      }
+    }
+  }
+
+  function closeIdentityForms() {
+    bumpContactsSuggest();
+    setFormOpen(document.getElementById('crm-company-name-form'), document.getElementById('crm-change-company'), false);
+    setFormOpen(document.getElementById('crm-address-form'), document.getElementById('crm-edit-address'), false);
+    const addBtns = document.querySelectorAll('[data-crm-trigger="crm-add-person"], #crm-add-person');
+    addBtns.forEach((b) => b.setAttribute('aria-expanded', 'false'));
+    setFormOpen(document.getElementById('crm-person-form'), null, false);
+  }
+
+  function openExclusiveForm(which) {
+    if (identitySaveBusy) return;
+    closeIdentityForms();
+    if (which === 'name') {
+      setFormOpen(document.getElementById('crm-company-name-form'), document.getElementById('crm-change-company'), true, 'crm-identity-name');
+    } else if (which === 'address') {
+      setFormOpen(document.getElementById('crm-address-form'), document.getElementById('crm-edit-address'), true, 'crm-address-street');
+    } else if (which === 'person') {
+      const addBtn = document.getElementById('crm-add-person');
+      const identityAdd = document.querySelector('#crm-identity [data-crm-trigger="crm-add-person"]');
+      if (addBtn) addBtn.setAttribute('aria-expanded', 'true');
+      if (identityAdd) identityAdd.setAttribute('aria-expanded', 'true');
+      setFormOpen(document.getElementById('crm-person-form'), null, true, 'crm-person-name');
+    }
+  }
+
+  async function withIdentitySave(form, errBoxId, work) {
+    if (identitySaveBusy) return;
+    identitySaveBusy = true;
+    const submitBtn = form ? form.querySelector('button[type="submit"]') : null;
+    clearIdentityError(errBoxId);
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.setAttribute('aria-busy', 'true');
+    }
+    try {
+      await work();
+    } catch (e) {
+      showIdentityError(errBoxId, e);
+    } finally {
+      identitySaveBusy = false;
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.setAttribute('aria-busy', 'false');
+      }
+    }
+  }
+
+  function fillPersonForm(mode, row) {
+    const form = document.getElementById('crm-person-form');
+    const title = document.getElementById('crm-person-form-title');
+    if (!form) return;
+    form.setAttribute('data-mode', mode);
+    personContactsUid = '';
+    form.removeAttribute('data-person-id');
+    form.removeAttribute('data-updated-at');
+    if (title) title.textContent = mode === 'edit' ? t('Change person') : t('Add person');
+    setFieldValue('crm-person-name', row ? (row.getAttribute('data-person-name') || '') : '');
+    setFieldValue('crm-person-email', row ? (row.getAttribute('data-person-email') || '') : '');
+    setFieldValue('crm-person-phone', row ? (row.getAttribute('data-person-phone') || '') : '');
+    setFieldValue('crm-person-role', row ? (row.getAttribute('data-person-role') || '') : '');
+    const advanced = document.getElementById('crm-person-advanced');
+    if (advanced) advanced.open = !!(row && (row.getAttribute('data-person-role') || '').trim());
+    if (mode === 'edit' && row) {
+      form.setAttribute('data-person-id', row.getAttribute('data-person-id') || '');
+      form.setAttribute('data-updated-at', row.getAttribute('data-updated-at') || '');
+    }
+  }
+
+  async function maybeApplyContactsMatch(name) {
+    const q = String(name || '').trim();
+    if (q.length < 2 || identitySaveBusy) return;
+    const form = document.getElementById('crm-person-form');
+    if (!form || form.hidden || form.getAttribute('data-mode') !== 'add') return;
+    const gen = ++contactsSuggestGen;
+    try {
+      const resPayload = await Api.get('/contacts/suggest?q=' + encodeURIComponent(q) + '&limit=5');
+      if (gen !== contactsSuggestGen || identitySaveBusy) return;
+      if (!form || form.hidden || form.getAttribute('data-mode') !== 'add') return;
+      const res = (resPayload && resPayload.data) ? resPayload.data : resPayload;
+      if (!res || !res.available) return;
+      const items = (res && Array.isArray(res.items) && res.items.length)
+        ? res.items
+        : (res && Array.isArray(res.suggestions) ? res.suggestions : []);
+      const applyContact = (match) => {
+        if (!match || !match.name) return;
+        setFieldValue('crm-person-name', match.name);
+        if (match.email && fieldValue('crm-person-email') === '') setFieldValue('crm-person-email', match.email);
+        if (match.phone && fieldValue('crm-person-phone') === '') setFieldValue('crm-person-phone', match.phone);
+        if (match.uid) personContactsUid = String(match.uid);
+      };
+      if (items.length === 1) {
+        applyContact(items[0]);
+      } else if (items.length > 1) {
+        const first = items[0];
+        const use = await C.confirmDialog({
+          title: t('Use Contacts match?'),
+          message: first.name + (first.email ? ' <' + first.email + '>' : ''),
+          confirmLabel: t('Use this contact'),
+          cancelLabel: t('Keep what I typed'),
+        });
+        if (gen !== contactsSuggestGen || identitySaveBusy) return;
+        if (use) applyContact(first);
+      }
+    } catch (e) {
+      // Contacts optional — continue with typed values.
+    }
+  }
+
   const addPerson = document.getElementById('crm-add-person');
   if (addPerson) {
-    addPerson.addEventListener('click', async () => {
-      let contactsHint = '';
-      let contactsAvailable = false;
-      try {
-        const suggestPayload = await Api.get('/contacts/suggest?q=aa&limit=1');
-        const suggest = (suggestPayload && suggestPayload.data) ? suggestPayload.data : suggestPayload;
-        contactsAvailable = !!(suggest && suggest.available);
-        if (contactsAvailable) {
-          contactsHint = t('Tip: start typing a name — matches from Contacts appear after you save.');
-        }
-      } catch (e) {
-        contactsHint = '';
-      }
-      const data = await promptFields(t('Add person'), [
-        { name: 'name', label: t('Name'), required: true, hint: contactsHint || t('Who do you talk to at this company?') },
-        { name: 'email', label: t('Email'), type: 'email', hint: t('Optional — needed to log emails with them.') },
-        { name: 'phone', label: t('Phone'), advanced: true },
-        { name: 'role', label: t('Job title'), advanced: true },
-        {
-          name: 'buyingRole',
-          label: t('Role in buying'),
-          type: 'select',
-          value: '',
-          options: buyingRoleOptionsFromDom(),
-          advanced: true,
-        },
-      ]);
-      if (!data) return;
-      let contactsUid = null;
-      // Optional Contacts fill-in when the name looks like a search.
-      // Bachus: one exact match applies silently; only ask when 2+ matches compete.
-      if (contactsAvailable && data.name && data.name.length >= 2) {
-        try {
-          const resPayload = await Api.get('/contacts/suggest?q=' + encodeURIComponent(data.name) + '&limit=5');
-          const res = (resPayload && resPayload.data) ? resPayload.data : resPayload;
-          const items = (res && Array.isArray(res.items) && res.items.length)
-            ? res.items
-            : (res && Array.isArray(res.suggestions) ? res.suggestions : []);
-          const applyContact = (match) => {
-            if (!match || !match.name) return;
-            data.name = match.name || data.name;
-            data.email = match.email || data.email || '';
-            data.phone = match.phone || data.phone || '';
-            if (match.uid) {
-              contactsUid = String(match.uid);
-            }
-          };
-          if (items.length === 1) {
-            applyContact(items[0]);
-          } else if (items.length > 1) {
-            const first = items[0];
-            const use = await C.confirmDialog({
-              title: t('Use Contacts match?'),
-              message: first.name + (first.email ? ' <' + first.email + '>' : ''),
-              confirmLabel: t('Use this contact'),
-              cancelLabel: t('Keep what I typed'),
-            });
-            if (use) {
-              applyContact(first);
-            }
-          }
-        } catch (e) {
-          // Contacts optional — continue with typed values.
-        }
-      }
-      try {
-        const payload = Object.assign({ isPrimary: false }, data);
-        if (contactsUid) {
-          payload.contactsUid = contactsUid;
-        }
-        await Api.post('/companies/' + companyId + '/persons', payload);
-        location.reload();
-      } catch (e) {
-        await C.alertDialog({ title: t('Could not add person'), message: (e.payload && e.payload.message) || e.message, variant: 'danger' });
-      }
+    addPerson.addEventListener('click', () => {
+      fillPersonForm('add', null);
+      rememberIdentityOpener(document.activeElement instanceof HTMLElement ? document.activeElement : addPerson);
+      openExclusiveForm('person');
     });
+  }
+
+  const nameForm = document.getElementById('crm-company-name-form');
+  const changeCompanyBtn = document.getElementById('crm-change-company');
+  if (changeCompanyBtn && nameForm) {
+    changeCompanyBtn.addEventListener('click', () => {
+      if (!nameForm.hidden) {
+        closeIdentityForms();
+        changeCompanyBtn.focus();
+        identityFormOpener = null;
+        return;
+      }
+      const title = document.getElementById('crm-identity-title');
+      setFieldValue('crm-identity-name', title ? (title.textContent || '').trim() : '');
+      rememberIdentityOpener(changeCompanyBtn);
+      openExclusiveForm('name');
+    });
+    const nameCancel = document.getElementById('crm-company-name-cancel');
+    if (nameCancel) {
+      nameCancel.addEventListener('click', () => {
+        closeIdentityForms();
+        restoreIdentityOpenerFocus();
+      });
+    }
+    nameForm.addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      const name = fieldValue('crm-identity-name');
+      if (name === '') {
+        showIdentityError('crm-company-name-form-error', { message: t('Enter the company name.') });
+        return;
+      }
+      await withIdentitySave(nameForm, 'crm-company-name-form-error', async () => {
+        await Api.put('/companies/' + companyId, {
+          name: name,
+          updatedAt: companyUpdatedAt() || null,
+        });
+        if (liveRegion()) liveRegion().textContent = t('Company saved.');
+        location.reload();
+      });
+    });
+  }
+
+  const editAddressBtn = document.getElementById('crm-edit-address');
+  const addressForm = document.getElementById('crm-address-form');
+  const addressCancel = document.getElementById('crm-address-cancel');
+  if (editAddressBtn && addressForm) {
+    editAddressBtn.addEventListener('click', () => {
+      if (!addressForm.hidden) {
+        closeIdentityForms();
+        editAddressBtn.focus();
+        identityFormOpener = null;
+        return;
+      }
+      rememberIdentityOpener(editAddressBtn);
+      openExclusiveForm('address');
+    });
+    if (addressCancel) {
+      addressCancel.addEventListener('click', () => {
+        closeIdentityForms();
+        restoreIdentityOpenerFocus();
+      });
+    }
+    addressForm.addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      await withIdentitySave(addressForm, 'crm-address-form-error', async () => {
+        await Api.put('/companies/' + companyId, {
+          addrStreet: fieldValue('crm-address-street'),
+          addrZip: fieldValue('crm-address-zip'),
+          addrCity: fieldValue('crm-address-city'),
+          country: fieldValue('crm-address-country') || 'DE',
+          updatedAt: companyUpdatedAt() || null,
+        });
+        if (liveRegion()) liveRegion().textContent = t('Address saved.');
+        location.reload();
+      });
+    });
+  }
+
+  const personForm = document.getElementById('crm-person-form');
+  const personCancel = document.getElementById('crm-person-cancel');
+  const personNameInput = document.getElementById('crm-person-name');
+  if (personForm) {
+    if (personCancel) {
+      personCancel.addEventListener('click', () => {
+        closeIdentityForms();
+        restoreIdentityOpenerFocus();
+      });
+    }
+    if (personNameInput) {
+      personNameInput.addEventListener('blur', () => {
+        if (personForm.getAttribute('data-mode') !== 'add') return;
+        maybeApplyContactsMatch(personNameInput.value);
+      });
+    }
+    personForm.addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      const name = fieldValue('crm-person-name');
+      const email = fieldValue('crm-person-email');
+      const phone = fieldValue('crm-person-phone');
+      const role = fieldValue('crm-person-role');
+      if (name === '') {
+        showIdentityError('crm-person-form-error', { message: t('Enter the contact name.') });
+        return;
+      }
+      if (email !== '' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        showIdentityError('crm-person-form-error', { message: t('Enter a valid email address, for example name@example.com.') });
+        return;
+      }
+      if (phone !== '' && !PHONE_RE.test(phone)) {
+        showIdentityError('crm-person-form-error', { message: t('Enter a phone number using digits, spaces and + ( ) / - only.') });
+        return;
+      }
+      const mode = personForm.getAttribute('data-mode') || 'add';
+      const personId = parseInt(personForm.getAttribute('data-person-id') || '0', 10);
+      bumpContactsSuggest();
+      await withIdentitySave(personForm, 'crm-person-form-error', async () => {
+        if (mode === 'edit' && personId > 0) {
+          await Api.put('/persons/' + personId, {
+            name: name,
+            email: email,
+            phone: phone,
+            role: role,
+            updatedAt: personForm.getAttribute('data-updated-at') || null,
+          });
+          if (liveRegion()) liveRegion().textContent = t('Person updated.');
+        } else {
+          const payload = { name: name, email: email, phone: phone, role: role, isPrimary: false };
+          if (personContactsUid) payload.contactsUid = personContactsUid;
+          await Api.post('/companies/' + companyId + '/persons', payload);
+          if (liveRegion()) liveRegion().textContent = t('Person added.');
+        }
+        location.reload();
+      });
+    });
+  }
+
+  document.querySelectorAll('[data-crm-edit-person]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const row = btn.closest('[data-person-id]');
+      rememberIdentityOpener(btn);
+      fillPersonForm('edit', row);
+      openExclusiveForm('person');
+    });
+  });
+
+  document.addEventListener('keydown', (ev) => {
+    if (ev.key !== 'Escape' || identitySaveBusy) return;
+    const openForm = ['crm-company-name-form', 'crm-address-form', 'crm-person-form']
+      .map((id) => document.getElementById(id))
+      .find((f) => f && !f.hidden);
+    if (!openForm) return;
+    ev.preventDefault();
+    closeIdentityForms();
+    restoreIdentityOpenerFocus();
+  });
+
+  if (location.hash === '#crm-address-form' || location.hash === '#crm-company-address') {
+    openExclusiveForm('address');
+  } else if (location.hash === '#crm-person-form') {
+    fillPersonForm('add', null);
+    openExclusiveForm('person');
+  } else if (location.hash === '#crm-company-name-form') {
+    openExclusiveForm('name');
   }
 
   async function openLogEmailDialog() {
@@ -546,7 +826,7 @@
       });
       if (!ok) return;
       try {
-        const row = btn.closest('tr[data-person-id]');
+        const row = btn.closest('[data-person-id]');
         const updatedAt = row ? (row.getAttribute('data-updated-at') || '') : '';
         await Api.put('/persons/' + personId, { contactsUid: null, updatedAt });
         const live = document.getElementById('crm-live-region');
@@ -566,7 +846,7 @@
     btn.addEventListener('click', async () => {
       const personId = parseInt(btn.getAttribute('data-crm-remove-person') || '0', 10);
       if (!personId) return;
-      const row = btn.closest('tr[data-person-id]');
+      const row = btn.closest('[data-person-id]');
       const personName = (row && row.getAttribute('data-person-name')) || '';
       const ok = await C.confirmDialog({
         title: t('Remove this person?'),
@@ -673,7 +953,7 @@
     sel.addEventListener('change', async () => {
       const personId = parseInt(sel.getAttribute('data-crm-buying-role') || '0', 10);
       if (!personId) return;
-      const row = sel.closest('tr[data-person-id]');
+      const row = sel.closest('[data-person-id]');
       const updatedAt = sel.getAttribute('data-updated-at') || (row ? row.getAttribute('data-updated-at') : '') || '';
       sel.disabled = true;
       try {

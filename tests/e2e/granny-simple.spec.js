@@ -16,12 +16,11 @@ test.describe('Granny-simple company 360', () => {
     await page.goto('/apps/customercheck/companies/new');
     await page.waitForSelector('#crm-company-form', { timeout: 30000 });
     await expect(page.locator('#crm-company-advanced')).not.toHaveAttribute('open', '');
-    await expect(page.locator('#crm-company-status')).toBeAttached();
-    await expect(page.locator('#crm-company-address')).toBeAttached();
-    await expect(page.locator('#crm-company-street')).toBeAttached();
+    await expect(page.locator('#crm-company-status')).toBeHidden();
+    await expect(page.locator('#crm-company-address')).toBeVisible();
+    await expect(page.locator('#crm-company-street')).toBeVisible();
     const suffix = Date.now().toString(36);
     await page.locator('#crm-company-name').fill(`Granny Co ${suffix}`);
-    await page.locator('#crm-company-advanced').evaluate((el) => { el.open = true; });
     await page.locator('#crm-company-street').fill('Holtenauer Straße 267');
     await page.locator('#crm-company-zip').fill('24106');
     await page.locator('#crm-company-city').fill('Kiel');
@@ -33,6 +32,12 @@ test.describe('Granny-simple company 360', () => {
     await expect(page.locator('#crm-company-address-display')).toContainText('Holtenauer Straße 267');
     await expect(page.locator('#crm-company-address-display')).toContainText('24106');
     await expect(page.locator('#crm-company-address-display')).toContainText('Kiel');
+    await expect(page.locator('#crm-change-company')).toBeVisible();
+    await expect(page.locator('#crm-edit-address')).toBeVisible();
+    await expect(page.locator('#crm-edit-address')).toContainText(/Change address|Adresse ändern/i);
+    await expect(page.locator('#crm-identity-people')).toBeVisible();
+    await expect(page.locator('#crm-add-person')).toBeVisible();
+    await expect(page.locator('#crm-identity [data-crm-trigger="crm-add-person"]')).toBeVisible();
     await expect(page.locator('#crm-welcome-coach')).toBeVisible();
     await expect(page.locator('#crm-welcome-coach .crm-welcome-coach__steps')).toBeVisible();
     await expect(page.locator('#crm-welcome-coach .crm-welcome-coach__step')).toHaveCount(3);
@@ -82,9 +87,9 @@ test.describe('Granny-simple company 360', () => {
     await page.locator('[data-crm-focus-tab="today"]').click();
     // Add a person via the coach (single CTA owner — empty state has no duplicate).
     await page.locator('#crm-welcome-coach [data-crm-trigger="crm-add-person"]').click();
-    const personForm = page.locator('form[id^="crm-prompt-"]');
+    const personForm = page.locator('#crm-person-form');
     await expect(personForm).toBeVisible({ timeout: 10000 });
-    await personForm.locator('[name="name"]').fill(`Granny Person ${suffix}`);
+    await personForm.locator('#crm-person-name').fill(`Granny Person ${suffix}`);
     await personForm.locator('button[type="submit"]').click();
     await page.waitForLoadState('networkidle');
 
@@ -94,8 +99,11 @@ test.describe('Granny-simple company 360', () => {
     await expect(personsTable.locator('thead th', { hasText: /^Buying role$/i })).toHaveCount(0);
     await expect(personsTable.locator('thead th', { hasText: /Last touch|Letzter Kontakt/i })).toHaveCount(0);
     await expect(personsTable.locator('.crm-person-more').first()).toBeVisible();
-    await personsTable.locator('.crm-person-more > summary').first().click();
+    await expect(personsTable.locator('.crm-person-more').first()).toHaveAttribute('open', '');
+    await expect(personsTable.locator('.crm-person-more__body').first()).toBeVisible();
     await expect(personsTable.locator('.crm-person-more__body').first()).toContainText(/Last touch|Letzter Kontakt|Role in buying|Rolle beim Kauf/i);
+    await expect(personsTable.locator('[data-crm-edit-person]').first()).toBeVisible();
+    await expect(page.locator('#crm-identity-people .crm-identity-person').first()).toBeVisible();
     await expect(personsTable.locator('details.crm-more-menu')).toHaveCount(0);
     const primary = personsTable.locator('tbody tr').first().locator('.crm-table-actions .crm-btn--primary').first();
     await expect(primary).toBeVisible();
@@ -189,6 +197,8 @@ test.describe('Granny-simple company 360', () => {
     await expect(page.locator('#crm-company-advanced')).not.toHaveAttribute('open', '');
     await expect(page.locator('#crm-company-status')).toBeHidden();
     await expect(page.locator('#crm-company-owner')).toBeHidden();
+    await expect(page.locator('#crm-company-street')).toBeVisible();
+    await expect(page.locator('#crm-company-address')).toBeVisible();
     await page.locator('#crm-company-advanced > summary').click();
     await expect(page.locator('#crm-company-advanced')).toHaveAttribute('open', '');
     await expect(page.locator('#crm-company-status')).toBeVisible();

@@ -52,12 +52,12 @@ test.describe('Simplified core UX journeys', () => {
     await expect(newAg).toHaveAttribute('href', /companyId=\d+/);
     await focus.locator('[data-crm-focus-tab="today"]').click();
 
-    // Add person via coach (header Add person is hidden while coach owns the CTA).
+    // Add person via the always-visible People header (coach also offers it).
     await page.locator('#crm-welcome-coach [data-crm-trigger="crm-add-person"]').click();
-    let form = page.locator('form[id^="crm-prompt-"]');
+    let form = page.locator('#crm-person-form');
     await expect(form).toBeVisible({ timeout: 10000 });
-    await form.locator('[name="name"]').fill('Ada');
-    await form.locator('[name="email"]').fill(`ada-${suffix}@example.com`);
+    await form.locator('#crm-person-name').fill('Ada');
+    await form.locator('#crm-person-email').fill(`ada-${suffix}@example.com`);
     await form.locator('button[type="submit"]').click();
     await page.waitForLoadState('networkidle');
 
@@ -74,7 +74,9 @@ test.describe('Simplified core UX journeys', () => {
     await form.locator('[name="subject"]').fill('Hello Ada');
     await form.locator('button[type="submit"]').click();
     await page.waitForLoadState('networkidle');
+    await page.locator('[data-crm-focus-tab="more"]').click();
     await expect(page.locator('#crm-emails table tbody tr').first()).toContainText('Hello Ada');
+    await page.locator('[data-crm-focus-tab="today"]').click();
 
     // Add reminder + one-click Done (type under More; no confirm dialog on Done).
     await page.locator('#crm-add-activity').click();

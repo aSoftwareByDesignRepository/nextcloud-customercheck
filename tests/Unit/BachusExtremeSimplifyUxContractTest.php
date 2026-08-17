@@ -97,15 +97,46 @@ final class BachusExtremeSimplifyUxContractTest extends TestCase
 		$this->assertStringNotContainsString("\$l->t('Open')", $chunk);
 	}
 
-	public function testCompanyIdentityIsStatusStripWithoutNameRepeat(): void
+	public function testCompanyIdentityShowsDetailsPeopleAndChangeActions(): void
 	{
 		$html = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/company-detail.php');
-		$start = (int)strpos($html, 'crm-card--compact" id="crm-identity"');
-		$end = (int)strpos($html, 'id="crm-glance"', $start);
+		$start = (int)strpos($html, 'id="crm-identity"');
+		$end = (int)strpos($html, 'data-crm-360-focus="1"', $start);
 		$chunk = substr($html, $start, max(0, $end - $start));
-		$this->assertStringContainsString('crm-identity-strip', $chunk);
-		$this->assertStringContainsString('crm-card--compact', $chunk);
-		$this->assertStringNotContainsString('<h2', $chunk);
+		$this->assertNotFalse($start);
+		$glancePos = strpos($html, 'id="crm-glance"');
+		$this->assertNotFalse($glancePos);
+		$this->assertLessThan($start, (int)$glancePos, 'Identity must sit below At a glance');
+		$this->assertStringContainsString('id="crm-identity-title"', $chunk);
+		$this->assertStringContainsString('$company->getName()', $chunk);
+		$this->assertStringContainsString('id="crm-edit-address"', $chunk);
+		$this->assertStringContainsString('id="crm-change-company"', $chunk);
+		$this->assertStringContainsString('id="crm-identity-people"', $chunk);
+		$this->assertStringContainsString('id="crm-address-form"', $chunk);
+		$this->assertStringContainsString('id="crm-person-form"', $chunk);
+		$this->assertStringContainsString('id="crm-company-name-form"', $chunk);
+		$this->assertStringContainsString("\$l->t('More about this person')", $chunk);
+		$this->assertStringContainsString('href="#crm-person-', $chunk);
+		$this->assertStringNotContainsString('href="#crm-persons"', $chunk);
+		$this->assertStringContainsString('crm-card__header-actions crm-identity-actions', $chunk);
+		$this->assertStringContainsString('crm-identity-people__head', $chunk);
+		$this->assertStringContainsString('crm-identity-title-row', $chunk);
+		$this->assertStringContainsString('crm-identity-person__more', $chunk);
+		$this->assertStringContainsString('id="crm-identity-people-table"', $chunk);
+		$this->assertStringContainsString('table-container crm-table--responsive', $chunk);
+		$this->assertStringContainsString('th scope="col"', $chunk);
+		$this->assertStringContainsString("\$l->t('Name')); ?></th>", $chunk);
+		$this->assertStringContainsString("\$l->t('Email')); ?></th>", $chunk);
+		$this->assertStringContainsString("\$l->t('Action')); ?></th>", $chunk);
+		$this->assertStringContainsString('crm-table-actions', $chunk);
+		$this->assertStringNotContainsString('crm-identity-person__well', $chunk);
+		$this->assertStringNotContainsString('PersonInitialsPresenter', $chunk);
+		$this->assertStringNotContainsString('crm-identity-people__list', $chunk);
+		$this->assertStringNotContainsString('crm-card--table-solo', $chunk);
+		$this->assertStringContainsString("IconCatalog::render('map'", $chunk);
+		$this->assertStringContainsString("IconCatalog::render('users'", $chunk);
+		$this->assertStringContainsString('CompanyNotesPresenter::publicHeadline', $chunk);
+		$this->assertStringNotContainsString('p($company->getNotes())', $chunk);
 		$this->assertStringContainsString("\$l->t('Log talk')", $html);
 		$this->assertStringNotContainsString("\$l->t('Log email')", $html);
 	}

@@ -98,7 +98,8 @@ test.describe('Bachus extreme simplicity journeys', () => {
     await expect(page.locator('#crm-review-file-folder-pick')).toBeVisible();
     await expect(page.locator('#crm-review-file-folder')).toHaveAttribute('type', 'hidden');
     await expect(page.locator('input#crm-review-file-folder[type="number"]')).toHaveCount(0);
-    await expect(page.getByText(/Never type a raw folder file id|Nie eine rohe Ordner-Datei-ID/i)).toBeVisible();
+    await expect(page.locator('#crm-review-file-folder-help')).toBeVisible();
+    await expect(page.locator('#crm-review-file-folder-help')).toContainText(/Never type a raw folder file id|rohe Ordner-Datei-ID/i);
     await expect(page.locator('#crm-review-file-folder-status')).toBeVisible();
     await expect(page.locator('#crm-review-sources-form')).toHaveAttribute('aria-busy', 'false', { timeout: 30000 });
     await expect(page.locator('#crm-review-sources-save')).toBeEnabled({ timeout: 30000 });
@@ -135,7 +136,8 @@ test.describe('Bachus extreme simplicity journeys', () => {
     await expect(page.locator('#crm-log-email')).toHaveCount(1);
     await expect(page.locator('#crm-log-email')).toContainText(/Log talk|Gespräch|Protokollieren|Gespräch protokollieren/i);
     await expect(page.locator('#crm-identity')).toBeVisible();
-    await expect(page.locator('#crm-identity h2')).toHaveCount(0);
+    await expect(page.locator('#crm-identity-title')).toBeVisible();
+    await expect(page.locator('#crm-identity-title')).toContainText(`Bachus Co ${suffix}`);
     await expect(page.locator('#crm-glance-summary .crm-stat-tile')).toHaveCount(4, { timeout: 20000 });
     // Emails roster lives under More (focus tabs) — open it before asserting.
     await page.locator('[data-crm-focus-tab="more"]').click();

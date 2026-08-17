@@ -4,6 +4,7 @@
 /** @var \OCP\IURLGenerator $urlGenerator */
 
 use OCA\CustomerCheck\Service\IconCatalog;
+use OCA\CustomerCheck\Support\CompanyNotesPresenter;
 
 $company = $_['company'];
 $mail = $_['mail'] ?? ['mode' => 'manual_only', 'note' => '', 'related' => [], 'deepLinks' => [], 'touches' => []];
@@ -50,56 +51,31 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 	</details>
 	<?php endif; ?>
 </div>
-<div class="crm-page-stack" data-company-id="<?php p($company->getId()); ?>" data-workspace-id="<?php p((int)($_['workspaceId'] ?? $company->getWorkspaceId() ?? 0)); ?>" data-workspace-name="<?php p((string)($_['workspaceName'] ?? '')); ?>" data-crm-persons="<?php p($crmPersonsJson); ?>">
+<div class="crm-page-stack" data-company-id="<?php p($company->getId()); ?>" data-workspace-id="<?php p((int)($_['workspaceId'] ?? $company->getWorkspaceId() ?? 0)); ?>" data-workspace-name="<?php p((string)($_['workspaceName'] ?? '')); ?>" data-updated-at="<?php p((string)($_['companyUpdatedAt'] ?? '')); ?>" data-crm-persons="<?php p($crmPersonsJson); ?>">
 	<nav class="crm-back" aria-label="<?php p($l->t('Back')); ?>">
 		<a class="crm-btn crm-btn--ghost crm-btn--sm" href="<?php p($_['urls']['companies'] ?? $urlGenerator->linkToRoute('customercheck.page.companies')); ?>">← <?php p($l->t('Companies')); ?></a>
 	</nav>
 
-	<section class="crm-card crm-card--compact" id="crm-identity" aria-label="<?php p($l->t('Company status')); ?>">
-		<div class="crm-card__body crm-identity-strip">
-			<span class="crm-badge crm-badge--<?php p($company->getStatus() === 'active' ? 'success' : 'neutral'); ?>"><?php
-				$labels = $_['labels'] ?? null;
-				p($labels instanceof \OCA\CustomerCheck\Service\DisplayLabelService
-					? $labels->companyStatus((string)$company->getStatus())
-					: (string)$company->getStatus());
-			?></span>
-			<?php
-			$addrStreet = trim((string)($company->getAddrStreet() ?? ''));
-			$addrZip = trim((string)($company->getAddrZip() ?? ''));
-			$addrCity = trim((string)($company->getAddrCity() ?? ''));
-			$addrCountry = strtoupper(trim((string)($company->getCountry() ?? '')));
-			$addrLines = [];
-			if ($addrStreet !== '') {
-				$addrLines[] = $addrStreet;
-			}
-			$zipCity = trim($addrZip . ($addrZip !== '' && $addrCity !== '' ? ' ' : '') . $addrCity);
-			if ($zipCity !== '') {
-				$addrLines[] = $zipCity;
-			}
-			if ($addrCountry !== '' && $addrCountry !== 'DE') {
-				$addrLines[] = $addrCountry;
-			}
-			?>
-			<?php if ($addrLines !== []): ?>
-			<p class="crm-identity-strip__address" id="crm-company-address-display"><?php
-				foreach ($addrLines as $i => $line) {
-					if ($i > 0) {
-						print('<br>');
-					}
-					p($line);
-				}
-			?></p>
-			<?php elseif (!empty($_['canWrite'])): ?>
-			<p class="crm-identity-strip__address crm-identity-strip__address--empty">
-				<a class="crm-link" href="<?php p($urlGenerator->linkToRoute('customercheck.page.companyEdit', ['id' => $company->getId()])); ?>"><?php p($l->t('Add postal address')); ?></a>
-			</p>
-			<?php endif; ?>
-			<?php if ($company->getNotes()): ?>
-			<p class="crm-identity-strip__notes"><?php p($company->getNotes()); ?></p>
-			<?php endif; ?>
-		</div>
-	</section>
-
+	<?php
+	$labels = $_['labels'] ?? null;
+	$addrStreet = trim((string)($company->getAddrStreet() ?? ''));
+	$addrZip = trim((string)($company->getAddrZip() ?? ''));
+	$addrCity = trim((string)($company->getAddrCity() ?? ''));
+	$addrCountry = strtoupper(trim((string)($company->getCountry() ?? '')));
+	$addrLines = [];
+	if ($addrStreet !== '') {
+		$addrLines[] = $addrStreet;
+	}
+	$zipCity = trim($addrZip . ($addrZip !== '' && $addrCity !== '' ? ' ' : '') . $addrCity);
+	if ($zipCity !== '') {
+		$addrLines[] = $zipCity;
+	}
+	if ($addrCountry !== '' && $addrCountry !== 'DE') {
+		$addrLines[] = $addrCountry;
+	}
+	$companyEditHref = $urlGenerator->linkToRoute('customercheck.page.companyEdit', ['id' => $company->getId()]);
+	$identityPersons = $_['persons'] ?? [];
+	?>
 	<?php
 	$canWritePage = !empty($_['canWrite']);
 	$personsEmpty = ($_['persons'] ?? []) === [];
@@ -167,6 +143,149 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 			<?php include __DIR__ . '/common/crm-glance-density-list.php'; ?>
 		</details>
 		<?php endif; ?>
+	</section>
+
+	<section class="crm-card" id="crm-identity" aria-labelledby="crm-identity-title">
+		<header class="crm-card__header">
+			<div class="crm-card__header-text">
+				<div class="crm-identity-title-row">
+					<h2 id="crm-identity-title" class="crm-card__title"><?php p($company->getName()); ?></h2>
+					<span class="crm-badge crm-badge--<?php p($company->getStatus() === 'active' ? 'success' : 'neutral'); ?>"><?php
+						p($labels instanceof \OCA\CustomerCheck\Service\DisplayLabelService
+							? $labels->companyStatus((string)$company->getStatus())
+							: (string)$company->getStatus());
+					?></span>
+				</div>
+				<h3 class="crm-sr-only" id="crm-identity-address-title"><?php p($l->t('Postal address')); ?></h3>
+				<?php if ($addrLines !== []): ?>
+				<p class="crm-card__lead crm-identity-strip__address" id="crm-company-address-display"><?php print_unescaped(IconCatalog::render('map', 'crm-identity-strip__address-svg')); ?><span><?php p(implode(' · ', $addrLines)); ?></span></p>
+				<?php else: ?>
+				<p class="crm-card__lead crm-identity-strip__address crm-identity-strip__address--empty" id="crm-company-address-display"><?php print_unescaped(IconCatalog::render('map', 'crm-identity-strip__address-svg')); ?><span><?php p($l->t('No address yet.')); ?></span></p>
+				<?php endif; ?>
+				<?php
+				$identityNotes = CompanyNotesPresenter::publicHeadline($company->getNotes());
+				if ($identityNotes !== ''):
+				?>
+				<p class="crm-identity-strip__notes"><?php p($identityNotes); ?></p>
+				<?php endif; ?>
+			</div>
+			<div class="crm-card__header-actions crm-identity-actions">
+				<?php if (!empty($_['canWrite'])): ?>
+				<button type="button" class="crm-btn crm-btn--secondary crm-btn--sm" id="crm-change-company" aria-expanded="false" aria-controls="crm-company-name-form"><?php p($l->t('Change company')); ?></button>
+				<button type="button" class="crm-btn crm-btn--secondary crm-btn--sm" id="crm-edit-address" aria-expanded="false" aria-controls="crm-address-form"><?php p($addrLines !== [] ? $l->t('Change address') : $l->t('Add postal address')); ?></button>
+				<?php endif; ?>
+			</div>
+		</header>
+		<div class="crm-card__body crm-identity-body">
+			<div class="crm-identity-people" id="crm-identity-people" aria-labelledby="crm-identity-people-title">
+				<div class="crm-identity-people__head">
+					<h3 class="crm-identity-block-title" id="crm-identity-people-title"><?php print_unescaped(IconCatalog::render('users', 'crm-identity-people__icon')); ?><?php p($l->t('People')); ?></h3>
+					<?php if (!empty($_['canWrite'])): ?>
+					<button type="button" class="crm-btn <?php p($identityPersons === [] ? 'crm-btn--primary' : 'crm-btn--secondary crm-btn--sm'); ?>" data-crm-trigger="crm-add-person" aria-expanded="false" aria-controls="crm-person-form"><?php p($l->t('Add person')); ?></button>
+					<?php endif; ?>
+				</div>
+				<?php if ($identityPersons === []): ?>
+					<p class="crm-muted crm-identity-people__empty" id="crm-identity-people-empty"><?php p($l->t('No contacts yet')); ?></p>
+				<?php else: ?>
+					<div class="table-container crm-table--responsive">
+						<table class="table table--hover crm-table--responsive" id="crm-identity-people-table">
+							<thead><tr>
+								<th scope="col"><?php p($l->t('Name')); ?></th>
+								<th scope="col"><?php p($l->t('Email')); ?></th>
+								<th scope="col" class="crm-table-actions-col"><?php p($l->t('Action')); ?></th>
+							</tr></thead>
+							<tbody>
+							<?php foreach ($identityPersons as $ip):
+								$ipEmail = trim((string)($ip['email'] ?? ''));
+								$ipPhone = trim((string)($ip['phone'] ?? ''));
+								$ipRole = trim((string)($ip['role'] ?? ''));
+							?>
+								<tr class="crm-identity-person" id="crm-identity-person-<?php p((int)$ip['id']); ?>" data-person-id="<?php p((int)$ip['id']); ?>" data-person-name="<?php p($ip['name']); ?>" data-person-email="<?php p((string)($ip['email'] ?? '')); ?>" data-person-phone="<?php p((string)($ip['phone'] ?? '')); ?>" data-person-role="<?php p((string)($ip['role'] ?? '')); ?>" data-updated-at="<?php p((string)($ip['updatedAt'] ?? '')); ?>">
+									<td data-label="<?php p($l->t('Name')); ?>">
+										<?php p($ip['name']); ?><?php if (!empty($ip['isPrimary'])): ?> <span class="crm-badge crm-badge--info"><?php p($l->t('Primary')); ?></span><?php endif; ?>
+										<?php if ($ipRole !== '' || $ipPhone !== ''): ?>
+											<p class="crm-muted crm-person-meta">
+												<?php if ($ipRole !== ''): ?><?php p($ipRole); ?><?php endif; ?>
+												<?php if ($ipPhone !== ''): ?><?php if ($ipRole !== ''): ?> · <?php endif; ?><a href="tel:<?php p($ipPhone); ?>"><?php p($ipPhone); ?></a><?php endif; ?>
+											</p>
+										<?php endif; ?>
+									</td>
+									<td data-label="<?php p($l->t('Email')); ?>"><?php if ($ipEmail !== ''): ?><a href="mailto:<?php p($ipEmail); ?>"><?php p($ipEmail); ?></a><?php else: ?>—<?php endif; ?></td>
+									<td data-label="<?php p($l->t('Action')); ?>" class="actions-cell crm-table-actions-col">
+										<div class="crm-table-actions">
+											<?php if (!empty($_['canWrite'])): ?>
+											<button type="button" class="crm-btn crm-btn--sm crm-btn--secondary" data-crm-edit-person="<?php p((int)$ip['id']); ?>"><?php p($l->t('Change person')); ?></button>
+											<?php endif; ?>
+											<a class="crm-btn crm-btn--ghost crm-btn--sm crm-identity-person__more" href="#crm-person-<?php p((int)$ip['id']); ?>"><?php p($l->t('More about this person')); ?></a>
+										</div>
+									</td>
+								</tr>
+							<?php endforeach; ?>
+							</tbody>
+						</table>
+					</div>
+				<?php endif; ?>
+			</div>
+
+			<?php if (!empty($_['canWrite'])): ?>
+			<form id="crm-company-name-form" class="crm-identity-form" hidden novalidate aria-label="<?php p($l->t('Change company')); ?>">
+				<div class="form-group">
+					<label class="form-label" for="crm-identity-name"><?php p($l->t('Name')); ?></label>
+					<input class="crm-input form-input crm-input--lg" id="crm-identity-name" name="name" required maxlength="200" value="<?php p($company->getName()); ?>" autocomplete="organization" />
+				</div>
+				<p class="form-help"><?php p($l->t('Change the name here. Owner, status, and links stay under More company settings.')); ?></p>
+				<div id="crm-company-name-form-error" class="crm-callout crm-callout--danger" role="alert" tabindex="-1" hidden></div>
+				<div class="crm-form-actions crm-form-actions--start">
+					<button type="submit" class="crm-btn crm-btn--primary"><?php p($l->t('Save')); ?></button>
+					<button type="button" class="crm-btn crm-btn--secondary" id="crm-company-name-cancel"><?php p($l->t('Cancel')); ?></button>
+					<a class="crm-btn crm-btn--ghost" id="crm-company-more-settings" href="<?php p($companyEditHref); ?>"><?php p($l->t('More company settings')); ?></a>
+				</div>
+			</form>
+			<form id="crm-address-form" class="crm-identity-form crm-address-form" hidden novalidate aria-label="<?php p($l->t('Postal address')); ?>">
+				<?php
+				$crmAddrPrefix = 'crm-address';
+				$crmAddrCompany = $company;
+				include __DIR__ . '/common/crm-company-address-fields.php';
+				?>
+				<div id="crm-address-form-error" class="crm-callout crm-callout--danger" role="alert" tabindex="-1" hidden></div>
+				<div class="crm-form-actions crm-form-actions--start">
+					<button type="submit" class="crm-btn crm-btn--primary"><?php p($l->t('Save')); ?></button>
+					<button type="button" class="crm-btn crm-btn--secondary" id="crm-address-cancel"><?php p($l->t('Cancel')); ?></button>
+				</div>
+			</form>
+			<form id="crm-person-form" class="crm-identity-form" hidden data-mode="add" novalidate aria-labelledby="crm-person-form-title">
+				<h3 class="crm-identity-block-title" id="crm-person-form-title"><?php p($l->t('Add person')); ?></h3>
+				<div class="form-group">
+					<label class="form-label" for="crm-person-name"><?php p($l->t('Name')); ?></label>
+					<input class="crm-input form-input crm-input--lg" id="crm-person-name" name="name" required maxlength="255" autocomplete="name" aria-describedby="crm-person-name-help" />
+					<p class="form-help" id="crm-person-name-help"><?php p($l->t('Who do you talk to at this company?')); ?></p>
+				</div>
+				<div class="form-group">
+					<label class="form-label" for="crm-person-email"><?php p($l->t('Email')); ?></label>
+					<input class="crm-input form-input crm-input--lg" id="crm-person-email" name="email" type="email" maxlength="255" autocomplete="email" aria-describedby="crm-person-email-help" />
+					<p class="form-help" id="crm-person-email-help"><?php p($l->t('Optional — needed to log emails with them.')); ?></p>
+				</div>
+				<div class="form-group">
+					<label class="form-label" for="crm-person-phone"><?php p($l->t('Phone')); ?></label>
+					<input class="crm-input form-input crm-input--lg" id="crm-person-phone" name="phone" maxlength="64" autocomplete="tel" inputmode="tel" pattern="[0-9+()\/.\s-]{4,64}" />
+				</div>
+				<details class="crm-advanced" id="crm-person-advanced">
+					<summary class="crm-advanced__summary"><?php p($l->t('Advanced')); ?></summary>
+					<div class="crm-advanced__body">
+						<div class="form-group">
+							<label class="form-label" for="crm-person-role"><?php p($l->t('Job title')); ?></label>
+							<input class="crm-input form-input crm-input--lg" id="crm-person-role" name="role" maxlength="128" autocomplete="organization-title" />
+						</div>
+					</div>
+				</details>
+				<div id="crm-person-form-error" class="crm-callout crm-callout--danger" role="alert" tabindex="-1" hidden></div>
+				<div class="crm-form-actions crm-form-actions--start">
+					<button type="submit" class="crm-btn crm-btn--primary"><?php p($l->t('Save')); ?></button>
+					<button type="button" class="crm-btn crm-btn--secondary" id="crm-person-cancel"><?php p($l->t('Cancel')); ?></button>
+				</div>
+			</form>
+			<?php endif; ?>
+		</div>
 	</section>
 
 	<div class="crm-360-focus" data-crm-360-focus="1" data-company-id="<?php p((int)$company->getId()); ?>">
@@ -274,7 +393,7 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 				<h2 id="crm-persons-title" class="crm-card__title"><?php p($l->t('People')); ?></h2>
 				<p class="crm-card__lead"><?php p($l->t('Contacts at this company.')); ?></p>
 			</div>
-			<button type="button" class="crm-btn crm-btn--secondary crm-btn--sm" id="crm-add-person"<?php if (empty($_['canWrite']) || ($showWelcomeCoach && $personsEmpty)): ?> hidden<?php endif; ?>><?php p($l->t('Add person')); ?></button>
+			<button type="button" class="crm-btn crm-btn--primary crm-btn--lg" id="crm-add-person" aria-expanded="false" aria-controls="crm-person-form"<?php if (empty($_['canWrite'])): ?> hidden<?php endif; ?>><?php p($l->t('Add person')); ?></button>
 		</header>
 		<div class="crm-card__body">
 			<?php if ($personsEmpty): ?>
@@ -308,7 +427,7 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 							$roleLabel = $labels->buyingRole($buyingRole);
 						}
 					?>
-						<tr data-person-id="<?php p((int)$p['id']); ?>" data-person-name="<?php p($p['name']); ?>" data-contacts-uid="<?php p((string)($p['contactsUid'] ?? '')); ?>" data-updated-at="<?php p((string)($p['updatedAt'] ?? '')); ?>" data-buying-role="<?php p($buyingRole); ?>">
+						<tr id="crm-person-<?php p((int)$p['id']); ?>" data-person-id="<?php p((int)$p['id']); ?>" data-person-name="<?php p($p['name']); ?>" data-person-email="<?php p((string)($p['email'] ?? '')); ?>" data-person-phone="<?php p((string)($p['phone'] ?? '')); ?>" data-person-role="<?php p((string)($p['role'] ?? '')); ?>" data-contacts-uid="<?php p((string)($p['contactsUid'] ?? '')); ?>" data-updated-at="<?php p((string)($p['updatedAt'] ?? '')); ?>" data-buying-role="<?php p($buyingRole); ?>">
 							<td data-label="<?php p($l->t('Name')); ?>">
 								<?php p($p['name']); ?><?php if (!empty($p['isPrimary'])): ?> <span class="crm-badge crm-badge--info"><?php p($l->t('Primary')); ?></span><?php endif; ?>
 								<?php if (!empty($p['phone']) || !empty($p['role'])): ?>
@@ -317,7 +436,7 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 										<?php if (!empty($p['phone'])): ?><?php if (!empty($p['role'])): ?> · <?php endif; ?><?php p($p['phone']); ?><?php endif; ?>
 									</p>
 								<?php endif; ?>
-								<details class="crm-person-more">
+								<details class="crm-person-more" open>
 									<summary class="crm-person-more__summary"><?php p($l->t('More about this person')); ?></summary>
 									<div class="crm-person-more__body">
 										<p class="crm-person-more__row">
@@ -356,6 +475,9 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 							<td data-label="<?php p($l->t('Email')); ?>"><?php p($p['email'] ?? '—'); ?></td>
 							<td data-label="<?php p($l->t('Action')); ?>" class="actions-cell crm-table-actions-col">
 								<div class="crm-table-actions">
+									<?php if (!empty($_['canWrite'])): ?>
+										<button type="button" class="crm-btn crm-btn--sm crm-btn--secondary" data-crm-edit-person="<?php p((int)$p['id']); ?>"><?php p($l->t('Change person')); ?></button>
+									<?php endif; ?>
 									<?php if ($linked && !empty($_['contactsAvailable'])): ?>
 										<a class="crm-btn crm-btn--sm crm-btn--primary" href="<?php p((string)$_['contactsHomeUrl']); ?>" data-crm-open-contacts="<?php p((int)$p['id']); ?>" data-person-name="<?php p($p['name']); ?>"><?php p($l->t('Open in Contacts')); ?></a>
 										<?php if (!empty($_['canWrite'])): ?>

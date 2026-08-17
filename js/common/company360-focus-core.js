@@ -112,14 +112,25 @@ export function hashHrefToSectionId(href) {
 }
 
 /**
- * Deep-links may only target allowlisted section landmarks (SECTION_TAB_MAP keys).
- * Prevents hijacking arbitrary in-panel form/widget ids into tab switches.
+ * People-row landmarks (`#crm-person-12`) — numeric id only.
+ * Must not match `#crm-person-form` / `#crm-person-email` (identity widgets).
+ *
+ * @param {string|null|undefined} sectionId
+ * @returns {boolean}
+ */
+export function isPersonRowDeepLinkSectionId(sectionId) {
+  return typeof sectionId === 'string' && /^crm-person-\d+$/.test(sectionId);
+}
+
+/**
+ * Deep-links may only target allowlisted section landmarks (SECTION_TAB_MAP keys)
+ * or a people-row id. Prevents hijacking arbitrary in-panel form/widget ids.
  *
  * @param {string|null|undefined} sectionId
  * @returns {boolean}
  */
 export function isFocusDeepLinkSectionId(sectionId) {
-  return tabForSectionId(sectionId) !== null;
+  return tabForSectionId(sectionId) !== null || isPersonRowDeepLinkSectionId(sectionId);
 }
 
 /**

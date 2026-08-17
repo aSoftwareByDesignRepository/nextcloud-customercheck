@@ -9,25 +9,27 @@ use PHPUnit\Framework\TestCase;
 /** Company postal address fields — form, 360 display, JS wire-up. */
 final class CompanyAddressUxContractTest extends TestCase
 {
-	public function testCompanyFormExposesDedicatedAddressFieldsUnderAdvanced(): void
+	public function testCompanyFormExposesDedicatedAddressFieldsWithName(): void
 	{
 		$html = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/company-form.php');
+		$fields = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/common/crm-company-address-fields.php');
 		$advancedPos = (int)strpos($html, 'id="crm-company-advanced"');
-		$addressPos = (int)strpos($html, 'id="crm-company-address"');
+		$includePos = (int)strpos($html, 'crm-company-address-fields.php');
 		$namePos = (int)strpos($html, 'id="crm-company-name"');
 		$this->assertGreaterThan(0, $advancedPos);
-		$this->assertGreaterThan($advancedPos, $addressPos, 'Address must stay under Advanced');
+		$this->assertGreaterThan(0, $includePos);
+		$this->assertLessThan($advancedPos, $includePos, 'Address must sit with the name, not under Advanced');
 		$this->assertLessThan($advancedPos, $namePos, 'Name stays in essentials');
-		$this->assertStringContainsString('id="crm-company-street"', $html);
-		$this->assertStringContainsString('id="crm-company-zip"', $html);
-		$this->assertStringContainsString('id="crm-company-city"', $html);
-		$this->assertStringContainsString('id="crm-company-country"', $html);
-		$this->assertStringContainsString('name="addrStreet"', $html);
-		$this->assertStringContainsString('name="addrZip"', $html);
-		$this->assertStringContainsString('name="addrCity"', $html);
-		$this->assertStringContainsString('autocomplete="street-address"', $html);
-		$this->assertStringContainsString('autocomplete="postal-code"', $html);
-		$this->assertStringContainsString('Postal address', $html);
+		$this->assertStringContainsString('id="<?php p($crmAddrPrefix); ?>-street"', $fields);
+		$this->assertStringContainsString('id="<?php p($crmAddrPrefix); ?>-zip"', $fields);
+		$this->assertStringContainsString('id="<?php p($crmAddrPrefix); ?>-city"', $fields);
+		$this->assertStringContainsString('id="<?php p($crmAddrPrefix); ?>-country"', $fields);
+		$this->assertStringContainsString('name="addrStreet"', $fields);
+		$this->assertStringContainsString('name="addrZip"', $fields);
+		$this->assertStringContainsString('name="addrCity"', $fields);
+		$this->assertStringContainsString('autocomplete="street-address"', $fields);
+		$this->assertStringContainsString('autocomplete="postal-code"', $fields);
+		$this->assertStringContainsString('Postal address', $fields);
 		// Bachus: still never force-open Advanced on edit.
 		$this->assertStringNotContainsString("if (\$mode === 'edit'): ?> open", $html);
 	}
@@ -51,6 +53,10 @@ final class CompanyAddressUxContractTest extends TestCase
 		$this->assertStringContainsString('getAddrStreet', $html);
 		$this->assertStringContainsString('getAddrZip', $html);
 		$this->assertStringContainsString('getAddrCity', $html);
+		$this->assertStringContainsString('crm-card__lead crm-identity-strip__address crm-identity-strip__address--empty', $html);
+		$this->assertStringNotContainsString('crm-sr-only crm-identity-strip__address', $html);
+		$this->assertStringContainsString('CompanyNotesPresenter::publicHeadline', $html);
+		$this->assertStringNotContainsString('p($company->getNotes())', $html);
 	}
 
 	public function testImportApplyWritesAddressFields(): void

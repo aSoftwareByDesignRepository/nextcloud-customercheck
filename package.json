@@ -1,7 +1,7 @@
 {
     "name": "customercheck",
     "private": true,
-    "version": "1.6.148",
+    "version": "1.6.157",
     "type": "module",
     "description": "CustomerCheck Playwright / frontend tooling",
     "scripts": {

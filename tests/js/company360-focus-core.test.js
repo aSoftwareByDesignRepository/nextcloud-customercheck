@@ -97,9 +97,13 @@ describe('hashHrefToSectionId', () => {
 });
 
 describe('isFocusDeepLinkSectionId', () => {
-  it('allowlists SECTION_TAB_MAP landmarks only', () => {
+  it('allowlists SECTION_TAB_MAP landmarks and numeric people rows', () => {
     expect(isFocusDeepLinkSectionId('crm-billing')).toBe(true);
     expect(isFocusDeepLinkSectionId('crm-identity-links')).toBe(true);
+    expect(isFocusDeepLinkSectionId('crm-person-12')).toBe(true);
+    expect(isFocusDeepLinkSectionId('crm-person-form')).toBe(false);
+    expect(isFocusDeepLinkSectionId('crm-person-email')).toBe(false);
+    expect(isFocusDeepLinkSectionId('crm-person-')).toBe(false);
     expect(isFocusDeepLinkSectionId('crm-plan-goal')).toBe(false);
     expect(isFocusDeepLinkSectionId('crm-evil')).toBe(false);
     expect(isFocusDeepLinkSectionId('')).toBe(false);
@@ -193,6 +197,8 @@ describe('hashBelongsToOtherTab', () => {
     };
     expect(hashBelongsToOtherTab('#crm-tickets', 'today', billing)).toBe(true);
     expect(hashBelongsToOtherTab('#crm-tickets', 'money', billing)).toBe(false);
+    expect(hashBelongsToOtherTab('#crm-person-12', 'deals', billing)).toBe(true);
+    expect(hashBelongsToOtherTab('#crm-person-form', 'today', billing)).toBe(false);
     expect(hashBelongsToOtherTab('#crm-next-steps', 'today', null)).toBe(false);
     expect(hashBelongsToOtherTab('#crm-plan-goal', 'today', billing)).toBe(false);
     expect(hashBelongsToOtherTab('', 'today', billing)).toBe(false);

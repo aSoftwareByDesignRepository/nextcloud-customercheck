@@ -268,4 +268,16 @@
     selectId: 'crm-company-tc',
     bodyKey: 'existingTcCustomerId',
   });
+
+  // Deep-link from 360 “Change address” / “Add postal address” — address is now first-class, not under Advanced.
+  if (form.dataset.mode === 'edit' && (location.hash === '#crm-company-address' || location.hash === '#crm-company-street')) {
+    const street = document.getElementById('crm-company-street');
+    const block = document.getElementById('crm-company-address');
+    if (block && typeof block.scrollIntoView === 'function') {
+      block.scrollIntoView({ block: 'start' });
+    }
+    if (street && typeof street.focus === 'function') {
+      street.focus();
+    }
+  }
 })();

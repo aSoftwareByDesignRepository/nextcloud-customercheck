@@ -88,6 +88,10 @@ final class ExtremeSimplicityUxContractTest extends TestCase
 		$statusPos = (int)strpos($html, 'crm-company-status');
 		$this->assertGreaterThan($namePos, $advancedPos);
 		$this->assertGreaterThan($advancedPos, $statusPos);
+		$addressIncludePos = (int)strpos($html, 'crm-company-address-fields.php');
+		$this->assertNotFalse($addressIncludePos);
+		$this->assertGreaterThan($namePos, $addressIncludePos);
+		$this->assertLessThan($advancedPos, $addressIncludePos, 'Postal address must sit with the name, not under Advanced');
 		// Bachus: edit never force-opens Advanced (agreement parity).
 		$this->assertStringNotContainsString("if (\$mode === 'edit'): ?> open", $html);
 		$this->assertDoesNotMatchRegularExpression(
@@ -110,11 +114,14 @@ final class ExtremeSimplicityUxContractTest extends TestCase
 		$this->assertStringContainsString('crm-persons-table', $detail);
 		$this->assertStringNotContainsString("\$l->t('Phone')); ?></th>", $detail);
 		$this->assertStringNotContainsString("\$l->t('Buying role')); ?></th>", $detail);
-		// Lean roster: Name / Email / Action; Last touch + role under crm-person-more (not a More menu scroll-trap).
+		// Lean roster: Name / Email / Action; Last touch + role under crm-person-more (open by default).
 		$this->assertStringContainsString('crm-person-more', $detail);
+		$this->assertStringContainsString('crm-person-more" open', $detail);
 		$this->assertStringContainsString("\$l->t('Address book')", $detail);
 		$this->assertStringContainsString("\$l->t('Last touch')", $detail);
 		$this->assertStringContainsString("\$l->t('Role in buying')", $detail);
+		$this->assertStringContainsString("\$l->t('Change person')", $detail);
+		$this->assertStringContainsString('data-crm-edit-person', $detail);
 		$this->assertStringNotContainsString("\$l->t('Address book')); ?></th>", $detail);
 		$this->assertStringNotContainsString("\$l->t('Last touch')); ?></th>", $detail);
 		$this->assertStringNotContainsString("\$l->t('Role in buying')); ?></th>", $detail);
@@ -126,6 +133,108 @@ final class ExtremeSimplicityUxContractTest extends TestCase
 		$personsEnd = strpos($detail, 'id="crm-deals"', (int)$personsStart);
 		$personsChunk = substr($detail, (int)$personsStart, (int)$personsEnd - (int)$personsStart);
 		$this->assertStringNotContainsString('crm-more-menu', $personsChunk);
+		$this->assertStringNotContainsString('showWelcomeCoach && $personsEmpty', $detail);
+	}
+
+	public function testCompanyIdentitySurfacesPeopleAddressAndEdit(): void
+	{
+		$detail = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/company-detail.php');
+		$this->assertStringContainsString('id="crm-change-company"', $detail);
+		$this->assertStringContainsString('id="crm-edit-address"', $detail);
+		$this->assertStringContainsString('id="crm-address-form"', $detail);
+		$this->assertStringContainsString('id="crm-person-form"', $detail);
+		$this->assertStringContainsString('id="crm-company-name-form"', $detail);
+		$this->assertStringContainsString('id="crm-company-more-settings"', $detail);
+		$this->assertStringContainsString('id="crm-identity-people"', $detail);
+		$this->assertStringContainsString('id="crm-identity-title"', $detail);
+		$this->assertStringContainsString("\$l->t('Change company')", $detail);
+		$this->assertStringContainsString("\$l->t('Change address')", $detail);
+		$this->assertStringContainsString("\$l->t('Add postal address')", $detail);
+		$this->assertStringContainsString("\$l->t('No address yet.')", $detail);
+		$this->assertStringContainsString("\$l->t('More company settings')", $detail);
+		$this->assertStringContainsString('crm-company-address-fields.php', $detail);
+		$this->assertStringNotContainsString('crm-card--compact', $detail);
+		$this->assertStringNotContainsString("\$l->t('Company status')", $detail);
+		$js = (string)file_get_contents(dirname(__DIR__, 2) . '/js/pages/company-detail.js');
+		$this->assertStringContainsString('crm-edit-address', $js);
+		$this->assertStringContainsString('data-crm-edit-person', $js);
+		$this->assertStringNotContainsString("promptFields(t('Add person')", $js);
+		$this->assertStringNotContainsString("promptFields(t('Change person')", $js);
+		$this->assertStringContainsString("t('Change person')", $js);
+		$this->assertStringContainsString("t('Address saved.')", $js);
+		$this->assertStringContainsString("t('Company saved.')", $js);
+		$this->assertStringContainsString("t('Reload page')", $js);
+		$this->assertStringContainsString("t('Person updated.')", $js);
+		$this->assertStringContainsString("t('Person added.')", $js);
+		$this->assertStringContainsString('contactsSuggestGen', $js);
+		$this->assertStringContainsString('contactsSuggestGen += 1;', $js);
+		$this->assertStringContainsString('restoreIdentityOpenerFocus', $js);
+		$this->assertStringContainsString("Api.put('/companies/' + companyId", $js);
+		$this->assertStringContainsString('payload.contactsUid', $js);
+		$this->assertStringContainsString('if (identitySaveBusy) return;', $js);
+		$this->assertStringNotContainsString("q=aa", $js);
+		$form = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/company-form.php');
+		$this->assertStringContainsString('Change the name or postal address', $form);
+		$formJs = (string)file_get_contents(dirname(__DIR__, 2) . '/js/pages/company-form.js');
+		$this->assertStringContainsString('#crm-company-address', $formJs);
+		$this->assertStringContainsString('addrStreet', $formJs);
+		$fields = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/common/crm-company-address-fields.php');
+		$this->assertStringContainsString('crmAddrPrefix', $fields);
+		$this->assertStringContainsString('addrStreet', $fields);
+		$this->assertStringContainsString('id="<?php p($crmAddrPrefix); ?>-street"', $fields);
+		$this->assertStringContainsString('crm-identity-strip__address', $detail);
+		$css = (string)file_get_contents(dirname(__DIR__, 2) . '/css/app.css');
+		$this->assertMatchesRegularExpression(
+			'/crm-identity-form\[hidden\][^{]*\{[^}]*display:\s*none\s*!important/s',
+			$css,
+			'Identity inline forms must stay display:none when [hidden] — flex must not unhide them',
+		);
+		$this->assertStringContainsString('crm-identity-title-row', $css);
+		$this->assertMatchesRegularExpression(
+			'/#app-content\.crm-app \.crm-identity-person__more\s*\{[^}]*text-decoration:\s*none/s',
+			$css,
+			'Identity More link must keep a dedicated rule — table actions still need a visible focus target',
+		);
+		$this->assertStringContainsString('#app-content.crm-app .crm-identity-people .table-container', $css);
+		$this->assertStringNotContainsString('crm-identity-person__well', $css);
+		$this->assertStringNotContainsString('crm-identity-people__list', $css);
+		$this->assertMatchesRegularExpression(
+			'/crm-identity-strip__address\s*\{[^}]*max-width:\s*60ch/s',
+			$css,
+			'Identity address lead must stay on the design-system reading measure',
+		);
+		$this->assertMatchesRegularExpression(
+			'/#crm-identity\.crm-card\s*>\s*\.crm-card__header\s*\{[^}]*flex-direction:\s*column/s',
+			$css,
+			'Identity header must stack so name and actions are not parked at opposite edges',
+		);
+		$this->assertDoesNotMatchRegularExpression(
+			'/#crm-identity \.crm-card__header-text\s*\{[^}]*flex:\s*1/s',
+			$css,
+			'Identity header-text must not keep the 14rem row basis — in a column header that becomes empty height',
+		);
+		$this->assertDoesNotMatchRegularExpression(
+			'/crm-identity-title-row \.crm-card__title\s*\{[^}]*flex:\s*1/s',
+			$css,
+			'Title must not grow — that shoves the status badge across the card',
+		);
+		$this->assertStringContainsString('crm-card__header-actions crm-identity-actions', $detail);
+		$this->assertStringContainsString('crm-identity-people__head', $detail);
+		$this->assertStringContainsString('crm-identity-title-row', $detail);
+		$this->assertStringContainsString('crm-identity-person__more', $detail);
+		$this->assertStringContainsString('id="crm-identity-people-table"', $detail);
+		$this->assertStringContainsString('table table--hover crm-table--responsive', $detail);
+		$this->assertStringNotContainsString('crm-identity-person__well', $detail);
+		$this->assertStringNotContainsString('PersonInitialsPresenter', $detail);
+		$this->assertStringNotContainsString('crm-identity-people__list', $detail);
+		$this->assertStringContainsString('CompanyNotesPresenter::publicHeadline', $detail);
+		$this->assertStringNotContainsString('p($company->getNotes())', $detail);
+		$this->assertStringContainsString('crm-card__lead crm-identity-strip__address crm-identity-strip__address--empty', $detail);
+		$glancePos = strpos($detail, 'id="crm-glance"');
+		$identityPos = strpos($detail, 'id="crm-identity"');
+		$this->assertNotFalse($glancePos);
+		$this->assertNotFalse($identityPos);
+		$this->assertLessThan($identityPos, $glancePos, 'At a glance must render above the identity card');
 	}
 
 	public function testBriefVerifyDefaultsEvidenceAndPrimaryDone(): void
@@ -172,7 +281,8 @@ final class ExtremeSimplicityUxContractTest extends TestCase
 		$this->assertStringContainsString("t('More options')", $js);
 		$this->assertStringContainsString('advanced: true', $js);
 		$this->assertStringContainsString('formatDisplayDate', $js);
-		$this->assertStringContainsString("t('Role in buying')", $js);
+		$this->assertStringContainsString("t('Role in buying updated.')", $js);
+		$this->assertStringContainsString("\$l->t('Role in buying')", $detail);
 		$this->assertStringContainsString('Please fill in: %s', $js);
 		$this->assertStringContainsString('el.checked', $js);
 		$pipeline = (string)file_get_contents(dirname(__DIR__, 2) . '/js/pages/pipeline.js');

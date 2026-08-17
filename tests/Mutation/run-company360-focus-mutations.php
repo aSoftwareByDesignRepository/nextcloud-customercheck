@@ -155,7 +155,7 @@ function company360_focus_mutations(string $appRoot): array
 		],
 		[
 			'file' => $appRoot . '/js/common/company360-focus.js',
-			'from' => 'return tabForSectionId(sectionId) !== null;',
+			'from' => 'return tabForSectionId(sectionId) !== null || isPersonRowDeepLinkSectionId(sectionId);',
 			'to' => 'return true;',
 			'label' => 'deep_link_allowlist_always_true',
 			'filter' => 'Company360FocusContractTest::testBootstrapHelpersStayInSyncWithCore',
@@ -183,11 +183,10 @@ function company360_focus_mutations(string $appRoot): array
 		],
 		[
 			'file' => $appRoot . '/css/app.css',
-			'from' => 'inset 0 -4px 0',
-			'to' => '/* mutated no inset cue */ 0 0 0',
+			'from' => "#app-content.crm-app--company-detail .crm-360-focus__tab[aria-selected=\"true\"] {\n\tborder-color: var(--color-primary-element);\n\tborder-width: 3px;",
+			'to' => "#app-content.crm-app--company-detail .crm-360-focus__tab[aria-selected=\"true\"] {\n\tborder-color: var(--color-primary-element);\n\tborder-width: 2px;",
 			'label' => 'drops_selected_tab_non_color_cue',
 			'filter' => 'Company360FocusContractTest::testFocusCssIsStickyAndAccessible',
-			'replace_all' => true,
 		],
 		[
 			'file' => $appRoot . '/js/common/company360-focus.js',
