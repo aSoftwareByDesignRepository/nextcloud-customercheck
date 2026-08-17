@@ -446,6 +446,18 @@
     setFormOpen(document.getElementById('crm-person-form'), null, false);
   }
 
+  function revealPeopleFocusTab() {
+    const tab = document.querySelector('[data-crm-focus-tab="people"]');
+    const panel = document.getElementById('crm-360-panel-people');
+    if (tab instanceof HTMLElement && tab.getAttribute('aria-selected') !== 'true') {
+      tab.click();
+    }
+    if (panel instanceof HTMLElement && panel.hasAttribute('hidden')) {
+      panel.removeAttribute('hidden');
+      panel.removeAttribute('aria-hidden');
+    }
+  }
+
   function openExclusiveForm(which) {
     if (identitySaveBusy) return;
     closeIdentityForms();
@@ -454,11 +466,10 @@
     } else if (which === 'address') {
       setFormOpen(document.getElementById('crm-address-form'), document.getElementById('crm-edit-address'), true, 'crm-address-street');
     } else if (which === 'person') {
+      revealPeopleFocusTab();
       const addBtn = document.getElementById('crm-add-person');
-      const identityAdd = document.querySelector('#crm-identity [data-crm-trigger="crm-add-person"]');
       if (addBtn) addBtn.setAttribute('aria-expanded', 'true');
-      if (identityAdd) identityAdd.setAttribute('aria-expanded', 'true');
-      setFormOpen(document.getElementById('crm-person-form'), null, true, 'crm-person-name');
+      setFormOpen(document.getElementById('crm-person-form'), addBtn, true, 'crm-person-name');
     }
   }
 
@@ -497,8 +508,10 @@
     setFieldValue('crm-person-email', row ? (row.getAttribute('data-person-email') || '') : '');
     setFieldValue('crm-person-phone', row ? (row.getAttribute('data-person-phone') || '') : '');
     setFieldValue('crm-person-role', row ? (row.getAttribute('data-person-role') || '') : '');
+    const role = row ? (row.getAttribute('data-person-role') || '').trim() : '';
+    const phone = row ? (row.getAttribute('data-person-phone') || '').trim() : '';
     const advanced = document.getElementById('crm-person-advanced');
-    if (advanced) advanced.open = !!(row && (row.getAttribute('data-person-role') || '').trim());
+    if (advanced) advanced.open = !!(role || phone);
     if (mode === 'edit' && row) {
       form.setAttribute('data-person-id', row.getAttribute('data-person-id') || '');
       form.setAttribute('data-updated-at', row.getAttribute('data-updated-at') || '');
@@ -1681,7 +1694,10 @@
         minutes: minutes,
         topic: data.topic,
       });
-      location.reload();
+      if (liveRegion()) liveRegion().textContent = t('Hours logged');
+      if (typeof loadCommandCenter === 'function') {
+        await loadCommandCenter({ silent: true });
+      }
     } catch (e) {
       await C.alertDialog({ title: t('Could not log hours'), message: (e.payload && e.payload.message) || e.message, variant: 'danger' });
     }
@@ -1813,7 +1829,11 @@
 
   document.querySelectorAll('[data-crm-complete-activity]').forEach((btn) => {
     btn.addEventListener('click', async () => {
+      if (btn.disabled || btn.getAttribute('aria-busy') === 'true') {
+        return;
+      }
       btn.disabled = true;
+      btn.setAttribute('aria-busy', 'true');
       try {
         await Api.post('/activities/' + btn.getAttribute('data-crm-complete-activity') + '/done', {
           done: true,
@@ -1821,9 +1841,26 @@
         });
         const live = document.getElementById('crm-live-region');
         if (live) live.textContent = t('Activity marked done.');
-        location.reload();
+        const item = btn.closest('.crm-todo-list__item');
+        if (item) {
+          item.classList.add('crm-todo-list__item--closed');
+          const actions = item.querySelector('.crm-todo-list__actions');
+          if (actions) {
+            while (actions.firstChild) {
+              actions.removeChild(actions.firstChild);
+            }
+            const badge = document.createElement('span');
+            badge.className = 'crm-badge crm-badge--success';
+            badge.textContent = t('Done');
+            actions.appendChild(badge);
+          }
+        }
+        if (typeof loadCommandCenter === 'function') {
+          await loadCommandCenter({ silent: true });
+        }
       } catch (e) {
         btn.disabled = false;
+        btn.removeAttribute('aria-busy');
         await C.alertDialog({ title: t('Update failed'), message: (e.payload && e.payload.message) || e.message, variant: 'danger' });
       }
     });
@@ -1987,8 +2024,9 @@
   let talkMailPreviewGeneration = 0;
   /** Aborts in-flight Talk preview fetch when the operator moves to another row. */
   let talkMailPreviewAbort = null;
-  async function loadCommandCenter() {
+  async function loadCommandCenter(opts) {
     if (!companyId || !Api) return;
+    const silent = !!(opts && opts.silent);
     const live = document.getElementById('crm-live-region');
     const generation = ++commandCenterGeneration;
     try {
@@ -2867,9 +2905,12 @@
           plat.innerHTML = '<p class="crm-muted">' + t('No related apps enabled.') + '</p>';
         }
       }
-      if (live) live.textContent = t('Company overview updated.');
+      if (live && !silent) live.textContent = t('Company overview updated.');
     } catch (e) {
       if (generation !== commandCenterGeneration) {
+        return;
+      }
+      if (silent) {
         return;
       }
       if (live) live.textContent = t('Some overview data could not be loaded.');

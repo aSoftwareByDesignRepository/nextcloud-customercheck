@@ -29,10 +29,11 @@ final class BachusFirstPaintSimplicityContractTest extends TestCase
 	public function testEmptyStatesDeferCtasToCoach(): void
 	{
 		$html = (string)file_get_contents($this->root . '/templates/company-detail.php');
-		// People header Add person stays visible (identity + roster). Empty-state duplicate still defers to the coach.
+		// People header Add person lives on the People tab. Empty-state duplicate still defers to the coach.
 		$this->assertStringNotContainsString('showWelcomeCoach && $personsEmpty', $html);
 		$this->assertStringContainsString('!$showWelcomeCoach', $html);
 		$this->assertStringContainsString('id="crm-add-person"', $html);
+		$this->assertStringContainsString("['id' => 'people', 'label' => \$l->t('People')]", $html);
 		// Deals are on their own focus tab — coach must not strip Add deal from that panel.
 		$this->assertDoesNotMatchRegularExpression(
 			'/showWelcomeCoach && \$dealsEmpty[\s\S]{0,180}hidden/',

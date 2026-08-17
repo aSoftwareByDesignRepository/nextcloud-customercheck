@@ -33,8 +33,12 @@ test.describe('CustomerCheck journeys smoke', () => {
     await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
     await expect(page.locator('#crm-main-content')).toBeVisible();
     await expect(page.locator('.crm-page-stack')).toBeVisible();
+    await expect(page.locator('[data-crm-focus-tab="people"]')).toBeVisible();
+    await page.locator('[data-crm-focus-tab="deals"]').click();
     await expect(page.locator('#crm-contracts')).toBeVisible();
+    await page.locator('[data-crm-focus-tab="more"]').click();
     await expect(page.locator('#crm-emails')).toBeVisible();
+    await page.locator('[data-crm-focus-tab="money"]').click();
     // Progressive disclosure: empty linked apps stay in DOM under the bundle
     await expect(page.locator('#crm-invoices')).toHaveCount(1);
     await expect(page.locator('#crm-projects')).toHaveCount(1);
@@ -105,7 +109,7 @@ test.describe('CustomerCheck journeys smoke', () => {
     await expect(page.locator('#crm-page-actions #crm-company-gdpr-export')).toBeVisible({ timeout: 10000 });
     const focus = page.locator('[data-crm-360-focus="1"]');
     await expect(focus).toBeVisible();
-    await expect(focus.locator('[data-crm-focus-tab]')).toHaveCount(4);
+    await expect(focus.locator('[data-crm-focus-tab]')).toHaveCount(5);
     await focus.locator('[data-crm-focus-tab="money"]').click();
     await expect(page.locator('#crm-tickets')).toHaveCount(1);
   });

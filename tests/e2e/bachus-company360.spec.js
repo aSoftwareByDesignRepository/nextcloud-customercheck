@@ -35,14 +35,14 @@ test.describe('Bachus company 360 effortless flows', () => {
 
     // Coach CTA opens Add person (name required only).
     await page.locator('#crm-welcome-coach [data-crm-trigger="crm-add-person"]').click();
-    let form = page.locator('form[id^="crm-prompt-"]');
+    let form = page.locator('#crm-person-form');
     await expect(form).toBeVisible({ timeout: 10000 });
-    await expect(form.locator('[name="name"]')).toBeVisible();
-    await expect(form.locator('[name="email"]')).toBeVisible();
-    await expect(form.locator('details.crm-advanced')).toBeVisible();
-    await expect(form.locator('details.crm-advanced')).not.toHaveAttribute('open', '');
-    await expect(form.locator('[name="buyingRole"]')).toBeAttached();
-    await form.locator('[name="name"]').fill(`Pat ${suffix}`);
+    await expect(form.locator('#crm-person-name')).toBeVisible();
+    await expect(form.locator('#crm-person-email')).toBeVisible();
+    await expect(form.locator('#crm-person-advanced')).toBeVisible();
+    await expect(form.locator('#crm-person-advanced')).not.toHaveAttribute('open', '');
+    await expect(form.locator('#crm-person-phone')).toBeAttached();
+    await form.locator('#crm-person-name').fill(`Pat ${suffix}`);
     await form.locator('button[type="submit"]').click();
     await page.waitForLoadState('networkidle');
     await expect(page.locator('#crm-persons-table')).toBeVisible({ timeout: 15000 });
@@ -50,7 +50,9 @@ test.describe('Bachus company 360 effortless flows', () => {
     await expect(page.locator('#crm-persons-table thead th')).toHaveCount(3);
     await expect(page.locator('#crm-persons-table thead th', { hasText: /Address book|Adressbuch/i })).toHaveCount(0);
     await expect(page.locator('#crm-persons-table .crm-person-more').first()).toBeVisible();
+    await expect(page.locator('#crm-persons-table .crm-person-more').first()).not.toHaveAttribute('open');
     await page.locator('#crm-persons-table .crm-person-more > summary').first().click();
+    await expect(page.locator('#crm-persons-table .crm-person-more').first()).toHaveAttribute('open', '');
     await expect(page.locator('#crm-persons-table .crm-person-more__body').first()).toContainText(/Address book|Adressbuch|Last touch|Letzter Kontakt/i);
     await expect(page.locator('#crm-persons-table details.crm-more-menu')).toHaveCount(0);
     await expect(page.locator('#crm-persons-table .crm-table-actions .crm-btn--primary').first()).toBeVisible();
@@ -64,6 +66,7 @@ test.describe('Bachus company 360 effortless flows', () => {
     // gap is key/partner-only — standard-tier create stays neutral by design.
 
     // Deal: title-only primary; notes + value stay under progressive disclosure.
+    await page.locator('[data-crm-focus-tab="today"]').click();
     await page.locator('#crm-welcome-coach [data-crm-trigger="crm-add-deal"]').click();
     form = page.locator('form[id^="crm-prompt-"]');
     await expect(form).toBeVisible({ timeout: 10000 });

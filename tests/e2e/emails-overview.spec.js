@@ -31,7 +31,8 @@ test.describe('Who wrote what (emails overview)', () => {
     }
     await expect(emails.locator('.crm-emails__summary')).toContainText(/Last logged contact|Letzter protokollierter Kontakt|Kontakt/i);
 
-    await page.locator('#crm-identity [data-crm-trigger="crm-add-person"]').click();
+    await page.locator('[data-crm-focus-tab="people"]').click();
+    await page.locator('#crm-add-person').click();
     const personForm = page.locator('#crm-person-form');
     await expect(personForm).toBeVisible({ timeout: 10000 });
     await personForm.locator('#crm-person-name').fill('Ada');

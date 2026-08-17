@@ -20,7 +20,7 @@ final class Company360FocusContractTest extends TestCase
 		$this->assertStringNotContainsString('data-crm-zone="now"', $html);
 		$this->assertStringNotContainsString('1 · Talk & people', $html);
 		$this->assertStringNotContainsString('How to use this page', $html);
-		foreach (['today', 'deals', 'money', 'more'] as $tab) {
+		foreach (['today', 'people', 'deals', 'money', 'more'] as $tab) {
 			$this->assertStringContainsString('data-crm-focus-panel="' . $tab . '"', $html);
 		}
 		$tabsPartial = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/common/crm-360-focus-tabs.php');
@@ -32,6 +32,10 @@ final class Company360FocusContractTest extends TestCase
 	public function testDealsAndMorePanelsStartHidden(): void
 	{
 		$html = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/company-detail.php');
+		$this->assertMatchesRegularExpression(
+			'/id="crm-360-panel-people"[^>]*hidden/',
+			$html,
+		);
 		$this->assertMatchesRegularExpression(
 			'/id="crm-360-panel-deals"[^>]*hidden/',
 			$html,
@@ -112,6 +116,9 @@ final class Company360FocusContractTest extends TestCase
 		$this->assertStringNotContainsString('window.setTimeout(function () {\n          ignoreHashChange = false;', $boot);
 		$this->assertStringContainsString('orderedPresentTabIds(tabs.keys(), ALLOWED_FOCUS_TABS)', $boot);
 		$this->assertStringContainsString('hashBelongsToOtherTab(hash, tabId, section)', $boot);
+		$this->assertStringContainsString('resolveTabForElement(section, null)', $boot);
+		$this->assertStringNotContainsString('if (!tabId) {', $boot);
+		$this->assertStringNotContainsString('if (!tabId || !panels.has(tabId))', $boot);
 		$this->assertSame(1, substr_count($boot, 'clearStaleHashForTab(tabId);'));
 		$this->assertSame(1, substr_count($boot, 'clearStaleHashForTab(nextId);'));
 		$this->assertStringContainsString('function bootFocusTabs()', $boot);
@@ -125,6 +132,10 @@ final class Company360FocusContractTest extends TestCase
 		$this->assertSame($coreMap, $bootMap, 'SECTION_TAB_MAP must be structurally identical in bootstrap and core');
 		$this->assertArrayHasKey('crm-tickets', $bootMap);
 		$this->assertSame('money', $bootMap['crm-tickets']);
+		$this->assertArrayHasKey('crm-persons', $bootMap);
+		$this->assertSame('people', $bootMap['crm-persons']);
+		$this->assertStringContainsString("const ALLOWED_FOCUS_TABS = ['today', 'people', 'deals', 'money', 'more']", $boot);
+		$this->assertStringContainsString("Object.freeze(['today', 'people', 'deals', 'money', 'more'])", $core);
 	}
 
 	public function testSectionTabMapTargetsExistInCompanyDetailTree(): void

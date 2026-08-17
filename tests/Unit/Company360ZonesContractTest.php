@@ -6,13 +6,13 @@ namespace OCA\CustomerCheck\Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
 
-/** Bachus: company 360 is four focus tabs, not a long scroll with zone labels. */
+/** Bachus: company 360 is five focus tabs, not a long scroll with zone labels. */
 final class Company360ZonesContractTest extends TestCase
 {
-	public function testFourFocusPanelsExist(): void
+	public function testFiveFocusPanelsExist(): void
 	{
 		$html = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/company-detail.php');
-		foreach (['today', 'deals', 'money', 'more'] as $panel) {
+		foreach (['today', 'people', 'deals', 'money', 'more'] as $panel) {
 			$this->assertStringContainsString('data-crm-focus-panel="' . $panel . '"', $html);
 		}
 		$this->assertStringNotContainsString('data-crm-zone="now"', $html);
@@ -24,6 +24,7 @@ final class Company360ZonesContractTest extends TestCase
 	{
 		$html = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/company-detail.php');
 		$this->assertStringContainsString("\$l->t('Today')", $html);
+		$this->assertStringContainsString("['id' => 'people', 'label' => \$l->t('People')]", $html);
 		$this->assertStringContainsString("\$l->t('Deals')", $html);
 		$this->assertStringContainsString("\$l->t('Bills & files')", $html);
 		$this->assertStringContainsString("\$l->t('Plan & links')", $html);
@@ -50,8 +51,8 @@ final class Company360ZonesContractTest extends TestCase
 		$identity = strpos($html, 'id="crm-identity-links"');
 		$plan = strpos($html, 'id="crm-account-plan"');
 		$this->assertNotFalse($persons);
-		$this->assertGreaterThan($persons, $nextSteps);
-		$this->assertGreaterThan($nextSteps, $deals);
+		$this->assertGreaterThan($nextSteps, $persons, 'People tab follows Today work');
+		$this->assertGreaterThan($persons, $deals);
 		$this->assertGreaterThan($deals, $billing);
 		$this->assertGreaterThan($billing, $identity);
 		$this->assertGreaterThan($identity, $plan);

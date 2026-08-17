@@ -17,7 +17,7 @@
   const STICKY_GAP_PX = 8;
   const STORAGE_PREFIX = 'crm360-focus-tab:';
   const DEFAULT_FOCUS_TAB = 'today';
-  const ALLOWED_FOCUS_TABS = ['today', 'deals', 'money', 'more'];
+  const ALLOWED_FOCUS_TABS = ['today', 'people', 'deals', 'money', 'more'];
 
   /** @type {Readonly<Record<string, string>>} */
   const SECTION_TAB_MAP = Object.freeze({
@@ -28,7 +28,7 @@
     'crm-promises': 'today',
     'crm-open-tasks': 'today',
     'crm-communication': 'today',
-    'crm-persons': 'today',
+    'crm-persons': 'people',
     'crm-deals': 'deals',
     'crm-contracts': 'deals',
     'crm-billing': 'money',
@@ -446,11 +446,12 @@
         if (!(section instanceof HTMLElement)) {
           return;
         }
-        const tabId = resolveTabForElement(section, sectionId);
-        if (!tabId) {
-          return;
+        // Glance sits above the tab panels — never steal the active tab.
+        // People / deals / money / more live inside panels; DOM closest() wins.
+        const tabId = resolveTabForElement(section, null);
+        if (tabId) {
+          activateTab(tabId, true);
         }
-        activateTab(tabId, true);
         const generation = ++jumpGeneration;
         window.requestAnimationFrame(function () {
           scrollToSection(section, sectionId, generation);
@@ -548,10 +549,6 @@
           }
           const section = document.getElementById(sectionId);
           if (!(section instanceof HTMLElement)) {
-            return;
-          }
-          const tabId = resolveTabForElement(section, sectionId);
-          if (!tabId || !panels.has(tabId)) {
             return;
           }
           ev.preventDefault();

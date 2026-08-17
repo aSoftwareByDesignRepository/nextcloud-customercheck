@@ -27,7 +27,8 @@ final class ContactsPeopleRosterContractTest extends TestCase
 		$this->assertStringContainsString("\$l->t('Role in buying')", $html);
 		$this->assertStringContainsString("\$l->t('Log talk')", $html);
 		$this->assertStringContainsString('data-crm-edit-person', $html);
-		$this->assertStringContainsString('crm-person-more" open', $html);
+		$this->assertStringContainsString('crm-person-more', $html);
+		$this->assertStringNotContainsString('crm-person-more" open', $html);
 		// Granny: never bury person controls in a More *menu* scroll-trap (disclosure for extras is OK).
 		$personsStart = strpos($html, 'id="crm-persons-table"');
 		$personsEnd = strpos($html, 'id="crm-deals"', (int)$personsStart);

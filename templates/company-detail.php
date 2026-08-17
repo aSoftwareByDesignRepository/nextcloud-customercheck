@@ -74,7 +74,6 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 		$addrLines[] = $addrCountry;
 	}
 	$companyEditHref = $urlGenerator->linkToRoute('customercheck.page.companyEdit', ['id' => $company->getId()]);
-	$identityPersons = $_['persons'] ?? [];
 	?>
 	<?php
 	$canWritePage = !empty($_['canWrite']);
@@ -176,58 +175,8 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 				<?php endif; ?>
 			</div>
 		</header>
+		<?php if (!empty($_['canWrite'])): ?>
 		<div class="crm-card__body crm-identity-body">
-			<div class="crm-identity-people" id="crm-identity-people" aria-labelledby="crm-identity-people-title">
-				<div class="crm-identity-people__head">
-					<h3 class="crm-identity-block-title" id="crm-identity-people-title"><?php print_unescaped(IconCatalog::render('users', 'crm-identity-people__icon')); ?><?php p($l->t('People')); ?></h3>
-					<?php if (!empty($_['canWrite'])): ?>
-					<button type="button" class="crm-btn <?php p($identityPersons === [] ? 'crm-btn--primary' : 'crm-btn--secondary crm-btn--sm'); ?>" data-crm-trigger="crm-add-person" aria-expanded="false" aria-controls="crm-person-form"><?php p($l->t('Add person')); ?></button>
-					<?php endif; ?>
-				</div>
-				<?php if ($identityPersons === []): ?>
-					<p class="crm-muted crm-identity-people__empty" id="crm-identity-people-empty"><?php p($l->t('No contacts yet')); ?></p>
-				<?php else: ?>
-					<div class="table-container crm-table--responsive">
-						<table class="table table--hover crm-table--responsive" id="crm-identity-people-table">
-							<thead><tr>
-								<th scope="col"><?php p($l->t('Name')); ?></th>
-								<th scope="col"><?php p($l->t('Email')); ?></th>
-								<th scope="col" class="crm-table-actions-col"><?php p($l->t('Action')); ?></th>
-							</tr></thead>
-							<tbody>
-							<?php foreach ($identityPersons as $ip):
-								$ipEmail = trim((string)($ip['email'] ?? ''));
-								$ipPhone = trim((string)($ip['phone'] ?? ''));
-								$ipRole = trim((string)($ip['role'] ?? ''));
-							?>
-								<tr class="crm-identity-person" id="crm-identity-person-<?php p((int)$ip['id']); ?>" data-person-id="<?php p((int)$ip['id']); ?>" data-person-name="<?php p($ip['name']); ?>" data-person-email="<?php p((string)($ip['email'] ?? '')); ?>" data-person-phone="<?php p((string)($ip['phone'] ?? '')); ?>" data-person-role="<?php p((string)($ip['role'] ?? '')); ?>" data-updated-at="<?php p((string)($ip['updatedAt'] ?? '')); ?>">
-									<td data-label="<?php p($l->t('Name')); ?>">
-										<?php p($ip['name']); ?><?php if (!empty($ip['isPrimary'])): ?> <span class="crm-badge crm-badge--info"><?php p($l->t('Primary')); ?></span><?php endif; ?>
-										<?php if ($ipRole !== '' || $ipPhone !== ''): ?>
-											<p class="crm-muted crm-person-meta">
-												<?php if ($ipRole !== ''): ?><?php p($ipRole); ?><?php endif; ?>
-												<?php if ($ipPhone !== ''): ?><?php if ($ipRole !== ''): ?> · <?php endif; ?><a href="tel:<?php p($ipPhone); ?>"><?php p($ipPhone); ?></a><?php endif; ?>
-											</p>
-										<?php endif; ?>
-									</td>
-									<td data-label="<?php p($l->t('Email')); ?>"><?php if ($ipEmail !== ''): ?><a href="mailto:<?php p($ipEmail); ?>"><?php p($ipEmail); ?></a><?php else: ?>—<?php endif; ?></td>
-									<td data-label="<?php p($l->t('Action')); ?>" class="actions-cell crm-table-actions-col">
-										<div class="crm-table-actions">
-											<?php if (!empty($_['canWrite'])): ?>
-											<button type="button" class="crm-btn crm-btn--sm crm-btn--secondary" data-crm-edit-person="<?php p((int)$ip['id']); ?>"><?php p($l->t('Change person')); ?></button>
-											<?php endif; ?>
-											<a class="crm-btn crm-btn--ghost crm-btn--sm crm-identity-person__more" href="#crm-person-<?php p((int)$ip['id']); ?>"><?php p($l->t('More about this person')); ?></a>
-										</div>
-									</td>
-								</tr>
-							<?php endforeach; ?>
-							</tbody>
-						</table>
-					</div>
-				<?php endif; ?>
-			</div>
-
-			<?php if (!empty($_['canWrite'])): ?>
 			<form id="crm-company-name-form" class="crm-identity-form" hidden novalidate aria-label="<?php p($l->t('Change company')); ?>">
 				<div class="form-group">
 					<label class="form-label" for="crm-identity-name"><?php p($l->t('Name')); ?></label>
@@ -253,45 +202,15 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 					<button type="button" class="crm-btn crm-btn--secondary" id="crm-address-cancel"><?php p($l->t('Cancel')); ?></button>
 				</div>
 			</form>
-			<form id="crm-person-form" class="crm-identity-form" hidden data-mode="add" novalidate aria-labelledby="crm-person-form-title">
-				<h3 class="crm-identity-block-title" id="crm-person-form-title"><?php p($l->t('Add person')); ?></h3>
-				<div class="form-group">
-					<label class="form-label" for="crm-person-name"><?php p($l->t('Name')); ?></label>
-					<input class="crm-input form-input crm-input--lg" id="crm-person-name" name="name" required maxlength="255" autocomplete="name" aria-describedby="crm-person-name-help" />
-					<p class="form-help" id="crm-person-name-help"><?php p($l->t('Who do you talk to at this company?')); ?></p>
-				</div>
-				<div class="form-group">
-					<label class="form-label" for="crm-person-email"><?php p($l->t('Email')); ?></label>
-					<input class="crm-input form-input crm-input--lg" id="crm-person-email" name="email" type="email" maxlength="255" autocomplete="email" aria-describedby="crm-person-email-help" />
-					<p class="form-help" id="crm-person-email-help"><?php p($l->t('Optional — needed to log emails with them.')); ?></p>
-				</div>
-				<div class="form-group">
-					<label class="form-label" for="crm-person-phone"><?php p($l->t('Phone')); ?></label>
-					<input class="crm-input form-input crm-input--lg" id="crm-person-phone" name="phone" maxlength="64" autocomplete="tel" inputmode="tel" pattern="[0-9+()\/.\s-]{4,64}" />
-				</div>
-				<details class="crm-advanced" id="crm-person-advanced">
-					<summary class="crm-advanced__summary"><?php p($l->t('Advanced')); ?></summary>
-					<div class="crm-advanced__body">
-						<div class="form-group">
-							<label class="form-label" for="crm-person-role"><?php p($l->t('Job title')); ?></label>
-							<input class="crm-input form-input crm-input--lg" id="crm-person-role" name="role" maxlength="128" autocomplete="organization-title" />
-						</div>
-					</div>
-				</details>
-				<div id="crm-person-form-error" class="crm-callout crm-callout--danger" role="alert" tabindex="-1" hidden></div>
-				<div class="crm-form-actions crm-form-actions--start">
-					<button type="submit" class="crm-btn crm-btn--primary"><?php p($l->t('Save')); ?></button>
-					<button type="button" class="crm-btn crm-btn--secondary" id="crm-person-cancel"><?php p($l->t('Cancel')); ?></button>
-				</div>
-			</form>
-			<?php endif; ?>
 		</div>
+		<?php endif; ?>
 	</section>
 
 	<div class="crm-360-focus" data-crm-360-focus="1" data-company-id="<?php p((int)$company->getId()); ?>">
 	<?php
 	$focusTabs = [
 		['id' => 'today', 'label' => $l->t('Today')],
+		['id' => 'people', 'label' => $l->t('People')],
 		['id' => 'deals', 'label' => $l->t('Deals')],
 		['id' => 'money', 'label' => $l->t('Bills & files')],
 		['id' => 'more', 'label' => $l->t('Plan & links')],
@@ -384,123 +303,6 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 			<div id="crm-communication-feed" class="crm-feed" aria-live="polite">
 				<p class="crm-muted"><?php p($l->t('Loading conversation…')); ?></p>
 			</div>
-		</div>
-	</section>
-
-<section class="crm-card" id="crm-persons" aria-labelledby="crm-persons-title" data-contacts-available="<?php p(!empty($_['contactsAvailable']) ? '1' : '0'); ?>" data-contacts-home="<?php p((string)($_['contactsHomeUrl'] ?? '/apps/contacts/')); ?>">
-		<header class="crm-card__header">
-			<div class="crm-card__header-text">
-				<h2 id="crm-persons-title" class="crm-card__title"><?php p($l->t('People')); ?></h2>
-				<p class="crm-card__lead"><?php p($l->t('Contacts at this company.')); ?></p>
-			</div>
-			<button type="button" class="crm-btn crm-btn--primary crm-btn--lg" id="crm-add-person" aria-expanded="false" aria-controls="crm-person-form"<?php if (empty($_['canWrite'])): ?> hidden<?php endif; ?>><?php p($l->t('Add person')); ?></button>
-		</header>
-		<div class="crm-card__body">
-			<?php if ($personsEmpty): ?>
-				<div class="crm-empty-state" role="status">
-					<h3 class="crm-empty-state__title"><?php p($l->t('No contacts yet')); ?></h3>
-					<p class="crm-empty-state__text"><?php p($l->t('Add someone you talk to. A name is enough — an email lets you log messages with them.')); ?></p>
-					<?php if (!empty($_['canWrite']) && !$showWelcomeCoach): ?>
-					<div class="crm-empty-state__actions">
-						<button type="button" class="crm-btn crm-btn--primary crm-btn--lg" data-crm-trigger="crm-add-person"><?php p($l->t('Add person')); ?></button>
-					</div>
-					<?php endif; ?>
-				</div>
-			<?php else: ?>
-			<div class="table-container crm-table--responsive crm-persons-table-wrap">
-				<table class="table table--hover" id="crm-persons-table">
-					<thead><tr>
-						<th scope="col"><?php p($l->t('Name')); ?></th>
-						<th scope="col"><?php p($l->t('Email')); ?></th>
-						<th scope="col" class="crm-table-actions-col"><?php p($l->t('Action')); ?></th>
-					</tr></thead>
-					<tbody>
-					<?php
-					$buyingRoleOptions = $_['buyingRoleOptions'] ?? [];
-					foreach ($_['persons'] as $p):
-						$linked = trim((string)($p['contactsUid'] ?? '')) !== '';
-						$ltLabel = (string)($p['lastTouchLabel'] ?? $l->t('No touch yet'));
-						$buyingRole = (string)($p['buyingRole'] ?? '');
-						$hasTouch = !empty($p['lastTouch']);
-						$roleLabel = $buyingRole;
-						if ($labels instanceof \OCA\CustomerCheck\Service\DisplayLabelService && $buyingRole !== '') {
-							$roleLabel = $labels->buyingRole($buyingRole);
-						}
-					?>
-						<tr id="crm-person-<?php p((int)$p['id']); ?>" data-person-id="<?php p((int)$p['id']); ?>" data-person-name="<?php p($p['name']); ?>" data-person-email="<?php p((string)($p['email'] ?? '')); ?>" data-person-phone="<?php p((string)($p['phone'] ?? '')); ?>" data-person-role="<?php p((string)($p['role'] ?? '')); ?>" data-contacts-uid="<?php p((string)($p['contactsUid'] ?? '')); ?>" data-updated-at="<?php p((string)($p['updatedAt'] ?? '')); ?>" data-buying-role="<?php p($buyingRole); ?>">
-							<td data-label="<?php p($l->t('Name')); ?>">
-								<?php p($p['name']); ?><?php if (!empty($p['isPrimary'])): ?> <span class="crm-badge crm-badge--info"><?php p($l->t('Primary')); ?></span><?php endif; ?>
-								<?php if (!empty($p['phone']) || !empty($p['role'])): ?>
-									<p class="crm-muted crm-person-meta">
-										<?php if (!empty($p['role'])): ?><?php p($p['role']); ?><?php endif; ?>
-										<?php if (!empty($p['phone'])): ?><?php if (!empty($p['role'])): ?> · <?php endif; ?><?php p($p['phone']); ?><?php endif; ?>
-									</p>
-								<?php endif; ?>
-								<details class="crm-person-more" open>
-									<summary class="crm-person-more__summary"><?php p($l->t('More about this person')); ?></summary>
-									<div class="crm-person-more__body">
-										<p class="crm-person-more__row">
-											<span class="crm-muted"><?php p($l->t('Last touch')); ?>:</span>
-											<?php if ($hasTouch): ?>
-												<button type="button" class="crm-btn crm-btn--sm crm-btn--secondary" data-crm-person-last-touch="<?php p((int)$p['id']); ?>"><?php p($ltLabel); ?></button>
-											<?php else: ?>
-												<span class="crm-muted"><?php p($ltLabel); ?></span>
-											<?php endif; ?>
-										</p>
-										<p class="crm-person-more__row">
-											<span class="crm-muted"><?php p($l->t('Address book')); ?>:</span>
-											<?php if ($linked && !empty($_['contactsAvailable'])): ?>
-												<span class="crm-badge crm-badge--success"><?php p($l->t('Linked')); ?></span>
-											<?php elseif ($linked): ?>
-												<span class="crm-badge crm-badge--neutral" title="<?php p($l->t('Contacts app is not available — link kept.')); ?>"><?php p($l->t('Linked')); ?></span>
-											<?php else: ?>
-												<span class="crm-muted"><?php p($l->t('Not linked')); ?></span>
-											<?php endif; ?>
-										</p>
-										<div class="crm-person-more__row">
-											<?php if (!empty($_['canWrite'])): ?>
-												<label class="form-label" for="crm-buying-role-<?php p((int)$p['id']); ?>"><?php p($l->t('Role in buying')); ?></label>
-												<select id="crm-buying-role-<?php p((int)$p['id']); ?>" class="crm-input crm-input--sm crm-persons-role" data-crm-buying-role="<?php p((int)$p['id']); ?>" data-updated-at="<?php p((string)($p['updatedAt'] ?? '')); ?>">
-													<?php foreach ($buyingRoleOptions as $opt): ?>
-														<option value="<?php p($opt['value']); ?>" <?php if ((string)$opt['value'] === $buyingRole): ?>selected<?php endif; ?>><?php p($opt['label']); ?></option>
-													<?php endforeach; ?>
-												</select>
-											<?php else: ?>
-												<span class="crm-muted"><?php p($l->t('Role in buying')); ?>: <?php p($roleLabel !== '' ? $roleLabel : '—'); ?></span>
-											<?php endif; ?>
-										</div>
-									</div>
-								</details>
-							</td>
-							<td data-label="<?php p($l->t('Email')); ?>"><?php p($p['email'] ?? '—'); ?></td>
-							<td data-label="<?php p($l->t('Action')); ?>" class="actions-cell crm-table-actions-col">
-								<div class="crm-table-actions">
-									<?php if (!empty($_['canWrite'])): ?>
-										<button type="button" class="crm-btn crm-btn--sm crm-btn--secondary" data-crm-edit-person="<?php p((int)$p['id']); ?>"><?php p($l->t('Change person')); ?></button>
-									<?php endif; ?>
-									<?php if ($linked && !empty($_['contactsAvailable'])): ?>
-										<a class="crm-btn crm-btn--sm crm-btn--primary" href="<?php p((string)$_['contactsHomeUrl']); ?>" data-crm-open-contacts="<?php p((int)$p['id']); ?>" data-person-name="<?php p($p['name']); ?>"><?php p($l->t('Open in Contacts')); ?></a>
-										<?php if (!empty($_['canWrite'])): ?>
-											<button type="button" class="crm-btn crm-btn--sm crm-btn--ghost" data-crm-unlink-contacts="<?php p((int)$p['id']); ?>"><?php p($l->t('Unlink')); ?></button>
-										<?php endif; ?>
-									<?php elseif ($hasTouch): ?>
-										<button type="button" class="crm-btn crm-btn--sm crm-btn--primary" data-crm-person-last-touch="<?php p((int)$p['id']); ?>"><?php p($l->t('See talk')); ?></button>
-									<?php elseif (!empty($_['canWrite'])): ?>
-										<button type="button" class="crm-btn crm-btn--sm crm-btn--primary" data-crm-trigger="crm-log-email"><?php p($l->t('Log talk')); ?></button>
-									<?php else: ?>
-										<a class="crm-btn crm-btn--sm crm-btn--secondary" href="#crm-communication"><?php p($l->t('See talk')); ?></a>
-									<?php endif; ?>
-									<?php if (!empty($_['canWrite'])): ?>
-										<button type="button" class="crm-btn crm-btn--sm crm-btn--ghost" data-crm-remove-person="<?php p((int)$p['id']); ?>" title="<?php p($l->t('Remove from this company')); ?>"><?php p($l->t('Remove')); ?></button>
-									<?php endif; ?>
-								</div>
-							</td>
-						</tr>
-					<?php endforeach; ?>
-					</tbody>
-				</table>
-			</div>
-			<?php endif; ?>
 		</div>
 	</section>
 
@@ -612,6 +414,162 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 		</div>
 	</section>
 
+	</div>
+
+	<div id="crm-360-panel-people" class="crm-360-focus__panel" role="tabpanel" data-crm-focus-panel="people" aria-labelledby="crm-360-tab-people" aria-hidden="true" hidden>
+	<?php /* People is its own focus tab — coach Add person on Today must switch here before opening the form. */ ?>
+	<section class="crm-card" id="crm-persons" aria-labelledby="crm-persons-title" data-contacts-available="<?php p(!empty($_['contactsAvailable']) ? '1' : '0'); ?>" data-contacts-home="<?php p((string)($_['contactsHomeUrl'] ?? '/apps/contacts/')); ?>">
+		<header class="crm-card__header">
+			<div class="crm-card__header-text">
+				<h2 id="crm-persons-title" class="crm-card__title"><?php p($l->t('People')); ?></h2>
+				<p class="crm-card__lead"><?php p($l->t('Contacts at this company.')); ?></p>
+			</div>
+			<button type="button" class="crm-btn crm-btn--primary crm-btn--lg" id="crm-add-person" aria-expanded="false" aria-controls="crm-person-form"<?php if (empty($_['canWrite'])): ?> hidden<?php endif; ?>><?php p($l->t('Add person')); ?></button>
+		</header>
+		<div class="crm-card__body">
+			<?php if (!empty($_['canWrite'])): ?>
+			<form id="crm-person-form" class="crm-identity-form" hidden data-mode="add" novalidate aria-labelledby="crm-person-form-title">
+				<h3 class="crm-identity-block-title" id="crm-person-form-title"><?php p($l->t('Add person')); ?></h3>
+				<div class="form-group">
+					<label class="form-label" for="crm-person-name"><?php p($l->t('Name')); ?></label>
+					<input class="crm-input form-input crm-input--lg" id="crm-person-name" name="name" required maxlength="255" autocomplete="name" aria-describedby="crm-person-name-help" />
+					<p class="form-help" id="crm-person-name-help"><?php p($l->t('Who do you talk to at this company?')); ?></p>
+				</div>
+				<div class="form-group">
+					<label class="form-label" for="crm-person-email"><?php p($l->t('Email')); ?></label>
+					<input class="crm-input form-input crm-input--lg" id="crm-person-email" name="email" type="email" maxlength="255" autocomplete="email" aria-describedby="crm-person-email-help" />
+					<p class="form-help" id="crm-person-email-help"><?php p($l->t('Optional — needed to log emails with them.')); ?></p>
+				</div>
+				<details class="crm-advanced" id="crm-person-advanced">
+					<summary class="crm-advanced__summary"><?php p($l->t('More options')); ?></summary>
+					<div class="crm-advanced__body">
+						<div class="form-group">
+							<label class="form-label" for="crm-person-phone"><?php p($l->t('Phone')); ?></label>
+							<input class="crm-input form-input crm-input--lg" id="crm-person-phone" name="phone" maxlength="64" autocomplete="tel" inputmode="tel" pattern="[0-9+()\/.\s-]{4,64}" />
+						</div>
+						<div class="form-group">
+							<label class="form-label" for="crm-person-role"><?php p($l->t('Job title')); ?></label>
+							<input class="crm-input form-input crm-input--lg" id="crm-person-role" name="role" maxlength="128" autocomplete="organization-title" />
+						</div>
+					</div>
+				</details>
+				<div id="crm-person-form-error" class="crm-callout crm-callout--danger" role="alert" tabindex="-1" hidden></div>
+				<div class="crm-form-actions crm-form-actions--start">
+					<button type="submit" class="crm-btn crm-btn--primary"><?php p($l->t('Save')); ?></button>
+					<button type="button" class="crm-btn crm-btn--secondary" id="crm-person-cancel"><?php p($l->t('Cancel')); ?></button>
+				</div>
+			</form>
+			<?php endif; ?>
+			<?php if ($personsEmpty): ?>
+				<div class="crm-empty-state" role="status">
+					<h3 class="crm-empty-state__title"><?php p($l->t('No contacts yet')); ?></h3>
+					<p class="crm-empty-state__text"><?php p($l->t('Add someone you talk to. A name is enough — an email lets you log messages with them.')); ?></p>
+					<?php if (!empty($_['canWrite']) && !$showWelcomeCoach): ?>
+					<div class="crm-empty-state__actions">
+						<button type="button" class="crm-btn crm-btn--primary crm-btn--lg" data-crm-trigger="crm-add-person"><?php p($l->t('Add person')); ?></button>
+					</div>
+					<?php endif; ?>
+				</div>
+			<?php else: ?>
+			<div class="table-container crm-persons-table-wrap">
+				<table class="table table--hover" id="crm-persons-table">
+					<thead><tr>
+						<th scope="col"><?php p($l->t('Name')); ?></th>
+						<th scope="col"><?php p($l->t('Email')); ?></th>
+						<th scope="col" class="crm-table-actions-col"><?php p($l->t('Action')); ?></th>
+					</tr></thead>
+					<tbody>
+					<?php
+					$buyingRoleOptions = $_['buyingRoleOptions'] ?? [];
+					foreach ($_['persons'] as $p):
+						$linked = trim((string)($p['contactsUid'] ?? '')) !== '';
+						$ltLabel = (string)($p['lastTouchLabel'] ?? $l->t('No touch yet'));
+						$buyingRole = (string)($p['buyingRole'] ?? '');
+						$hasTouch = !empty($p['lastTouch']);
+						$roleLabel = $buyingRole;
+						if ($labels instanceof \OCA\CustomerCheck\Service\DisplayLabelService && $buyingRole !== '') {
+							$roleLabel = $labels->buyingRole($buyingRole);
+						}
+						$pEmail = trim((string)($p['email'] ?? ''));
+						$pPhone = trim((string)($p['phone'] ?? ''));
+						$pJob = trim((string)($p['role'] ?? ''));
+					?>
+						<tr id="crm-person-<?php p((int)$p['id']); ?>" data-person-id="<?php p((int)$p['id']); ?>" data-person-name="<?php p($p['name']); ?>" data-person-email="<?php p((string)($p['email'] ?? '')); ?>" data-person-phone="<?php p((string)($p['phone'] ?? '')); ?>" data-person-role="<?php p((string)($p['role'] ?? '')); ?>" data-contacts-uid="<?php p((string)($p['contactsUid'] ?? '')); ?>" data-updated-at="<?php p((string)($p['updatedAt'] ?? '')); ?>" data-buying-role="<?php p($buyingRole); ?>">
+							<td data-label="<?php p($l->t('Name')); ?>">
+								<?php p($p['name']); ?><?php if (!empty($p['isPrimary'])): ?> <span class="crm-badge crm-badge--info"><?php p($l->t('Primary')); ?></span><?php endif; ?>
+								<?php if ($pPhone !== '' || $pJob !== ''): ?>
+									<p class="crm-muted crm-person-meta">
+										<?php if ($pJob !== ''): ?><?php p($pJob); ?><?php endif; ?>
+										<?php if ($pPhone !== ''): ?><?php if ($pJob !== ''): ?> · <?php endif; ?><a href="tel:<?php p($pPhone); ?>"><?php p($pPhone); ?></a><?php endif; ?>
+									</p>
+								<?php endif; ?>
+								<details class="crm-person-more">
+									<summary class="crm-person-more__summary"><?php p($l->t('More about this person')); ?></summary>
+									<div class="crm-person-more__body">
+										<p class="crm-person-more__row">
+											<span class="crm-muted"><?php p($l->t('Last touch')); ?>:</span>
+											<?php if ($hasTouch): ?>
+												<button type="button" class="crm-btn crm-btn--sm crm-btn--secondary" data-crm-person-last-touch="<?php p((int)$p['id']); ?>"><?php p($ltLabel); ?></button>
+											<?php else: ?>
+												<span class="crm-muted"><?php p($ltLabel); ?></span>
+											<?php endif; ?>
+										</p>
+										<p class="crm-person-more__row">
+											<span class="crm-muted"><?php p($l->t('Address book')); ?>:</span>
+											<?php if ($linked && !empty($_['contactsAvailable'])): ?>
+												<span class="crm-badge crm-badge--success"><?php p($l->t('Linked')); ?></span>
+											<?php elseif ($linked): ?>
+												<span class="crm-badge crm-badge--neutral" title="<?php p($l->t('Contacts app is not available — link kept.')); ?>"><?php p($l->t('Linked')); ?></span>
+											<?php else: ?>
+												<span class="crm-muted"><?php p($l->t('Not linked')); ?></span>
+											<?php endif; ?>
+										</p>
+										<div class="crm-person-more__row">
+											<?php if (!empty($_['canWrite'])): ?>
+												<label class="form-label" for="crm-buying-role-<?php p((int)$p['id']); ?>"><?php p($l->t('Role in buying')); ?></label>
+												<select id="crm-buying-role-<?php p((int)$p['id']); ?>" class="crm-input crm-input--sm crm-persons-role" data-crm-buying-role="<?php p((int)$p['id']); ?>" data-updated-at="<?php p((string)($p['updatedAt'] ?? '')); ?>">
+													<?php foreach ($buyingRoleOptions as $opt): ?>
+														<option value="<?php p($opt['value']); ?>" <?php if ((string)$opt['value'] === $buyingRole): ?>selected<?php endif; ?>><?php p($opt['label']); ?></option>
+													<?php endforeach; ?>
+												</select>
+											<?php else: ?>
+												<span class="crm-muted"><?php p($l->t('Role in buying')); ?>: <?php p($roleLabel !== '' ? $roleLabel : '—'); ?></span>
+											<?php endif; ?>
+										</div>
+									</div>
+								</details>
+							</td>
+							<td data-label="<?php p($l->t('Email')); ?>"><?php if ($pEmail !== ''): ?><a href="mailto:<?php p($pEmail); ?>"><?php p($pEmail); ?></a><?php else: ?>—<?php endif; ?></td>
+							<td data-label="<?php p($l->t('Action')); ?>" class="actions-cell crm-table-actions-col">
+								<div class="crm-table-actions">
+									<?php if (!empty($_['canWrite'])): ?>
+										<button type="button" class="crm-btn crm-btn--sm crm-btn--secondary" data-crm-edit-person="<?php p((int)$p['id']); ?>"><?php p($l->t('Change person')); ?></button>
+									<?php endif; ?>
+									<?php if ($linked && !empty($_['contactsAvailable'])): ?>
+										<a class="crm-btn crm-btn--sm crm-btn--primary" href="<?php p((string)$_['contactsHomeUrl']); ?>" data-crm-open-contacts="<?php p((int)$p['id']); ?>" data-person-name="<?php p($p['name']); ?>"><?php p($l->t('Open in Contacts')); ?></a>
+										<?php if (!empty($_['canWrite'])): ?>
+											<button type="button" class="crm-btn crm-btn--sm crm-btn--ghost" data-crm-unlink-contacts="<?php p((int)$p['id']); ?>"><?php p($l->t('Unlink')); ?></button>
+										<?php endif; ?>
+									<?php elseif ($hasTouch): ?>
+										<button type="button" class="crm-btn crm-btn--sm crm-btn--primary" data-crm-person-last-touch="<?php p((int)$p['id']); ?>"><?php p($l->t('See talk')); ?></button>
+									<?php elseif (!empty($_['canWrite'])): ?>
+										<button type="button" class="crm-btn crm-btn--sm crm-btn--primary" data-crm-trigger="crm-log-email"><?php p($l->t('Log talk')); ?></button>
+									<?php else: ?>
+										<a class="crm-btn crm-btn--sm crm-btn--secondary" href="#crm-communication"><?php p($l->t('See talk')); ?></a>
+									<?php endif; ?>
+									<?php if (!empty($_['canWrite'])): ?>
+										<button type="button" class="crm-btn crm-btn--sm crm-btn--ghost" data-crm-remove-person="<?php p((int)$p['id']); ?>" title="<?php p($l->t('Remove from this company')); ?>"><?php p($l->t('Remove')); ?></button>
+									<?php endif; ?>
+								</div>
+							</td>
+						</tr>
+					<?php endforeach; ?>
+					</tbody>
+				</table>
+			</div>
+			<?php endif; ?>
+		</div>
+	</section>
 	</div>
 
 	<div id="crm-360-panel-deals" class="crm-360-focus__panel" role="tabpanel" data-crm-focus-panel="deals" aria-labelledby="crm-360-tab-deals" aria-hidden="true" hidden>

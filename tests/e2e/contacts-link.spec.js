@@ -16,6 +16,7 @@ test.describe('Contacts link (Command Center)', () => {
     });
     await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
 
+    await page.locator('[data-crm-focus-tab="people"]').click();
     await page.locator('#crm-persons').scrollIntoViewIfNeeded();
     await page.locator('#crm-add-person').click();
     const form = page.locator('#crm-person-form');
@@ -28,6 +29,8 @@ test.describe('Contacts link (Command Center)', () => {
     await expect(page.locator('#crm-persons-table')).toBeVisible();
     await expect(page.locator('#crm-persons-table thead th')).toHaveCount(3);
     await expect(page.locator('#crm-persons-table .crm-person-more').first()).toBeVisible();
+    await expect(page.locator('#crm-persons-table .crm-person-more').first()).not.toHaveAttribute('open');
+    await page.locator('#crm-persons-table .crm-person-more > summary').first().click();
     await expect(page.locator('#crm-persons-table .crm-person-more').first()).toHaveAttribute('open', '');
     await expect(page.locator('#crm-persons-table .crm-person-more__body').first()).toBeVisible();
     await expect(page.locator('#crm-persons-table .crm-person-more__body').first()).toContainText(/Last touch|Letzter Kontakt|Address book|Adressbuch/i);
@@ -36,8 +39,9 @@ test.describe('Contacts link (Command Center)', () => {
     await expect(page.locator('#crm-persons-table [data-crm-edit-person]').first()).toBeVisible();
     await expect(page.locator('#crm-persons-table [data-crm-remove-person]').first()).toBeVisible();
 
-    // Cockpit Log email is wired (AC communication actions).
+    await page.locator('[data-crm-focus-tab="today"]').click();
     await expect(page.locator('#crm-log-email[data-crm-log-email]')).toBeVisible();
+    await page.locator('[data-crm-focus-tab="people"]').click();
 
     await page.locator('#crm-persons-table [data-crm-remove-person]').first().click();
     const confirm = page.locator('dialog[open][role="alertdialog"]');
@@ -58,6 +62,7 @@ test.describe('Contacts link (Command Center)', () => {
     await openRow.click();
     await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
     await expect(page.locator('#crm-platform-links')).toBeAttached();
+    await page.locator('[data-crm-focus-tab="people"]').click();
     await expect(page.locator('#crm-persons')).toBeVisible();
   });
 });

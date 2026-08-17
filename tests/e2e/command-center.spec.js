@@ -37,11 +37,12 @@ test.describe('Command Center', () => {
     // DOM source order (viewport y is unreliable with sticky glance + collapsed details).
     const order = [
       'crm-glance',
+      'crm-identity',
       'crm-communication',
-      'crm-persons',
-      'crm-deals',
       'crm-next-steps',
       'crm-open-tasks',
+      'crm-persons',
+      'crm-deals',
       'crm-contracts',
       'crm-billing',
       'crm-documents',
@@ -64,8 +65,10 @@ test.describe('Command Center', () => {
     }
     await expect(page.locator('#crm-glance')).toBeVisible();
     await expect(page.locator('#crm-platform-links')).toBeAttached();
-    await expect(page.locator('#crm-documents')).toBeVisible();
+    await expect(page.locator('#crm-documents')).toBeAttached();
     await expect(page.locator('#crm-open-tasks')).toBeVisible();
+    await page.locator('[data-crm-focus-tab="people"]').click();
+    await expect(page.locator('#crm-persons')).toBeVisible();
   });
 
   test('companies list health columns (AC-CC-15)', async ({ page }) => {
@@ -86,6 +89,7 @@ test.describe('Command Center', () => {
 
   test('documents section uses browse folders control', async ({ page }) => {
     await openFirstCompany(page);
+    await page.locator('[data-crm-focus-tab="money"]').click();
     await expect(page.locator('#crm-documents')).toBeVisible({ timeout: 30000 });
     await expect(page.locator('#crm-link-folder')).toBeVisible();
     await expect(page.locator('#crm-link-folder')).toHaveText(/browse folders|ordner durchsuchen|ordner wählen/i);
@@ -95,6 +99,7 @@ test.describe('Command Center', () => {
 
   test('timeline shows human labels not machine keys', async ({ page }) => {
     await openFirstCompany(page);
+    await page.locator('[data-crm-focus-tab="more"]').click();
     const timeline = page.locator('#crm-timeline');
     await expect(timeline).toBeVisible({ timeout: 30000 });
     // Collapsed by default (Bachus) — open to read labels.

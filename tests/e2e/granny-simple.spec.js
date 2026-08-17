@@ -35,15 +35,16 @@ test.describe('Granny-simple company 360', () => {
     await expect(page.locator('#crm-change-company')).toBeVisible();
     await expect(page.locator('#crm-edit-address')).toBeVisible();
     await expect(page.locator('#crm-edit-address')).toContainText(/Change address|Adresse ändern/i);
-    await expect(page.locator('#crm-identity-people')).toBeVisible();
-    await expect(page.locator('#crm-add-person')).toBeVisible();
-    await expect(page.locator('#crm-identity [data-crm-trigger="crm-add-person"]')).toBeVisible();
+    await expect(page.locator('[data-crm-focus-tab="people"]')).toBeVisible();
+    await expect(page.locator('#crm-persons')).toBeHidden();
+    await expect(page.locator('#crm-identity [data-crm-trigger="crm-add-person"]')).toHaveCount(0);
+    await expect(page.locator('#crm-identity-people')).toHaveCount(0);
     await expect(page.locator('#crm-welcome-coach')).toBeVisible();
     await expect(page.locator('#crm-welcome-coach .crm-welcome-coach__steps')).toBeVisible();
     await expect(page.locator('#crm-welcome-coach .crm-welcome-coach__step')).toHaveCount(3);
     await expect(page.locator('#crm-welcome-coach [data-crm-trigger="crm-add-person"]')).toBeVisible();
     await expect(page.locator('#crm-welcome-coach [data-crm-trigger="crm-add-deal"]')).toBeVisible();
-    // People share Today with the coach — no duplicate Add person in that empty state.
+    // People are a separate focus tab — no duplicate Add person in that empty state.
     await expect(page.locator('#crm-persons .crm-empty-state [data-crm-trigger="crm-add-person"]')).toHaveCount(0);
     // Deals are a separate focus tab — Add deal must remain reachable there.
     await page.locator('[data-crm-focus-tab="deals"]').click();
@@ -93,17 +94,20 @@ test.describe('Granny-simple company 360', () => {
     await personForm.locator('button[type="submit"]').click();
     await page.waitForLoadState('networkidle');
 
+    await page.locator('[data-crm-focus-tab="people"]').click();
     const personsTable = page.locator('#crm-persons-table');
     await expect(personsTable).toBeVisible({ timeout: 15000 });
     await expect(personsTable.locator('thead th')).toHaveCount(3);
     await expect(personsTable.locator('thead th', { hasText: /^Buying role$/i })).toHaveCount(0);
     await expect(personsTable.locator('thead th', { hasText: /Last touch|Letzter Kontakt/i })).toHaveCount(0);
     await expect(personsTable.locator('.crm-person-more').first()).toBeVisible();
+    await expect(personsTable.locator('.crm-person-more').first()).not.toHaveAttribute('open');
+    await personsTable.locator('.crm-person-more > summary').first().click();
     await expect(personsTable.locator('.crm-person-more').first()).toHaveAttribute('open', '');
     await expect(personsTable.locator('.crm-person-more__body').first()).toBeVisible();
     await expect(personsTable.locator('.crm-person-more__body').first()).toContainText(/Last touch|Letzter Kontakt|Role in buying|Rolle beim Kauf/i);
     await expect(personsTable.locator('[data-crm-edit-person]').first()).toBeVisible();
-    await expect(page.locator('#crm-identity-people .crm-identity-person').first()).toBeVisible();
+    await expect(page.locator('#crm-identity-people')).toHaveCount(0);
     await expect(personsTable.locator('details.crm-more-menu')).toHaveCount(0);
     const primary = personsTable.locator('tbody tr').first().locator('.crm-table-actions .crm-btn--primary').first();
     await expect(primary).toBeVisible();
@@ -113,9 +117,13 @@ test.describe('Granny-simple company 360', () => {
 
     const focus = page.locator('[data-crm-360-focus="1"]');
     await expect(focus).toBeVisible();
-    await expect(focus.locator('[data-crm-focus-tab]')).toHaveCount(4);
+    await expect(focus.locator('[data-crm-focus-tab]')).toHaveCount(5);
+    await expect(focus.locator('[data-crm-focus-tab="people"]')).toBeVisible();
+    await expect(focus.locator('[data-crm-focus-tab="people"][aria-selected="true"]')).toBeVisible();
+    await focus.locator('[data-crm-focus-tab="today"]').click();
     await expect(focus.locator('[data-crm-focus-tab="today"][aria-selected="true"]')).toBeVisible();
     await expect(page.locator('#crm-360-panel-deals')).toHaveAttribute('hidden', '');
+    await expect(page.locator('#crm-360-panel-people')).toHaveAttribute('hidden', '');
     await expect(page.locator('#crm-communication')).toBeVisible();
     await expect(page.locator('#crm-open-tasks')).toBeVisible();
     await expect(page.locator('#crm-open-tasks')).not.toHaveAttribute('open', '');

@@ -895,11 +895,6 @@ dialog.crm-native-dialog .crm-form-actions--start {
 	font-weight: 600;
 	line-height: var(--crm-line-tight, 1.2);
 }
-#app-content.crm-app .crm-identity-people__icon {
-	width: var(--crm-icon-md, 1.125rem);
-	height: var(--crm-icon-md, 1.125rem);
-	color: var(--color-primary-element);
-}
 #app-content.crm-app .crm-identity-strip__notes {
 	margin: var(--crm-space-2, 0.5rem) 0 0;
 	max-width: 60ch;
@@ -934,31 +929,6 @@ dialog.crm-native-dialog .crm-form-actions--start {
 	font-weight: 400;
 	font-style: normal;
 }
-#app-content.crm-app .crm-identity-people__empty,
-#app-content.crm-app #crm-identity-people-empty {
-	margin: 0;
-	max-width: 42ch;
-	font-size: var(--crm-fs-sm, 0.875rem);
-	line-height: var(--crm-line-base, 1.45);
-}
-#app-content.crm-app .crm-identity-people__head {
-	display: flex;
-	flex-wrap: wrap;
-	align-items: center;
-	justify-content: flex-start;
-	gap: var(--crm-space-2, 0.5rem) var(--crm-space-3, 0.75rem);
-	margin: 0 0 var(--crm-space-3, 0.75rem);
-}
-#app-content.crm-app .crm-identity-people .table-container {
-	margin: 0;
-}
-#app-content.crm-app .crm-identity-person__more {
-	text-decoration: none;
-}
-#app-content.crm-app .crm-identity-person__more:focus-visible {
-	outline: 3px solid color-mix(in srgb, var(--color-primary-element) 60%, transparent);
-	outline-offset: 2px;
-}
 #app-content.crm-app .crm-identity-actions {
 	margin: 0;
 	flex: 0 1 auto;
@@ -968,8 +938,6 @@ dialog.crm-native-dialog .crm-form-actions--start {
 	justify-content: flex-start;
 }
 #app-content.crm-app .crm-identity-actions .crm-btn,
-#app-content.crm-app .crm-identity-people__head .crm-btn:not(.crm-btn--primary),
-#app-content.crm-app .crm-identity-people .crm-table-actions .crm-btn,
 #app-content.crm-app .crm-identity-form .crm-btn {
 	min-height: var(--crm-touch, 44px);
 }
@@ -986,6 +954,13 @@ dialog.crm-native-dialog .crm-form-actions--start {
 }
 #app-content.crm-app .crm-identity-form[hidden] {
 	display: none !important;
+}
+/* Collapse the identity body while both inline forms stay hidden — no empty padded hole. */
+#app-content.crm-app #crm-identity .crm-identity-body:not(:has(.crm-identity-form:not([hidden]))) {
+	display: none;
+	padding: 0;
+	gap: 0;
+	border: 0;
 }
 #app-content.crm-app .crm-identity-form .crm-callout {
 	display: flex;
@@ -1025,14 +1000,14 @@ dialog.crm-native-dialog .crm-form-actions--start {
 }
 @media (max-width: 767px) {
 	#app-content.crm-app .crm-identity-actions,
-	#app-content.crm-app .crm-identity-people__head,
-	#app-content.crm-app .crm-identity-form .crm-form-actions {
+	#app-content.crm-app .crm-identity-form .crm-form-actions,
+	#app-content.crm-app #crm-persons > .crm-card__header {
 		flex-direction: column;
 		align-items: stretch;
 	}
 	#app-content.crm-app .crm-identity-actions .crm-btn,
-	#app-content.crm-app .crm-identity-people__head .crm-btn,
-	#app-content.crm-app .crm-identity-form .crm-form-actions .crm-btn {
+	#app-content.crm-app .crm-identity-form .crm-form-actions .crm-btn,
+	#app-content.crm-app #crm-persons > .crm-card__header .crm-btn {
 		width: 100%;
 		min-width: 0;
 		min-height: var(--crm-touch, 44px);
@@ -1206,6 +1181,7 @@ dialog.crm-native-dialog .crm-form-actions--start {
 #app-content.crm-app--company-detail .crm-page-stack > .crm-card[id] {
 	scroll-margin-top: 6.5rem;
 }
+#app-content.crm-app--company-detail #crm-persons [id],
 #app-content.crm-app--company-detail .crm-360-zone [id],
 #app-content.crm-app--company-detail .crm-360-focus__panel [id],
 #app-content.crm-app--company-detail .crm-linked-bundle [id],
@@ -1495,7 +1471,8 @@ dialog.crm-native-dialog .crm-form-actions--start {
 	box-shadow: none;
 }
 #app-content.crm-app .crm-persons-table-wrap {
-	overflow: visible;
+	overflow-x: auto;
+	overflow-y: visible;
 }
 #app-content.crm-app .crm-persons-role {
 	min-height: 44px;
@@ -6087,6 +6064,9 @@ dialog.crm-native-dialog label.crm-check {
 }
 #app-content.crm-app .crm-todo-list__item--closed {
   opacity: 0.72;
+}
+#app-content.crm-app .crm-todo-list__item--closed .crm-todo-list__title {
+  text-decoration: line-through;
 }
 #app-content.crm-app .crm-todo-list__actions .crm-btn--lg {
   min-height: 48px;

@@ -26,8 +26,9 @@ test.describe('CustomerCheck extreme simplicity journeys', () => {
 
     await expect(page.locator('#crm-identity')).toBeVisible();
     await expect(page.locator('#crm-identity-links')).toBeAttached();
-    await expect(page.locator('#crm-persons')).toBeVisible();
     await expect(page.locator('#crm-activities')).toBeVisible();
+    await page.locator('[data-crm-focus-tab="people"]').click();
+    await expect(page.locator('#crm-persons')).toBeVisible();
     await page.locator('[data-crm-focus-tab="deals"]').click();
     await expect(page.locator('#crm-contracts')).toBeVisible();
     await page.locator('[data-crm-focus-tab="money"]').click();

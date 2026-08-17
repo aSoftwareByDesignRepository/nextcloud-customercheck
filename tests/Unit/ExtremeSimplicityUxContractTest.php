@@ -114,9 +114,12 @@ final class ExtremeSimplicityUxContractTest extends TestCase
 		$this->assertStringContainsString('crm-persons-table', $detail);
 		$this->assertStringNotContainsString("\$l->t('Phone')); ?></th>", $detail);
 		$this->assertStringNotContainsString("\$l->t('Buying role')); ?></th>", $detail);
-		// Lean roster: Name / Email / Action; Last touch + role under crm-person-more (open by default).
+		// Lean roster: Name / Email / Action table; extras under closed More (design-system §3.7 / §12.5).
 		$this->assertStringContainsString('crm-person-more', $detail);
-		$this->assertStringContainsString('crm-person-more" open', $detail);
+		$this->assertStringNotContainsString('crm-person-more" open', $detail);
+		$this->assertStringContainsString('<table class="table table--hover" id="crm-persons-table">', $detail);
+		$this->assertStringNotContainsString('crm-table--responsive" id="crm-persons-table"', $detail);
+		$this->assertStringNotContainsString('id="crm-persons-table" class="table table--hover crm-table--responsive"', $detail);
 		$this->assertStringContainsString("\$l->t('Address book')", $detail);
 		$this->assertStringContainsString("\$l->t('Last touch')", $detail);
 		$this->assertStringContainsString("\$l->t('Role in buying')", $detail);
@@ -145,7 +148,13 @@ final class ExtremeSimplicityUxContractTest extends TestCase
 		$this->assertStringContainsString('id="crm-person-form"', $detail);
 		$this->assertStringContainsString('id="crm-company-name-form"', $detail);
 		$this->assertStringContainsString('id="crm-company-more-settings"', $detail);
-		$this->assertStringContainsString('id="crm-identity-people"', $detail);
+		$this->assertStringNotContainsString('id="crm-identity-people"', $detail);
+		$this->assertStringNotContainsString('id="crm-identity-people-table"', $detail);
+		$this->assertStringNotContainsString('crm-identity-people__head', $detail);
+		$this->assertStringNotContainsString('#crm-identity [data-crm-trigger="crm-add-person"]', $detail);
+		$this->assertSame(1, substr_count($detail, 'id="crm-persons"'));
+		$this->assertSame(1, substr_count($detail, 'id="crm-add-person"'));
+		$this->assertSame(1, substr_count($detail, 'id="crm-person-form"'));
 		$this->assertStringContainsString('id="crm-identity-title"', $detail);
 		$this->assertStringContainsString("\$l->t('Change company')", $detail);
 		$this->assertStringContainsString("\$l->t('Change address')", $detail);
@@ -163,6 +172,10 @@ final class ExtremeSimplicityUxContractTest extends TestCase
 		$this->assertStringContainsString("t('Change person')", $js);
 		$this->assertStringContainsString("t('Address saved.')", $js);
 		$this->assertStringContainsString("t('Company saved.')", $js);
+		$this->assertStringContainsString('revealPeopleFocusTab', $js);
+		$this->assertStringContainsString('[data-crm-focus-tab="people"]', $js);
+		$this->assertStringContainsString("} else if (which === 'person') {\n      revealPeopleFocusTab();", $js);
+		$this->assertStringContainsString("getElementById('crm-360-panel-people')", $js);
 		$this->assertStringContainsString("t('Reload page')", $js);
 		$this->assertStringContainsString("t('Person updated.')", $js);
 		$this->assertStringContainsString("t('Person added.')", $js);
@@ -173,6 +186,9 @@ final class ExtremeSimplicityUxContractTest extends TestCase
 		$this->assertStringContainsString('payload.contactsUid', $js);
 		$this->assertStringContainsString('if (identitySaveBusy) return;', $js);
 		$this->assertStringNotContainsString("q=aa", $js);
+		$this->assertStringNotContainsString('#crm-identity [data-crm-trigger="crm-add-person"]', $js);
+		$this->assertStringContainsString("advanced.open = !!(role || phone)", $js);
+		$this->assertStringContainsString("const phone = row ? (row.getAttribute('data-person-phone') || '').trim() : '';", $js);
 		$form = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/company-form.php');
 		$this->assertStringContainsString('Change the name or postal address', $form);
 		$formJs = (string)file_get_contents(dirname(__DIR__, 2) . '/js/pages/company-form.js');
@@ -190,12 +206,11 @@ final class ExtremeSimplicityUxContractTest extends TestCase
 			'Identity inline forms must stay display:none when [hidden] — flex must not unhide them',
 		);
 		$this->assertStringContainsString('crm-identity-title-row', $css);
-		$this->assertMatchesRegularExpression(
-			'/#app-content\.crm-app \.crm-identity-person__more\s*\{[^}]*text-decoration:\s*none/s',
-			$css,
-			'Identity More link must keep a dedicated rule — table actions still need a visible focus target',
-		);
-		$this->assertStringContainsString('#app-content.crm-app .crm-identity-people .table-container', $css);
+		$this->assertStringContainsString('#app-content.crm-app--company-detail #crm-persons [id]', $css);
+		$this->assertStringContainsString('#crm-identity .crm-identity-body:not(:has(.crm-identity-form:not([hidden])))', $css);
+		$this->assertStringNotContainsString('crm-identity-person__more', $css);
+		$this->assertStringNotContainsString('crm-identity-people__head', $css);
+		$this->assertStringNotContainsString('#app-content.crm-app .crm-identity-people .table-container', $css);
 		$this->assertStringNotContainsString('crm-identity-person__well', $css);
 		$this->assertStringNotContainsString('crm-identity-people__list', $css);
 		$this->assertMatchesRegularExpression(
@@ -219,11 +234,30 @@ final class ExtremeSimplicityUxContractTest extends TestCase
 			'Title must not grow — that shoves the status badge across the card',
 		);
 		$this->assertStringContainsString('crm-card__header-actions crm-identity-actions', $detail);
-		$this->assertStringContainsString('crm-identity-people__head', $detail);
 		$this->assertStringContainsString('crm-identity-title-row', $detail);
-		$this->assertStringContainsString('crm-identity-person__more', $detail);
-		$this->assertStringContainsString('id="crm-identity-people-table"', $detail);
-		$this->assertStringContainsString('table table--hover crm-table--responsive', $detail);
+		$this->assertStringContainsString('id="crm-persons"', $detail);
+		$this->assertStringContainsString('id="crm-persons-table"', $detail);
+		$this->assertStringContainsString("\$l->t('More options')", $detail);
+		$this->assertStringContainsString('id="crm-person-advanced"', $detail);
+		$personsPos = strpos($detail, 'id="crm-persons"');
+		$focusPos = strpos($detail, 'data-crm-360-focus="1"');
+		$personFormPos = strpos($detail, 'id="crm-person-form"');
+		$peoplePanelPos = strpos($detail, 'data-crm-focus-panel="people"');
+		$dealsPanelPos = strpos($detail, 'id="crm-360-panel-deals"');
+		$this->assertNotFalse($personsPos);
+		$this->assertNotFalse($focusPos);
+		$this->assertNotFalse($personFormPos);
+		$this->assertNotFalse($peoplePanelPos);
+		$this->assertNotFalse($dealsPanelPos);
+		$this->assertGreaterThan($focusPos, $personsPos, 'People roster lives in the People focus tab, not above the tabs');
+		$this->assertGreaterThan($peoplePanelPos, $personsPos);
+		$this->assertLessThan($dealsPanelPos, $personsPos, 'People tab sits between Today and Deals');
+		$this->assertGreaterThan($personsPos, $personFormPos, 'Person form lives in the People card, not in Company');
+		$this->assertLessThan($dealsPanelPos, $personFormPos);
+		$identityChunk = substr($detail, (int)strpos($detail, 'id="crm-identity"'), max(0, $focusPos - (int)strpos($detail, 'id="crm-identity"')));
+		$this->assertStringNotContainsString("\$l->t('People')", $identityChunk);
+		$this->assertStringNotContainsString('data-crm-trigger="crm-add-person"', $identityChunk);
+		$this->assertStringContainsString('<table class="table table--hover" id="crm-persons-table">', $detail);
 		$this->assertStringNotContainsString('crm-identity-person__well', $detail);
 		$this->assertStringNotContainsString('PersonInitialsPresenter', $detail);
 		$this->assertStringNotContainsString('crm-identity-people__list', $detail);

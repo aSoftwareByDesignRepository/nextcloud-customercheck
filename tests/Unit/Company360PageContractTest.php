@@ -172,6 +172,7 @@ final class Company360PageContractTest extends TestCase
 	{
 		$css = (string)file_get_contents(dirname(__DIR__, 2) . '/css/app.css');
 		$this->assertStringContainsString('.crm-360-focus__panel [id]', $css);
+		$this->assertStringContainsString('#crm-persons [id]', $css);
 		$this->assertStringContainsString('scroll-margin-top: 6.5rem', $css);
 		$this->assertStringContainsString('.crm-review-row__subject', $css);
 		$this->assertStringContainsString('.crm-billing-strip', $css);

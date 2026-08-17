@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 import { login, credsFromEnv } from './helpers/auth.js';
 
 test.describe('Company detail focus tabs', () => {
-  test('four tabs show one panel; hash opens the right tab', async ({ page }) => {
+  test('five tabs show one panel; hash opens the right tab', async ({ page }) => {
     test.skip(!process.env.NC_ADMIN_USER && !process.env.NC_EMPLOYEE_USER, 'Requires NC credentials');
     const creds = process.env.NC_ADMIN_USER ? credsFromEnv('ADMIN') : credsFromEnv('EMPLOYEE');
     await page.setViewportSize({ width: 1280, height: 900 });
@@ -25,10 +25,17 @@ test.describe('Company detail focus tabs', () => {
     await page.waitForSelector('[data-crm-360-focus="1"]', { timeout: 30000 });
 
     const focus = page.locator('[data-crm-360-focus="1"]');
-    await expect(focus.locator('[data-crm-focus-tab]')).toHaveCount(4);
+    await expect(focus.locator('[data-crm-focus-tab]')).toHaveCount(5);
     await expect(focus.locator('[data-crm-focus-tab="today"][aria-selected="true"]')).toBeVisible();
+    await expect(focus.locator('[data-crm-focus-tab="people"]')).toBeVisible();
     await expect(page.locator('#crm-360-panel-deals')).toHaveAttribute('hidden', '');
+    await expect(page.locator('#crm-360-panel-people')).toHaveAttribute('hidden', '');
     await expect(page.locator('#crm-communication')).toBeVisible();
+
+    await focus.locator('[data-crm-focus-tab="people"]').click();
+    await expect(focus.locator('[data-crm-focus-tab="people"][aria-selected="true"]')).toBeVisible();
+    await expect(page.locator('#crm-persons')).toBeVisible();
+    await expect(page.locator('#crm-360-panel-today')).toHaveAttribute('hidden', '');
 
     await focus.locator('[data-crm-focus-tab="deals"]').click();
     await expect(focus.locator('[data-crm-focus-tab="deals"][aria-selected="true"]')).toBeVisible();
@@ -57,8 +64,11 @@ test.describe('Company detail focus tabs', () => {
     await expect(page).not.toHaveURL(/#crm-tickets$/);
     await expect(page.locator('#crm-communication')).toBeVisible();
 
-    // Roving tabindex: arrows move selection in stable Today→Deals→Money→More order.
+    // Roving tabindex: arrows move selection in stable Today→People→Deals→Money→More order.
     await focus.locator('[data-crm-focus-tab="today"]').focus();
+    await page.keyboard.press('ArrowRight');
+    await expect(focus.locator('[data-crm-focus-tab="people"][aria-selected="true"]')).toBeVisible();
+    await expect(focus.locator('[data-crm-focus-tab="people"]')).toBeFocused();
     await page.keyboard.press('ArrowRight');
     await expect(focus.locator('[data-crm-focus-tab="deals"][aria-selected="true"]')).toBeVisible();
     await expect(focus.locator('[data-crm-focus-tab="deals"]')).toBeFocused();
@@ -71,7 +81,7 @@ test.describe('Company detail focus tabs', () => {
 
     await expect(page.locator('#crm-tickets')).toHaveCount(1);
 
-    // Narrow viewport: tabs remain usable (2×2 wrap, 48px targets).
+    // Narrow viewport: tabs wrap; 48px targets stay tappable.
     await page.setViewportSize({ width: 390, height: 844 });
     await expect(focus.locator('[data-crm-focus-tab="more"]')).toBeVisible();
     await focus.locator('[data-crm-focus-tab="money"]').click();

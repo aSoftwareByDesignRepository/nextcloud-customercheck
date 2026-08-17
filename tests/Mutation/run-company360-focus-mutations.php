@@ -209,6 +209,34 @@ function company360_focus_mutations(string $appRoot): array
 			'label' => 'quiet_hash_uses_macrotask_again',
 			'filter' => 'Company360FocusContractTest::testBootstrapHelpersStayInSyncWithCore',
 		],
+		[
+			'file' => $appRoot . '/js/common/company360-focus.js',
+			'from' => 'const tabId = resolveTabForElement(section, null);',
+			'to' => 'const tabId = resolveTabForElement(section, sectionId);',
+			'label' => 'jump_uses_map_fallback_and_steals_tab',
+			'filter' => 'Company360FocusContractTest::testBootstrapHelpersStayInSyncWithCore',
+		],
+		[
+			'file' => $appRoot . '/js/common/company360-focus.js',
+			'from' => "'crm-persons': 'people',",
+			'to' => "'crm-persons': 'today',",
+			'label' => 'people_roster_maps_back_to_today',
+			'filter' => 'Company360FocusContractTest::testBootstrapHelpersStayInSyncWithCore',
+		],
+		[
+			'file' => $appRoot . '/js/common/company360-focus.js',
+			'from' => "const ALLOWED_FOCUS_TABS = ['today', 'people', 'deals', 'money', 'more'];",
+			'to' => "const ALLOWED_FOCUS_TABS = ['today', 'deals', 'money', 'more'];",
+			'label' => 'drops_people_from_focus_allowlist',
+			'filter' => 'Company360FocusContractTest::testBootstrapHelpersStayInSyncWithCore',
+		],
+		[
+			'file' => $appRoot . '/templates/company-detail.php',
+			'from' => "['id' => 'people', 'label' => \$l->t('People')],",
+			'to' => "['id' => 'peoplex', 'label' => \$l->t('People')],",
+			'label' => 'drops_people_focus_tab',
+			'filter' => 'Company360FocusContractTest::testFocusTabsReplaceJumpNavAndZones|Company360ZonesContractTest::testFiveFocusPanelsExist|Company360ZonesContractTest::testFocusTabLabelsInTemplate',
+		],
 	];
 }
 

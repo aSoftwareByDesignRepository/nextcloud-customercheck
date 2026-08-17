@@ -16,7 +16,7 @@ export const SECTION_TAB_MAP = Object.freeze({
   'crm-promises': 'today',
   'crm-open-tasks': 'today',
   'crm-communication': 'today',
-  'crm-persons': 'today',
+  'crm-persons': 'people',
   'crm-deals': 'deals',
   'crm-contracts': 'deals',
   'crm-billing': 'money',
@@ -36,7 +36,7 @@ export const SECTION_TAB_MAP = Object.freeze({
 });
 
 export const DEFAULT_FOCUS_TAB = 'today';
-export const ALLOWED_FOCUS_TABS = Object.freeze(['today', 'deals', 'money', 'more']);
+export const ALLOWED_FOCUS_TABS = Object.freeze(['today', 'people', 'deals', 'money', 'more']);
 
 /**
  * @param {string|null|undefined} sectionId

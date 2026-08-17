@@ -33,6 +33,10 @@ final class PersonsRowUxContractTest extends TestCase
 		$this->assertStringContainsString('.table .crm-more-menu__panel', $css);
 		$this->assertStringContainsString('position: static', $css);
 		$this->assertStringContainsString('.crm-persons-table-wrap', $css);
-		$this->assertStringContainsString('overflow: visible', $css);
+		$this->assertMatchesRegularExpression(
+			'/\.crm-persons-table-wrap\s*\{[^}]*overflow-x:\s*auto/s',
+			$css,
+			'People table must scroll horizontally (design-system §3.7), not stack into cards',
+		);
 	}
 }

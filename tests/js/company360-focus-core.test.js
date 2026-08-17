@@ -17,6 +17,7 @@ import {
 describe('tabForSectionId', () => {
   it('maps known section ids to focus tabs', () => {
     expect(tabForSectionId('crm-communication')).toBe('today');
+    expect(tabForSectionId('crm-persons')).toBe('people');
     expect(tabForSectionId('crm-deals')).toBe('deals');
     expect(tabForSectionId('crm-billing')).toBe('money');
     expect(tabForSectionId('crm-timeline')).toBe('more');
@@ -51,6 +52,8 @@ describe('resolveTabForElement', () => {
     const glance = { closest() { return null; } };
     expect(resolveTabForElement(glance, 'crm-glance')).toBe('today');
     expect(resolveTabForElement(null, 'crm-deals')).toBe('deals');
+    expect(resolveTabForElement(glance, null)).toBeNull();
+    expect(resolveTabForElement({ closest() { return null; } }, 'crm-person-12')).toBeNull();
   });
 
   it('ignores unknown panel attributes', () => {
@@ -163,8 +166,9 @@ describe('isJumpCurrent', () => {
 
 describe('orderedPresentTabIds', () => {
   it('follows canonical order even when present order is scrambled', () => {
-    expect(orderedPresentTabIds(['more', 'today', 'money', 'deals'], ALLOWED_FOCUS_TABS)).toEqual([
+    expect(orderedPresentTabIds(['more', 'today', 'money', 'deals', 'people'], ALLOWED_FOCUS_TABS)).toEqual([
       'today',
+      'people',
       'deals',
       'money',
       'more',

@@ -43,8 +43,9 @@ test.describe('Simplified core UX journeys', () => {
 
     // Focus tabs: one panel at a time (Pipedrive-style).
     const focus = page.locator('[data-crm-360-focus="1"]');
-    await expect(focus.locator('[data-crm-focus-tab]')).toHaveCount(4);
+    await expect(focus.locator('[data-crm-focus-tab]')).toHaveCount(5);
     await expect(focus.locator('[data-crm-focus-tab="today"][aria-selected="true"]')).toBeVisible();
+    await expect(focus.locator('[data-crm-focus-tab="people"]')).toBeVisible();
 
     // New license keeps company context (EN or DE label) — lives on Deals tab.
     await focus.locator('[data-crm-focus-tab="deals"]').click();
@@ -61,6 +62,7 @@ test.describe('Simplified core UX journeys', () => {
     await form.locator('button[type="submit"]').click();
     await page.waitForLoadState('networkidle');
 
+    await page.locator('[data-crm-focus-tab="today"]').click();
     await page.locator('#crm-log-email').click();
     form = page.locator('form[id^="crm-prompt-"]');
     await expect(form).toBeVisible({ timeout: 10000 });

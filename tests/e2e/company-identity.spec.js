@@ -59,9 +59,14 @@ test.describe('Company identity: people, address, change', () => {
     await expect(page.locator('#crm-company-more-settings')).toHaveAttribute('href', /\/companies\/\d+\/edit/);
     await expect(page.locator('#crm-edit-address')).toBeVisible();
     await expect(page.locator('#crm-edit-address')).toContainText(/Add postal address|Postadresse hinzufügen/i);
-    await expect(page.locator('#crm-identity [data-crm-trigger="crm-add-person"]')).toBeVisible();
+    await expect(page.locator('#crm-identity [data-crm-trigger="crm-add-person"]')).toHaveCount(0);
+    await expect(page.locator('[data-crm-focus-tab="people"]')).toBeVisible();
+    await expect(page.locator('#crm-persons')).toBeHidden();
+    await page.locator('[data-crm-focus-tab="people"]').click();
     await expect(page.locator('#crm-add-person')).toBeVisible();
-    await expect(page.locator('#crm-identity-people-empty')).toBeVisible();
+    await expect(page.locator('#crm-persons')).toBeVisible();
+    await expect(page.locator('#crm-identity-people')).toHaveCount(0);
+    await expect(page.locator('#crm-persons .crm-empty-state')).toBeVisible();
     await expect(page.locator('#crm-address-form')).toBeHidden();
 
     await page.locator('#crm-edit-address').click();
@@ -81,25 +86,27 @@ test.describe('Company identity: people, address, change', () => {
     await expect(page.locator('#crm-edit-address')).toContainText(/Change address|Adresse ändern/i);
     await expect(page.locator('#crm-address-form')).toBeHidden();
 
-    await page.locator('#crm-identity [data-crm-trigger="crm-add-person"]').click();
+    await page.locator('#crm-add-person').click();
     const personForm = page.locator('#crm-person-form');
     await expect(personForm).toBeVisible({ timeout: 10000 });
     await expect(page.locator('#crm-address-form')).toBeHidden();
     await personForm.locator('#crm-person-name').fill(`Ada ${suffix}`);
     await personForm.locator('#crm-person-email').fill(`ada-${suffix}@example.com`);
+    await personForm.locator('#crm-person-advanced > summary').click();
     await personForm.locator('#crm-person-phone').fill('+49 431 0000');
     await personForm.locator('button[type="submit"]').click();
     await page.waitForLoadState('networkidle');
 
-    const personCard = page.locator('#crm-identity-people .crm-identity-person').first();
-    await expect(page.locator('#crm-identity-people-table')).toBeVisible();
+    const personCard = page.locator('#crm-persons-table tbody tr').first();
+    await expect(page.locator('#crm-persons-table')).toBeVisible();
     await expect(personCard).toBeVisible();
     await expect(personCard).toContainText(`Ada ${suffix}`);
     await expect(personCard).toContainText(`ada-${suffix}@example.com`);
     await expect(personCard).toContainText('+49 431 0000');
     await expect(personCard.locator('[data-crm-edit-person]')).toBeVisible();
 
-    await expect(page.locator('#crm-persons-table')).toBeVisible();
+    await expect(page.locator('#crm-persons-table .crm-person-more').first()).not.toHaveAttribute('open');
+    await page.locator('#crm-persons-table .crm-person-more > summary').first().click();
     await expect(page.locator('#crm-persons-table .crm-person-more').first()).toHaveAttribute('open', '');
     await expect(page.locator('#crm-persons-table .crm-person-more__body').first()).toBeVisible();
 
@@ -111,7 +118,7 @@ test.describe('Company identity: people, address, change', () => {
     await editForm.locator('#crm-person-email').fill(`ada-new-${suffix}@example.com`);
     await editForm.locator('button[type="submit"]').click();
     await page.waitForLoadState('networkidle');
-    await expect(page.locator('#crm-identity-people .crm-identity-person').first()).toContainText(`ada-new-${suffix}@example.com`);
+    await expect(page.locator('#crm-persons-table tbody tr').first()).toContainText(`ada-new-${suffix}@example.com`);
 
     const desktopResults = await new AxeBuilder({ page })
       .include('#crm-main-content')
@@ -177,6 +184,7 @@ test.describe('Company identity: people, address, change', () => {
     await page.locator('#crm-company-form button[type="submit"]').click();
     await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
 
+    await page.locator('[data-crm-focus-tab="people"]').click();
     await page.locator('#crm-add-person').click();
     await expect(page.locator('#crm-person-form')).toBeVisible();
     await page.locator('#crm-person-name').fill(`Pat ${suffix}`);
@@ -185,10 +193,10 @@ test.describe('Company identity: people, address, change', () => {
     await expect(page.locator('#crm-person-form-error')).toBeVisible();
     await expect(page.locator('#crm-person-form-error')).toContainText(/valid email|gültige E-Mail|gültige Mail/i);
     await expect(page.locator('#crm-person-form')).toBeVisible();
-    await expect(page.locator('#crm-identity-people-empty')).toBeVisible();
+    await expect(page.locator('#crm-persons .crm-empty-state')).toBeVisible();
   });
 
-  test('Escape returns focus; More about this person opens Today extras', async ({ page }) => {
+  test('Escape returns focus; people hide on Deals', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await login(page, credsFromEnv('ADMIN'));
     await page.goto('/apps/customercheck/companies/new');
@@ -212,21 +220,23 @@ test.describe('Company identity: people, address, change', () => {
     await page.locator('#crm-company-name-cancel').click();
     await expect(page.locator('#crm-change-company')).toBeFocused();
 
-    await page.locator('#crm-identity [data-crm-trigger="crm-add-person"]').click();
+    await page.locator('[data-crm-focus-tab="people"]').click();
+    await page.locator('#crm-add-person').click();
     await expect(page.locator('#crm-person-form')).toBeVisible();
     await page.locator('#crm-person-name').fill(`Ada ${suffix}`);
     await page.locator('#crm-person-form button[type="submit"]').click();
     await page.waitForLoadState('networkidle');
 
-    await page.locator('[data-crm-focus-tab="deals"]').click();
-    await expect(page.locator('#crm-deals')).toBeVisible();
-    const moreLink = page.locator('#crm-identity-people a[href^="#crm-person-"]').first();
-    await expect(moreLink).toBeVisible();
-    await expect(moreLink).toHaveClass(/crm-identity-person__more/);
-    await moreLink.click();
-    await expect(page.locator('[data-crm-focus-tab="today"][aria-selected="true"]')).toBeVisible();
     const personRow = page.locator('#crm-persons-table tbody tr').first();
     await expect(personRow).toBeVisible();
-    await expect(personRow.locator('.crm-person-more__body')).toBeVisible();
+    await expect(page.locator('#crm-persons-table thead th')).toHaveCount(3);
+    await expect(personRow.locator('.crm-person-more')).not.toHaveAttribute('open');
+    await page.locator('[data-crm-focus-tab="deals"]').click();
+    await expect(page.locator('#crm-deals')).toBeVisible();
+    await expect(page.locator('#crm-persons-table')).toBeHidden();
+    await expect(page.locator('#crm-identity-people')).toHaveCount(0);
+    await page.locator('[data-crm-focus-tab="people"]').click();
+    await expect(page.locator('#crm-persons-table')).toBeVisible();
+    await expect(personRow).toBeVisible();
   });
 });
