@@ -312,6 +312,7 @@ trait PageShellTrait
 			'settings' => $g->linkToRoute('customercheck.page.settings'),
 			'appSettings' => $g->linkToRoute('customercheck.page.appSettings'),
 			'supportUs' => $g->linkToRoute('customercheck.page.supportUs'),
+			'getTheApp' => $g->linkToRoute('customercheck.page.getTheApp'),
 			'apiBase' => $g->linkToRoute('customercheck.today_api.index'),
 		];
 	}

@@ -31,6 +31,7 @@ use OCA\CustomerCheck\Service\WorkspaceCapability;
 use OCA\CustomerCheck\Service\WorkspaceService;
 use OCA\CustomerCheck\Service\WorkspaceSettingsSectionCatalog;
 use OCA\CustomerCheck\Support\DensityCounts;
+use OCA\CustomerCheck\Support\MobileAppLinks;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
@@ -1284,6 +1285,27 @@ class PageController extends Controller
 			$this->l10n->t('Optional partner care — the app stays free under AGPL.'),
 			[],
 		));
+	}
+
+
+	public function getTheApp(): TemplateResponse
+	{
+		$this->registerFrontEndAssets('', 'get-the-app');
+		$links = new MobileAppLinks();
+		$lang = method_exists($this->l10n, 'getLanguageCode') ? (string)$this->l10n->getLanguageCode() : 'en';
+		$params = $this->mergeShellPageParams(
+			'get-the-app',
+			$this->l10n->t('Get the App'),
+			$this->l10n->t('Official Android companion — seats on this Nextcloud, listing when public.'),
+			[],
+		);
+		$params['urls'] = array_merge($params['urls'] ?? [], [
+			'playStore' => $links->playStoreUrl(),
+			'mobileProductPage' => $links->productPageUrl($lang),
+			'mobilePrivacyPage' => $links->privacyPageUrl($lang),
+		]);
+
+		return new TemplateResponse('customercheck', 'get-the-app', $params);
 	}
 
 	/**

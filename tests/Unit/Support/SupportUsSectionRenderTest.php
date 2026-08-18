@@ -38,6 +38,22 @@ final class SupportUsSectionRenderTest extends TestCase
 		self::assertNotSame('', trim($html));
 	}
 
+	public function testRenderIncludesMobileLicenseWhenConfigured(): void
+	{
+		$html = $this->renderSection(
+			new SupportUsLinks(
+				'CustomerCheck',
+				true,
+				'/apps/customercheck/app-settings/license#section-license'
+			),
+			'en'
+		);
+		$plain = html_entity_decode($html, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+		self::assertStringContainsString('Official mobile & terminal licenses', $plain);
+		self::assertStringContainsString('/apps/customercheck/app-settings/license#section-license', $html);
+		self::assertStringContainsString('official mobile licenses', $plain);
+	}
+
 	public function testEmptyWhenWrongLinksClass(): void
 	{
 		require_once dirname(__DIR__, 3) . '/tests/Unit/Support/template_stubs.php';

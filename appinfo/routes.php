@@ -47,6 +47,7 @@ return [
 		['name' => 'page#appSettingsSection', 'url' => '/app-settings/{section}', 'verb' => 'GET',
 			'requirements' => ['section' => 'access|jobs|tokens|license|product-codes|personal-mail']],
 		['name' => 'page#supportUs', 'url' => '/support-us', 'verb' => 'GET'],
+		['name' => 'page#getTheApp', 'url' => '/get-the-app', 'verb' => 'GET'],
 
 		// ── Companies API ───────────────────────────────────────────────
 		['name' => 'company_api#index', 'url' => '/api/v1/companies', 'verb' => 'GET'],

@@ -64,6 +64,10 @@ final class SupportUsSectionContractTest extends TestCase
 		self::assertStringContainsString('aria-describedby', $src);
 		self::assertStringContainsString('role="group"', $src);
 		self::assertStringContainsString('Support & us', $src);
+		self::assertStringContainsString('(opens in a new tab)', $src);
+		self::assertStringContainsString('support-us__new-tab', $src);
+		self::assertStringContainsString("'Setup & training'", $src);
+		self::assertStringContainsString("'Ask about setup or training'", $src);
 	}
 
 	public function testDedicatedPageMatchesAzcLayout(): void
@@ -87,9 +91,16 @@ final class SupportUsSectionContractTest extends TestCase
 		self::assertStringNotContainsString('crm-app--admin-support-us', $css);
 		self::assertStringContainsString('crm-support-us-page', $css);
 		self::assertStringContainsString(':focus-visible', $css);
+		self::assertStringContainsString(':focus:not(:focus-visible)', $css);
 		self::assertStringContainsString('prefers-reduced-motion', $css);
+		self::assertStringContainsString('prefers-contrast', $css);
+		self::assertStringContainsString('forced-colors', $css);
 		self::assertStringContainsString('max-width: none', $css);
 		self::assertStringContainsString('a.crm-support-us__cta.crm-btn--primary', $css);
+		self::assertStringContainsString('minmax(min(100%, 16rem)', $css);
+		self::assertStringContainsString('@media (max-width: 768px)', $css);
+		self::assertStringContainsString('min-width: 44px', $css);
+		self::assertStringContainsString('crm-support-us__new-tab', $css);
 	}
 
 	public function testVendorMarkAssetExists(): void

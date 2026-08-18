@@ -24,6 +24,7 @@ if (!isset($supportUsLinks) || !$supportUsLinks instanceof \OCA\CustomerCheck\Su
 }
 
 $l = $l ?? (\OCP\Util::getL10N('customercheck'));
+$newTab = $l->t('(opens in a new tab)');
 $lang = isset($supportUsLanguageCode) && is_string($supportUsLanguageCode) && $supportUsLanguageCode !== ''
 	? $supportUsLanguageCode
 	: (method_exists($l, 'getLanguageCode') ? (string)$l->getLanguageCode() : 'en');
@@ -123,7 +124,7 @@ if ($presentation === 'embed') {
 						href="<?php p($links['supportPageUrl']); ?>"
 						target="_blank"
 						rel="noopener noreferrer"
-					><?php p($l->t('Open support page')); ?></a>
+					><?php p($l->t('Open support page')); ?><span class="<?php p($prefix); ?>-support-us__new-tab"><?php p($newTab); ?></span></a>
 				</p>
 			</div>
 		</div>
@@ -190,13 +191,13 @@ if ($presentation === 'embed') {
 					href="<?php p($links['appsPageUrl']); ?>"
 					target="_blank"
 					rel="noopener noreferrer"
-				><?php p($l->t('More Check apps')); ?></a>
+				><?php p($l->t('More Check apps')); ?><span class="<?php p($prefix); ?>-support-us__new-tab"><?php p($newTab); ?></span></a>
 				<span aria-hidden="true"> · </span>
 				<a
 					href="<?php p($links['sponsorsUrl']); ?>"
 					target="_blank"
 					rel="noopener noreferrer"
-				><?php p($l->t('GitHub Sponsors (voluntary, no invoice SLA)')); ?></a>
+				><?php p($l->t('GitHub Sponsors (voluntary, no invoice SLA)')); ?><span class="<?php p($prefix); ?>-support-us__new-tab"><?php p($newTab); ?></span></a>
 			</p>
 			<p class="<?php p($prefix); ?>-support-us__contact">
 				<a href="<?php p($links['contactMailto']); ?>"><?php p($links['contactEmail']); ?></a>

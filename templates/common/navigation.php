@@ -3,6 +3,7 @@ use OCA\CustomerCheck\Service\IconCatalog;
 use OCP\Util;
 Util::addScript('customercheck', 'common/navigation');
 Util::addScript('customercheck', 'common/navigation-icons');
+Util::addScript('customercheck', 'common/app-feedback');
 // Soft keyboard: keep focused notes/inputs above the IME on phones.
 Util::addScript('customercheck', 'common/keep-focused-visible');
 /** @var array $_ */
@@ -14,7 +15,7 @@ $workspaceName = (string)($_['workspaceName'] ?? '');
 $workspaceId = (int)($_['workspaceId'] ?? 0);
 $icon = static fn(string $n): string => IconCatalog::render($n, 'crm-nav__icon-svg');
 $is = static fn(string ...$ids): bool => in_array($pageId, $ids, true);
-$toolsOpen = $is('import', 'settings', 'app-settings', 'support-us', 'mail-triage', 'sales-inbox', 'review', 'conflicts');
+$toolsOpen = $is('import', 'settings', 'app-settings', 'support-us', 'get-the-app', 'mail-triage', 'sales-inbox', 'review', 'conflicts');
 $canManageNav = !empty($_['canManage']);
 $canManageWorkspaceNav = !empty($_['canManageWorkspace']);
 $canWriteNav = !empty($_['canWrite']);
@@ -132,8 +133,10 @@ $navItem = static function (
 				<?php if ($canManageNav): ?>
 				<li class="<?php p($is('app-settings') ? 'active' : ''); ?>"><a href="<?php p($u('appSettings')); ?>" title="<?php p($l->t('Access, seats, and tokens')); ?>"><?php p($l->t('App settings')); ?></a></li>
 				<?php endif; ?>
+				<li class="<?php p($is('get-the-app') ? 'active' : ''); ?>"><a href="<?php p($u('getTheApp')); ?>" title="<?php p($l->t('Official Android companion')); ?>"><?php p($l->t('Get the App')); ?></a></li>
 				<li class="<?php p($is('support-us') ? 'active' : ''); ?>"><a href="<?php p($u('supportUs')); ?>" title="<?php p($l->t('Optional project support')); ?>"><?php p($l->t('Support & us')); ?></a></li>
 			</ul>
 		</li>
 	</ul>
+	<?php include __DIR__ . '/../parts/feedback-nav-footer.php'; ?>
 </div>

@@ -83,10 +83,17 @@ include __DIR__ . '/common/page-start.php';
 	$supportUsBtnPrimaryClass = 'crm-btn crm-btn--primary';
 	$supportUsBtnSecondaryClass = 'crm-btn crm-btn--secondary';
 	$supportUsPresentation = 'page';
+	$licensePageUrl = '';
+	if ($urlGenerator instanceof \OCP\IURLGenerator) {
+		$licensePageUrl = $urlGenerator->linkToRouteAbsolute(
+			'customercheck.page.appSettingsSection',
+			['section' => 'license'],
+		) . '#section-license';
+	}
 	$supportUsLinks = new \OCA\CustomerCheck\Support\SupportUsLinks(
 		$appDisplayName,
-		false,
-		null
+		$licensePageUrl !== '',
+		$licensePageUrl !== '' ? $licensePageUrl : null
 	);
 	include __DIR__ . '/parts/support-us-section.php';
 	?>
