@@ -1445,7 +1445,7 @@ OC.L10N.register(
 		"Money customers still owe": "Geld klanten nog steeds verschuldigd",
 		"Money this month": "Geld deze maand",
 		"More": "Meer",
-		"More Check apps": "Meer apps controleren",
+		"More Check apps": "Meer Check-apps",
 		"More about this person": "Meer over deze persoon",
 		"More actions": "Meer acties",
 		"More agreement actions": "Meer overeenkomsten",

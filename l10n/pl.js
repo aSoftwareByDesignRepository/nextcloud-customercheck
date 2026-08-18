@@ -1445,7 +1445,7 @@ OC.L10N.register(
 		"Money customers still owe": "Klienci nadal winni",
 		"Money this month": "Pieniądze w tym miesiącu",
 		"More": "Więcej",
-		"More Check apps": "Więcej Sprawdź aplikacje",
+		"More Check apps": "Więcej aplikacji Check",
 		"More about this person": "Więcej o tej osobie",
 		"More actions": "Więcej działań",
 		"More agreement actions": "Więcej działań w ramach porozumienia",

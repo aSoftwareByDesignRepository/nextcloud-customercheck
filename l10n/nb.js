@@ -1445,7 +1445,7 @@ OC.L10N.register(
 		"Money customers still owe": "Penger kunder fortsatt skylder",
 		"Money this month": "Penger i denne måneden",
 		"More": "Mer",
-		"More Check apps": "Flere Sjekk apper",
+		"More Check apps": "Flere Check-apper",
 		"More about this person": "Mer om denne personen",
 		"More actions": "Flere handlinger",
 		"More agreement actions": "Flere avtaletiltak",
