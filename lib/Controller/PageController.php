@@ -1288,6 +1288,8 @@ class PageController extends Controller
 	}
 
 
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
 	public function getTheApp(): TemplateResponse
 	{
 		$this->registerFrontEndAssets('', 'get-the-app');
