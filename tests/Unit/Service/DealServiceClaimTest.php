@@ -58,6 +58,7 @@ final class DealServiceClaimTest extends TestCase
 			$l10n,
 			$this->createMock(IDBConnection::class),
 			$this->createMock(AgreementMapper::class),
+			$this->createMock(\OCA\CustomerCheck\Db\PersonMapper::class),
 		);
 	}
 

@@ -115,6 +115,22 @@ final class Constants
 	/** @var list<string> Ordered pipeline stages (D6). */
 	public const DEAL_STAGES = ['lead', 'contacted', 'quoted', 'negotiation', 'won', 'lost'];
 
+	/**
+	 * How the deal entered the pipeline (Salesforce Lead Source / Pipedrive origin).
+	 *
+	 * @var list<string>
+	 */
+	public const LEAD_SOURCES = [
+		'manual',
+		'website',
+		'referral',
+		'partner',
+		'event',
+		'cold_outreach',
+		'existing_customer',
+		'other',
+	];
+
 	/** @var list<string> Terminal stages — no further transitions (§4.7-C). */
 	public const DEAL_TERMINAL_STAGES = ['won', 'lost'];
 
@@ -203,8 +219,8 @@ final class Constants
 		'price', 'competitor', 'timing', 'no_decision', 'requirements', 'technical', 'internal', 'other',
 	];
 
-	/** @var list<string> Forecast buckets — planning labels, never cash (§11.7). */
-	public const FORECAST_BUCKETS = ['commit', 'upside', 'pipeline'];
+	/** @var list<string> Forecast buckets — win-chance percents 25/50/75/100, never cash (§11.7). */
+	public const FORECAST_BUCKETS = ['pipeline', 'upside', 'commit', 'certain'];
 
 	/** @var list<string> CEO commitment kinds (§10.3). */
 	public const COMMIT_KINDS = [
@@ -462,7 +478,7 @@ final class Constants
 	/** @var list<string> Page ids (product §4.1 / appendix). */
 	public const PAGE_IDS = [
 		'today', 'pulse', 'brief', 'my-accounts', 'team', 'companies',
-		'company-detail', 'company-form', 'prepare-meeting', 'strategy',
+		'company-detail', 'company-form', 'strategy',
 		'pipeline', 'agreements', 'agreement-form', 'money', 'activities',
 		'mail-triage', 'sales-inbox', 'review', 'conflicts', 'import', 'settings', 'support-us', 'access-denied',
 		'workload',

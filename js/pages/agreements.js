@@ -26,16 +26,28 @@
     const day = String(x.getDate()).padStart(2, '0');
     return y + '-' + m + '-' + day;
   }
+
+  function durationMinuteOptionsHtml(selected) {
+    const DP = window.CustomerCheckDatepicker;
+    const mins = (DP && DP.DURATION_MINUTES) ? DP.DURATION_MINUTES : [15, 30, 45, 60, 90, 120, 180, 240, 360, 480];
+    const picked = DP && typeof DP.snapDurationMinutes === 'function'
+      ? DP.snapDurationMinutes(selected)
+      : 60;
+    return mins.map((m) => {
+      const label = DP && typeof DP.formatDurationLabel === 'function'
+        ? DP.formatDurationLabel(m)
+        : String(m);
+      return '<option value="' + m + '"' + (m === picked ? ' selected' : '') + '>' + escapeHtml(label) + '</option>';
+    }).join('');
+  }
   if (C && C.init) { C.init(); }
 
-  const toggle = document.getElementById('crm-agreements-filter-toggle');
-  const panel = document.getElementById('crm-agreements-filter');
-  if (toggle && panel) {
-    toggle.addEventListener('click', () => {
-      const open = panel.hasAttribute('hidden');
-      if (open) panel.removeAttribute('hidden');
-      else panel.setAttribute('hidden', '');
-      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+  const ListToolbar = window.CustomerCheckListToolbar;
+  if (ListToolbar && typeof ListToolbar.bind === 'function') {
+    ListToolbar.bind({
+      controlsId: 'crm-agreements-controls',
+      toggleId: 'crm-agreements-filter-toggle',
+      panelId: 'crm-agreements-filter',
     });
   }
 
@@ -50,8 +62,8 @@
       id: id,
       title: t('Log hours'),
       content: '<form id="' + id + '-form" class="crm-form crm-form--stack">' +
-        '<div class="form-group"><label class="form-label" for="' + id + '-date">' + escapeHtml(t('Date')) + '</label><input class="crm-input form-input" id="' + id + '-date" name="entryDate" type="date" value="' + escapeHtml(today) + '" required /></div>' +
-        '<div class="form-group"><label class="form-label" for="' + id + '-minutes">' + escapeHtml(t('Minutes')) + '</label><input class="crm-input form-input" id="' + id + '-minutes" name="minutes" type="number" min="15" step="15" value="60" required /><p class="form-help">' + escapeHtml(t('Steps of 15. Default is one hour.')) + '</p></div>' +
+        '<div class="form-group"><label class="form-label" for="' + id + '-date">' + escapeHtml(t('Date')) + '</label><input class="crm-input form-input datepicker-input" id="' + id + '-date" name="entryDate" type="date" value="' + escapeHtml(today) + '" required autocomplete="off" /></div>' +
+        '<div class="form-group"><label class="form-label" for="' + id + '-minutes">' + escapeHtml(t('Minutes')) + '</label><select class="crm-input form-select" id="' + id + '-minutes" name="minutes" required>' + durationMinuteOptionsHtml(60) + '</select><p class="form-help">' + escapeHtml(t('Steps of 15. Default is one hour.')) + '</p></div>' +
         '<div class="form-group"><label class="form-label" for="' + id + '-topic">' + escapeHtml(t('Topic')) + '</label><input class="crm-input form-input" id="' + id + '-topic" name="topic" required autofocus /></div>' +
         '<div class="crm-form-actions"><button type="submit" class="crm-btn crm-btn--primary">' + escapeHtml(t('Save')) + '</button> <button type="button" class="crm-btn crm-btn--secondary" data-cancel>' + escapeHtml(t('Cancel')) + '</button></div></form>',
     });
@@ -69,11 +81,17 @@
         submitBtn.setAttribute('aria-busy', 'true');
       }
       let minutes = parseInt(form.elements.minutes.value, 10);
-      if (!Number.isFinite(minutes) || minutes < 15) minutes = 15;
-      minutes = Math.round(minutes / 15) * 15;
+      const DP = window.CustomerCheckDatepicker;
+      if (DP && typeof DP.snapDurationMinutes === 'function') {
+        minutes = DP.snapDurationMinutes(minutes);
+      } else {
+        if (!Number.isFinite(minutes) || minutes < 15) minutes = 15;
+        minutes = Math.round(minutes / 15) * 15;
+      }
       try {
+        const dateEl = form.elements.entryDate;
         await Api.post('/agreements/' + agreementId + '/hours', {
-          entryDate: form.elements.entryDate.value,
+          entryDate: (DP && typeof DP.isoValue === 'function') ? DP.isoValue(dateEl) : dateEl.value,
           minutes: minutes,
           topic: form.elements.topic.value,
         });

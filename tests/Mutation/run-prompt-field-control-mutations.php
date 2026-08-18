@@ -75,11 +75,34 @@ function prompt_field_control_mutations(string $appRoot): array
 			'label' => 'todo_title_loses_multiline_wrap',
 			'filter' => 'PromptFieldControlUxContractTest::testTodoListTitlesWrapMultilinePromptText',
 		],
+		[
+			'file' => $appRoot . '/js/common/new-deal-form.js',
+			'from' => '<input class="form-input crm-input" id="\' + id + \'-title" name="title" required maxlength="255"',
+			'to' => '<textarea class="form-input crm-input" id="\' + id + \'-title" name="title" required maxlength="255"',
+			'label' => 'add_deal_title_becomes_textarea',
+			'filter' => 'PromptFieldControlUxContractTest::testTrueOneLinersStaySingleLineInputs',
+		],
 	];
 }
 
 function run_phpunit(string $phpunit, string $appRoot, string $filter): int
 {
+	$composeDir = dirname($appRoot, 2);
+	$dockerPhpunit = '/var/www/html/custom_apps/customercheck/vendor/bin/phpunit';
+	$dockerConfig = '/var/www/html/custom_apps/customercheck/phpunit.xml';
+	if (is_file($composeDir . '/docker-compose.yml')) {
+		$probe = 'docker compose -f ' . escapeshellarg($composeDir . '/docker-compose.yml')
+			. ' exec -T -u www-data nextcloud php -r ' . escapeshellarg('echo "ok";');
+		exec($probe . ' 2>/dev/null', $probeOut, $probeCode);
+		if ($probeCode === 0) {
+			$cmd = 'docker compose -f ' . escapeshellarg($composeDir . '/docker-compose.yml')
+				. ' exec -T -u www-data nextcloud php ' . escapeshellarg($dockerPhpunit)
+				. ' -c ' . escapeshellarg($dockerConfig)
+				. ' --filter ' . escapeshellarg($filter);
+			passthru($cmd, $code);
+			return (int)$code;
+		}
+	}
 	$cmd = escapeshellarg($phpunit)
 		. ' -c ' . escapeshellarg($appRoot . '/phpunit.xml')
 		. ' --filter ' . escapeshellarg($filter);

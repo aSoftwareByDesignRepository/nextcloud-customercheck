@@ -9,6 +9,7 @@ use OCA\CustomerCheck\Exception\ConflictException;
 use OCA\CustomerCheck\Service\AccountPlanService;
 use OCA\CustomerCheck\Service\CompanyService;
 use OCA\CustomerCheck\Service\CoverageService;
+use OCA\CustomerCheck\Service\DirectoryOptionsService;
 use OCA\CustomerCheck\Service\DisplayLabelService;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\DB\IResult;
@@ -73,8 +74,10 @@ final class AccountPlanOptimisticLockTest extends TestCase
 		$coverage->method('forCompany')->willReturn(['flags' => []]);
 		$time = $this->createMock(ITimeFactory::class);
 		$time->method('getDateTime')->willReturn(new \DateTime('2026-08-02T12:00:00+00:00'));
+		$directory = $this->createMock(DirectoryOptionsService::class);
+		$directory->method('resolveUsers')->willReturn([]);
 
-		$svc = new AccountPlanService($db, $companies, $coverage, $labels, $time, $l10n);
+		$svc = new AccountPlanService($db, $companies, $coverage, $labels, $time, $l10n, $directory);
 		$this->expectException(ConflictException::class);
 		$svc->upsert(4, ['goal' => 'New goal', 'priority' => 'p1'], 'mgr');
 	}

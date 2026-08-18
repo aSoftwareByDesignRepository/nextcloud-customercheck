@@ -67,6 +67,26 @@ final class FilterLiveContractTest extends TestCase
 		$this->assertStringContainsString('Could not update the list. Try again.', $core);
 		$this->assertStringContainsString("t('No matches')", $core);
 		$this->assertStringContainsString("t('List updated.')", $core);
+		$this->assertStringContainsString('function isAllowedSwapName', $core);
+		$this->assertStringContainsString("return name === 'nav' || name === 'main';", $core);
+		$this->assertStringContainsString('isAllowedSwapName(name) && !seen[name]', $core);
+	}
+
+	public function testSwapIslandsAreAllowlisted(): void
+	{
+		$root = dirname(__DIR__, 2);
+		$core = (string)file_get_contents($root . '/js/common/filter-live-core.js');
+		$this->assertStringContainsString("return name === 'nav' || name === 'main';", $core);
+		$this->assertStringContainsString('isAllowedSwapName: isAllowedSwapName', $core);
+		$this->assertStringContainsString('data-crm-filter-swap=(["\'])(nav|main)\\1(?=[\\s>/])', $core);
+
+		$js = (string)file_get_contents($root . '/js/common/filter-live.js');
+		$this->assertStringContainsString('if (!Core.isAllowedSwapName(name))', $js);
+		$swapStart = strpos($js, 'function swapFromDocument');
+		$this->assertNotFalse($swapStart);
+		$chunk = substr($js, $swapStart, 700);
+		$this->assertStringContainsString('Core.isAllowedSwapName(name)', $chunk);
+		$this->assertStringNotContainsString("if (!name) {\n        continue;\n      }\n      const dest = document.querySelector('[data-crm-filter-swap=\"' + name + '\"]')", $chunk);
 	}
 
 	public function testLiveFilterPagesKeepFormsOutsideSwapAndDelegateRowActions(): void

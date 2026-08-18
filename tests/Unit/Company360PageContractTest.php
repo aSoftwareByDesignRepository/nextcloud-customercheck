@@ -15,7 +15,7 @@ final class Company360PageContractTest extends TestCase
 	{
 		$controller = (string)file_get_contents(dirname(__DIR__, 2) . '/lib/Controller/PageController.php');
 		$this->assertStringContainsString(
-			"registerFrontEndAssets('pages/company-detail', null, ['common/identity-links'], ['common/company360-focus', 'common/folder-picker', 'common/glance-summary', 'common/company360-present', 'common/deal-checklist-ux', 'common/mail-sync-now', 'common/rich-mail-composer', 'common/shared-mail-send', 'pages/persona'])",
+			"registerFrontEndAssets('pages/company-detail', null, ['common/identity-links'], ['common/person-picker', 'common/new-deal-form', 'common/company360-focus', 'common/person-dialog-core', 'common/folder-picker', 'common/glance-summary', 'common/company360-present', 'common/deal-checklist-ux', 'common/mail-sync-now', 'common/rich-mail-composer', 'common/shared-mail-send', 'pages/persona'])",
 			$controller,
 		);
 	}
@@ -134,7 +134,7 @@ final class Company360PageContractTest extends TestCase
 		$this->assertTrue($promGen < $boot, 'promisesGeneration must init before boot');
 		$this->assertTrue($cmdGen < $planGen, 'command + account plan counters stay co-located');
 		$this->assertTrue($planGen < $promGen, 'account plan counter precedes promises counter');
-		$this->assertStringContainsString('id="crm-account-plan-form" class="crm-form crm-form--stack"', $js);
+		$this->assertStringContainsString('id="crm-account-plan-form" class="crm-form crm-form--stack crm-account-plan__form"', $js);
 		$this->assertStringContainsString("t('Could not load account plan.')", $js);
 		$this->assertStringContainsString("t('Loading account plan…')", $js);
 		$html = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/company-detail.php');

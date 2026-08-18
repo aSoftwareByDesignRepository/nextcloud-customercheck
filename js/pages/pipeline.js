@@ -84,7 +84,17 @@
   }
 
   function forecastOptions() {
-    return parseJsonScript('crm-pipeline-forecast-options');
+    return parseJsonScript('crm-deal-form-forecast-options');
+  }
+
+  function stageOptions() {
+    return parseJsonScript('crm-deal-form-stage-options');
+  }
+
+  /** Open pipeline stages only — won/lost belong on stage change, not create. */
+  function openStageOptions() {
+    const open = ['lead', 'contacted', 'quoted', 'negotiation'];
+    return stageOptions().filter((o) => open.includes(String(o.value || '')));
   }
 
   function lossOptions() {
@@ -95,19 +105,43 @@
     return String(s || '').replace(/[<>&"]/g, (ch) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[ch]));
   }
 
-  const filterToggle = document.getElementById('crm-pipeline-filter-toggle');
   const filterPanel = document.getElementById('crm-pipeline-filter');
   const periodCustom = document.getElementById('crm-pipeline-period-custom');
+  const ListToolbar = window.CustomerCheckListToolbar;
+  const baseSync = ListToolbar && typeof ListToolbar.bind === 'function'
+    ? ListToolbar.bind({
+      controlsId: 'crm-pipeline-controls',
+      toggleId: 'crm-pipeline-filter-toggle',
+      panelId: 'crm-pipeline-filter',
+      openClass: 'crm-pipeline-controls--filter-open',
+    })
+    : null;
+
+  function syncPipelineControlsOpen() {
+    if (baseSync) {
+      baseSync();
+    }
+    if (periodCustom && filterPanel) {
+      periodCustom.setAttribute(
+        'aria-expanded',
+        !filterPanel.hasAttribute('hidden') && document.getElementById('crm-filter-period')?.value === 'custom'
+          ? 'true'
+          : 'false',
+      );
+    }
+  }
+
   function openFilterPanel() {
     if (!filterPanel) return;
     filterPanel.hidden = false;
-    if (filterToggle) filterToggle.setAttribute('aria-expanded', 'true');
-    if (periodCustom) periodCustom.setAttribute('aria-expanded', 'true');
+    filterPanel.removeAttribute('hidden');
     const periodSel = document.getElementById('crm-filter-period');
     if (periodSel && periodSel.value !== 'custom') {
       periodSel.value = 'custom';
     }
+    syncPipelineControlsOpen();
   }
+
   if (periodCustom && filterPanel) {
     periodCustom.addEventListener('click', function () {
       openFilterPanel();
@@ -115,26 +149,27 @@
       if (from) from.focus();
     });
   }
-  if (filterToggle && filterPanel) {
-    filterToggle.addEventListener('click', () => {
-      const open = filterPanel.hasAttribute('hidden');
-      if (open) filterPanel.removeAttribute('hidden');
-      else filterPanel.setAttribute('hidden', '');
-      filterToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+
+  syncPipelineControlsOpen();
+
+  const PipelineView = window.CustomerCheckPipelineView;
+  if (PipelineView && typeof PipelineView.bind === 'function' && Api && typeof Api.put === 'function') {
+    PipelineView.bind({
+      document: document,
+      put: function (view) {
+        return Api.put('/settings/me', { pipelineView: view });
+      },
+      onError: async function (e) {
+        if (C) {
+          await C.alertDialog({
+            title: t('Error'),
+            message: (e && e.payload && e.payload.message) || (e && e.message) || t('Error'),
+            variant: 'danger',
+          });
+        }
+      },
     });
   }
-
-  document.querySelectorAll('[data-crm-pipeline-view]').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      const view = btn.getAttribute('data-crm-pipeline-view');
-      try {
-        await Api.put('/settings/me', { pipelineView: view });
-        location.reload();
-      } catch (e) {
-        if (C) await C.alertDialog({ title: t('Error'), message: (e.payload && e.payload.message) || e.message, variant: 'danger' });
-      }
-    });
-  });
 
   async function offerCreateAgreement(dealMeta) {
     if (!C) return;
@@ -467,11 +502,14 @@
     const dialogId = 'crm-chase-' + Date.now();
     const ownerUid = host.getAttribute('data-owner-user-id') || '';
     const ownerLabel = host.getAttribute('data-owner-display-name') || ownerUid;
-    const forecastOpts = forecastOptions().map((o) =>
-      '<option value="' + escapeHtml(o.value) + '"' +
-      (String(o.value) === String(host.getAttribute('data-forecast-bucket') || '') ? ' selected' : '') +
-      '>' + escapeHtml(o.label || o.value) + '</option>'
-    ).join('');
+    const NewDeal = window.CustomerCheckNewDealForm;
+    const forecastOpts = (NewDeal && typeof NewDeal.winChanceOptionsHtml === 'function')
+      ? NewDeal.winChanceOptionsHtml(t, escapeHtml, host.getAttribute('data-forecast-bucket') || '')
+      : forecastOptions().map((o) =>
+        '<option value="' + escapeHtml(o.value) + '"' +
+        (String(o.value) === String(host.getAttribute('data-forecast-bucket') || '') ? ' selected' : '') +
+        '>' + escapeHtml(o.label || o.value) + '</option>'
+      ).join('');
     const html =
       '<form id="' + dialogId + '-form" class="crm-form crm-form--stack">' +
       '<p class="crm-muted" role="status">' + escapeHtml(t('Planning labels — not expected cash.')) + '</p>' +
@@ -496,7 +534,7 @@
       '</div>' +
       '<p class="crm-muted">' + escapeHtml(t('Search by name or login, then pick a colleague. Never type a raw user id.')) + '</p></div>' +
       '<div class="form-group"><label class="form-label" for="' + dialogId + '-quote">' + escapeHtml(t('Quote sent on')) + '</label>' +
-      '<input class="crm-input form-input" id="' + dialogId + '-quote" name="quoteSentOn" type="date" value="' +
+      '<input class="crm-input form-input datepicker-input" id="' + dialogId + '-quote" name="quoteSentOn" type="date" value="' +
       escapeHtml(host.getAttribute('data-quote-sent-on') || '') + '" /></div>' +
       '<div class="form-group">' +
       '<span class="form-label" id="' + dialogId + '-pdf-label">' + escapeHtml(t('Quote PDF')) + '</span>' +
@@ -511,7 +549,8 @@
       '<input type="hidden" id="' + dialogId + '-pdf" name="quoteFileId" value="" />' +
       '</div>' +
       '<div class="form-group"><label class="form-label" for="' + dialogId + '-forecast">' + escapeHtml(t('Win chance')) + '</label>' +
-      '<select class="crm-input form-select" id="' + dialogId + '-forecast" name="forecastBucket">' + forecastOpts + '</select></div>' +
+      '<select class="crm-input form-select" id="' + dialogId + '-forecast" name="forecastBucket">' + forecastOpts + '</select>' +
+      '<p class="form-help">' + escapeHtml(t('How sure are you this deal will close? 100%% is almost sure — it is not marked won.')) + '</p></div>' +
       '</div></details>' +
       '<div class="crm-form-actions">' +
       '<button type="submit" class="crm-btn crm-btn--primary">' + escapeHtml(t('Save')) + '</button> ' +
@@ -585,7 +624,9 @@
         await Api.put('/deals/' + id, {
           notes: String(form.elements.notes.value || '').trim(),
           ownerUserId: ownerPicker.selectedUid() || null,
-          quoteSentOn: String(form.elements.quoteSentOn.value || '').trim() || null,
+          quoteSentOn: String((window.CustomerCheckDatepicker && typeof window.CustomerCheckDatepicker.isoValue === 'function')
+            ? window.CustomerCheckDatepicker.isoValue(form.elements.quoteSentOn)
+            : (form.elements.quoteSentOn.value || '')).trim() || null,
           quoteFileId: qfid > 0 ? qfid : null,
           forecastBucket: String(form.elements.forecastBucket.value || '').trim() || null,
           updatedAt: host.getAttribute('data-updated-at') || null,
@@ -621,143 +662,27 @@
         await offerCreateCompanyFirst();
         return;
       }
-      const id = 'crm-new-deal-' + Date.now();
-      const html =
-        '<form id="' + id + '-form" class="crm-form crm-form--stack crm-form--new-deal">' +
-        '<div class="form-group crm-new-deal__company">' +
-        '<span class="form-label" id="' + id + '-company-label">' + escapeHtml(t('Company')) + '</span>' +
-        '<div class="crm-company-picker crm-deal-company-picker" id="' + id + '-company-picker" ' +
-        'aria-labelledby="' + id + '-company-label">' +
-        '<div class="crm-company-choice" id="' + id + '-company-choice" hidden>' +
-        '<div class="crm-company-choice__card">' +
-        '<p class="crm-company-choice__name" id="' + id + '-company-choice-name"></p>' +
-        '<button type="button" class="crm-btn crm-btn--secondary crm-btn--sm crm-company-choice__change" id="' +
-        id + '-company-change">' + escapeHtml(t('Change company')) + '</button>' +
-        '</div></div>' +
-        '<div class="crm-company-browse" id="' + id + '-company-browse">' +
-        '<div class="crm-company-picker__filter-wrap" id="' + id + '-company-filter-wrap" hidden>' +
-        '<label class="visually-hidden" for="' + id + '-company-filter">' +
-        escapeHtml(t('Filter companies')) + '</label>' +
-        '<input type="search" id="' + id + '-company-filter" class="form-input crm-input crm-company-picker__filter" ' +
-        'autocomplete="off" placeholder="' + escapeHtml(t('Search by company name…')) + '" ' +
-        'aria-controls="' + id + '-company-list" /></div>' +
-        '<ul id="' + id + '-company-list" class="crm-company-list" role="listbox" aria-labelledby="' +
-        id + '-company-label"></ul>' +
-        '<p class="crm-muted crm-company-picker__status" id="' + id + '-company-status" role="status" aria-live="polite" hidden></p>' +
-        '</div>' +
-        '<input type="hidden" id="' + id + '-company" name="companyId" value="" required />' +
-        '</div></div>' +
-        '<div class="form-group crm-new-deal__title">' +
-        '<label class="form-label" for="' + id + '-title">' + escapeHtml(t('What is this deal?')) + '</label>' +
-        '<input class="form-input crm-input" id="' + id + '-title" name="title" required maxlength="255" ' +
-        'placeholder="' + escapeHtml(t('e.g. Quote for workshop tools')) + '" />' +
-        '<p class="form-help">' + escapeHtml(t('A title is enough. Value and products are optional.')) + '</p></div>' +
-        '<details class="crm-advanced crm-new-deal__more">' +
-        '<summary class="crm-advanced__summary">' + escapeHtml(t('More options')) + '</summary>' +
-        '<div class="crm-advanced__body">' +
-        '<div class="form-group"><label class="form-label" for="' + id + '-value">' + escapeHtml(t('Value (EUR, optional)')) + '</label>' +
-        '<input class="form-input crm-input" id="' + id + '-value" name="valueEur" type="number" min="0" step="0.01" /></div>' +
-        '<div class="form-group"><label class="form-label" for="' + id + '-products">' + escapeHtml(t('Products (optional)')) + '</label>' +
-        '<input class="form-input crm-input" id="' + id + '-products" name="products" maxlength="255" /></div>' +
-        '</div></details>' +
-        '<div class="crm-form-actions crm-new-deal__actions">' +
-        '<button type="submit" class="crm-btn crm-btn--primary">' + escapeHtml(t('Create deal')) + '</button>' +
-        '<button type="button" class="crm-btn crm-btn--secondary" data-cancel>' + escapeHtml(t('Cancel')) + '</button></div></form>';
-      let companyPanel = null;
-      C.openDialog({
-        id: id,
-        title: t('New deal'),
-        content: html,
-        size: 'md',
-        onClose: () => {
-          if (companyPanel && typeof companyPanel.destroy === 'function') {
-            companyPanel.destroy();
-          }
-          companyPanel = null;
-        },
-      });
-      const form = document.getElementById(id + '-form');
-      const dialogEl = document.getElementById(id);
-      if (dialogEl) {
-        dialogEl.classList.add('crm-dialog--new-deal');
-      }
-      const close = () => C.closeModal(dialogEl);
-      form.querySelector('[data-cancel]').addEventListener('click', () => close());
-      const titleInput = form.elements.title;
-      const Picker = window.CustomerCheckCompanyPicker;
-      let emptied = false;
-      const focusTitle = () => {
-        if (titleInput && typeof titleInput.focus === 'function') {
-          setTimeout(() => titleInput.focus(), 40);
-        }
-      };
-      if (Picker && typeof Picker.mountListPanel === 'function') {
-        companyPanel = Picker.mountListPanel({
-          listEl: document.getElementById(id + '-company-list'),
-          filterEl: document.getElementById(id + '-company-filter'),
-          filterWrapEl: document.getElementById(id + '-company-filter-wrap'),
-          browseEl: document.getElementById(id + '-company-browse'),
-          choiceEl: document.getElementById(id + '-company-choice'),
-          choiceNameEl: document.getElementById(id + '-company-choice-name'),
-          changeBtn: document.getElementById(id + '-company-change'),
-          hiddenEl: document.getElementById(id + '-company'),
-          statusEl: document.getElementById(id + '-company-status'),
-          api: Api,
-          workspaceIdFn: activeWorkspaceId,
-          t: t,
-          browseLimit: 40,
-          filterMinCount: 8,
-          onReady: async (count) => {
-            if (count > 0) {
-              if (count === 1) {
-                focusTitle();
-              }
-              return;
-            }
-            if (emptied) {
-              return;
-            }
-            emptied = true;
-            if (companyPanel && typeof companyPanel.destroy === 'function') {
-              companyPanel.destroy();
-            }
-            close();
-            await offerCreateCompanyFirst();
-          },
-          onSelect: () => {
-            focusTitle();
-          },
+      const NewDeal = window.CustomerCheckNewDealForm;
+      if (!NewDeal || typeof NewDeal.open !== 'function') {
+        await C.alertDialog({
+          title: t('Error'),
+          message: t('Could not open the new deal form. Reload and try again.'),
+          variant: 'danger',
         });
-      } else {
-        close();
-        await offerCreateCompanyFirst();
+        return;
       }
-      form.addEventListener('submit', async (ev) => {
-        ev.preventDefault();
-        const submitBtn = form.querySelector('button[type="submit"]');
-        if (submitBtn && submitBtn.disabled) {
-          return;
-        }
-        const companyId = parseInt(String(form.elements.companyId.value || '0'), 10);
-        const title = String(form.elements.title.value || '').trim();
-        const valueCents = Math.round(parseFloat(form.elements.valueEur.value || '0') * 100) || 0;
-        const products = String(form.elements.products.value || '').trim();
-        if (!companyId || title.length < 1) {
-          await C.alertDialog({ title: t('Almost there'), message: t('Choose a company and enter a title.'), variant: 'info' });
-          return;
-        }
-        if (submitBtn) submitBtn.disabled = true;
-        try {
-          await Api.post('/deals', { companyId, title, stage: 'lead', valueCents, products });
-          if (companyPanel && typeof companyPanel.destroy === 'function') {
-            companyPanel.destroy();
-          }
-          close();
-          location.reload();
-        } catch (e) {
-          if (submitBtn) submitBtn.disabled = false;
-          await C.alertDialog({ title: t('Could not create deal'), message: (e.payload && e.payload.message) || e.message, variant: 'danger' });
-        }
+      await NewDeal.open({
+        mode: 'pipeline',
+        components: C,
+        api: Api,
+        t: t,
+        escapeHtml: escapeHtml,
+        mountOwnerPicker: mountOwnerPicker,
+        activeWorkspaceId: activeWorkspaceId,
+        stageOptions: openStageOptions(),
+        forecastOptions: forecastOptions(),
+        onNoCompanies: offerCreateCompanyFirst,
+        onReload: () => { window.location.reload(); },
       });
     });
   }

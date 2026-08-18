@@ -153,3 +153,33 @@ dialog.crm-native-dialog.crm-dialog--content .crm-advanced__body {
 		scroll-behavior: auto;
 	}
 }
+
+/* Inputs inside dialogs are not under #app-content after the person dialog is hosted on body. */
+dialog.crm-native-dialog.crm-dialog--content .crm-input--lg,
+dialog.crm-native-dialog.crm-dialog--content .crm-btn--lg {
+	min-height: 3rem;
+	font-size: 1.125rem;
+	padding: 0.65rem 1.25rem;
+}
+
+/* One focus ring (the field) — a second box around the whole group is granny-hostile. */
+dialog.crm-native-dialog.crm-dialog--content .form-group:focus-within {
+	outline: none;
+}
+
+dialog.crm-person-dialog .modal-body {
+	overflow-x: hidden;
+}
+
+dialog.crm-person-dialog .crm-form--stack .crm-form-actions .crm-btn {
+	flex: 1 1 auto;
+	min-width: min(100%, 8.5rem);
+	min-height: 48px;
+	justify-content: center;
+}
+
+@media (max-width: 640px) {
+	dialog.crm-person-dialog .crm-form--stack .crm-form-actions .crm-btn {
+		flex: 1 1 100%;
+	}
+}

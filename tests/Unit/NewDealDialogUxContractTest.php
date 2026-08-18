@@ -8,6 +8,7 @@ use PHPUnit\Framework\TestCase;
 
 /**
  * New deal dialog: simple company list (no mega-select, no status/%s spam).
+ * Form markup lives in js/common/new-deal-form.js; pipeline.js delegates to it.
  */
 final class NewDealDialogUxContractTest extends TestCase
 {
@@ -31,7 +32,8 @@ final class NewDealDialogUxContractTest extends TestCase
 		$this->assertStringContainsString('CustomerCheckCompanyPicker', $boot);
 		$this->assertStringContainsString('filterMinCount', $boot);
 		$this->assertStringContainsString('showChoice', $boot);
-		$this->assertStringContainsString('crm-company-choice', (string)file_get_contents($this->root . '/js/pages/pipeline.js'));
+		$form = (string)file_get_contents($this->root . '/js/common/new-deal-form.js');
+		$this->assertStringContainsString('crm-company-choice', $form);
 		$this->assertStringNotContainsString('Showing %s companies', $boot);
 		$this->assertStringNotContainsString('Selected: %s', $boot);
 	}
@@ -51,51 +53,64 @@ final class NewDealDialogUxContractTest extends TestCase
 
 	public function testNewDealDialogUsesListPanelNotSelectDump(): void
 	{
-		$js = (string)file_get_contents($this->root . '/js/pages/pipeline.js');
-		$this->assertStringContainsString('crm-deal-company-picker', $js);
-		$this->assertStringContainsString('mountListPanel', $js);
-		$this->assertStringContainsString('crm-company-list', $js);
-		$this->assertStringContainsString("title: t('New deal'),\n        content: html,\n        size: 'md',", $js);
-		$this->assertStringContainsString('crm-dialog--new-deal', $js);
-		$this->assertStringContainsString('onClose', $js);
-		$this->assertStringContainsString('pipelineHasCompanies', $js);
-		$this->assertStringContainsString('crm-company-choice', $js);
-		$this->assertStringContainsString('crm-form--new-deal', $js);
-		$this->assertStringContainsString("t('Change company')", $js);
-		$this->assertStringContainsString("t('Search by company name…')", $js);
-		$this->assertStringContainsString("t('Filter companies')", $js);
-		$this->assertStringContainsString('crm-advanced__body', $js);
-		$this->assertStringContainsString("t('No companies yet')", $js);
-		$this->assertStringContainsString("t('Create a company first, then add a deal.')", $js);
-		$this->assertStringContainsString('offerCreateCompanyFirst', $js);
-		$this->assertStringContainsString('companyNewUrl', $js);
-		$this->assertStringContainsString("t('Create company')", $js);
-		$this->assertStringContainsString('confirmDialog', $js);
-		$this->assertStringContainsString('async function offerCreateCompanyFirst', $js);
+		$pipeline = (string)file_get_contents($this->root . '/js/pages/pipeline.js');
+		$this->assertStringContainsString('CustomerCheckNewDealForm', $pipeline);
+		$this->assertStringContainsString("mode: 'pipeline'", $pipeline);
+		$this->assertStringContainsString('pipelineHasCompanies', $pipeline);
+		$this->assertStringContainsString('offerCreateCompanyFirst', $pipeline);
+		$this->assertStringContainsString('companyNewUrl', $pipeline);
+		$this->assertStringContainsString("t('Create company')", $pipeline);
+		$this->assertStringContainsString('confirmDialog', $pipeline);
+		$this->assertStringContainsString('async function offerCreateCompanyFirst', $pipeline);
 		$this->assertGreaterThan(
 			0,
-			substr_count($js, 'await offerCreateCompanyFirst()'),
+			substr_count($pipeline, 'await offerCreateCompanyFirst()'),
 		);
 		$this->assertStringNotContainsString(
 			"alertDialog({ title: t('No companies yet')",
-			$js,
+			$pipeline,
 		);
-		$this->assertStringNotContainsString(
-			"alertDialog({\n          title: t('No companies yet')",
-			$js,
-		);
-		$this->assertStringNotContainsString('crm-pipeline-companies', $js);
-		$this->assertStringNotContainsString('Type to narrow the list', $js);
-		$this->assertStringNotContainsString('Showing %s companies', $js);
+		$this->assertStringNotContainsString('crm-pipeline-companies', $pipeline);
+		$this->assertStringNotContainsString('Type to narrow the list', $pipeline);
+		$this->assertStringNotContainsString('Showing %s companies', $pipeline);
+		$this->assertStringNotContainsString('crm-form--new-deal', $pipeline);
+
+		$form = (string)file_get_contents($this->root . '/js/common/new-deal-form.js');
+		$this->assertStringContainsString('crm-deal-company-picker', $form);
+		$this->assertStringContainsString('mountListPanel', $form);
+		$this->assertStringContainsString('crm-company-list', $form);
+		$this->assertStringContainsString("title: t('New deal')", $form);
+		$this->assertStringContainsString('content: html', $form);
+		$this->assertStringContainsString("size: 'md'", $form);
+		$this->assertStringContainsString('crm-dialog--new-deal', $form);
+		$this->assertStringContainsString('onClose', $form);
+		$this->assertStringContainsString('crm-company-choice', $form);
+		$this->assertStringContainsString('crm-form--new-deal', $form);
+		$this->assertStringContainsString("t('Change company')", $form);
+		$this->assertStringContainsString("t('Search by company name…')", $form);
+		$this->assertStringContainsString("t('Filter companies')", $form);
+		$this->assertStringContainsString('crm-advanced__body', $form);
+		$this->assertStringContainsString('name="notes"', $form);
+		$this->assertStringContainsString('name="expectedClose"', $form);
+		$this->assertStringContainsString('name="stage"', $form);
+		$this->assertStringContainsString('name="ownerUserId"', $form);
+		$this->assertStringContainsString('name="forecastBucket"', $form);
+		$this->assertStringContainsString('name="personId"', $form);
+		$this->assertStringContainsString('name="leadSource"', $form);
+		$this->assertStringContainsString('crm-deal-form-stage-options', (string)file_get_contents($this->root . '/templates/pipeline.php'));
+		$this->assertStringContainsString('OPEN_STAGES', $form);
+		$this->assertStringContainsString("t('A title is enough. Add notes, value, or a close date if you have them.')", $form);
+		$this->assertStringContainsString("t('No companies yet')", $pipeline);
+		$this->assertStringContainsString("t('Create a company first, then add a deal.')", $pipeline);
 		$this->assertDoesNotMatchRegularExpression(
 			'/select[^>]*name=["\']companyId["\']/',
-			$js,
+			$form,
 			'new deal must not use a mega company <select>',
 		);
-		$this->assertStringContainsString('crm-form crm-form--stack', $js);
+		$this->assertStringContainsString('crm-form crm-form--stack', $form);
 		$this->assertDoesNotMatchRegularExpression(
 			'/class="crm-form form/',
-			$js,
+			$form,
 			'no stray form class on dialog shell',
 		);
 	}
@@ -104,11 +119,15 @@ final class NewDealDialogUxContractTest extends TestCase
 	{
 		$appCss = (string)file_get_contents($this->root . '/css/app.css');
 		$this->assertStringContainsString("common/company-picker.css", $appCss);
+		$this->assertStringContainsString("common/new-deal-form.css", $appCss);
 		$css = (string)file_get_contents($this->root . '/css/common/company-picker.css');
 		$this->assertStringContainsString('crm-company-list', $css);
 		$this->assertStringContainsString('min-height: 44px', $css);
 		$this->assertStringContainsString('crm-company-choice__card', $css);
-		$this->assertStringContainsString('crm-form--new-deal', $css);
+		$dealCss = (string)file_get_contents($this->root . '/css/common/new-deal-form.css');
+		$this->assertStringContainsString('crm-form--new-deal', $dealCss);
+		$this->assertStringContainsString('crm-form-section', $dealCss);
+		$this->assertStringContainsString('min-height: var(--crm-touch, 44px)', $dealCss);
 		$this->assertStringContainsString('crm-dialog--new-deal', $css);
 		$this->assertStringContainsString('min(42rem', $css);
 		$this->assertStringContainsString('calc(100vw - 1rem)', $css);
@@ -131,6 +150,13 @@ final class NewDealDialogUxContractTest extends TestCase
 			'Create a company first, then add a deal.',
 			'Create company',
 			'Choose a company and enter a title.',
+			'A title is enough. Add notes, value, or a close date if you have them.',
+			'Leave empty to assign the deal to yourself.',
+			'Not set',
+			'Primary contact',
+			'Lead source',
+			'Deal created! Add a next step for your Today board?',
+			'Add to Today',
 		] as $key) {
 			$this->assertArrayHasKey($key, $tr, 'missing l10n key: ' . $key);
 		}

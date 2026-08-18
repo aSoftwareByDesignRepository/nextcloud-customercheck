@@ -19,10 +19,11 @@ final class PersonMapperEmailNormalizeTest extends TestCase
 		$this->assertGreaterThanOrEqual(2, substr_count($src, 'normalizeStoredEmail($entity->getEmail())'));
 	}
 
-	public function testFindByEmailComparesTrimmedLowerEmail(): void
+	public function testFindByEmailComparesNormalizedLowerEmail(): void
 	{
 		$src = (string)file_get_contents(dirname(__DIR__, 3) . '/lib/Db/PersonMapper.php');
 		$this->assertStringContainsString('$email = mb_strtolower(trim($email));', $src);
-		$this->assertStringContainsString("\$qb->func()->trim('p.email')", $src);
+		$this->assertStringContainsString("\$qb->func()->lower('p.email')", $src);
+		$this->assertStringNotContainsString("\$qb->func()->trim(", $src);
 	}
 }

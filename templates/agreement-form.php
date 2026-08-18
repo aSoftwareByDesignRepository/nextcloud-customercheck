@@ -95,7 +95,7 @@ include __DIR__ . '/common/page-start.php';
 					<div class="crm-ag-money-row">
 						<div class="form-group">
 							<label class="form-label" for="crm-ag-until"><?php p($l->t('Valid until')); ?></label>
-							<input id="crm-ag-until" name="validUntil" type="date" class="crm-input form-input crm-input--lg" value="<?php p($a && $a->getValidUntil() ? $a->getValidUntil()->format('Y-m-d') : ''); ?>" <?php if ($isTerminal): ?>readonly<?php endif; ?> />
+							<input id="crm-ag-until" name="validUntil" type="date" class="crm-input form-input crm-input--lg datepicker-input" value="<?php p($a && $a->getValidUntil() ? $a->getValidUntil()->format('Y-m-d') : ''); ?>" autocomplete="off" placeholder="<?php p($l->t('dd.mm.yyyy')); ?>" <?php if ($isTerminal): ?>readonly<?php endif; ?> />
 						</div>
 						<div class="form-group">
 							<label class="form-label" for="crm-ag-amount"><?php p($l->t('Amount (EUR)')); ?></label>
@@ -141,13 +141,13 @@ include __DIR__ . '/common/page-start.php';
 						</div>
 						<div class="form-group">
 							<label class="form-label" for="crm-ag-starts"><?php p($l->t('Starts')); ?></label>
-							<input id="crm-ag-starts" name="startsAt" type="date" class="crm-input form-input" value="<?php
+							<input id="crm-ag-starts" name="startsAt" type="date" class="crm-input form-input datepicker-input" value="<?php
 								if ($a && $a->getStartsAt()) {
 									p($a->getStartsAt()->format('Y-m-d'));
 								} elseif ($mode === 'create') {
 									p((new \DateTimeImmutable('today'))->format('Y-m-d'));
 								}
-							?>" <?php if ($isTerminal): ?>readonly<?php endif; ?> />
+							?>" autocomplete="off" placeholder="<?php p($l->t('dd.mm.yyyy')); ?>" <?php if ($isTerminal): ?>readonly<?php endif; ?> />
 							<?php if ($mode === 'create'): ?>
 								<p class="form-help"><?php p($l->t('Defaults to today — change only if needed.')); ?></p>
 							<?php endif; ?>

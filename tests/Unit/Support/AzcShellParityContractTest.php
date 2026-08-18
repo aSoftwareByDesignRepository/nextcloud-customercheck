@@ -75,7 +75,6 @@ final class AzcShellParityContractTest extends TestCase
 			'/templates/strategy.php',
 			'/templates/my-accounts.php',
 			'/templates/mail-triage.php',
-			'/templates/prepare-meeting.php',
 		] as $rel) {
 			$html = (string)file_get_contents($this->root . $rel);
 			$this->assertStringContainsString('page-start.php', $html, $rel);

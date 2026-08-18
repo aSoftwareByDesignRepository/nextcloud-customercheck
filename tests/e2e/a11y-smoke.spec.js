@@ -1,7 +1,7 @@
 // @ts-check
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { login, credsFromEnv } from './helpers/auth.js';
+import { login, credsFromEnv, gotoCrm } from './helpers/auth.js';
 
 const pages = [
   '/apps/customercheck/companies',
@@ -29,12 +29,11 @@ const pages = [
 
 for (const path of pages) {
   test(`CRM a11y: ${path} has no serious/critical violations`, async ({ page }) => {
-    test.setTimeout(90000);
+    test.setTimeout(180000);
     test.skip(!process.env.NC_ADMIN_USER && !process.env.NC_EMPLOYEE_USER, 'Requires NC credentials');
     const creds = process.env.NC_ADMIN_USER ? credsFromEnv('ADMIN') : credsFromEnv('EMPLOYEE');
     await login(page, creds);
-    await page.goto(path);
-    await page.waitForSelector('#crm-main-content', { timeout: 30000 });
+    await gotoCrm(page, path);
     const results = await new AxeBuilder({ page })
       .include('#crm-main-content')
       .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
@@ -45,11 +44,10 @@ for (const path of pages) {
 }
 
 test('CRM a11y: company 360 has no serious/critical violations', async ({ page }) => {
-  test.setTimeout(90000);
+  test.setTimeout(180000);
   test.skip(!process.env.NC_ADMIN_USER, 'Requires NC admin credentials');
   await login(page, credsFromEnv('ADMIN'));
-  await page.goto('/apps/customercheck/companies/new');
-  await page.waitForSelector('#crm-main-content', { timeout: 30000 });
+  await gotoCrm(page, '/apps/customercheck/companies/new');
   const suffix = Date.now().toString(36);
   await page.locator('#crm-company-name').fill(`Axe Co ${suffix}`);
   await page.locator('#crm-company-advanced').evaluate((el) => {

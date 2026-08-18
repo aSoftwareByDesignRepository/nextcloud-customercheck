@@ -7,6 +7,7 @@ namespace OCA\CustomerCheck\Service;
 use OCA\CustomerCheck\Constants;
 use OCA\CustomerCheck\Exception\ConflictException;
 use OCA\CustomerCheck\Exception\ValidationException;
+use OCA\CustomerCheck\Support\DateMath;
 use OCA\CustomerCheck\Support\OptimisticLock;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\DB\Exception as DbException;
@@ -28,6 +29,7 @@ class AccountPlanService
 		private readonly DisplayLabelService $labels,
 		private readonly ITimeFactory $timeFactory,
 		private readonly IL10N $l10n,
+		private readonly DirectoryOptionsService $directory,
 	) {
 	}
 
@@ -87,7 +89,19 @@ class AccountPlanService
 		}
 		$owner = trim((string)($data['ownerUserId'] ?? $actor));
 		$horizon = trim((string)($data['horizon'] ?? ''));
-		$nextAssign = trim((string)($data['nextAssignOn'] ?? ''));
+		$nextAssignRaw = trim((string)($data['nextAssignOn'] ?? ''));
+		$nextAssign = '';
+		if ($nextAssignRaw !== '') {
+			$parsedReview = self::calendarDayFromStorage($nextAssignRaw);
+			if ($parsedReview === null) {
+				throw ValidationException::field(
+					Constants::ERR_VALIDATION,
+					'nextAssignOn',
+					$this->l10n->t('Use YYYY-MM-DD.'),
+				);
+			}
+			$nextAssign = $parsedReview;
+		}
 		$now = $this->timeFactory->getDateTime()->format('Y-m-d H:i:s');
 		$status = $this->normalizePlanStatus(
 			array_key_exists('status', $data) ? (string)$data['status'] : 'active',
@@ -184,9 +198,8 @@ class AccountPlanService
 			->set('updated_at', $qb->createNamedParameter($now))
 			->where($qb->expr()->eq('id', $qb->createNamedParameter($planId)));
 		if ($expectedUpdatedAt !== null && trim($expectedUpdatedAt) !== '') {
-			try {
-				$sqlStamp = (new \DateTimeImmutable(trim($expectedUpdatedAt)))->format('Y-m-d H:i:s');
-			} catch (\Exception) {
+			$sqlStamp = self::stampToWallSql(trim($expectedUpdatedAt));
+			if ($sqlStamp === null) {
 				$sqlStamp = trim($expectedUpdatedAt);
 			}
 			$qb->andWhere($qb->expr()->eq(
@@ -195,11 +208,72 @@ class AccountPlanService
 			));
 		}
 		$affected = $qb->executeStatement();
-		if ($affected < 1) {
-			throw new ConflictException(
-				$this->l10n->t('Someone else changed this account plan. Reload and try again.'),
-			);
+		if ($affected >= 1) {
+			return;
 		}
+		// MySQL reports 0 when every SET value already matches. A matching stamp
+		// means this writer still owns the row — do not fake a 409.
+		if ($expectedUpdatedAt !== null && trim($expectedUpdatedAt) !== '') {
+			$stored = $this->fetchPlanUpdatedAt($planId);
+			$expectedSql = self::stampToWallSql(trim($expectedUpdatedAt));
+			$storedSql = $stored !== null ? self::stampToWallSql($stored) : null;
+			if ($expectedSql !== null && $expectedSql === $storedSql) {
+				return;
+			}
+		}
+		throw new ConflictException(
+			$this->l10n->t('Someone else changed this account plan. Reload and try again.'),
+		);
+	}
+
+	private function fetchPlanUpdatedAt(int $planId): ?string
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('updated_at')
+			->from('crm_acct_plan')
+			->where($qb->expr()->eq('id', $qb->createNamedParameter($planId)))
+			->setMaxResults(1);
+		$r = $qb->executeQuery();
+		$row = $r->fetch();
+		$r->closeCursor();
+		if (!is_array($row) || !array_key_exists('updated_at', $row) || $row['updated_at'] === null) {
+			return null;
+		}
+
+		return trim((string)$row['updated_at']) !== '' ? (string)$row['updated_at'] : null;
+	}
+
+	public static function stampToWallSql(string $value): ?string
+	{
+		try {
+			return (new \DateTimeImmutable($value))->format('Y-m-d H:i:s');
+		} catch (\Exception) {
+			return null;
+		}
+	}
+
+	/**
+	 * Wire and storage dates are calendar days (`YYYY-MM-DD`). PDO/DATE drivers
+	 * sometimes hand back DateTime or `YYYY-MM-DD 00:00:00` — never send that
+	 * to a type=date / datepicker, and never persist European `dd.mm.yyyy`.
+	 */
+	public static function calendarDayFromStorage(mixed $value): ?string
+	{
+		if ($value instanceof \DateTimeInterface) {
+			return $value->format('Y-m-d');
+		}
+		if ($value === null) {
+			return null;
+		}
+		$raw = trim((string)$value);
+		if ($raw === '') {
+			return null;
+		}
+		if (preg_match('/^(\d{4}-\d{2}-\d{2})/', $raw, $m) === 1) {
+			return DateMath::parseStrictDate($m[1]) !== null ? $m[1] : null;
+		}
+
+		return DateMath::parseStrictDate($raw)?->format('Y-m-d');
 	}
 
 	private function insertPlanRow(
@@ -407,7 +481,7 @@ class AccountPlanService
 		} catch (\Throwable) {
 		}
 		$health = self::health([
-			'nextAssignOn' => $row['next_review_on'] ?? null,
+			'nextAssignOn' => self::calendarDayFromStorage($row['next_review_on'] ?? null),
 			'touchOverdue' => $touchOverdue,
 			'openCallbacks' => $this->countOpenCallbacksOverdue($companyId),
 			'renewalsHot' => $this->hasRenewalHot($companyId),
@@ -421,6 +495,20 @@ class AccountPlanService
 				$openMoves++;
 			}
 		}
+		$ownerUid = isset($row['owner_user_id']) && $row['owner_user_id'] !== null
+			? trim((string)$row['owner_user_id'])
+			: '';
+		$ownerDisplayName = null;
+		if ($ownerUid !== '') {
+			foreach ($this->directory->resolveUsers([$ownerUid]) as $resolved) {
+				$ownerDisplayName = (string)($resolved['displayName'] ?? $ownerUid);
+				break;
+			}
+			if ($ownerDisplayName === null || $ownerDisplayName === '') {
+				$ownerDisplayName = $ownerUid;
+			}
+		}
+
 		return [
 			'id' => $planId,
 			'companyId' => $companyId,
@@ -430,10 +518,11 @@ class AccountPlanService
 			'goal' => $row['goal'] ?? null,
 			'priority' => $priority,
 			'priorityLabel' => $this->labels->planPriority($priority),
-			'ownerUserId' => $row['owner_user_id'] ?? null,
+			'ownerUserId' => $ownerUid !== '' ? $ownerUid : null,
+			'ownerDisplayName' => $ownerDisplayName,
 			'status' => $status,
 			'statusLabel' => $this->labels->planStatus($status),
-			'nextAssignOn' => $row['next_review_on'] ?? null,
+			'nextAssignOn' => self::calendarDayFromStorage($row['next_review_on'] ?? null),
 			'updatedAt' => isset($row['updated_at']) && $row['updated_at'] !== null && (string)$row['updated_at'] !== ''
 				? OptimisticLock::format(new \DateTimeImmutable((string)$row['updated_at']))
 				: null,

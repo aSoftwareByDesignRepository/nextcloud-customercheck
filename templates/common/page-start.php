@@ -38,11 +38,10 @@ $pageIcons = [
 	'mail-triage' => 'scroll-text',
 	'review' => 'list',
 	'conflicts' => 'alert-triangle',
-	'prepare-meeting' => 'calendar',
 	'companies' => 'building-2', 'company-detail' => 'building-2', 'company-form' => 'building-2',
 	'pipeline' => 'kanban', 'agreements' => 'file-text', 'agreement-form' => 'file-text',
 	'money' => 'coins', 'activities' => 'check-square', 'import' => 'upload',
-	'settings' => 'settings', 'app-settings' => 'shield-check', 'support-us' => 'heart-handshake', 'access-denied' => 'lock',
+	'settings' => 'settings', 'app-settings' => 'shield-check', 'support-us' => 'heart-handshake', 'get-the-app' => 'smartphone', 'access-denied' => 'lock',
 ];
 $headerIcon = $pageIcons[$pageId] ?? 'layout-grid';
 $urlsJson = htmlspecialchars(json_encode($urls, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8');

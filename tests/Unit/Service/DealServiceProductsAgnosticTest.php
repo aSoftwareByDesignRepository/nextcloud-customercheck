@@ -63,6 +63,7 @@ final class DealServiceProductsAgnosticTest extends TestCase
 			$l10n,
 			$db,
 			$this->createMock(AgreementMapper::class),
+			$this->createMock(\OCA\CustomerCheck\Db\PersonMapper::class),
 		);
 	}
 

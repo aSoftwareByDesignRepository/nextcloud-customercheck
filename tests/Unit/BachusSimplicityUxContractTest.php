@@ -230,8 +230,8 @@ final class BachusSimplicityUxContractTest extends TestCase
 		$this->assertStringContainsString("\$l->t('Add to-do')", $detail);
 		$this->assertStringContainsString("\$l->t('To-do')", $detail);
 		$this->assertStringContainsString('id="crm-open-tasks"', $detail);
-		$this->assertStringContainsString('<details class="crm-card crm-card--collapsible" id="crm-prepare-meeting">', $detail);
-		$this->assertStringContainsString('<details class="crm-card crm-card--collapsible" id="crm-timeline">', $detail);
+		$this->assertStringNotContainsString('id="crm-prepare-meeting"', $detail);
+		$this->assertStringContainsString('<details class="crm-card crm-card--collapsible" id="crm-timeline"', $detail);
 		$this->assertStringContainsString('id="crm-create-folder"', $detail);
 		$this->assertStringContainsString("\$l->t('More document actions')", $detail);
 		// Reminders: checklist rows (title + due meta + Done) — not spreadsheet tables.

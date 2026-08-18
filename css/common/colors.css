@@ -69,7 +69,7 @@ body {
   --arbeitszeitcheck-color-background-secondary: var(--color-background-dark);
   --arbeitszeitcheck-color-background-tertiary: var(--color-background-hover);
   --arbeitszeitcheck-color-background-elevated: var(--color-main-background);
-  --arbeitszeitcheck-color-background-overlay: color-mix(in srgb, var(--color-main-text) 50%, transparent);
+  --arbeitszeitcheck-color-background-overlay: var(--crm-scrim, color-mix(in srgb, var(--color-main-text) 45%, transparent));
 
   /* Text — use text-maxcontrast for secondary/muted (WCAG 2.1 AA 4.5:1) */
   --arbeitszeitcheck-color-text: var(--color-main-text);

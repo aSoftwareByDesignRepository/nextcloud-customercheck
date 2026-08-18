@@ -172,20 +172,38 @@ textarea:focus:not(:focus-visible) {
   }
 }
 
-/* Nextcloud High-Contrast themes (body data-theme-*) — borders + focus weight */
+/* Nextcloud High-Contrast themes — page, dialogs, and personal-settings panels */
 body[data-theme-light-highcontrast] #app-content.crm-app .crm-btn,
 body[data-theme-dark-highcontrast] #app-content.crm-app .crm-btn,
+body[data-theme-light-highcontrast] dialog.crm-native-dialog .crm-btn,
+body[data-theme-dark-highcontrast] dialog.crm-native-dialog .crm-btn,
+body[data-theme-light-highcontrast] .crm-nc-admin-settings .crm-btn,
+body[data-theme-dark-highcontrast] .crm-nc-admin-settings .crm-btn,
+body[data-theme-light-highcontrast] .crm-nc-settings-panel .crm-btn,
+body[data-theme-dark-highcontrast] .crm-nc-settings-panel .crm-btn,
 body[data-theme-light-highcontrast] #app-content.crm-app .form-input,
 body[data-theme-dark-highcontrast] #app-content.crm-app .form-input,
+body[data-theme-light-highcontrast] dialog.crm-native-dialog .form-input,
+body[data-theme-dark-highcontrast] dialog.crm-native-dialog .form-input,
 body[data-theme-light-highcontrast] #app-content.crm-app .form-select,
 body[data-theme-dark-highcontrast] #app-content.crm-app .form-select,
+body[data-theme-light-highcontrast] dialog.crm-native-dialog .form-select,
+body[data-theme-dark-highcontrast] dialog.crm-native-dialog .form-select,
 body[data-theme-light-highcontrast] #app-content.crm-app .form-textarea,
-body[data-theme-dark-highcontrast] #app-content.crm-app .form-textarea {
+body[data-theme-dark-highcontrast] #app-content.crm-app .form-textarea,
+body[data-theme-light-highcontrast] dialog.crm-native-dialog .form-textarea,
+body[data-theme-dark-highcontrast] dialog.crm-native-dialog .form-textarea {
   border-width: 2px;
 }
 
 body[data-theme-light-highcontrast] #app-content.crm-app :focus-visible,
-body[data-theme-dark-highcontrast] #app-content.crm-app :focus-visible {
+body[data-theme-dark-highcontrast] #app-content.crm-app :focus-visible,
+body[data-theme-light-highcontrast] dialog.crm-native-dialog :focus-visible,
+body[data-theme-dark-highcontrast] dialog.crm-native-dialog :focus-visible,
+body[data-theme-light-highcontrast] .crm-nc-admin-settings :focus-visible,
+body[data-theme-dark-highcontrast] .crm-nc-admin-settings :focus-visible,
+body[data-theme-light-highcontrast] .crm-nc-settings-panel :focus-visible,
+body[data-theme-dark-highcontrast] .crm-nc-settings-panel :focus-visible {
   outline-width: 3px;
   outline-offset: 3px;
 }

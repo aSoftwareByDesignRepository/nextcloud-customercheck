@@ -86,5 +86,6 @@ final class PageQuickStartContractTest extends TestCase
 		$this->assertContains('settings', PageQuickStartCatalog::requiredPageIds());
 		$this->assertContains('app-settings', PageQuickStartCatalog::requiredPageIds());
 		$this->assertNotContains('access-denied', PageQuickStartCatalog::requiredPageIds());
+		$this->assertNotContains('prepare-meeting', PageQuickStartCatalog::requiredPageIds());
 	}
 }

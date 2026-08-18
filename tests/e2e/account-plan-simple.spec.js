@@ -21,13 +21,23 @@ test.describe('Account plan extreme simplicity', () => {
     await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
 
     const plan = page.locator('#crm-account-plan');
+    await page.locator('[data-crm-focus-tab="more"]').click();
     await expect(plan).toBeVisible();
-    await page.locator('#crm-account-plan > summary').click();
-    await expect(plan).toHaveAttribute('open', '');
+    const steps = page.locator('#crm-account-plan .crm-account-plan__guide > .crm-welcome-coach__step');
+    await expect(page.locator('#crm-account-plan .crm-welcome-coach__steps')).toBeVisible({ timeout: 20000 });
+    await expect(steps).toHaveCount(3);
+    const firstStep = await steps.nth(0).boundingBox();
+    const thirdStep = await steps.nth(2).boundingBox();
+    expect(firstStep && thirdStep).toBeTruthy();
+    expect(Math.abs((firstStep?.y || 0) - (thirdStep?.y || 0))).toBeLessThan(24);
+    expect((thirdStep?.x || 0)).toBeGreaterThan((firstStep?.x || 0) + 80);
     await expect(page.locator('#crm-account-plan-form')).toBeVisible({ timeout: 20000 });
+    await expect(page.locator('#crm-account-plan .crm-account-plan__stack')).toBeVisible();
+    await expect(page.locator('#crm-account-plan .crm-account-plan__panel--goal')).toBeVisible();
+    await expect(page.locator('#crm-account-plan .crm-account-plan__panel--moves')).toBeVisible();
 
     await expect(page.locator('#crm-account-plan .crm-card__lead')).toContainText(
-      /Where this customer should go|Wohin soll es mit diesem Kunden/i,
+      /Where this customer should go|Wohin dieser Kunde soll/i,
     );
     await expect(page.locator('#crm-plan-goal')).toBeVisible();
     const goalBox = await page.locator('#crm-plan-goal').boundingBox();
@@ -35,8 +45,8 @@ test.describe('Account plan extreme simplicity', () => {
 
     // Priority/owner demoted under details
     await expect(page.locator('#crm-plan-priority')).toBeAttached();
-    await expect(page.locator('.crm-plan-more')).toBeVisible();
-    await expect(page.locator('.crm-plan-more')).not.toHaveAttribute('open', '');
+    await expect(page.locator('#crm-account-plan .crm-account-plan__more')).toBeVisible();
+    await expect(page.locator('#crm-account-plan .crm-account-plan__more')).not.toHaveAttribute('open', '');
 
     const title = page.locator('#crm-map-step-title');
     await expect(title).toHaveAttribute('rows', '3');
@@ -72,10 +82,73 @@ test.describe('Account plan extreme simplicity', () => {
     await page.locator('#crm-company-name').fill(`Plan Mobile ${suffix}`);
     await page.locator('#crm-company-form button[type="submit"]').click();
     await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
-    await page.locator('#crm-account-plan > summary').click();
+    await page.locator('[data-crm-focus-tab="more"]').click();
     await expect(page.locator('#crm-map-step-form')).toBeVisible({ timeout: 20000 });
+    const steps = page.locator('#crm-account-plan .crm-account-plan__guide > .crm-welcome-coach__step');
+    await expect(steps).toHaveCount(3);
+    const firstStep = await steps.nth(0).boundingBox();
+    const thirdStep = await steps.nth(2).boundingBox();
+    expect(firstStep && thirdStep).toBeTruthy();
+    expect((thirdStep?.y || 0)).toBeGreaterThan((firstStep?.y || 0) + 24);
     const add = page.locator('#crm-map-step-form button[type="submit"]');
     const box = await add.boundingBox();
     expect(box?.height || 0).toBeGreaterThanOrEqual(44);
+  });
+
+  test('Save plan persists the goal even with a calendar review date', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await login(page, credsFromEnv('ADMIN'));
+
+    await page.goto('/apps/customercheck/companies/new');
+    await page.waitForSelector('#crm-company-form', { timeout: 30000 });
+    const suffix = Date.now().toString(36);
+    await page.locator('#crm-company-name').fill(`Plan Save ${suffix}`);
+    await page.locator('#crm-company-form button[type="submit"]').click();
+    await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
+
+    await page.locator('[data-crm-focus-tab="more"]').click();
+    const form = page.locator('#crm-account-plan-form');
+    await expect(form).toBeVisible({ timeout: 20000 });
+    await expect(form).toHaveAttribute('novalidate', '');
+
+    const goal = page.locator('#crm-plan-goal');
+    await goal.fill(`Renew seats this year ${suffix}`);
+    const more = page.locator('#crm-account-plan .crm-account-plan__more');
+    if (!(await more.getAttribute('open'))) {
+      await more.locator('summary').click();
+    }
+    const review = page.locator('#crm-plan-review');
+    await expect(review).toBeVisible();
+    await expect(page.locator('#crm-account-plan-form .crm-datepicker-host')).toBeVisible();
+
+    const putWait = page.waitForResponse((r) => r.url().includes('/account-plan') && r.request().method() === 'PUT');
+    await form.locator('button[type="submit"]').click();
+    const put = await putWait;
+    expect(put.ok(), 'account-plan PUT must succeed').toBeTruthy();
+    const putBody = put.request().postDataJSON();
+    expect(putBody.goal).toBe(`Renew seats this year ${suffix}`);
+    expect(
+      putBody.nextAssignOn === '' || /^\d{4}-\d{2}-\d{2}$/.test(String(putBody.nextAssignOn || '')),
+      'nextAssignOn must be ISO YYYY-MM-DD or empty, not European display',
+    ).toBeTruthy();
+    await expect(page.locator('#crm-plan-save-status')).toBeVisible({ timeout: 20000 });
+    await expect(page.locator('#crm-plan-save-status')).toContainText(/Account plan saved|Account-Plan gespeichert/i);
+    await expect(page.locator('#crm-account-plan-form button[type="submit"]')).toHaveAttribute('data-plan-just-saved', '1');
+    await expect(form).toBeVisible({ timeout: 20000 });
+    await expect(page.locator('#crm-plan-goal')).toHaveValue(`Renew seats this year ${suffix}`, { timeout: 20000 });
+    await expect(form).not.toHaveAttribute('aria-busy', 'true');
+    await expect(form.locator('button[type="submit"]')).toBeEnabled();
+    const stampAfterFirst = await page.locator('#crm-account-plan-form').getAttribute('data-plan-updated-at');
+    expect(stampAfterFirst && stampAfterFirst.length > 8).toBeTruthy();
+
+    const form2 = page.locator('#crm-account-plan-form');
+    await page.locator('#crm-plan-goal').fill(`Renew seats this year ${suffix} v2`);
+    const put2Wait = page.waitForResponse((r) => r.url().includes('/account-plan') && r.request().method() === 'PUT');
+    await form2.locator('button[type="submit"]').click();
+    const put2 = await put2Wait;
+    expect(put2.ok(), 'second account-plan PUT (optimistic lock) must succeed').toBeTruthy();
+    await expect(page.locator('#crm-plan-goal')).toHaveValue(`Renew seats this year ${suffix} v2`, { timeout: 20000 });
+    await expect(page.locator('#crm-plan-save-status')).toBeVisible();
+    await expect(page.locator('#crm-plan-save-status')).toContainText(/Account plan saved|Account-Plan gespeichert/i);
   });
 });

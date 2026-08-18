@@ -110,7 +110,7 @@
     for (let i = 0; i < incoming.length; i++) {
       const src = incoming[i];
       const name = src.getAttribute('data-crm-filter-swap');
-      if (!name) {
+      if (!Core.isAllowedSwapName(name)) {
         continue;
       }
       const dest = document.querySelector('[data-crm-filter-swap="' + name + '"]');
@@ -290,6 +290,9 @@
           window.history.replaceState(window.history.state, '', url.href);
         }
         syncFormsFromUrl(url);
+        if (window.CustomerCheckListToolbar && typeof window.CustomerCheckListToolbar.syncFilterPanelsFromUrl === 'function') {
+          window.CustomerCheckListToolbar.syncFilterPanelsFromUrl(url.href);
+        }
         announce(Core.statusMessage(Object.assign({ count: countLiveRows(document), t: t }, statusCopy())));
         if (focusId) {
           const el = document.getElementById(focusId);

@@ -8,12 +8,15 @@ use OCA\CustomerCheck\Constants;
 use OCA\CustomerCheck\Db\Deal;
 use OCA\CustomerCheck\Db\DealMapper;
 use OCA\CustomerCheck\Db\AgreementMapper;
+use OCA\CustomerCheck\Db\PersonMapper;
 use OCA\CustomerCheck\Exception\ConflictException;
 use OCA\CustomerCheck\Exception\NotFoundException;
 use OCA\CustomerCheck\Exception\ValidationException;
 use OCA\CustomerCheck\Support\CompanyScopedFk;
 use OCA\CustomerCheck\Support\DateMath;
 use OCA\CustomerCheck\Support\DbTransaction;
+use OCA\CustomerCheck\Support\LeadSource;
+use OCA\CustomerCheck\Support\WinChance;
 use OCA\CustomerCheck\Support\OptimisticLock;
 use OCP\AppFramework\Db\DoesNotExistException;
 use OCP\AppFramework\Utility\ITimeFactory;
@@ -38,6 +41,7 @@ class DealService
 		private readonly IL10N $l10n,
 		private readonly IDBConnection $db,
 		private readonly AgreementMapper $agreementMapper,
+		private readonly PersonMapper $personMapper,
 		private readonly ?EditConflictService $editConflicts = null,
 		private readonly ?EntityRevisionService $entityRevisions = null,
 		private readonly ?NotificationService $notifications = null,
@@ -82,15 +86,13 @@ class DealService
 		$deal->setValueCents(max(0, (int)($data['valueCents'] ?? 0)));
 		$deal->setProducts(isset($data['products']) ? trim((string)$data['products']) : null);
 		$deal->setNotes($this->normalizeNotes($data['notes'] ?? null));
+		$this->applyPersonId($deal, $companyId, $data['personId'] ?? null);
+		$deal->setLeadSource($this->resolveLeadSource($data['leadSource'] ?? null, true));
 		$close = DateMath::parseStrictDate((string)($data['expectedClose'] ?? ''));
 		$deal->setExpectedClose($close !== null ? new \DateTime($close->format('Y-m-d')) : null);
 		$owner = trim((string)($data['ownerUserId'] ?? $actor));
 		$deal->setOwnerUserId($owner !== '' ? $owner : null);
-		$bucket = isset($data['forecastBucket']) ? trim((string)$data['forecastBucket']) : null;
-		if ($bucket !== null && $bucket !== '' && !in_array($bucket, Constants::FORECAST_BUCKETS, true)) {
-			throw ValidationException::field(Constants::ERR_VALIDATION, 'forecastBucket', $this->l10n->t('Unknown forecast bucket.'));
-		}
-		$deal->setForecastBucket($bucket !== '' ? $bucket : null);
+		$deal->setForecastBucket($this->resolveForecastBucket($data['forecastBucket'] ?? ($data['winChance'] ?? null)));
 		if ($stage === 'lead') {
 			$slaHours = isset($data['leadSlaHours'])
 				? max(1, (int)$data['leadSlaHours'])
@@ -213,6 +215,12 @@ class DealService
 			if (array_key_exists('notes', $data)) {
 				$deal->setNotes($this->normalizeNotes($data['notes']));
 			}
+			if (array_key_exists('personId', $data)) {
+				$this->applyPersonId($deal, (int)$deal->getCompanyId(), $data['personId']);
+			}
+			if (array_key_exists('leadSource', $data)) {
+				$deal->setLeadSource($this->resolveLeadSource($data['leadSource'], false));
+			}
 			if (array_key_exists('expectedClose', $data)) {
 				$close = DateMath::parseStrictDate((string)($data['expectedClose'] ?? ''));
 				$deal->setExpectedClose($close !== null ? new \DateTime($close->format('Y-m-d')) : null);
@@ -278,12 +286,9 @@ class DealService
 					}
 				}
 			}
-			if (array_key_exists('forecastBucket', $data)) {
-				$bucket = $data['forecastBucket'] === null ? null : trim((string)$data['forecastBucket']);
-				if ($bucket !== null && $bucket !== '' && !in_array($bucket, Constants::FORECAST_BUCKETS, true)) {
-					throw ValidationException::field(Constants::ERR_VALIDATION, 'forecastBucket', $this->l10n->t('Unknown forecast bucket.'));
-				}
-				$deal->setForecastBucket($bucket !== '' ? $bucket : null);
+			if (array_key_exists('forecastBucket', $data) || array_key_exists('winChance', $data)) {
+				$raw = array_key_exists('forecastBucket', $data) ? $data['forecastBucket'] : $data['winChance'];
+				$deal->setForecastBucket($this->resolveForecastBucket($raw));
 			}
 			if (array_key_exists('quoteSentOn', $data)) {
 				$qs = DateMath::parseStrictDate((string)($data['quoteSentOn'] ?? ''));
@@ -426,6 +431,8 @@ class DealService
 			'ownerUserId' => (string)($deal->getOwnerUserId() ?? ''),
 			'valueCents' => (int)$deal->getValueCents(),
 			'notes' => (string)($deal->getNotes() ?? ''),
+			'personId' => $deal->getPersonId() !== null ? (int)$deal->getPersonId() : '',
+			'leadSource' => (string)($deal->getLeadSource() ?? ''),
 			'quoteSentOn' => $deal->getQuoteSentOn() !== null ? $deal->getQuoteSentOn()->format('Y-m-d') : '',
 			'forecastBucket' => (string)($deal->getForecastBucket() ?? ''),
 			'nextActionSkipUntil' => $deal->getNextActionSkipUntil() !== null
@@ -442,7 +449,7 @@ class DealService
 	private function dealIncomingPatch(array $data): array
 	{
 		$out = [];
-		foreach (['title', 'ownerUserId', 'valueCents', 'notes', 'quoteSentOn', 'forecastBucket', 'nextActionSkipUntil', 'stage'] as $field) {
+		foreach (['title', 'ownerUserId', 'valueCents', 'notes', 'personId', 'leadSource', 'quoteSentOn', 'forecastBucket', 'nextActionSkipUntil', 'stage'] as $field) {
 			if (array_key_exists($field, $data)) {
 				$out[$field] = $data[$field];
 			}
@@ -466,6 +473,83 @@ class DealService
 		}
 
 		return $notes === '' ? null : $notes;
+	}
+
+	/**
+	 * @throws ValidationException
+	 */
+	private function applyPersonId(Deal $deal, int $companyId, mixed $raw): void
+	{
+		if ($raw === null || $raw === '' || (is_int($raw) && $raw <= 0) || (is_string($raw) && trim($raw) === '')) {
+			$deal->setPersonId(null);
+
+			return;
+		}
+		$personId = (int)$raw;
+		if ($personId <= 0) {
+			throw ValidationException::field(
+				Constants::ERR_VALIDATION,
+				'personId',
+				$this->l10n->t('Pick a contact that belongs to this company.'),
+			);
+		}
+		try {
+			$person = $this->personMapper->findById($personId);
+		} catch (DoesNotExistException) {
+			throw ValidationException::field(
+				Constants::ERR_VALIDATION,
+				'personId',
+				$this->l10n->t('Pick a contact that belongs to this company.'),
+			);
+		}
+		CompanyScopedFk::assertSameCompany(
+			$companyId,
+			(int)$person->getCompanyId(),
+			'personId',
+			$this->l10n,
+			$this->l10n->t('Pick a contact that belongs to this company.'),
+		);
+		$deal->setPersonId($personId);
+	}
+
+	/**
+	 * @throws ValidationException
+	 */
+	/**
+	 * @throws ValidationException
+	 */
+	private function resolveForecastBucket(mixed $raw): ?string
+	{
+		$normalized = WinChance::normalize($raw);
+		if ($normalized === WinChance::INVALID) {
+			throw ValidationException::field(
+				Constants::ERR_VALIDATION,
+				'forecastBucket',
+				$this->l10n->t('Pick 25%%, 50%%, 75%%, or 100%%.'),
+			);
+		}
+
+		return $normalized;
+	}
+
+	private function resolveLeadSource(mixed $raw, bool $defaultManual): ?string
+	{
+		if ($raw === null || $raw === '') {
+			return $defaultManual ? 'manual' : null;
+		}
+		$normalized = LeadSource::normalize(is_string($raw) || is_numeric($raw) ? (string)$raw : '', false);
+		if ($normalized === null) {
+			return $defaultManual ? 'manual' : null;
+		}
+		if (!LeadSource::isKnown($normalized)) {
+			throw ValidationException::field(
+				Constants::ERR_VALIDATION,
+				'leadSource',
+				$this->l10n->t('Unknown lead source.'),
+			);
+		}
+
+		return $normalized;
 	}
 
 	/**
@@ -719,6 +803,8 @@ class DealService
 			'valueCents' => (int)$deal->getValueCents(),
 			'products' => $deal->getProducts(),
 			'notes' => $deal->getNotes(),
+			'personId' => $deal->getPersonId(),
+			'leadSource' => $deal->getLeadSource(),
 			'expectedClose' => $deal->getExpectedClose()?->format('Y-m-d'),
 			'stageChangedAt' => OptimisticLock::format($deal->getStageChangedAt()),
 			'lostReason' => $deal->getLostReason(),

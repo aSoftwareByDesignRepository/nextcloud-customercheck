@@ -2,6 +2,7 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { login, credsFromEnv } from './helpers/auth.js';
+import { dismissNextStepNudge, fillNextStepDueDate, submitNewDealAndDismiss, waitForNewDealForm } from './helpers/new-deal-form.js';
 
 /**
  * Bachus company 360 — create → detail → person → deal with forgiving forms + a11y.
@@ -65,20 +66,20 @@ test.describe('Bachus company 360 effortless flows', () => {
     // SF-01 (coverage gap → Money warning) is proven in vitest + Zeus contracts;
     // gap is key/partner-only — standard-tier create stays neutral by design.
 
-    // Deal: title-only primary; notes + value stay under progressive disclosure.
+    // Deal: title-first in shared new-deal dialog; notes in Notes section.
     await page.locator('[data-crm-focus-tab="today"]').click();
     await page.locator('#crm-welcome-coach [data-crm-trigger="crm-add-deal"]').click();
-    form = page.locator('form[id^="crm-prompt-"]');
-    await expect(form).toBeVisible({ timeout: 10000 });
+    form = await waitForNewDealForm(page);
     await expect(form.locator('[name="title"]')).toBeVisible();
-    await expect(form.locator('details.crm-advanced')).not.toHaveAttribute('open', '');
-    await expect(form.locator('[name="notes"]')).toBeAttached();
+    await expect(form.locator('[name="notes"]')).toBeVisible();
+    await expect(form.locator('[name="personId"]')).toBeVisible();
+    await expect(form.locator('[name="leadSource"]')).toBeVisible();
+    await expect(form.locator('details.crm-new-deal__more')).not.toHaveAttribute('open', '');
     await expect(form.locator('[name="valueEur"]')).toBeAttached();
     await form.locator('[name="title"]').fill(`Quote ${suffix}`);
-    await form.locator('details.crm-advanced summary').click();
     await form.locator('[name="notes"]').fill(`Team note ${suffix}`);
-    await form.locator('button[type="submit"]').click();
-    await page.waitForLoadState('networkidle');
+    await submitNewDealAndDismiss(page, form);
+    await page.locator('[data-crm-focus-tab="deals"]').click();
     await expect(page.locator('#crm-deals-table')).toContainText(`Quote ${suffix}`, { timeout: 15000 });
     await expect(page.locator('#crm-deals-table')).toContainText(`Team note ${suffix}`);
     await expect(page.locator('#crm-welcome-coach')).toHaveCount(0);
@@ -106,11 +107,9 @@ test.describe('Bachus company 360 effortless flows', () => {
     await expect(form).toBeVisible({ timeout: 10000 });
     await expect(form.locator('details.crm-advanced')).not.toHaveAttribute('open', '');
     await expect(form.locator('[name="type"]')).toBeAttached();
-    const due = form.locator('[name="dueDate"]');
-    await expect(due).toHaveAttribute('type', 'date');
     const today = new Date().toISOString().slice(0, 10);
     await form.locator('[name="title"]').fill(`Call ${suffix}`);
-    await due.fill(today);
+    await fillNextStepDueDate(form, today);
     await form.locator('button[type="submit"]').click();
     await page.waitForLoadState('networkidle');
     await expect(page.locator('#crm-activities')).toBeVisible();

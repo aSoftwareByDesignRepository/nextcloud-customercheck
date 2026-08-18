@@ -20,7 +20,7 @@ return [
 		['name' => 'page#team', 'url' => '/team', 'verb' => 'GET'],
 		['name' => 'page#workload', 'url' => '/workload', 'verb' => 'GET'],
 		['name' => 'page#strategy', 'url' => '/strategy', 'verb' => 'GET'],
-		['name' => 'page#prepareMeeting', 'url' => '/companies/{id}/prepare-meeting', 'verb' => 'GET', 'requirements' => ['id' => '\d+']],
+		['name' => 'page#prepareMeeting', 'url' => '/companies/{id}/prepare-meeting', 'verb' => 'GET', 'requirements' => ['id' => '\d+']], // 301 → company 360
 		['name' => 'page#mailTriage', 'url' => '/mail-triage', 'verb' => 'GET'],
 		['name' => 'page#salesInbox', 'url' => '/sales-inbox', 'verb' => 'GET'],
 		['name' => 'page#review', 'url' => '/review', 'verb' => 'GET'],
@@ -228,7 +228,6 @@ return [
 		['name' => 'persona_api#createPromise', 'url' => '/api/v1/companies/{companyId}/promises', 'verb' => 'POST', 'requirements' => ['companyId' => '\d+']],
 		['name' => 'persona_api#completePromise', 'url' => '/api/v1/companies/{companyId}/promises/{id}/done', 'verb' => 'POST', 'requirements' => ['companyId' => '\d+', 'id' => '\d+']],
 		['name' => 'persona_api#cancelPromise', 'url' => '/api/v1/companies/{companyId}/promises/{id}/cancel', 'verb' => 'POST', 'requirements' => ['companyId' => '\d+', 'id' => '\d+']],
-		['name' => 'persona_api#prepareMeeting', 'url' => '/api/v1/companies/{companyId}/prepare-meeting', 'verb' => 'GET', 'requirements' => ['companyId' => '\d+']],
 
 		// ── Aggregates ──────────────────────────────────────────────────
 		['name' => 'today_api#index', 'url' => '/api/v1/today', 'verb' => 'GET'],

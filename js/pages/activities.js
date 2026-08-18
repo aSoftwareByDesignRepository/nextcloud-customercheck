@@ -5,14 +5,12 @@
   const t = (msg) => (window.t ? window.t('customercheck', msg) : msg);
   if (C && C.init) { C.init(); }
 
-  const toggle = document.getElementById('crm-activities-filter-toggle');
-  const panel = document.getElementById('crm-activities-filter');
-  if (toggle && panel) {
-    toggle.addEventListener('click', () => {
-      const open = panel.hasAttribute('hidden');
-      if (open) panel.removeAttribute('hidden');
-      else panel.setAttribute('hidden', '');
-      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+  const ListToolbar = window.CustomerCheckListToolbar;
+  if (ListToolbar && typeof ListToolbar.bind === 'function') {
+    ListToolbar.bind({
+      controlsId: 'crm-activities-controls',
+      toggleId: 'crm-activities-filter-toggle',
+      panelId: 'crm-activities-filter',
     });
   }
 

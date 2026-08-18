@@ -64,6 +64,7 @@ final class DealServiceAgreementFkTest extends TestCase
 			$l10n,
 			$db,
 			$agreements,
+			$this->createMock(\OCA\CustomerCheck\Db\PersonMapper::class),
 		);
 
 		try {

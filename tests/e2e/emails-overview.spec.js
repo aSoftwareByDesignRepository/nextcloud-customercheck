@@ -33,8 +33,11 @@ test.describe('Who wrote what (emails overview)', () => {
 
     await page.locator('[data-crm-focus-tab="people"]').click();
     await page.locator('#crm-add-person').click();
+    const personDialog = page.locator('#crm-person-dialog');
+    await expect(personDialog).toBeVisible({ timeout: 10000 });
+    await expect(personDialog).toHaveJSProperty('open', true);
     const personForm = page.locator('#crm-person-form');
-    await expect(personForm).toBeVisible({ timeout: 10000 });
+    await expect(personForm).toBeVisible();
     await personForm.locator('#crm-person-name').fill('Ada');
     await personForm.locator('#crm-person-email').fill(`ada-${suffix}@example.com`);
     await personForm.locator('button[type="submit"]').click();

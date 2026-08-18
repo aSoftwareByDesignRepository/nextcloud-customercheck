@@ -115,6 +115,7 @@ final class CoachingBoardTest extends TestCase
 			'alex' => [
 				['quoteAgeDays' => 20, 'forecastBucket' => 'commit', 'valueCents' => 50000],
 				['quoteAgeDays' => 2, 'forecastBucket' => 'upside', 'valueCents' => 1000],
+				['quoteAgeDays' => 1, 'forecastBucket' => 'certain', 'valueCents' => 10000],
 			],
 		]);
 
@@ -182,11 +183,11 @@ final class CoachingBoardTest extends TestCase
 		}
 		$this->assertNotNull($alex);
 		$this->assertTrue($alex['stuck']);
-		$this->assertSame(2, $alex['chase']);
+		$this->assertSame(3, $alex['chase']);
 		$this->assertSame(1, $alex['quote14']);
 		$this->assertSame(1, $alex['coverageGaps']);
 		$this->assertSame(2, $alex['overdueWork']);
-		$this->assertSame(50000, $alex['commitCents']);
+		$this->assertSame(60000, $alex['commitCents']);
 		$this->assertCount(1, $board['escalations']);
 	}
 

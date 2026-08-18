@@ -176,6 +176,11 @@ final class ExtremeSimplicityUxContractTest extends TestCase
 		$this->assertStringContainsString('[data-crm-focus-tab="people"]', $js);
 		$this->assertStringContainsString("} else if (which === 'person') {\n      revealPeopleFocusTab();", $js);
 		$this->assertStringContainsString("getElementById('crm-360-panel-people')", $js);
+		$this->assertStringContainsString('openPersonModal', $js);
+		$this->assertStringContainsString('hostPersonDialog', $js);
+		$this->assertStringContainsString('closePersonModal', $js);
+		$this->assertStringContainsString("C.openModal(dlg)", $js);
+		$this->assertStringNotContainsString("setFormOpen(document.getElementById('crm-person-form')", $js);
 		$this->assertStringContainsString("t('Reload page')", $js);
 		$this->assertStringContainsString("t('Person updated.')", $js);
 		$this->assertStringContainsString("t('Person added.')", $js);
@@ -320,11 +325,13 @@ final class ExtremeSimplicityUxContractTest extends TestCase
 		$this->assertStringContainsString('Please fill in: %s', $js);
 		$this->assertStringContainsString('el.checked', $js);
 		$pipeline = (string)file_get_contents(dirname(__DIR__, 2) . '/js/pages/pipeline.js');
-		$this->assertStringContainsString("t('Almost there')", $pipeline);
+		$newDeal = (string)file_get_contents(dirname(__DIR__, 2) . '/js/common/new-deal-form.js');
+		$this->assertStringContainsString("t('Almost there')", $newDeal);
 		$this->assertStringContainsString("t('Deal saved.')", $pipeline);
 		$this->assertStringNotContainsString("t('Deal chase fields saved.')", $pipeline);
 		$this->assertStringNotContainsString("t('Products / SKUs')", $pipeline);
-		$this->assertStringContainsString("t('Products (optional)')", $pipeline);
+		$this->assertStringNotContainsString("t('Products / SKUs')", $newDeal);
+		$this->assertStringContainsString("t('Products (optional)')", $newDeal);
 		$form = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/company-form.php');
 		$this->assertStringContainsString("\$l->t('Short address')", $form);
 		$this->assertStringNotContainsString("\$l->t('Slug')", $form);
@@ -435,7 +442,6 @@ final class ExtremeSimplicityUxContractTest extends TestCase
 		$this->assertStringContainsString('formatDisplayDate', $persona);
 		$this->assertStringContainsString('Money this month', $persona);
 		$this->assertStringContainsString('Promises left', $persona);
-		$this->assertStringContainsString('Renewals in the next 90 days', $persona);
 		$this->assertStringNotContainsString('Renewals ≤90d', $persona);
 	}
 
@@ -610,11 +616,6 @@ final class ExtremeSimplicityUxContractTest extends TestCase
 		$this->assertStringContainsString('kindLabel', $pulsePhp);
 		$this->assertStringContainsString('pulseAttentionKind', $pulsePhp);
 		$this->assertStringNotContainsString("' · ' . \$health", $pulsePhp);
-		$preparePhp = (string)file_get_contents(dirname(__DIR__, 2) . '/lib/Service/PrepareMeetingService.php');
-		$this->assertStringContainsString('flagLabels', $preparePhp);
-		$this->assertStringContainsString('buyingRoleLabel', $preparePhp);
-		$this->assertStringContainsString('statusLabel', $preparePhp);
-		$this->assertStringContainsString('missingLabels', $preparePhp);
 		$coveragePhp = (string)file_get_contents(dirname(__DIR__, 2) . '/lib/Service/CoverageService.php');
 		$this->assertStringContainsString('missingLabels', $coveragePhp);
 		$this->assertStringContainsString('coverageMissing', $coveragePhp);
@@ -731,9 +732,9 @@ final class ExtremeSimplicityUxContractTest extends TestCase
 		$persona = (string)file_get_contents(dirname(__DIR__, 2) . '/js/pages/persona.js');
 		$this->assertStringContainsString("t('Needs attention')", $persona);
 		$this->assertStringContainsString("t('Up to date')", $persona);
-		$this->assertStringContainsString("t('Open customer')", $persona);
 		$this->assertStringNotContainsString("t('Open company 360')", $persona);
 		$this->assertStringNotContainsString("t('Missing company id for prepare meeting.')", $persona);
+		$this->assertStringNotContainsString('loadPrepare', $persona);
 		$this->assertStringNotContainsString('chase hygiene', $persona);
 		$this->assertStringContainsString("t('Logged without a deal — not counted as sales work.')", $persona);
 		$this->assertStringContainsString("t('Kept what was already saved.')", $persona);

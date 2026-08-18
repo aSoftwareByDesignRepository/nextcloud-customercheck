@@ -1,5 +1,5 @@
 /**
- * Persona OS pages — Pulse / Brief / My Accounts / Team / Strategy / Mail triage / Prepare.
+ * Persona OS pages — Pulse / Brief / My Accounts / Team / Strategy / Mail triage.
  * AZC-simple: one card, clear list, text badges, ≥44px targets.
  */
 (function () {
@@ -208,15 +208,6 @@
       /* leave id 0 — callers show Select a workspace */
     }
     return 0;
-  }
-
-  function companyIdFromContext(mount) {
-    const attr = mount && mount.getAttribute('data-company-id');
-    if (attr && parseInt(attr, 10) > 0) {
-      return parseInt(attr, 10);
-    }
-    const m = window.location.pathname.match(/\/companies\/(\d+)\/prepare-meeting/);
-    return m ? parseInt(m[1], 10) : 0;
   }
 
   async function apiGet(path) {
@@ -1197,9 +1188,9 @@
       userPickerFieldHtml({ id: 'crm-ooo-backup', name: 'backupUserId', label: t('Covering colleague'), required: true }) +
       '<div class="crm-form-row-2">' +
       '<div class="form-group"><label class="form-label" for="crm-ooo-from">' + escapeHtml(t('From')) + '</label>' +
-      '<input id="crm-ooo-from" name="from" type="date" required class="crm-input form-input" /></div>' +
+      '<input id="crm-ooo-from" name="from" type="date" required class="crm-input form-input datepicker-input" autocomplete="off" /></div>' +
       '<div class="form-group"><label class="form-label" for="crm-ooo-until">' + escapeHtml(t('Until')) + '</label>' +
-      '<input id="crm-ooo-until" name="until" type="date" required class="crm-input form-input" /></div>' +
+      '<input id="crm-ooo-until" name="until" type="date" required class="crm-input form-input datepicker-input" autocomplete="off" data-datepicker-min-from="crm-ooo-from" /></div>' +
       '</div>' +
       '<p class="form-help">' + escapeHtml(t('Cover lasts at most 60 days.')) + '</p>' +
       '<div class="crm-form-actions"><button type="submit" class="crm-btn crm-btn--primary">' + escapeHtml(t('Save cover')) + '</button></div>' +
@@ -1508,7 +1499,7 @@
       escapeHtml(t('Short notes are enough — next week’s you will thank you.')) + '</p></div>' +
       '<div class="form-group">' +
       '<label class="form-label" for="crm-11-date">' + escapeHtml(t('Meeting date')) + '</label>' +
-      '<input id="crm-11-date" name="meetingOn" type="date" class="crm-input form-input" value="' +
+      '<input id="crm-11-date" name="meetingOn" type="date" class="crm-input form-input datepicker-input" autocomplete="off" value="' +
       escapeHtml((prep.notes && prep.notes.meetingOn) || localYmd()) + '" /></div>' +
       '<div class="crm-form-actions">' +
       '<button type="submit" class="crm-btn crm-btn--primary">' + escapeHtml(t('Save notes')) + '</button>' +
@@ -1604,7 +1595,7 @@
       '</select></div>' +
       '<div class="form-group">' +
       '<label class="form-label" for="' + escapeHtml(reviewId) + '">' + escapeHtml(t('Next review')) + '</label>' +
-      '<input id="' + escapeHtml(reviewId) + '" type="date" name="nextAssignOn" class="crm-input form-input" value="' +
+      '<input id="' + escapeHtml(reviewId) + '" type="date" name="nextAssignOn" class="crm-input form-input datepicker-input" autocomplete="off" value="' +
       escapeHtml(p.nextAssignOn || '') + '" /></div>' +
       '<div class="form-group">' +
       '<label class="form-label" for="' + escapeHtml(statusId) + '">' + escapeHtml(t('Status')) + '</label>' +
@@ -2262,185 +2253,6 @@
 
     // §14.4 — failed shared sends (workspace-visible to mail.read)
     await renderFailedSendsSection(mount, ws, function () { return loadMail(mount); });
-  }
-
-  function sectionList(title, items, emptyMsg, mapFn) {
-    const block = document.createElement('section');
-    block.className = 'crm-card crm-prepare-section';
-    const header = document.createElement('header');
-    header.className = 'crm-card__header';
-    const h = document.createElement('h3');
-    h.className = 'crm-card__title';
-    h.textContent = title;
-    header.appendChild(h);
-    block.appendChild(header);
-    const body = document.createElement('div');
-    body.className = 'crm-card__body';
-    const mapped = (items || []).map(mapFn || function (it) {
-      return { title: it.title || it.name || it.subject || String(it), meta: it.meta || '' };
-    });
-    renderList(body, mapped, emptyMsg);
-    block.appendChild(body);
-    return block;
-  }
-
-  async function loadPrepare(mount) {
-    const companyId = companyIdFromContext(mount);
-    if (!companyId) {
-      clearMountBusy(mount);
-      mount.innerHTML = '<div class="crm-callout crm-callout--danger" role="alert"><p>' +
-        escapeHtml(t('Pick a company first — then open Prepare meeting from that customer.')) + '</p></div>';
-      return;
-    }
-    const data = await apiGet('/api/v1/companies/' + companyId + '/prepare-meeting');
-    clearMountBusy(mount);
-    mount.innerHTML = '';
-
-    if (data.companyName) {
-      const lead = document.createElement('p');
-      lead.className = 'crm-muted';
-      lead.setAttribute('role', 'status');
-      lead.textContent = data.companyName;
-      mount.appendChild(lead);
-    }
-
-    const cov = data.coverage || {};
-    const flagText = (cov.flagLabels && cov.flagLabels.length)
-      ? cov.flagLabels.join(' · ')
-      : ((cov.flags || []).map(function (f) {
-        const map = {
-          champion_gap: t('Missing champion'),
-          buyer_gap: t('Missing budget decision-maker'),
-          champion_left: t('Champion left'),
-          touch_overdue: t('Follow-up overdue'),
-          promise_overdue: t('Promise overdue'),
-          partner_hours_hot: t('Partner hours running low'),
-          renewal_hot: t('Renewal soon'),
-        };
-        return map[f] || f;
-      }).join(' · '));
-    const covBlock = document.createElement('section');
-    covBlock.className = 'crm-card crm-prepare-section';
-    covBlock.innerHTML =
-      '<header class="crm-card__header"><h3 class="crm-card__title">' + t('Coverage') + '</h3></header>' +
-      '<div class="crm-card__body"><p><span class="crm-badge">' + escapeHtml(cov.gap ? t('Needs attention') : t('Up to date')) + '</span>' +
-      (flagText ? ' <span class="crm-muted">' + escapeHtml(flagText) + '</span>' : '') +
-      '</p></div>';
-    mount.appendChild(covBlock);
-
-    mount.appendChild(sectionList(t('People'), data.people || [], t('No people linked yet.'), function (p) {
-      return {
-        title: p.name,
-        meta: [p.buyingRoleLabel || p.buyingRole, p.statusLabel || p.status].filter(Boolean).join(' · '),
-      };
-    }));
-
-    mount.appendChild(sectionList(t('Communication'), data.communication || [], t('No recent communication.'), function (c) {
-      return {
-        title: c.subject || c.snippet || c.kindLabel || t('Touch'),
-        meta: [
-          c.occurredAt ? formatDisplayDate(c.occurredAt) : '',
-          c.directionLabel || c.direction,
-          c.kindLabel || c.kind,
-        ].filter(Boolean).join(' · '),
-      };
-    }));
-
-    mount.appendChild(sectionList(t('Open promises'), data.openPromises || [], t('No open promises.'), function (p) {
-      return {
-        title: p.title || p.text || t('Promise'),
-        meta: [p.statusLabel || p.status, (p.dueOn || p.dueDate) ? formatDisplayDate(p.dueOn || p.dueDate) : ''].filter(Boolean).join(' · '),
-      };
-    }));
-
-    mount.appendChild(sectionList(t('Action plan'), data.map || [], t('No next steps yet.'), function (s) {
-      return { title: s.title, meta: s.statusLabel || s.status || '' };
-    }));
-
-    const ren = data.renewals90d;
-    const renBlock = document.createElement('section');
-    renBlock.className = 'crm-card crm-prepare-section';
-    renBlock.innerHTML =
-      '<header class="crm-card__header"><h3 class="crm-card__title">' + t('Renewals in the next 90 days') + '</h3></header>' +
-      '<div class="crm-card__body">' +
-      (ren && (ren.validUntil || ren.daysLeft != null)
-        ? '<p>' + escapeHtml(
-          (ren.validUntil ? formatDisplayDate(ren.validUntil) : '') +
-          (ren.daysLeft != null ? ' · ' + t('%s days left', [String(ren.daysLeft)]) : '')
-        ) + '</p>'
-        : '<p class="crm-empty">' + escapeHtml(t('No renewal runway in the next 90 days.')) + '</p>') +
-      '</div>';
-    mount.appendChild(renBlock);
-
-    const ph = data.partnerHours;
-    const phBlock = document.createElement('section');
-    phBlock.className = 'crm-card crm-prepare-section';
-    phBlock.innerHTML =
-      '<header class="crm-card__header"><h3 class="crm-card__title">' + t('Partner hours') + '</h3></header>' +
-      '<div class="crm-card__body">' +
-      (ph
-        ? '<p>' + escapeHtml(
-          [
-            ph.usedMinutes != null ? t('%sh used', [(ph.usedMinutes / 60).toFixed(1)]) : '',
-            ph.quotaMinutes != null ? t('%sh quota', [(ph.quotaMinutes / 60).toFixed(1)]) : '',
-          ].filter(Boolean).join(' / ') +
-          (ph.alert ? ' · ' + t('Alert') : '')
-        ) + '</p>'
-        : '<p class="crm-empty">' + escapeHtml(t('No partner hours data.')) + '</p>') +
-      '</div>';
-    mount.appendChild(phBlock);
-
-    const money = data.money || {};
-    const moneyBlock = document.createElement('section');
-    moneyBlock.className = 'crm-card crm-prepare-section';
-    moneyBlock.innerHTML =
-      '<header class="crm-card__header"><h3 class="crm-card__title">' + escapeHtml(t('Money')) + '</h3></header>' +
-      '<div class="crm-card__body">' +
-      '<p>' + escapeHtml(t('Overdue')) + ': ' + euros(money.overdueCents != null ? money.overdueCents : money.overdueAmountCents) +
-      ' · ' + escapeHtml(t('Open')) + ': ' + euros(money.openCents != null ? money.openCents : money.openAmountCents) + '</p></div>';
-    mount.appendChild(moneyBlock);
-
-    const waitBlock = document.createElement('section');
-    waitBlock.className = 'crm-card crm-prepare-section';
-    waitBlock.innerHTML =
-      '<header class="crm-card__header"><h3 class="crm-card__title">' + t('Waiting tickets') + '</h3></header>' +
-      '<div class="crm-card__body"><p>' + (data.waitingTickets || 0) + '</p></div>';
-    mount.appendChild(waitBlock);
-
-    const goalBlock = document.createElement('section');
-    goalBlock.className = 'crm-card crm-prepare-section';
-    goalBlock.innerHTML =
-      '<header class="crm-card__header"><h3 class="crm-card__title">' + t('Plan goal') + '</h3></header>' +
-      '<div class="crm-card__body">' +
-      (data.planGoal
-        ? '<p>' + escapeHtml(String(data.planGoal)) + '</p>'
-        : '<p class="crm-empty">' + escapeHtml(t('No account plan goal yet.')) + '</p>') +
-      '</div>';
-    mount.appendChild(goalBlock);
-
-    const ctaBlock = document.createElement('section');
-    ctaBlock.className = 'crm-card crm-prepare-section';
-    ctaBlock.innerHTML = '<header class="crm-card__header"><h3 class="crm-card__title">' + t('Next actions') + '</h3></header><div class="crm-card__body" data-crm-prepare-cta></div>';
-    const ctaRow = document.createElement('p');
-    ctaRow.className = 'crm-persona-cta';
-    (data.ctas || []).forEach(function (cta) {
-      const a = document.createElement('a');
-      a.className = 'crm-btn crm-btn--primary';
-      a.href = cta.href || '#';
-      a.textContent = cta.label || t('Open');
-      ctaRow.appendChild(a);
-      ctaRow.appendChild(document.createTextNode(' '));
-    });
-    if (!(data.ctas || []).length) {
-      const a = document.createElement('a');
-      a.className = 'crm-btn crm-btn--primary';
-      a.href = OC.generateUrl('/apps/customercheck/companies/' + companyId);
-      a.textContent = t('Open customer');
-      ctaRow.appendChild(a);
-    }
-    const ctaBody = ctaBlock.querySelector('[data-crm-prepare-cta]');
-    (ctaBody || ctaBlock).appendChild(ctaRow);
-    mount.appendChild(ctaBlock);
   }
 
   function normalizeReviewKindAttr(mount) {
@@ -4212,7 +4024,6 @@
       else if (kind === 'mail-triage') await loadMail(mount);
       else if (kind === 'review') await loadReview(mount);
       else if (kind === 'conflicts') await loadConflicts(mount);
-      else if (kind === 'prepare-meeting') await loadPrepare(mount);
       else {
         clearMountBusy(mount);
         mount.innerHTML = '<p class="crm-muted">' + t('Open a company to continue.') + '</p>';

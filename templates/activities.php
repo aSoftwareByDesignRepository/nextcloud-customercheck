@@ -16,17 +16,22 @@ if (!$crmListFragment) {
 }
 ?>
 <?php if (!$crmListFragment): ?>
-<div class="crm-page-actions-source header-actions" hidden>
-	<button type="button" class="crm-btn crm-btn--secondary" id="crm-activities-filter-toggle" aria-expanded="<?php p($filterOpen ? 'true' : 'false'); ?>" aria-controls="crm-activities-filter"><?php p($l->t('More filters')); ?></button>
-</div>
 <div class="crm-page-stack">
+	<div class="crm-list-controls<?php if ($filterOpen): ?> crm-list-controls--filter-open<?php endif; ?>" id="crm-activities-controls">
+		<section class="crm-list-toolbar" id="crm-activities-toolbar" aria-label="<?php p($l->t('Activity filters')); ?>">
+			<div class="crm-list-toolbar__primary">
 <?php endif; ?>
-	<nav class="crm-quick-filters" data-crm-filter-swap="nav" aria-label="<?php p($l->t('Quick filters')); ?>">
-		<a class="crm-quick-filter<?php if ($filterScope === 'open' && $filterType === ''): ?> is-active<?php endif; ?>" href="<?php p($activitiesUrl); ?>"<?php if ($filterScope === 'open' && $filterType === ''): ?> aria-current="page"<?php endif; ?>><?php p($l->t('Open')); ?></a>
-		<a class="crm-quick-filter<?php if ($filterScope === 'done'): ?> is-active<?php endif; ?>" href="<?php p($activitiesUrl); ?>?scope=done"<?php if ($filterScope === 'done'): ?> aria-current="page"<?php endif; ?>><?php p($l->t('Done')); ?></a>
-		<a class="crm-quick-filter<?php if ($filterScope === 'all'): ?> is-active<?php endif; ?>" href="<?php p($activitiesUrl); ?>?scope=all"<?php if ($filterScope === 'all'): ?> aria-current="page"<?php endif; ?>><?php p($l->t('All')); ?></a>
-	</nav>
+				<nav class="crm-quick-filters" data-crm-filter-swap="nav" aria-label="<?php p($l->t('Quick filters')); ?>">
+					<a class="crm-quick-filter<?php if ($filterScope === 'open' && $filterType === ''): ?> is-active<?php endif; ?>" href="<?php p($activitiesUrl); ?>"<?php if ($filterScope === 'open' && $filterType === ''): ?> aria-current="page"<?php endif; ?>><?php p($l->t('Open')); ?></a>
+					<a class="crm-quick-filter<?php if ($filterScope === 'done'): ?> is-active<?php endif; ?>" href="<?php p($activitiesUrl); ?>?scope=done"<?php if ($filterScope === 'done'): ?> aria-current="page"<?php endif; ?>><?php p($l->t('Done')); ?></a>
+					<a class="crm-quick-filter<?php if ($filterScope === 'all'): ?> is-active<?php endif; ?>" href="<?php p($activitiesUrl); ?>?scope=all"<?php if ($filterScope === 'all'): ?> aria-current="page"<?php endif; ?>><?php p($l->t('All')); ?></a>
+				</nav>
 <?php if (!$crmListFragment): ?>
+			</div>
+			<div class="crm-list-toolbar__actions">
+				<button type="button" class="crm-btn crm-btn--secondary" id="crm-activities-filter-toggle" aria-expanded="<?php p($filterOpen ? 'true' : 'false'); ?>" aria-controls="crm-activities-filter"><?php p($l->t('More filters')); ?></button>
+			</div>
+		</section>
 	<section id="crm-activities-filter" class="crm-card crm-filter-panel" <?php if (!$filterOpen): ?>hidden<?php endif; ?> aria-labelledby="crm-activities-filter-title">
 		<header class="crm-filter-panel__head">
 			<h2 id="crm-activities-filter-title"><?php p($l->t('Filter activities')); ?></h2>
@@ -62,6 +67,7 @@ if (!$crmListFragment) {
 			</form>
 		</div>
 	</section>
+	</div>
 <?php endif; ?>
 	<div data-crm-filter-swap="main" id="crm-activities-results" data-crm-filter-empty="<?php p($l->t('Nothing open right now')); ?>" data-crm-filter-done="<?php p($l->t('List updated.')); ?>" data-crm-filter-failed="<?php p($l->t('Could not update the list. Try again.')); ?>">
 	<?php

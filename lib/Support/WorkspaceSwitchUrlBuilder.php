@@ -15,7 +15,6 @@ final class WorkspaceSwitchUrlBuilder
 	public const ENTITY_FALLBACK = [
 		'company-detail' => 'companies',
 		'company-form' => 'companies',
-		'prepare-meeting' => 'companies',
 		'agreement-form' => 'agreements',
 	];
 
@@ -58,8 +57,9 @@ final class WorkspaceSwitchUrlBuilder
 			'my-accounts' => 'myAccounts',
 			'mail-triage' => 'mailTriage',
 			'support-us' => 'supportUs',
+			'get-the-app' => 'getTheApp',
 			'app-settings' => 'appSettings',
-			'company-detail', 'company-form', 'prepare-meeting' => 'companies',
+			'company-detail', 'company-form' => 'companies',
 			'agreement-form' => 'agreements',
 			default => $pageId,
 		};

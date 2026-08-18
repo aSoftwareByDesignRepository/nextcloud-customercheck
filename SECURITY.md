@@ -33,7 +33,6 @@ Vendor Software-by-Design is **not** the IR owner for self-hosted installs. Cont
 - **What:** Optional ≤50 KiB plain-text snapshot in `crm_mail_msg.preview` after “Show message”.
 - **Why / legal basis:** Art. 6(1)(f) legitimate interest (team triage of a workplace shared inbox) and/or Art. 6(1)(b) contract performance; mandatory DSGVO ack on mailbox save documents operator acceptance.
 - **Retention:** Workspace `mail_retention_days` (floor 30); purge deletes index rows including `preview`. IMAP originals unchanged.
-- **Details:** `docs/security/MAIL-PREVIEW-COMPLIANCE.md`
 
 ## Side-effectful preview API
 

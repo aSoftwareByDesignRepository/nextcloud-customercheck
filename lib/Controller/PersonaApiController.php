@@ -21,7 +21,6 @@ use OCA\CustomerCheck\Service\MailDraftService;
 use OCA\CustomerCheck\Service\MailSendService;
 use OCA\CustomerCheck\Service\PersonalMailService;
 use OCA\CustomerCheck\Service\PersonalMailOAuthService;
-use OCA\CustomerCheck\Service\PrepareMeetingService;
 use OCA\CustomerCheck\Service\PromiseService;
 use OCA\CustomerCheck\Service\PulseService;
 use OCA\CustomerCheck\Service\ReviewService;
@@ -57,7 +56,6 @@ class PersonaApiController extends Controller
 		private readonly MailboxSyncService $mailboxSync,
 		private readonly MailSendService $mailSend,
 		private readonly MailDraftService $mailDrafts,
-		private readonly PrepareMeetingService $prepare,
 		private readonly AccountPlanService $plans,
 		private readonly EscalationService $escalations,
 		private readonly CirclesRollCallService $circles,
@@ -662,21 +660,6 @@ class PersonaApiController extends Controller
 	}
 
 	#[NoAdminRequired]
-	public function prepareMeeting(int $companyId): JSONResponse
-	{
-		try {
-			$uid = $this->access->currentUserId();
-			$company = $this->companies->get($companyId);
-			$wsId = (int)($company->getWorkspaceId() ?? 0);
-			$this->workspaces->assertUserCanAccessCompany($uid, $wsId, 'read');
-
-			return $this->ok($this->prepare->build($companyId, $uid));
-		} catch (\Throwable $e) {
-			return $this->fromThrowable($e);
-		}
-	}
-
-	#[NoAdminRequired]
 	public function mailboxes(int $workspaceId): JSONResponse
 	{
 		try {
@@ -916,10 +899,16 @@ class PersonaApiController extends Controller
 			// Companion AuthSession uses the same redirect URI; do not burn state/code here.
 			if ($this->personalMailOAuth->isNativeOAuthState($state)) {
 				$msg = $this->l10n->t('Sign-in complete. You can return to the CustomerCheck app.');
-				$html = '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">'
+				$lang = method_exists($this->l10n, 'getLanguageCode') ? (string)$this->l10n->getLanguageCode() : 'en';
+				if (!preg_match('/^[a-z]{2,3}([_-][A-Za-z0-9]+)*$/', $lang)) {
+					$lang = 'en';
+				}
+				$html = '<!DOCTYPE html><html lang="' . htmlspecialchars($lang, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '"><head><meta charset="utf-8">'
 					. '<meta name="viewport" content="width=device-width, initial-scale=1">'
 					. '<title>' . htmlspecialchars($msg, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</title>'
-					. '<style>body{font-family:system-ui,sans-serif;margin:2rem;line-height:1.5;color:#111}'
+					. '<meta name="color-scheme" content="light dark">'
+					. '<style>html{color-scheme:light dark}'
+					. 'body{font-family:system-ui,sans-serif;margin:2rem;line-height:1.5;color:CanvasText;background:Canvas}'
 					. 'p{max-width:36rem;font-size:1.125rem}</style></head><body>'
 					. '<p role="status">' . htmlspecialchars($msg, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</p>'
 					. '</body></html>';

@@ -339,12 +339,13 @@ class AgreementMapper extends QBMapper
 	}
 
 	/**
-	 * @param array{companyId?: int, companyIds?: list<int>, kind?: string, status?: string, invoiceStatus?: string, expiringBefore?: \DateTimeInterface, workspaceId?: int} $filters
+	 * @param array{companyId?: int, companyIds?: list<int>, kind?: string, status?: string, invoiceStatus?: string, expiringBefore?: \DateTimeInterface, workspaceId?: int, workspaceIds?: list<int>} $filters
 	 */
 	private function applyFilters(IQueryBuilder $qb, array $filters): void
 	{
 		$companyId = (int)($filters['companyId'] ?? 0);
 		$workspaceId = (int)($filters['workspaceId'] ?? 0);
+		$workspaceIds = $filters['workspaceIds'] ?? null;
 		/** @var list<int> $companyIds */
 		$companyIds = array_values(array_filter(array_map('intval', $filters['companyIds'] ?? [])));
 		if ($companyId > 0) {
@@ -360,8 +361,12 @@ class AgreementMapper extends QBMapper
 			// explicit company context (companyId) keeps history reachable.
 			$this->excludeArchivedCompanies($qb);
 		}
-		if ($workspaceId > 0) {
+		if (is_array($workspaceIds)) {
+			$this->restrictToWorkspaces($qb, $workspaceIds);
+		} elseif ($workspaceId > 0) {
 			$this->restrictToWorkspace($qb, $workspaceId);
+		} elseif ($companyId <= 0 && $companyIds === []) {
+			$qb->andWhere($qb->expr()->eq($qb->createNamedParameter(1), $qb->createNamedParameter(0)));
 		}
 
 		$kind = (string)($filters['kind'] ?? '');

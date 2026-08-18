@@ -160,6 +160,21 @@ final class DisplayLabelServiceTest extends TestCase
 		$this->assertSame('To-do', $opts[3]['label']);
 	}
 
+	public function testForecastBucketLabelsArePercentages(): void
+	{
+		$this->assertSame('25%', $this->labels->forecastBucket('pipeline'));
+		$this->assertSame('50%', $this->labels->forecastBucket('upside'));
+		$this->assertSame('75%', $this->labels->forecastBucket('commit'));
+		$this->assertSame('100%', $this->labels->forecastBucket('certain'));
+		$this->assertSame('Not set', $this->labels->forecastBucket(''));
+		$opts = $this->labels->forecastBucketOptions();
+		$values = array_column($opts, 'value');
+		$this->assertSame(['pipeline', 'upside', 'commit', 'certain'], $values);
+		$this->assertNotContains('', $values);
+		$labels = array_column($opts, 'label');
+		$this->assertSame(['25%', '50%', '75%', '100%'], $labels);
+	}
+
 	public function testSiblingOptionsSortByLabelAndSkipInvalid(): void
 	{
 		$opts = $this->labels->siblingCustomerOptions([

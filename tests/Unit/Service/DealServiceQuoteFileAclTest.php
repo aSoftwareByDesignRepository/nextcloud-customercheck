@@ -72,6 +72,7 @@ final class DealServiceQuoteFileAclTest extends TestCase
 			$l10n,
 			$this->createMock(IDBConnection::class),
 			$this->createMock(AgreementMapper::class),
+			$this->createMock(\OCA\CustomerCheck\Db\PersonMapper::class),
 		);
 
 		try {
@@ -118,6 +119,7 @@ final class DealServiceQuoteFileAclTest extends TestCase
 			$l10n,
 			$this->createMock(IDBConnection::class),
 			$this->createMock(AgreementMapper::class),
+			$this->createMock(\OCA\CustomerCheck\Db\PersonMapper::class),
 		);
 
 		$result = $svc->update(3, [
@@ -162,6 +164,7 @@ final class DealServiceQuoteFileAclTest extends TestCase
 			$l10n,
 			$this->createMock(IDBConnection::class),
 			$this->createMock(AgreementMapper::class),
+			$this->createMock(\OCA\CustomerCheck\Db\PersonMapper::class),
 		);
 
 		$result = $svc->update(3, [

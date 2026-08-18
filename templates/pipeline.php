@@ -19,6 +19,8 @@ $stageLabels = [
 $hasCompanies = !empty($_['hasCompanies']);
 $forecastDisclaimer = (string)($_['forecastDisclaimer'] ?? $l->t('Planning labels — not expected cash.'));
 $forecastBucketOptions = $_['forecastBucketOptions'] ?? [];
+$dealStageOptions = $_['dealStageOptions'] ?? [];
+$leadSourceOptions = $_['leadSourceOptions'] ?? [];
 $lossReasonCodeOptions = $_['lossReasonCodeOptions'] ?? [];
 /** @var \OCA\CustomerCheck\Service\DisplayLabelService|null $labels */
 $labels = $_['labels'] ?? null;
@@ -28,50 +30,64 @@ include __DIR__ . '/common/page-start.php';
 <script type="application/json" id="crm-pipeline-meta"><?php
 	echo json_encode(['hasCompanies' => $hasCompanies], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR);
 ?></script>
-<script type="application/json" id="crm-pipeline-forecast-options"><?php
+<script type="application/json" id="crm-deal-form-forecast-options"><?php
 	echo json_encode($forecastBucketOptions, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR);
+?></script>
+<script type="application/json" id="crm-deal-form-stage-options"><?php
+	echo json_encode($dealStageOptions, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR);
+?></script>
+<script type="application/json" id="crm-deal-form-lead-source-options"><?php
+	echo json_encode($leadSourceOptions, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR);
 ?></script>
 <script type="application/json" id="crm-pipeline-loss-options"><?php
 	echo json_encode($lossReasonCodeOptions, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR);
 ?></script>
-<div class="crm-page-actions-source header-actions" hidden>
-	<div class="crm-btn-group" role="group" aria-label="<?php p($l->t('Deals view')); ?>">
-		<button type="button" class="crm-btn crm-btn--sm <?php p($pipelineView === 'table' ? 'crm-btn--primary' : 'crm-btn--secondary'); ?>" data-crm-pipeline-view="table"><?php p($l->t('Table')); ?></button>
-		<button type="button" class="crm-btn crm-btn--sm <?php p($pipelineView === 'board' ? 'crm-btn--primary' : 'crm-btn--secondary'); ?>" data-crm-pipeline-view="board"><?php p($l->t('Board')); ?></button>
-	</div>
-	<div class="crm-btn-group" role="group" aria-label="<?php p($l->t('Period')); ?>">
-		<?php
-		$periodChips = [
-			'' => $l->t('All'),
-			'month' => $l->t('This month'),
-			'quarter' => $l->t('This quarter'),
-		];
-		foreach ($periodChips as $pval => $plabel):
-			$active = $periodFilter === $pval;
-			$href = $urlGenerator->linkToRoute('customercheck.page.pipeline', array_filter([
-				'view' => $pipelineView !== 'table' ? $pipelineView : null,
-				'stage' => $stageFilter !== '' ? $stageFilter : null,
-				'period' => $pval !== '' ? $pval : null,
-				'workspaceId' => $_['workspaceId'] ?? null,
-			], static fn ($v) => $v !== null && $v !== ''));
-			?>
-		<a class="crm-btn crm-btn--sm <?php p($active ? 'crm-btn--primary' : 'crm-btn--secondary'); ?>"
-			href="<?php p($href); ?>"
-			aria-current="<?php p($active ? 'true' : 'false'); ?>"><?php p($plabel); ?></a>
-		<?php endforeach; ?>
-		<button type="button" class="crm-btn crm-btn--sm crm-btn--secondary" id="crm-pipeline-period-custom"
-			aria-expanded="<?php p($periodFilter === 'custom' ? 'true' : 'false'); ?>"
-			aria-controls="crm-pipeline-filter"><?php p($l->t('Custom')); ?></button>
-	</div>
-	<button type="button" class="crm-btn crm-btn--secondary" id="crm-pipeline-filter-toggle" aria-expanded="false" aria-controls="crm-pipeline-filter"><?php p($l->t('Filter')); ?></button>
-	<?php if (!empty($_['canWrite'])): ?>
-	<button type="button" class="crm-btn crm-btn--primary" id="crm-pipeline-new-deal" data-has-companies="<?php p($hasCompanies ? '1' : '0'); ?>"><?php p($l->t('New deal')); ?></button>
-	<?php endif; ?>
-</div>
 <div class="crm-page-stack">
 	<p class="crm-muted" role="status" id="crm-forecast-disclaimer"><?php p($forecastDisclaimer); ?></p>
 
-	<section id="crm-pipeline-filter" class="crm-card crm-filter-panel" <?php if ($stageFilter === '' && $periodFilter === ''): ?>hidden<?php endif; ?> aria-labelledby="crm-pipeline-filter-title">
+	<div class="crm-pipeline-controls<?php if ($stageFilter !== '' || $periodFilter !== ''): ?> crm-pipeline-controls--filter-open<?php endif; ?>" id="crm-pipeline-controls">
+		<section class="crm-pipeline-toolbar" id="crm-pipeline-toolbar" aria-label="<?php p($l->t('Deals view and filters')); ?>">
+			<div class="crm-pipeline-toolbar__primary">
+				<div class="crm-btn-group crm-pipeline-toolbar__views" role="group" aria-label="<?php p($l->t('Deals view')); ?>">
+					<button type="button" class="crm-btn crm-btn--sm <?php p($pipelineView === 'table' ? 'crm-btn--primary' : 'crm-btn--secondary'); ?>" data-crm-pipeline-view="table" aria-pressed="<?php p($pipelineView === 'table' ? 'true' : 'false'); ?>"><?php p($l->t('Table')); ?></button>
+					<button type="button" class="crm-btn crm-btn--sm <?php p($pipelineView === 'board' ? 'crm-btn--primary' : 'crm-btn--secondary'); ?>" data-crm-pipeline-view="board" aria-pressed="<?php p($pipelineView === 'board' ? 'true' : 'false'); ?>"><?php p($l->t('Board')); ?></button>
+				</div>
+				<div class="crm-btn-group crm-pipeline-toolbar__period" role="group" aria-label="<?php p($l->t('Period')); ?>">
+					<?php
+					$periodChips = [
+						'' => $l->t('All'),
+						'month' => $l->t('This month'),
+						'quarter' => $l->t('This quarter'),
+					];
+					foreach ($periodChips as $pval => $plabel):
+						$active = $periodFilter === $pval;
+						$href = $urlGenerator->linkToRoute('customercheck.page.pipeline', array_filter([
+							'view' => $pipelineView !== 'table' ? $pipelineView : null,
+							'stage' => $stageFilter !== '' ? $stageFilter : null,
+							'period' => $pval !== '' ? $pval : null,
+							'workspaceId' => $_['workspaceId'] ?? null,
+						], static fn ($v) => $v !== null && $v !== ''));
+						?>
+					<a class="crm-btn crm-btn--sm <?php p($active ? 'crm-btn--primary' : 'crm-btn--secondary'); ?>"
+						href="<?php p($href); ?>"
+						aria-current="<?php p($active ? 'true' : 'false'); ?>"><?php p($plabel); ?></a>
+					<?php endforeach; ?>
+					<button type="button" class="crm-btn crm-btn--sm crm-btn--secondary" id="crm-pipeline-period-custom"
+						aria-expanded="<?php p($periodFilter === 'custom' ? 'true' : 'false'); ?>"
+						aria-controls="crm-pipeline-filter"><?php p($l->t('Custom')); ?></button>
+				</div>
+			</div>
+			<div class="crm-pipeline-toolbar__actions">
+				<button type="button" class="crm-btn crm-btn--secondary" id="crm-pipeline-filter-toggle"
+					aria-expanded="<?php p(($stageFilter !== '' || $periodFilter !== '') ? 'true' : 'false'); ?>"
+					aria-controls="crm-pipeline-filter"><?php p($l->t('Filter')); ?></button>
+				<?php if (!empty($_['canWrite'])): ?>
+				<button type="button" class="crm-btn crm-btn--primary" id="crm-pipeline-new-deal" data-has-companies="<?php p($hasCompanies ? '1' : '0'); ?>"><?php p($l->t('New deal')); ?></button>
+				<?php endif; ?>
+			</div>
+		</section>
+
+	<section id="crm-pipeline-filter" class="crm-card crm-filter-panel crm-pipeline-filter" <?php if ($stageFilter === '' && $periodFilter === ''): ?>hidden<?php endif; ?> aria-labelledby="crm-pipeline-filter-title">
 		<header class="crm-filter-panel__head">
 			<h2 id="crm-pipeline-filter-title"><?php p($l->t('Filter deals')); ?></h2>
 			<p class="crm-filter-panel__intro"><?php p($l->t('Narrow by stage or period, then Apply.')); ?></p>
@@ -100,11 +116,11 @@ include __DIR__ . '/common/page-start.php';
 					</div>
 					<div class="crm-filter-field">
 						<label for="crm-filter-from" class="form-label"><?php p($l->t('From')); ?></label>
-						<input type="date" id="crm-filter-from" name="from" class="form-input crm-input" value="<?php p($periodFrom); ?>">
+						<input type="date" id="crm-filter-from" name="from" class="form-input crm-input datepicker-input" value="<?php p($periodFrom); ?>" autocomplete="off" placeholder="<?php p($l->t('dd.mm.yyyy')); ?>" data-datepicker-sync-month-with="crm-filter-to" data-datepicker-max-from="crm-filter-to">
 					</div>
 					<div class="crm-filter-field">
 						<label for="crm-filter-to" class="form-label"><?php p($l->t('To')); ?></label>
-						<input type="date" id="crm-filter-to" name="to" class="form-input crm-input" value="<?php p($periodTo); ?>">
+						<input type="date" id="crm-filter-to" name="to" class="form-input crm-input datepicker-input" value="<?php p($periodTo); ?>" autocomplete="off" placeholder="<?php p($l->t('dd.mm.yyyy')); ?>" data-datepicker-sync-month-with="crm-filter-from" data-datepicker-min-from="crm-filter-from">
 					</div>
 					<div class="crm-filter-field crm-filter-field--actions">
 						<button type="submit" class="crm-btn crm-btn--primary"><?php p($l->t('Apply')); ?></button>
@@ -114,6 +130,7 @@ include __DIR__ . '/common/page-start.php';
 			</form>
 		</div>
 	</section>
+	</div>
 
 	<section class="crm-card" id="crm-pipeline-table" <?php if ($pipelineView === 'board'): ?>hidden<?php endif; ?>>
 		<header class="crm-card__header"><h2 class="crm-card__title"><?php p($l->t('Deals')); ?></h2></header>

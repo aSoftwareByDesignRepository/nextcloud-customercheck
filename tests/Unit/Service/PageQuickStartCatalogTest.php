@@ -58,7 +58,9 @@ final class PageQuickStartCatalogTest extends TestCase
 	public function testCompanyDetailHasNoQuickStart(): void
 	{
 		$this->assertNotContains('company-detail', PageQuickStartCatalog::requiredPageIds());
+		$this->assertNotContains('prepare-meeting', PageQuickStartCatalog::requiredPageIds());
 		$this->assertNull($this->catalog->forPage('company-detail'));
+		$this->assertNull($this->catalog->forPage('prepare-meeting'));
 	}
 
 	public function testWorkloadAliasesToTeam(): void

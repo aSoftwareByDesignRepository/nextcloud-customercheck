@@ -1,6 +1,7 @@
 (function () {
   'use strict';
   const C = window.CustomerCheckComponents || window.CrmComponents;
+  const PersonDlg = window.CustomerCheckPersonDialogCore || {};
   const Api = window.CustomerCheckApi;
   const t = (msg, args) => {
     const list = Array.isArray(args) ? args : [];
@@ -187,6 +188,10 @@
               const selected = f.value !== undefined && String(f.value) === value ? ' selected' : '';
               return '<option value="' + escapeHtml(value) + '"' + selected + '>' + escapeHtml(label) + '</option>';
             }).join('') + '</select>';
+        } else if (f.type === 'date') {
+          const val = f.value !== undefined && f.value !== null ? ' value="' + escapeHtml(String(f.value)) + '"' : '';
+          html += '<input class="crm-input form-input datepicker-input" id="' + id + '-' + fname + '" name="' + fname + '" type="date"' + val +
+            ' autocomplete="off" placeholder="' + escapeHtml(t('dd.mm.yyyy')) + '" ' + (f.required ? 'required' : '') + ' />';
         } else if (f.type === 'checkbox') {
           const checked = f.value ? ' checked' : '';
           html = '<div class="form-group"><label class="crm-choice" for="' + id + '-' + fname + '">' +
@@ -304,6 +309,9 @@
             const metaBase = String(f.name || '').replace(/Id$/, '');
             data[metaBase + 'Name'] = (el.dataset && el.dataset.companyName) || '';
             data[metaBase + 'UpdatedAt'] = (el.dataset && el.dataset.updatedAt) || '';
+          } else if (f.type === 'date') {
+            const DP = window.CustomerCheckDatepicker;
+            data[f.name] = (DP && typeof DP.isoValue === 'function') ? DP.isoValue(el) : el.value;
           } else {
             data[f.name] = el.value;
           }
@@ -361,7 +369,8 @@
     return root ? (root.getAttribute('data-updated-at') || '') : '';
   }
 
-  const PHONE_RE = /^[0-9+()\/.\s-]{4,64}$/;
+  const PHONE_RE = PersonDlg.PHONE_RE || /^[0-9+()\/.\s-]{4,64}$/;
+  const EMAIL_RE = PersonDlg.EMAIL_RE || /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   let identitySaveBusy = false;
   let personContactsUid = '';
   let identityFormOpener = null;
@@ -437,13 +446,99 @@
     }
   }
 
+  function setPersonAddExpanded(open) {
+    document.querySelectorAll('[data-crm-trigger="crm-add-person"], #crm-add-person').forEach((b) => {
+      b.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+  }
+
+  function personDialogEl() {
+    return document.getElementById(PersonDlg.DIALOG_ID || 'crm-person-dialog');
+  }
+
+  function isPersonDialogOpen() {
+    const dlg = personDialogEl();
+    if (typeof PersonDlg.isNativeDialogOpen === 'function') {
+      return PersonDlg.isNativeDialogOpen(dlg);
+    }
+    return !!(dlg && (dlg.open === true || dlg.hasAttribute('open')));
+  }
+
+  function hostPersonDialog() {
+    const dlg = personDialogEl();
+    if (!dlg) return null;
+    if (typeof PersonDlg.hostDialogOnBody === 'function') {
+      PersonDlg.hostDialogOnBody(dlg, document.body);
+    } else if (dlg.parentElement !== document.body) {
+      document.body.appendChild(dlg);
+    }
+    if (typeof PersonDlg.markPersist === 'function') {
+      PersonDlg.markPersist(dlg);
+    } else {
+      dlg.dataset.azcModalPersist = 'true';
+      dlg.dataset.azcFocusTrapStandalone = '1';
+    }
+    if (dlg.dataset.crmPersonDialogWired !== '1') {
+      dlg.dataset.crmPersonDialogWired = '1';
+      dlg.addEventListener('cancel', (e) => {
+        const block = typeof PersonDlg.shouldBlockDialogDismiss === 'function'
+          ? PersonDlg.shouldBlockDialogDismiss(identitySaveBusy)
+          : identitySaveBusy;
+        if (block || dlg.dataset.azcModalDismiss === 'false') {
+          e.preventDefault();
+          return;
+        }
+        setTimeout(() => {
+          if (C && typeof C.closeModal === 'function') {
+            C.closeModal(dlg);
+          }
+        }, 0);
+      });
+      dlg.addEventListener('click', (e) => {
+        if (e.target !== dlg) return;
+        const block = typeof PersonDlg.shouldBlockDialogDismiss === 'function'
+          ? PersonDlg.shouldBlockDialogDismiss(identitySaveBusy)
+          : identitySaveBusy;
+        if (block || dlg.dataset.azcModalDismiss === 'false') return;
+        closePersonModal();
+        restoreIdentityOpenerFocus();
+      });
+    }
+    return dlg;
+  }
+
+  function closePersonModal() {
+    setPersonAddExpanded(false);
+    const dlg = personDialogEl();
+    if (!dlg) return;
+    if (C && typeof C.closeModal === 'function' && isPersonDialogOpen()) {
+      C.closeModal(dlg);
+    }
+  }
+
+  function openPersonModal(focusId) {
+    const dlg = hostPersonDialog();
+    if (!dlg || !C || typeof C.openModal !== 'function') return;
+    setPersonAddExpanded(true);
+    if (identityFormOpener) {
+      dlg._azcReturnFocus = identityFormOpener;
+    }
+    C.openModal(dlg);
+    const focusEl = focusId ? document.getElementById(focusId) : null;
+    const wait = typeof PersonDlg.FOCUS_AFTER_OPEN_MS === 'number' ? PersonDlg.FOCUS_AFTER_OPEN_MS : 80;
+    window.setTimeout(() => {
+      if (!isPersonDialogOpen()) return;
+      if (focusEl && typeof focusEl.focus === 'function') {
+        focusEl.focus();
+      }
+    }, wait);
+  }
+
   function closeIdentityForms() {
     bumpContactsSuggest();
     setFormOpen(document.getElementById('crm-company-name-form'), document.getElementById('crm-change-company'), false);
     setFormOpen(document.getElementById('crm-address-form'), document.getElementById('crm-edit-address'), false);
-    const addBtns = document.querySelectorAll('[data-crm-trigger="crm-add-person"], #crm-add-person');
-    addBtns.forEach((b) => b.setAttribute('aria-expanded', 'false'));
-    setFormOpen(document.getElementById('crm-person-form'), null, false);
+    closePersonModal();
   }
 
   function revealPeopleFocusTab() {
@@ -469,7 +564,7 @@
       revealPeopleFocusTab();
       const addBtn = document.getElementById('crm-add-person');
       if (addBtn) addBtn.setAttribute('aria-expanded', 'true');
-      setFormOpen(document.getElementById('crm-person-form'), addBtn, true, 'crm-person-name');
+      openPersonModal('crm-person-name');
     }
   }
 
@@ -477,6 +572,20 @@
     if (identitySaveBusy) return;
     identitySaveBusy = true;
     const submitBtn = form ? form.querySelector('button[type="submit"]') : null;
+    const personDlg = form && typeof form.closest === 'function' ? form.closest('#crm-person-dialog') : null;
+    const extraLock = [];
+    if (personDlg) {
+      if (typeof PersonDlg.setDismissible === 'function') {
+        PersonDlg.setDismissible(personDlg, false);
+      } else {
+        personDlg.dataset.azcModalDismiss = 'false';
+      }
+      ['crm-person-dialog-close', 'crm-person-cancel'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) extraLock.push(el);
+      });
+      extraLock.forEach((el) => { el.disabled = true; });
+    }
     clearIdentityError(errBoxId);
     if (submitBtn) {
       submitBtn.disabled = true;
@@ -488,6 +597,14 @@
       showIdentityError(errBoxId, e);
     } finally {
       identitySaveBusy = false;
+      extraLock.forEach((el) => { el.disabled = false; });
+      if (personDlg) {
+        if (typeof PersonDlg.setDismissible === 'function') {
+          PersonDlg.setDismissible(personDlg, true);
+        } else {
+          delete personDlg.dataset.azcModalDismiss;
+        }
+      }
       if (submitBtn) {
         submitBtn.disabled = false;
         submitBtn.setAttribute('aria-busy', 'false');
@@ -504,6 +621,7 @@
     form.removeAttribute('data-person-id');
     form.removeAttribute('data-updated-at');
     if (title) title.textContent = mode === 'edit' ? t('Change person') : t('Add person');
+    clearIdentityError('crm-person-form-error');
     setFieldValue('crm-person-name', row ? (row.getAttribute('data-person-name') || '') : '');
     setFieldValue('crm-person-email', row ? (row.getAttribute('data-person-email') || '') : '');
     setFieldValue('crm-person-phone', row ? (row.getAttribute('data-person-phone') || '') : '');
@@ -522,12 +640,20 @@
     const q = String(name || '').trim();
     if (q.length < 2 || identitySaveBusy) return;
     const form = document.getElementById('crm-person-form');
-    if (!form || form.hidden || form.getAttribute('data-mode') !== 'add') return;
+    const mode = form ? form.getAttribute('data-mode') : '';
+    const dialogOpen = isPersonDialogOpen();
+    const allow = typeof PersonDlg.shouldSuggestContacts === 'function'
+      ? PersonDlg.shouldSuggestContacts(mode, identitySaveBusy, dialogOpen)
+      : (mode === 'add' && dialogOpen);
+    if (!form || !allow) return;
     const gen = ++contactsSuggestGen;
     try {
       const resPayload = await Api.get('/contacts/suggest?q=' + encodeURIComponent(q) + '&limit=5');
       if (gen !== contactsSuggestGen || identitySaveBusy) return;
-      if (!form || form.hidden || form.getAttribute('data-mode') !== 'add') return;
+      const stillOpen = typeof PersonDlg.shouldSuggestContacts === 'function'
+        ? PersonDlg.shouldSuggestContacts(form.getAttribute('data-mode'), identitySaveBusy, isPersonDialogOpen())
+        : (form.getAttribute('data-mode') === 'add' && isPersonDialogOpen());
+      if (!form || !stillOpen) return;
       const res = (resPayload && resPayload.data) ? resPayload.data : resPayload;
       if (!res || !res.available) return;
       const items = (res && Array.isArray(res.items) && res.items.length)
@@ -646,6 +772,13 @@
   const personForm = document.getElementById('crm-person-form');
   const personCancel = document.getElementById('crm-person-cancel');
   const personNameInput = document.getElementById('crm-person-name');
+  hostPersonDialog();
+  window.addEventListener('modal-close', (ev) => {
+    const id = ev && ev.detail ? ev.detail.modalId : '';
+    if (id !== (PersonDlg.DIALOG_ID || 'crm-person-dialog')) return;
+    bumpContactsSuggest();
+    setPersonAddExpanded(false);
+  });
   if (personForm) {
     if (personCancel) {
       personCancel.addEventListener('click', () => {
@@ -655,7 +788,11 @@
     }
     if (personNameInput) {
       personNameInput.addEventListener('blur', () => {
-        if (personForm.getAttribute('data-mode') !== 'add') return;
+        const mode = personForm.getAttribute('data-mode');
+        const allow = typeof PersonDlg.shouldSuggestContacts === 'function'
+          ? PersonDlg.shouldSuggestContacts(mode, identitySaveBusy, isPersonDialogOpen())
+          : (mode === 'add' && isPersonDialogOpen());
+        if (!allow) return;
         maybeApplyContactsMatch(personNameInput.value);
       });
     }
@@ -665,34 +802,54 @@
       const email = fieldValue('crm-person-email');
       const phone = fieldValue('crm-person-phone');
       const role = fieldValue('crm-person-role');
-      if (name === '') {
-        showIdentityError('crm-person-form-error', { message: t('Enter the contact name.') });
+      const checked = typeof PersonDlg.validatePersonFields === 'function'
+        ? PersonDlg.validatePersonFields({ name: name, email: email, phone: phone })
+        : null;
+      if (checked && !checked.ok) {
+        if (checked.code === 'name') {
+          showIdentityError('crm-person-form-error', { message: t('Enter the contact name.') });
+        } else if (checked.code === 'email') {
+          showIdentityError('crm-person-form-error', { message: t('Enter a valid email address, for example name@example.com.') });
+        } else {
+          showIdentityError('crm-person-form-error', { message: t('Enter a phone number using digits, spaces and + ( ) / - only.') });
+        }
         return;
       }
-      if (email !== '' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        showIdentityError('crm-person-form-error', { message: t('Enter a valid email address, for example name@example.com.') });
-        return;
-      }
-      if (phone !== '' && !PHONE_RE.test(phone)) {
-        showIdentityError('crm-person-form-error', { message: t('Enter a phone number using digits, spaces and + ( ) / - only.') });
-        return;
+      if (!checked) {
+        if (name === '') {
+          showIdentityError('crm-person-form-error', { message: t('Enter the contact name.') });
+          return;
+        }
+        if (email !== '' && !EMAIL_RE.test(email)) {
+          showIdentityError('crm-person-form-error', { message: t('Enter a valid email address, for example name@example.com.') });
+          return;
+        }
+        if (phone !== '' && !PHONE_RE.test(phone)) {
+          showIdentityError('crm-person-form-error', { message: t('Enter a phone number using digits, spaces and + ( ) / - only.') });
+          return;
+        }
       }
       const mode = personForm.getAttribute('data-mode') || 'add';
       const personId = parseInt(personForm.getAttribute('data-person-id') || '0', 10);
       bumpContactsSuggest();
       await withIdentitySave(personForm, 'crm-person-form-error', async () => {
         if (mode === 'edit' && personId > 0) {
-          await Api.put('/persons/' + personId, {
-            name: name,
-            email: email,
-            phone: phone,
-            role: role,
-            updatedAt: personForm.getAttribute('data-updated-at') || null,
-          });
+          const putBody = typeof PersonDlg.buildUpdatePayload === 'function'
+            ? PersonDlg.buildUpdatePayload({ name: name, email: email, phone: phone, role: role }, personForm.getAttribute('data-updated-at') || null)
+            : {
+              name: name,
+              email: email,
+              phone: phone,
+              role: role,
+              updatedAt: personForm.getAttribute('data-updated-at') || null,
+            };
+          await Api.put('/persons/' + personId, putBody);
           if (liveRegion()) liveRegion().textContent = t('Person updated.');
         } else {
-          const payload = { name: name, email: email, phone: phone, role: role, isPrimary: false };
-          if (personContactsUid) payload.contactsUid = personContactsUid;
+          const payload = typeof PersonDlg.buildCreatePayload === 'function'
+            ? PersonDlg.buildCreatePayload({ name: name, email: email, phone: phone, role: role }, personContactsUid)
+            : { name: name, email: email, phone: phone, role: role, isPrimary: false };
+          if (!payload.contactsUid && personContactsUid) payload.contactsUid = personContactsUid;
           await Api.post('/companies/' + companyId + '/persons', payload);
           if (liveRegion()) liveRegion().textContent = t('Person added.');
         }
@@ -712,7 +869,8 @@
 
   document.addEventListener('keydown', (ev) => {
     if (ev.key !== 'Escape' || identitySaveBusy) return;
-    const openForm = ['crm-company-name-form', 'crm-address-form', 'crm-person-form']
+    if (isPersonDialogOpen()) return;
+    const openForm = ['crm-company-name-form', 'crm-address-form']
       .map((id) => document.getElementById(id))
       .find((f) => f && !f.hidden);
     if (!openForm) return;
@@ -1211,54 +1369,48 @@
     });
   }
 
-  const addDeal = document.getElementById('crm-add-deal');
-  if (addDeal) {
-    addDeal.addEventListener('click', async () => {
-      const data = await promptFields(t('Add deal'), [
-        {
-          name: 'title',
-          label: t('What is this deal?'),
-          required: true,
-          hint: t('Example: Renewal 2026 or Website project. A title is enough.'),
-          maxlength: 255,
-        },
-        {
-          name: 'notes',
-          label: t('Notes'),
-          type: 'textarea',
-          advanced: true,
-          maxlength: 4000,
-          hint: t('Internal notes for your team — the customer does not see these.'),
-        },
-        { name: 'valueEur', label: t('Value (EUR, optional)'), type: 'number', min: 0, step: '0.01', advanced: true },
-        { name: 'products', label: t('Products (optional)'), advanced: true, maxlength: 255 },
-      ]);
-      if (!data) return;
-      const title = String(data.title || '').trim();
-      if (!title) {
-        await C.alertDialog({
-          title: t('Almost there'),
-          message: t('Enter a short title for this deal.'),
-          variant: 'info',
-        });
-        return;
+  function parseDealFormCompanyMeta() {
+    try {
+      const el = document.getElementById('crm-deal-form-company-meta');
+      if (!el) {
+        return { companyId: companyId, companyName: '' };
       }
-      const valueCents = Math.round(parseFloat(data.valueEur || '0') * 100) || 0;
-      try {
-        await Api.post('/deals', {
-          companyId,
-          title,
-          stage: 'lead',
-          valueCents,
-          products: data.products || '',
-          notes: String(data.notes || '').trim(),
-        });
-        location.reload();
-      } catch (e) {
-        await C.alertDialog({ title: t('Could not add deal'), message: (e.payload && e.payload.message) || e.message, variant: 'danger' });
-      }
+      return JSON.parse(el.textContent || '{}');
+    } catch (e) {
+      return { companyId: companyId, companyName: '' };
+    }
+  }
+
+  function openAddDealDialog() {
+    const NewDeal = window.CustomerCheckNewDealForm;
+    if (!NewDeal || typeof NewDeal.open !== 'function' || !C) {
+      return;
+    }
+    const meta = parseDealFormCompanyMeta();
+    NewDeal.open({
+      mode: 'company360',
+      fixedCompanyId: parseInt(String(meta.companyId || companyId || '0'), 10) || companyId,
+      fixedCompanyName: String(meta.companyName || ''),
+      components: C,
+      api: Api,
+      t: t,
+      escapeHtml: escapeHtml,
+      activeWorkspaceId: function () {
+        const stack = document.querySelector('.crm-page-stack[data-company-id]');
+        const wsId = stack ? parseInt(stack.getAttribute('data-workspace-id') || '0', 10) : 0;
+        return wsId > 0 ? wsId : 0;
+      },
+      onReload: function () { window.location.reload(); },
     });
   }
+
+  const addDeal = document.getElementById('crm-add-deal');
+  if (addDeal) {
+    addDeal.addEventListener('click', openAddDealDialog);
+  }
+  document.querySelectorAll('[data-crm-trigger="crm-add-deal"]').forEach((btn) => {
+    btn.addEventListener('click', openAddDealDialog);
+  });
 
   document.querySelectorAll('[data-crm-edit-chase]').forEach((btn) => {
     btn.addEventListener('click', async () => {
@@ -1661,6 +1813,15 @@
     });
   });
 
+  function durationMinuteOptions() {
+    const DP = window.CustomerCheckDatepicker;
+    const mins = (DP && DP.DURATION_MINUTES) ? DP.DURATION_MINUTES : [15, 30, 45, 60, 90, 120, 180, 240, 360, 480];
+    return mins.map((m) => ({
+      value: String(m),
+      label: (DP && typeof DP.formatDurationLabel === 'function') ? DP.formatDurationLabel(m) : String(m),
+    }));
+  }
+
   async function openLogHours(agreementId) {
     const today = localYmd();
     const data = await promptFields(t('Log hours'), [
@@ -1668,9 +1829,10 @@
       {
         name: 'minutes',
         label: t('Minutes'),
-        type: 'number',
+        type: 'select',
         required: true,
         value: '60',
+        options: durationMinuteOptions(),
         hint: t('Steps of 15 minutes. Default is one hour.'),
       },
       {
@@ -1686,8 +1848,13 @@
     if (!data) return;
     if (!data.entryDate) data.entryDate = today;
     let minutes = parseInt(data.minutes, 10);
-    if (!Number.isFinite(minutes) || minutes < 15) minutes = 15;
-    minutes = Math.round(minutes / 15) * 15;
+    const DP = window.CustomerCheckDatepicker;
+    if (DP && typeof DP.snapDurationMinutes === 'function') {
+      minutes = DP.snapDurationMinutes(minutes);
+    } else {
+      if (!Number.isFinite(minutes) || minutes < 15) minutes = 15;
+      minutes = Math.round(minutes / 15) * 15;
+    }
     try {
       await Api.post('/agreements/' + agreementId + '/hours', {
         entryDate: data.entryDate,
@@ -2019,6 +2186,8 @@
   // throws outside try/catch and leaves the section stuck on “Loading…”.
   let commandCenterGeneration = 0;
   let accountPlanGeneration = 0;
+  /** Visible “saved” flash so granny is not left staring at an unchanged form. */
+  let accountPlanSavedUntil = 0;
   let promisesGeneration = 0;
   /** Drops stale Talk mail-body paints when ArrowUp/Down races preview POSTs. */
   let talkMailPreviewGeneration = 0;
@@ -2890,19 +3059,35 @@
 
       const plat = document.getElementById('crm-platform-links');
       if (plat) {
+        const origin = window.location.origin;
         const links = platform.data || platform || {};
+        const chips = (window.CustomerCheckPlatformLinks && typeof window.CustomerCheckPlatformLinks.enabledChips === 'function')
+          ? window.CustomerCheckPlatformLinks.enabledChips(links, origin)
+          : [];
         plat.innerHTML = '';
-        Object.keys(links).forEach((key) => {
-          const info = links[key];
-          if (!info || !info.url) return;
-          const a = document.createElement('a');
-          a.className = 'crm-platform-links__chip';
-          a.href = info.url;
-          a.textContent = info.label || key;
-          plat.appendChild(a);
-        });
-        if (!plat.children.length) {
-          plat.innerHTML = '<p class="crm-muted">' + t('No related apps enabled.') + '</p>';
+        plat.setAttribute('data-platform-painted', '1');
+        if (!chips.length) {
+          plat.hidden = true;
+          plat.setAttribute('hidden', '');
+        } else {
+          plat.hidden = false;
+          plat.removeAttribute('hidden');
+          const lead = document.createElement('p');
+          lead.className = 'crm-platform-links__lead';
+          lead.id = 'crm-platform-links-lead';
+          lead.textContent = t('Open related Nextcloud apps');
+          plat.setAttribute('aria-labelledby', 'crm-platform-links-lead');
+          plat.appendChild(lead);
+          const row = document.createElement('div');
+          row.className = 'crm-platform-links__row';
+          chips.forEach((chip) => {
+            const a = document.createElement('a');
+            a.className = 'crm-platform-links__chip';
+            a.href = chip.href;
+            a.textContent = chip.label;
+            row.appendChild(a);
+          });
+          plat.appendChild(row);
         }
       }
       if (live && !silent) live.textContent = t('Company overview updated.');
@@ -3137,7 +3322,81 @@
     });
   }
 
-  async function loadAccountPlan() {
+  function accountPlanOwnerSearchLabel(plan) {
+    const uid = String(plan.ownerUserId || '').trim();
+    if (!uid) return '';
+    const name = String(plan.ownerDisplayName || '').trim();
+    if (name && name !== uid) {
+      return name + ' (' + uid + ')';
+    }
+    return uid;
+  }
+
+  function accountPlanStepsHtml(plan, mapSteps) {
+    const goalText = String((plan && plan.goal) || '').trim();
+    const hasSaved = !!(plan && (plan.updatedAt || plan.id));
+    const openMoves = (mapSteps || []).filter((s) => String(s.status || 'open') === 'open');
+    const steps = [
+      { title: t('Write the goal'), text: t('Where should this customer be in a year?'), done: goalText !== '' },
+      { title: t('Save plan'), text: t('Keeps the goal for your team.'), done: hasSaved && goalText !== '' },
+      { title: t('Add the next moves'), text: t('Concrete steps toward the goal.'), done: openMoves.length > 0 },
+    ];
+    let html = '<ol class="crm-welcome-coach__steps crm-account-plan__guide" aria-label="' + escapeHtml(t('Account plan steps')) + '">';
+    steps.forEach((step, index) => {
+      html += '<li class="crm-welcome-coach__step' + (step.done ? ' crm-welcome-coach__step--done' : '') + '">';
+      html += '<span class="crm-welcome-coach__step-num" aria-hidden="true">' + String(index + 1) + '</span>';
+      html += '<div class="crm-welcome-coach__step-body">';
+      html += '<strong class="crm-welcome-coach__step-title">' + escapeHtml(step.title) + '</strong>';
+      html += '<p class="crm-welcome-coach__step-text">' + escapeHtml(step.text) + '</p>';
+      html += '</div></li>';
+    });
+    html += '</ol>';
+    return html;
+  }
+
+  function planMoreShouldOpen(plan) {
+    const owner = String(plan.ownerUserId || '').trim();
+    const review = String(plan.nextAssignOn || '').trim();
+    const priority = String(plan.priority || 'p2');
+    return owner !== '' || review !== '' || (priority !== '' && priority !== 'p2');
+  }
+
+  function accountPlanJustSaved() {
+    return Date.now() < accountPlanSavedUntil;
+  }
+
+  function announceAccountPlanSaved() {
+    if (liveRegion()) {
+      liveRegion().textContent = t('Account plan saved.');
+    }
+    if (C && typeof C.showToast === 'function') {
+      C.showToast({ type: 'success', title: t('Saved.'), message: t('Account plan saved.') });
+    }
+  }
+
+  function bindAccountPlanDirty(form) {
+    if (!form) return;
+    const onDirty = function (e) {
+      if (e && e.isTrusted === false) {
+        return;
+      }
+      accountPlanSavedUntil = 0;
+      const banner = document.getElementById('crm-plan-save-status');
+      if (banner) {
+        banner.remove();
+      }
+      const btn = form.querySelector('button[type="submit"]');
+      if (btn && form.getAttribute('aria-busy') !== 'true') {
+        btn.textContent = t('Save plan');
+        btn.removeAttribute('data-plan-just-saved');
+        btn.classList.remove('crm-account-plan__save-btn--done');
+      }
+    };
+    form.addEventListener('input', onDirty);
+    form.addEventListener('change', onDirty);
+  }
+
+  async function loadAccountPlan(planOverride) {
     const body = document.getElementById('crm-account-plan-body');
     if (!body || !companyId) return;
     const canWrite = shellCan('write');
@@ -3146,13 +3405,14 @@
       if (code === 'p3') return t('Low');
       return t('Normal');
     };
-    const renderMoves = function (mapSteps, writable) {
-      let html = '';
-      html += '<section class="crm-plan-moves" aria-labelledby="crm-plan-moves-title">';
-      html += '<h3 id="crm-plan-moves-title" class="crm-plan-moves__title">' + escapeHtml(t('Next moves')) + '</h3>';
-      html += '<p class="crm-muted crm-plan-moves__hint">' + escapeHtml(t('Plan moves stay here. Day-to-day to-dos live under To-dos above.')) + '</p>';
+    const renderMovesSection = function (mapSteps, writable) {
+      let html = '<section class="crm-account-plan__panel crm-account-plan__panel--moves crm-account-plan__section crm-account-plan__section--moves" aria-labelledby="crm-plan-moves-title">';
+      html += '<h3 id="crm-plan-moves-title" class="crm-account-plan__panel-title crm-account-plan__heading">';
+      html += '<span class="crm-account-plan__panel-num" aria-hidden="true">3</span>';
+      html += '<span class="crm-account-plan__panel-label">' + escapeHtml(t('Add the next moves')) + '</span></h3>';
+      html += '<p class="crm-muted crm-account-plan__lead">' + escapeHtml(t('Plan moves stay here. Day-to-day to-dos live under To-dos above.')) + '</p>';
       if (mapSteps.length) {
-        html += '<ul class="crm-todo-list crm-plan-moves__list" role="list">';
+        html += '<ul class="crm-todo-list crm-plan-moves__list" role="list" aria-label="' + escapeHtml(t('Next moves')) + '">';
         mapSteps.forEach((s) => {
           const open = String(s.status || 'open') === 'open';
           html += '<li class="crm-todo-list__item' + (open ? '' : ' crm-todo-list__item--closed') + '" data-map-step-id="' + escapeHtml(String(s.id || '')) + '">';
@@ -3165,7 +3425,13 @@
         });
         html += '</ul>';
       } else {
-        html += '<p class="crm-muted" role="status">' + escapeHtml(t('No moves yet — add one below.')) + '</p>';
+        html += '<p class="crm-muted crm-account-plan__empty" role="status">' + escapeHtml(t('No moves yet — add one below.')) + '</p>';
+      }
+      if (writable) {
+        html += '<form id="crm-map-step-form" class="crm-form crm-form--stack crm-plan-add-move" aria-label="' + escapeHtml(t('Add a move to this plan')) + '">';
+        html += '<label class="form-label" for="crm-map-step-title">' + escapeHtml(t('What should happen next?')) + '</label>';
+        html += '<textarea class="crm-input form-input" id="crm-map-step-title" name="title" rows="3" required maxlength="255" placeholder="' + escapeHtml(t('e.g. Book a QBR with their CFO')) + '"></textarea>';
+        html += '<div class="crm-form-actions"><button type="submit" class="crm-btn crm-btn--primary crm-btn--lg">' + escapeHtml(t('Add move')) + '</button></div></form>';
       }
       html += '</section>';
       return html;
@@ -3173,36 +3439,64 @@
     let generation = 0;
     try {
       generation = ++accountPlanGeneration;
-      const res = await Api.get('/companies/' + companyId + '/account-plan');
+      let plan;
+      if (planOverride && typeof planOverride === 'object') {
+        plan = planOverride;
+      } else {
+        const res = await Api.get('/companies/' + companyId + '/account-plan');
+        if (generation !== accountPlanGeneration) {
+          return;
+        }
+        plan = res.data || res || {};
+      }
       if (generation !== accountPlanGeneration) {
         return;
       }
-      const plan = res.data || res || {};
       const mapSteps = plan.mapSteps || [];
       let html = '';
       if (!canWrite) {
+        html += '<div class="crm-account-plan">';
+        html += accountPlanStepsHtml(plan, mapSteps);
+        html += '<div class="crm-account-plan__stack">';
+        html += '<div class="crm-account-plan__col crm-account-plan__col--plan">';
+        html += '<section class="crm-account-plan__panel crm-account-plan__panel--goal crm-account-plan__section crm-account-plan__section--read" aria-labelledby="crm-plan-goal-panel-title">';
+        html += '<h3 id="crm-plan-goal-panel-title" class="crm-account-plan__panel-title crm-account-plan__heading">';
+        html += '<span class="crm-account-plan__panel-num" aria-hidden="true">1</span>';
+        html += '<span class="crm-account-plan__panel-label">' + escapeHtml(t('Write the goal')) + '</span></h3>';
         html += '<dl class="crm-dl">';
         html += '<div><dt>' + escapeHtml(t('Goal')) + '</dt><dd>' + escapeHtml(plan.goal || '—') + '</dd></div>';
         html += '<div><dt>' + escapeHtml(t('Priority')) + '</dt><dd>' + escapeHtml(priorityLabel(plan.priority || 'p2')) + '</dd></div>';
-        html += '<div><dt>' + escapeHtml(t('Plan owner')) + '</dt><dd>' + escapeHtml(plan.ownerUserId || '—') + '</dd></div>';
+        html += '<div><dt>' + escapeHtml(t('Plan owner')) + '</dt><dd>' + escapeHtml(plan.ownerDisplayName || plan.ownerUserId || '—') + '</dd></div>';
         html += '<div><dt>' + escapeHtml(t('Next review')) + '</dt><dd>' + escapeHtml(plan.nextAssignOn || '—') + '</dd></div>';
         if (plan.healthLabel || plan.health) {
           html += '<div><dt>' + escapeHtml(t('Health')) + '</dt><dd><span class="crm-badge">' + escapeHtml(plan.healthLabel || plan.health) + '</span></dd></div>';
         }
-        html += '</dl>';
-        html += renderMoves(mapSteps, false);
+        html += '</dl></section></div>';
+        html += '<div class="crm-account-plan__col crm-account-plan__col--moves">';
+        html += renderMovesSection(mapSteps, false);
+        html += '</div></div></div>';
         body.innerHTML = html;
         return;
       }
-      html = '<form id="crm-account-plan-form" class="crm-form crm-form--stack" data-plan-updated-at="' + escapeHtml(plan.updatedAt || '') + '">';
-      html += '<div class="form-group"><label class="form-label" for="crm-plan-goal">' + escapeHtml(t('Goal')) + '</label>';
-      html += '<textarea class="crm-input form-input crm-plan-goal" id="crm-plan-goal" name="goal" rows="4" maxlength="4000" placeholder="' + escapeHtml(t('e.g. Renew and grow seats this year')) + '">' + escapeHtml(plan.goal || '') + '</textarea></div>';
+      const moreOpen = planMoreShouldOpen(plan);
+      html = '<div class="crm-account-plan">';
+      html += accountPlanStepsHtml(plan, mapSteps);
+      html += '<div class="crm-account-plan__stack">';
+      html += '<div class="crm-account-plan__col crm-account-plan__col--plan">';
+      html += '<section class="crm-account-plan__panel crm-account-plan__panel--goal" aria-labelledby="crm-plan-goal-panel-title">';
+      html += '<h3 id="crm-plan-goal-panel-title" class="crm-account-plan__panel-title crm-account-plan__heading">';
+      html += '<span class="crm-account-plan__panel-num" aria-hidden="true">1</span>';
+      html += '<span class="crm-account-plan__panel-label">' + escapeHtml(t('Write the goal')) + '</span></h3>';
+      html += '<form id="crm-account-plan-form" class="crm-form crm-form--stack crm-account-plan__form" novalidate data-plan-updated-at="' + escapeHtml(plan.updatedAt || '') + '">';
+      html += '<div class="form-group crm-account-plan__goal-field">';
+      html += '<label class="form-label" for="crm-plan-goal" id="crm-plan-goal-heading">' + escapeHtml(t('Goal')) + '</label>';
+      html += '<textarea class="crm-input form-input crm-plan-goal" id="crm-plan-goal" name="goal" rows="4" maxlength="4000" aria-labelledby="crm-plan-goal-heading" placeholder="' + escapeHtml(t('e.g. Renew and grow seats this year')) + '">' + escapeHtml(plan.goal || '') + '</textarea></div>';
       if (plan.healthLabel || plan.health) {
-        html += '<p role="status"><span class="crm-badge">' + escapeHtml(plan.healthLabel || plan.health) + '</span></p>';
+        html += '<p class="crm-account-plan__health" role="status"><span class="crm-badge">' + escapeHtml(plan.healthLabel || plan.health) + '</span></p>';
       }
-      html += '<details class="crm-plan-more">';
-      html += '<summary class="crm-plan-more__summary">' + escapeHtml(t('Priority, owner & review')) + '</summary>';
-      html += '<div class="crm-plan-more__body">';
+      html += '<details class="crm-advanced crm-account-plan__more"' + (moreOpen ? ' open' : '') + '>';
+      html += '<summary class="crm-advanced__summary">' + escapeHtml(t('More options')) + '</summary>';
+      html += '<div class="crm-advanced__body">';
       html += '<div class="form-group"><label class="form-label" for="crm-plan-priority">' + escapeHtml(t('Priority')) + '</label>';
       html += '<select class="crm-input form-select" id="crm-plan-priority" name="priority">';
       [
@@ -3220,16 +3514,20 @@
       html += '<button type="button" class="user-picker__clear" id="crm-plan-owner-clear" hidden aria-label="' + escapeHtml(t('Clear')) + '">×</button></div>';
       html += '<ul id="crm-plan-owner-suggest" class="user-picker__list" role="listbox" hidden></ul>';
       html += '<input type="hidden" id="crm-plan-owner" name="ownerUserId" value="" />';
-      html += '</div><p class="crm-muted">' + escapeHtml(t('Search by name or login, then pick a colleague. Never type a raw user id.')) + '</p></div>';
+      html += '</div><p class="crm-muted crm-account-plan__hint">' + escapeHtml(t('Search by name or login, then pick a colleague. Never type a raw user id.')) + '</p></div>';
       html += '<div class="form-group"><label class="form-label" for="crm-plan-review">' + escapeHtml(t('Next review')) + '</label>';
-      html += '<input class="crm-input form-input" id="crm-plan-review" name="nextAssignOn" type="date" value="' + escapeHtml(plan.nextAssignOn || '') + '" /></div>';
+      html += '<input class="crm-input form-input datepicker-input" id="crm-plan-review" name="nextAssignOn" type="date" value="' + escapeHtml(plan.nextAssignOn || '') + '" autocomplete="off" /></div>';
       html += '</div></details>';
-      html += '<div class="crm-form-actions"><button type="submit" class="crm-btn crm-btn--primary crm-btn--lg">' + escapeHtml(t('Save plan')) + '</button></div></form>';
-      html += renderMoves(mapSteps, true);
-      html += '<form id="crm-map-step-form" class="crm-form crm-form--stack crm-plan-add-move" aria-label="' + escapeHtml(t('Add a move to this plan')) + '">';
-      html += '<label class="form-label" for="crm-map-step-title">' + escapeHtml(t('What should happen next?')) + '</label>';
-      html += '<textarea class="crm-input form-input" id="crm-map-step-title" name="title" rows="3" required maxlength="255" placeholder="' + escapeHtml(t('e.g. Book a QBR with their CFO')) + '"></textarea>';
-      html += '<div class="crm-form-actions"><button type="submit" class="crm-btn crm-btn--primary crm-btn--lg">' + escapeHtml(t('Add move')) + '</button></div></form>';
+      html += '<div class="crm-form-actions crm-account-plan__save">';
+      if (accountPlanJustSaved()) {
+        html += '<p class="crm-callout crm-callout--success crm-account-plan__saved" id="crm-plan-save-status" role="status">' + escapeHtml(t('Account plan saved.')) + '</p>';
+      }
+      html += '<button type="submit" class="crm-btn crm-btn--primary crm-btn--lg' + (accountPlanJustSaved() ? ' crm-account-plan__save-btn--done' : '') + '"' + (accountPlanJustSaved() ? ' data-plan-just-saved="1"' : '') + '>' + escapeHtml(accountPlanJustSaved() ? t('Saved.') : t('Save plan')) + '</button></div></form>';
+      html += '</section>';
+      html += '</div>';
+      html += '<div class="crm-account-plan__col crm-account-plan__col--moves">';
+      html += renderMovesSection(mapSteps, true);
+      html += '</div></div></div>';
       body.innerHTML = html;
       const ownerUid = String(plan.ownerUserId || '').trim();
       const ownerSearch = document.getElementById('crm-plan-owner-search');
@@ -3246,7 +3544,7 @@
       if (ownerHidden && ownerUid) {
         ownerHidden.value = ownerUid;
         if (ownerSearch) {
-          ownerSearch.value = ownerUid;
+          ownerSearch.value = accountPlanOwnerSearchLabel(plan);
         }
         if (ownerClear) {
           ownerClear.hidden = false;
@@ -3334,21 +3632,63 @@
       }
       const form = document.getElementById('crm-account-plan-form');
       if (form) {
+        bindAccountPlanDirty(form);
         form.addEventListener('submit', async (ev) => {
           ev.preventDefault();
+          if (form.getAttribute('aria-busy') === 'true') return;
+          const submitBtn = form.querySelector('button[type="submit"]');
+          const submitLabel = submitBtn ? submitBtn.textContent : '';
+          form.setAttribute('aria-busy', 'true');
+          if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = t('Saving…');
+          }
           try {
-            await Api.put('/companies/' + companyId + '/account-plan', {
-              goal: form.elements.goal.value,
-              priority: form.elements.priority.value,
+            const reviewEl = document.getElementById('crm-plan-review') || form.elements.nextAssignOn;
+            const putRes = await Api.put('/companies/' + companyId + '/account-plan', {
+              goal: form.elements.goal ? form.elements.goal.value : '',
+              priority: form.elements.priority ? form.elements.priority.value : 'p2',
               ownerUserId: ownerHidden ? ownerHidden.value : '',
-              nextAssignOn: form.elements.nextAssignOn.value,
+              horizon: plan.horizon || '',
+              nextAssignOn: (window.CustomerCheckDatepicker && typeof window.CustomerCheckDatepicker.isoValue === 'function')
+                ? window.CustomerCheckDatepicker.isoValue(reviewEl)
+                : (reviewEl && reviewEl.value) || '',
               status: plan.status || 'active',
               updatedAt: form.getAttribute('data-plan-updated-at') || plan.updatedAt || '',
             });
-            if (liveRegion()) liveRegion().textContent = t('Account plan saved.');
-            await loadAccountPlan();
+            accountPlanSavedUntil = Date.now() + 12000;
+            announceAccountPlanSaved();
+            const savedPlan = putRes && putRes.data && typeof putRes.data === 'object' ? putRes.data : null;
+            if (savedPlan) {
+              await loadAccountPlan(savedPlan);
+            } else {
+              await loadAccountPlan();
+            }
           } catch (e) {
-            await C.alertDialog({ title: t('Could not save account plan'), message: (e.payload && e.payload.message) || e.message, variant: 'danger' });
+            const isConflict = e && (Number(e.status) === 409
+              || String((e.payload && e.payload.message) || e.message || '').indexOf('Someone else changed this account plan') >= 0);
+            const errMsg = (e && e.payload && e.payload.message) || (e && e.message) || t('Could not save account plan');
+            if (C && typeof C.showToast === 'function') {
+              C.showToast({ type: 'error', title: t('Could not save account plan'), message: String(errMsg) });
+            }
+            if (C && typeof C.alertDialog === 'function') {
+              await C.alertDialog({
+                title: t('Could not save account plan'),
+                message: errMsg,
+                variant: 'danger',
+              });
+            }
+            if (isConflict) {
+              await loadAccountPlan();
+            }
+          } finally {
+            if (form.isConnected) {
+              form.removeAttribute('aria-busy');
+              if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = submitLabel || t('Save plan');
+              }
+            }
           }
         });
       }
@@ -3371,18 +3711,21 @@
       if (mapForm) {
         mapForm.addEventListener('submit', async (ev) => {
           ev.preventDefault();
+          if (mapForm.getAttribute('aria-busy') === 'true') return;
           const title = String(mapForm.elements.title.value || '').replace(/\s+/g, ' ').trim();
           if (!title) {
             mapForm.elements.title.focus();
             return;
           }
           const submitBtn = mapForm.querySelector('button[type="submit"]');
+          mapForm.setAttribute('aria-busy', 'true');
           if (submitBtn) submitBtn.disabled = true;
           try {
             await Api.post('/companies/' + companyId + '/account-plan/map-steps', { title: title });
             if (liveRegion()) liveRegion().textContent = t('Move added.');
             await loadAccountPlan();
           } catch (e) {
+            mapForm.removeAttribute('aria-busy');
             if (submitBtn) submitBtn.disabled = false;
             await C.alertDialog({ title: t('Could not add next step'), message: (e.payload && e.payload.message) || e.message, variant: 'danger' });
           }

@@ -18,6 +18,10 @@ use OCP\DB\Types;
  * @method void setValueCents(int $valueCents)
  * @method string|null getProducts()
  * @method void setProducts(?string $products)
+ * @method int|null getPersonId()
+ * @method void setPersonId(?int $personId)
+ * @method string|null getLeadSource()
+ * @method void setLeadSource(?string $leadSource)
  * @method string|null getNotes()
  * @method void setNotes(?string $notes)
  * @method \DateTime|null getExpectedClose()
@@ -60,6 +64,8 @@ class Deal extends Entity
 	protected $stage = 'lead';
 	protected $valueCents = 0;
 	protected $products = null;
+	protected $personId = null;
+	protected $leadSource = null;
 	protected $notes = null;
 	protected $expectedClose = null;
 	protected $stageChangedAt = null;
@@ -84,6 +90,7 @@ class Deal extends Entity
 		$this->addType('companyId', Types::BIGINT);
 		$this->addType('valueCents', Types::BIGINT);
 		$this->addType('agreementId', Types::BIGINT);
+		$this->addType('personId', Types::BIGINT);
 		$this->addType('quoteFileId', Types::BIGINT);
 		$this->addType('expectedClose', Types::DATE);
 		$this->addType('quoteSentOn', Types::DATE);

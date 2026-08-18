@@ -43,7 +43,6 @@
     'crm-account-plan': 'more',
     'crm-emails': 'more',
     'crm-platform-links': 'more',
-    'crm-prepare-meeting': 'more',
     'crm-timeline': 'more',
   });
 

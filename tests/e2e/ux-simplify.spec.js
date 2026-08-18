@@ -55,8 +55,11 @@ test.describe('Simplified core UX journeys', () => {
 
     // Add person via the always-visible People header (coach also offers it).
     await page.locator('#crm-welcome-coach [data-crm-trigger="crm-add-person"]').click();
+    const personDialog = page.locator('#crm-person-dialog');
+    await expect(personDialog).toBeVisible({ timeout: 10000 });
+    await expect(personDialog).toHaveJSProperty('open', true);
     let form = page.locator('#crm-person-form');
-    await expect(form).toBeVisible({ timeout: 10000 });
+    await expect(form).toBeVisible();
     await form.locator('#crm-person-name').fill('Ada');
     await form.locator('#crm-person-email').fill(`ada-${suffix}@example.com`);
     await form.locator('button[type="submit"]').click();

@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.6.184 - 2026-08-19
+
+### Theme, layout, and WCAG 2.1 AA
+- Map `--crm-radius-lg` / `--crm-radius-pill` and `--crm-scrim` to Nextcloud theme variables (Light, Dark, High Contrast, custom accent)
+- High-contrast borders and focus rings cover native dialogs and personal-settings panels
+- OAuth companion “sign-in complete” page follows `color-scheme` / Canvas colors and the user’s `lang`
+- Stacked tables no longer force a 600px min-width; keyboard focus on inputs is not stripped
+- Gauntlet: theme/a11y contracts, CSS token vitest, mutations, axe + theme-matrix + responsive-matrix
+
+### Harden
+- List searches fail closed without a workspace (`ListWorkspaceGuard`); unscoped mapper `search()` is `1=0`
+- Company name lookup requires `workspaceId`; pipeline table/board switches in place (no full reload)
+
+### UX
+- Shared new-deal form, list toolbars, and native date picker on filter/create flows
+
+### Hygiene
+- Remove internal audit/runbook files from the public app tree (canonical copies live under `documentation/`)
+
 ## 1.6.148 - 2026-08-16
 
 ### Harden (Sales Inbox pagination — Aristoteles gauntlet)

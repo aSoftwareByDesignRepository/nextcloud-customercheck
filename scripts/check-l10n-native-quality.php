@@ -19,6 +19,7 @@ $en = json_decode((string) file_get_contents($base . '/en.json'), true, 512, JSO
 /** @var array<string, true> */
 $allowExact = [
 	'CustomerCheck' => true,
+	'CustomerCheck Mobile' => true,
 	'ProjectCheck' => true,
 	'TicketCheck' => true,
 	'InvoiceCheck' => true,
@@ -153,6 +154,9 @@ $allowExact = [
 	'Open deals' => true,
 	'record' => true,
 	'Cash' => true,
+	'%s minutes' => true,
+	'dd.mm.yyyy' => true,
+	'Website' => true,
 ];
 
 /** Banned English leftovers in any non-en msgstr. */

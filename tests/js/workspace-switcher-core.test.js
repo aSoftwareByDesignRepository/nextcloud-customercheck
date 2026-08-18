@@ -59,6 +59,7 @@ describe('listFallbackKeyForPage', () => {
   it('maps entity pages to list routes', () => {
     expect(listFallbackKeyForPage('company-detail')).toBe('companies');
     expect(listFallbackKeyForPage('agreement-form')).toBe('agreements');
+    expect(listFallbackKeyForPage('prepare-meeting')).toBeNull();
     expect(listFallbackKeyForPage('pulse')).toBeNull();
   });
 });

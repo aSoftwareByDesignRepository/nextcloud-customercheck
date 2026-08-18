@@ -9,7 +9,6 @@
 export const WORKSPACE_SWITCH_LIST_FALLBACK = Object.freeze({
   'company-detail': 'companies',
   'company-form': 'companies',
-  'prepare-meeting': 'companies',
   'agreement-form': 'agreements',
 });
 

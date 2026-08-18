@@ -214,6 +214,8 @@ class DealMapper extends QBMapper
 			$this->restrictToWorkspaces($qb, $workspaceIds);
 		} elseif ($workspaceId > 0) {
 			$this->restrictToWorkspace($qb, $workspaceId);
+		} elseif ($companyId <= 0) {
+			$qb->andWhere($qb->expr()->eq($qb->createNamedParameter(1), $qb->createNamedParameter(0)));
 		}
 
 		$stage = (string)($filters['stage'] ?? '');

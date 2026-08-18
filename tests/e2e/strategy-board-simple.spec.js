@@ -23,10 +23,9 @@ test.describe('Strategy board extreme simplicity', () => {
     const companyUrl = page.url();
 
     await page.locator('[data-crm-focus-tab="more"]').click();
-    await page.locator('#crm-account-plan > summary').click();
     await expect(page.locator('#crm-account-plan-form')).toBeVisible({ timeout: 20000 });
     await page.locator('#crm-plan-goal').fill(`Win renewal for ${suffix}`);
-    await page.locator('.crm-plan-more > summary').click();
+    await page.locator('#crm-account-plan .crm-account-plan__more > summary').click();
     await page.locator('#crm-plan-priority').selectOption('p1');
     await page.locator('#crm-account-plan-form button[type="submit"]').click();
     await expect(page.locator('#crm-account-plan-body')).not.toContainText(/Could not save|konnte nicht/i);

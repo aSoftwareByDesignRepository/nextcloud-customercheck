@@ -56,21 +56,13 @@ final class SharedIdentityUiContractTest extends TestCase
 		);
 	}
 
-	public function testSupportRunbookExists(): void
+	public function testSupportRunbookNotShippedInPublicRepo(): void
 	{
-		$path = dirname(__DIR__, 2) . '/docs/IDENTITY-SUPPORT-RUNBOOK.md';
-		$this->assertFileExists($path);
-		$body = (string)file_get_contents($path);
-		$this->assertStringContainsString('Broken link', $body);
-		$this->assertStringContainsString('identity-health', $body);
-		$this->assertTrue(
-			str_contains(strtolower($body), 'no silent merge')
-			|| str_contains(strtolower($body), 'never silent merge'),
-			'Runbook must ban silent merge'
-		);
-		$this->assertStringContainsString('Unlink', $body);
+		$this->assertFileDoesNotExist(dirname(__DIR__, 2) . '/docs/IDENTITY-SUPPORT-RUNBOOK.md');
 		$readme = (string)file_get_contents(dirname(__DIR__, 2) . '/README.md');
-		$this->assertStringContainsString('IDENTITY-SUPPORT-RUNBOOK.md', $readme);
+		$this->assertStringNotContainsString('IDENTITY-SUPPORT-RUNBOOK.md', $readme);
+		$this->assertStringContainsString('identity-health', $readme);
+		$this->assertStringContainsString('silent merge', $readme);
 		$help = (string)file_get_contents(dirname(__DIR__, 2) . '/lib/Service/PageHelpCatalog.php');
 		$this->assertStringContainsString('two Acmes', $help);
 		$this->assertStringContainsString('identity support guide', $help);

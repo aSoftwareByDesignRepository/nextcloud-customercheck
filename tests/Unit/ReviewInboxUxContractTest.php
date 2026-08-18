@@ -319,10 +319,8 @@ final class ReviewInboxUxContractTest extends TestCase
 		$tpl = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/settings/workspace-mailbox.php');
 		$this->assertStringContainsString('short plain-text previews cached in CustomerCheck', $tpl);
 
-		$compliance = (string)file_get_contents(dirname(__DIR__, 2) . '/docs/security/MAIL-PREVIEW-COMPLIANCE.md');
-		$this->assertStringContainsString('Art. 6(1)(f)', $compliance);
-		$this->assertStringContainsString('≤ 1 hour', $compliance);
 		$sec = (string)file_get_contents(dirname(__DIR__, 2) . '/SECURITY.md');
+		$this->assertStringContainsString('Art. 6(1)(f)', $sec);
 		$this->assertStringContainsString('Rotate the shared IMAP/SMTP password within **1 hour**', $sec);
 
 		$sync = (string)file_get_contents(dirname(__DIR__, 2) . '/lib/Service/MailboxSyncService.php');

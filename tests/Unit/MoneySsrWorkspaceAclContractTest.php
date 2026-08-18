@@ -14,16 +14,25 @@ final class MoneySsrWorkspaceAclContractTest extends TestCase
 	public function testMoneyPagePassesResolvedWorkspaceId(): void
 	{
 		$src = (string)file_get_contents(dirname(__DIR__, 2) . '/lib/Controller/PageController.php');
-		$this->assertMatchesRegularExpression(
-			'/function money\(\)[\s\S]*?overview\(\s*200,\s*\$state[^,]*,\s*\$this->resolvedWorkspaceId\(\)/',
-			$src,
-			'Money SSR must scope overview to the active workspace',
+		$money = $this->extractMethod($src, 'function money(): TemplateResponse');
+		$this->assertStringContainsString('$wsId = $this->resolvedWorkspaceId();', $money);
+		$this->assertStringContainsString(
+			'ListWorkspaceGuard::isListable($wsId) ? $wsId : 0',
+			$money,
+			'Money SSR must fail closed when workspace id is 0',
 		);
 		$this->assertStringNotContainsString(
 			'$this->money->overview(200, $state !== \'\' ? $state : null);',
-			$src,
+			$money,
 			'Unscoped Money overview call must not return',
 		);
+	}
+
+	private function extractMethod(string $src, string $needle): string
+	{
+		$start = strpos($src, $needle);
+		$this->assertNotFalse($start, $needle);
+		return substr($src, $start, 2500);
 	}
 
 	public function testMoneyServiceFailsClosedWithoutWorkspace(): void

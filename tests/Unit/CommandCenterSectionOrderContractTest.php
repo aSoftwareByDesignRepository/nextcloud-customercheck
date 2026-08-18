@@ -31,7 +31,6 @@ final class CommandCenterSectionOrderContractTest extends TestCase
 			'crm-projects',
 			'crm-tickets',
 			'crm-account-plan',
-			'crm-prepare-meeting',
 			'crm-timeline',
 		];
 		$positions = [];

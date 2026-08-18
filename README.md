@@ -16,7 +16,7 @@ Part of the Check app family by [Software by Design](https://nextcloud.software-
 - **Business Pulse** — twelve book-health questions; unbilled never fakes €0 (`honesty_blocked`)
 - **Weekly Brief** — WIP-limited CEO commitments + cash calendar that excludes pipeline
 - **My Chase / Pipeline** — quote age, loss codes, forecast labels (not cash), kanban period chips, contacted/negotiation/won sequences
-- **Coverage & My Accounts** — buying roles, next touch, customer promises, prepare-meeting pack
+- **Coverage & My Accounts** — buying roles, next touch, customer promises
 - **Team Coaching** — stuck board, OOO cover (never steals ownership), bulk reassign
 - **Shared mailbox** — workspace IMAP index with unavoidable disclosure; personal Mail stays Private
 - **Companies & 360** — agreements, renewals (−60/−30/−7/0/+7 exactly once), partner hours, GDPR erase
@@ -32,7 +32,9 @@ Part of the Check app family by [Software by Design](https://nextcloud.software-
 - GDPR: user deletion frees companion seats automatically; company data export
   includes merged history. Suite erase order (PC → IC → TC → CUC): see
   [docs/SUITE-GDPR-ERASE.md](docs/SUITE-GDPR-ERASE.md).
-- Shared identity / “two Acme” support: [docs/IDENTITY-SUPPORT-RUNBOOK.md](docs/IDENTITY-SUPPORT-RUNBOOK.md).
+- Shared identity: companies can exist in more than one Check app without
+  silent merge. Unlink never deletes the sibling record. Admins can inspect
+  `GET /apps/customercheck/api/v1/admin/identity-health`.
 
 ## Requirements
 

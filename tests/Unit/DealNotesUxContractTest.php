@@ -22,16 +22,24 @@ final class DealNotesUxContractTest extends TestCase
 		$this->assertStringContainsString("Api.put('/deals/' + dealId", $js);
 		$this->assertStringContainsString('notes: String(data.notes || \'\').trim()', $js);
 		$this->assertStringContainsString("t('Deal saved.')", $js);
-		// Add deal: title-only primary; notes live under More options (advanced).
-		$this->assertMatchesRegularExpression(
-			"/promptFields\(t\('Add deal'\), \[[\s\S]*?\{\s*name: 'notes',\s*label: t\('Notes'\),\s*type: 'textarea',\s*advanced:\s*true/",
-			$js,
-		);
-		$this->assertDoesNotMatchRegularExpression(
-			"/promptFields\(t\('Add deal'\), \[[\s\S]*?\{\s*name: 'notes',\s*label: t\('Notes'\),\s*type: 'textarea',\s*maxlength:\s*4000/",
-			$js,
-			'Add deal notes must not sit on the primary surface (maxlength without advanced)',
-		);
+		$this->assertStringContainsString("promptFields(t('Edit deal')", $js);
+		$this->assertStringNotContainsString("promptFields(t('Add deal')", $js);
+
+		$form = (string)file_get_contents(dirname(__DIR__, 2) . '/js/common/new-deal-form.js');
+		$titlePos = strpos($form, 'name="title"');
+		$notesPos = strpos($form, 'name="notes"');
+		$morePos = strpos($form, "t('More options')");
+		$valuePos = strpos($form, 'name="valueEur"');
+		$this->assertNotFalse($titlePos);
+		$this->assertNotFalse($notesPos);
+		$this->assertNotFalse($morePos);
+		$this->assertNotFalse($valuePos);
+		$this->assertLessThan($notesPos, $titlePos, 'Title stays the first field');
+		$this->assertLessThan($morePos, $notesPos, 'Notes stay on the primary surface');
+		$this->assertLessThan($valuePos, $morePos, 'Value stays under More options');
+		$this->assertStringContainsString('rows="3" maxlength="4000"', $form);
+		$this->assertStringContainsString('form-textarea', $form);
+		$this->assertStringContainsString("t('Internal notes for your team — the customer does not see these.')", $form);
 	}
 
 	public function testCompanyDetailDealRowsExposeNotesAndDemoteStopReminders(): void

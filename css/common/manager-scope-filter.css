@@ -170,18 +170,14 @@
 #app-content.crm-app--manager-absences .manager-scope-page__toolbar .crm-date-range__part .crm-datepicker-host,
 #app-content.crm-app--manager-time-entries .manager-scope-page__toolbar .crm-date-range__part .crm-datepicker-host--flex,
 #app-content.crm-app--manager-absences .manager-scope-page__toolbar .crm-date-range__part .crm-datepicker-host--flex {
-	position: relative;
-	display: block;
 	width: 100%;
 	max-width: 100%;
-	min-height: 44px;
+	min-width: 0;
 }
 
 #app-content.crm-app--manager-time-entries .manager-scope-page__toolbar .crm-date-range__part .datepicker-input,
 #app-content.crm-app--manager-absences .manager-scope-page__toolbar .crm-date-range__part .datepicker-input {
 	min-width: 0;
-	width: 100%;
-	padding-inline-end: 3rem;
 	font-variant-numeric: tabular-nums;
 	color: var(--color-main-text, var(--crm-text));
 	background-color: var(--color-main-background, var(--crm-bg));
@@ -190,14 +186,7 @@
 
 #app-content.crm-app--manager-time-entries .manager-scope-page__toolbar .crm-date-range__part .crm-datepicker-toggle,
 #app-content.crm-app--manager-absences .manager-scope-page__toolbar .crm-date-range__part .crm-datepicker-toggle {
-	position: absolute !important;
-	inset-inline-end: 0;
-	top: 50% !important;
-	transform: translateY(-50%) !important;
 	color: var(--color-main-text, var(--crm-text));
-	background: color-mix(in srgb, var(--color-primary-element) 12%, var(--crm-bg-card));
-	border: 1px solid color-mix(in srgb, var(--color-primary-element) 35%, var(--crm-border));
-	border-radius: var(--crm-radius-sm, 6px);
 }
 
 #app-content.crm-app--manager-time-entries .manager-scope-page__toolbar .crm-date-range__part .crm-datepicker-toggle:focus-visible,

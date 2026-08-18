@@ -13,9 +13,14 @@
 	--crm-space-7: 48px;
 	--crm-space-8: 64px;
 
+	/*
+	 * Radii: design-system scale (6 / 12 / 16). Map only lg → NC --border-radius-large
+	 * so custom theming can round panels without collapsing cards to NC’s ~3px --border-radius.
+	 */
 	--crm-radius-sm: 6px;
 	--crm-radius-md: 12px;
-	--crm-radius-lg: 16px;
+	--crm-radius-lg: var(--border-radius-large, 16px);
+	--crm-radius-pill: var(--border-radius-pill, 999px);
 
 	--crm-fs-xs: 0.75rem;
 	--crm-fs-sm: 0.875rem;
@@ -111,6 +116,9 @@ body {
 
 	--crm-shadow-sm: 0 1px 2px color-mix(in srgb, var(--color-main-text) 8%, transparent);
 	--crm-shadow-md: 0 8px 24px color-mix(in srgb, var(--color-main-text) 12%, transparent);
+
+	/* Modal / overlay scrim — theme-aware, never raw black rgba (AZC --azc-scrim). */
+	--crm-scrim: color-mix(in srgb, var(--color-main-text) 45%, transparent);
 
 	/*
 	 * Solid danger CTA fill (design-system §3.3 / WCAG 1.4.3).

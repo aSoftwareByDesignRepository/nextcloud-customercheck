@@ -196,6 +196,27 @@ function filter_live_mutations(string $appRoot): array
 			'filter' => 'FilterLiveContractTest::testFragmentFetchAndForcedRefresh',
 		],
 		[
+			'file' => $appRoot . '/js/common/filter-live-core.js',
+			'from' => "return name === 'nav' || name === 'main';",
+			'to' => 'return typeof name === \'string\' && name !== \'\';',
+			'label' => 'allows_arbitrary_swap_names',
+			'filter' => 'FilterLiveContractTest::testSwapIslandsAreAllowlisted',
+		],
+		[
+			'file' => $appRoot . '/js/common/filter-live-core.js',
+			'from' => '/data-crm-filter-swap=(["\'])(nav|main)\\1(?=[\\s>/])/g',
+			'to' => '/data-crm-filter-swap=["\']([^"\']+)["\']/g',
+			'label' => 'extracts_untrusted_swap_names',
+			'filter' => 'FilterLiveContractTest::testSwapIslandsAreAllowlisted',
+		],
+		[
+			'file' => $appRoot . '/js/common/filter-live.js',
+			'from' => 'if (!Core.isAllowedSwapName(name)) {',
+			'to' => 'if (!name) {',
+			'label' => 'drops_swap_name_allowlist_at_insert',
+			'filter' => 'FilterLiveContractTest::testSwapIslandsAreAllowlisted',
+		],
+		[
 			'file' => $appRoot . '/js/pages/company-detail.js',
 			'from' => "await loadCommandCenter({ silent: true });",
 			'to' => '/* mutated: no glance refresh */',

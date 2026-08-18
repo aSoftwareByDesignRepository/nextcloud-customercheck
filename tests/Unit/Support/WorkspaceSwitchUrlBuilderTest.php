@@ -83,7 +83,9 @@ final class WorkspaceSwitchUrlBuilderTest extends TestCase
 		$this->assertSame('myAccounts', WorkspaceSwitchUrlBuilder::urlKeyForPage('my-accounts'));
 		$this->assertSame('mailTriage', WorkspaceSwitchUrlBuilder::urlKeyForPage('mail-triage'));
 		$this->assertSame('supportUs', WorkspaceSwitchUrlBuilder::urlKeyForPage('support-us'));
+		$this->assertSame('getTheApp', WorkspaceSwitchUrlBuilder::urlKeyForPage('get-the-app'));
 		$this->assertSame('companies', WorkspaceSwitchUrlBuilder::urlKeyForPage('company-detail'));
+		$this->assertArrayNotHasKey('prepare-meeting', WorkspaceSwitchUrlBuilder::ENTITY_FALLBACK);
 		$this->assertSame('pulse', WorkspaceSwitchUrlBuilder::urlKeyForPage('pulse'));
 	}
 }

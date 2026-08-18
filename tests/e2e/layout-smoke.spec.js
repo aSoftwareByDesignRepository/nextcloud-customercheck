@@ -1,6 +1,6 @@
 // @ts-check
 import { test, expect } from '@playwright/test';
-import { login, credsFromEnv } from './helpers/auth.js';
+import { login, credsFromEnv, gotoCrm } from './helpers/auth.js';
 
 const routes = [
   { path: '/apps/customercheck/', name: 'today' },
@@ -22,8 +22,7 @@ for (const { path, name } of routes) {
       : credsFromEnv('EMPLOYEE');
     await page.setViewportSize({ width: 375, height: 800 });
     await login(page, creds);
-    await page.goto(path);
-    await page.waitForSelector('#crm-main-content', { timeout: 30000 });
+    await gotoCrm(page, path);
     await expect(page.locator('.crm-page-header').first()).toBeVisible();
     await expect(page.locator('.crm-page-stack').first()).toBeVisible();
     const overflow = await page.evaluate(() => {

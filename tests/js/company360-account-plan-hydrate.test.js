@@ -37,7 +37,9 @@ describe('company 360 account-plan hydrate boot', () => {
     expect(pageJs).toContain('generation = ++promisesGeneration;');
     expect(pageJs).toContain("t('Could not load account plan.')");
     expect(pageJs).toContain("t('Loading account plan…')");
-    expect(pageJs).toContain('id="crm-account-plan-form" class="crm-form crm-form--stack"');
+    expect(pageJs).toContain('id="crm-account-plan-form" class="crm-form crm-form--stack crm-account-plan__form"');
+    expect(pageJs).toContain("form.setAttribute('aria-busy', 'true')");
+    expect(pageJs).toContain('crm-account-plan__panel');
   });
 
   it('documents why calling before let init hangs the UI', () => {

@@ -34,6 +34,7 @@ $lastLabel = (string)($mailSummary['lastContactLabel'] ?? '');
 				<p class="crm-card__lead"><?php p($l->t('Full Mail threads and the logged messages — open when you need them.')); ?></p>
 			<?php endif; ?>
 		</div>
+		<?php include __DIR__ . '/crm-collapsible-disclosure.php'; ?>
 		<?php if (!empty($_['canWrite'])): ?>
 		<p class="crm-muted crm-emails__log-hint"><?php p($l->t('To log a message, use Log talk under Communication above.')); ?></p>
 		<?php endif; ?>

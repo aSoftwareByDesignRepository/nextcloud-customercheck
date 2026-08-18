@@ -175,6 +175,7 @@
 	grid-row: span 2;
 	gap: var(--crm-space-2);
 	min-width: 0;
+	overflow: hidden;
 }
 
 #app-content.crm-app .crm-filter-field__label {
@@ -230,6 +231,136 @@
 	gap: var(--crm-space-2);
 	grid-row: span 2;
 	align-self: end;
+}
+
+/* List / pipeline toolbars: controls sit directly above content; filters expand underneath. */
+#app-content.crm-app .crm-list-controls,
+#app-content.crm-app .crm-pipeline-controls {
+	display: flex;
+	flex-direction: column;
+	gap: 0;
+	margin: 0 0 var(--crm-space-4);
+}
+
+#app-content.crm-app .crm-list-toolbar,
+#app-content.crm-app .crm-pipeline-toolbar {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--crm-space-3);
+	padding: var(--crm-space-3) var(--crm-space-4);
+	border: 1px solid var(--crm-border, var(--color-border));
+	border-radius: var(--crm-radius-md);
+	background: var(--crm-bg-card, var(--color-main-background));
+	box-shadow: var(--crm-shadow-sm);
+}
+
+#app-content.crm-app .crm-list-controls--filter-open .crm-list-toolbar,
+#app-content.crm-app .crm-pipeline-controls--filter-open .crm-pipeline-toolbar {
+	border-bottom-left-radius: 0;
+	border-bottom-right-radius: 0;
+	border-bottom-color: transparent;
+	box-shadow: none;
+}
+
+#app-content.crm-app .crm-list-toolbar__primary,
+#app-content.crm-app .crm-pipeline-toolbar__primary {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--crm-space-3);
+	min-width: 0;
+	flex: 1 1 auto;
+}
+
+#app-content.crm-app .crm-list-toolbar__actions,
+#app-content.crm-app .crm-pipeline-toolbar__actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: flex-end;
+	gap: var(--crm-space-2);
+	flex: 0 1 auto;
+}
+
+#app-content.crm-app .crm-list-toolbar .crm-quick-filters,
+#app-content.crm-app .crm-pipeline-toolbar .crm-btn-group {
+	margin: 0;
+}
+
+#app-content.crm-app .crm-list-controls > .crm-filter-panel,
+#app-content.crm-app .crm-pipeline-controls #crm-pipeline-filter.crm-pipeline-filter {
+	margin: 0;
+	border-top-left-radius: 0;
+	border-top-right-radius: 0;
+	border-top: 0;
+	box-shadow: var(--crm-shadow-sm);
+}
+
+#app-content.crm-app .crm-list-controls--filter-open [id$="-filter-toggle"][aria-expanded='true'],
+#app-content.crm-app .crm-pipeline-controls--filter-open #crm-pipeline-filter-toggle[aria-expanded='true'] {
+	border-color: var(--color-primary-element);
+	color: var(--color-primary-element-text, var(--color-primary-text));
+	background: var(--color-primary-element);
+}
+
+#app-content.crm-app .crm-list-controls > .crm-filter-panel[hidden],
+#app-content.crm-app .crm-pipeline-controls #crm-pipeline-filter.crm-pipeline-filter[hidden] {
+	display: none;
+}
+
+#app-content.crm-app .crm-list-toolbar .crm-btn,
+#app-content.crm-app .crm-pipeline-toolbar .crm-btn {
+	min-height: var(--crm-touch, 44px);
+}
+
+#app-content.crm-app .crm-list-controls .crm-companies-search {
+	margin: 0;
+	padding: var(--crm-space-3) var(--crm-space-4);
+	border: 1px solid var(--crm-border, var(--color-border));
+	border-top: 0;
+	border-radius: 0;
+	background: var(--crm-bg-soft, var(--color-background-dark));
+}
+
+#app-content.crm-app .crm-list-controls--filter-open .crm-companies-search {
+	border-bottom-left-radius: 0;
+	border-bottom-right-radius: 0;
+	border-bottom-color: transparent;
+}
+
+@media (max-width: 767px) {
+	#app-content.crm-app .crm-list-toolbar,
+	#app-content.crm-app .crm-pipeline-toolbar {
+		flex-direction: column;
+		align-items: stretch;
+		padding: var(--crm-space-3);
+	}
+
+	#app-content.crm-app .crm-list-toolbar__primary,
+	#app-content.crm-app .crm-list-toolbar__actions,
+	#app-content.crm-app .crm-pipeline-toolbar__primary,
+	#app-content.crm-app .crm-pipeline-toolbar__actions {
+		width: 100%;
+		justify-content: flex-start;
+	}
+
+	#app-content.crm-app .crm-list-toolbar__actions .crm-btn,
+	#app-content.crm-app .crm-pipeline-toolbar__actions .crm-btn {
+		flex: 1 1 auto;
+		min-width: min(100%, 10rem);
+	}
+}
+
+/* Pipeline: stage, period, from, to, actions — date hosts need room for input + calendar btn. */
+#app-content.crm-app #crm-pipeline-filter .crm-filter-grid {
+	grid-template-columns:
+		minmax(0, 1fr)
+		minmax(0, 1fr)
+		minmax(12rem, 1.15fr)
+		minmax(12rem, 1.15fr)
+		auto;
 }
 
 #app-content.crm-app .crm-filter-field__control .form-input[aria-invalid='true'],

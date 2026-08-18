@@ -198,7 +198,8 @@
 
   /* Table adjustments - ensure horizontal scroll */
   .table-responsive,
-  .table-container {
+  .table-container,
+  .crm-table-wrap {
     -webkit-overflow-scrolling: touch;
     overflow-x: auto;
     overflow-y: visible;
@@ -209,15 +210,17 @@
   .table-responsive .table:not(.crm-table--responsive),
   .table-responsive .arbeitszeitcheck-table:not(.crm-table--responsive),
   .table-container .table:not(.crm-table--responsive),
-  .table-container .arbeitszeitcheck-table:not(.crm-table--responsive) {
+  .table-container .arbeitszeitcheck-table:not(.crm-table--responsive),
+  .crm-table-wrap .table:not(.crm-table--responsive) {
     min-width: 520px;
   }
 
-  /* Ensure all tables are wrapped in responsive containers */
-  .table:not(.table-responsive .table):not(.table-container .table),
+  /* Unwrapped tables become their own scroll container so the document does not grow. */
+  .table:not(.table-responsive .table):not(.table-container .table):not(.crm-table-wrap .table):not(.crm-table--responsive),
   .arbeitszeitcheck-table:not(.table-responsive .arbeitszeitcheck-table):not(.table-container .arbeitszeitcheck-table) {
     display: block;
     overflow-x: auto;
+    max-width: 100%;
     -webkit-overflow-scrolling: touch;
   }
 

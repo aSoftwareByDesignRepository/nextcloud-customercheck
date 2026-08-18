@@ -6,6 +6,7 @@ namespace OCA\CustomerCheck\Service;
 
 use OCA\CustomerCheck\Constants;
 use OCA\CustomerCheck\Exception\ValidationException;
+use OCA\CustomerCheck\Support\WinChance;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\IDBConnection;
@@ -68,7 +69,8 @@ class CoachingService
 				if (($d['quoteAgeDays'] ?? 0) >= 14) {
 					$quoteOld++;
 				}
-				if (($d['forecastBucket'] ?? '') === 'commit') {
+				$bucket = $d['forecastBucket'] ?? null;
+				if (WinChance::isHighConfidence(is_string($bucket) ? $bucket : null)) {
 					$commitCents += max(0, (int)($d['valueCents'] ?? 0));
 				}
 			}

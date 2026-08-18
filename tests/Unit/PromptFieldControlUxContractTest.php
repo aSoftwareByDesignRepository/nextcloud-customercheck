@@ -73,20 +73,17 @@ final class PromptFieldControlUxContractTest extends TestCase
 	{
 		$js = $this->companyDetailJs();
 
-		$addDealStart = strpos($js, "promptFields(t('Add deal')");
-		$this->assertNotFalse($addDealStart);
-		$addDealChunk = substr($js, (int)$addDealStart, 900);
-		$this->assertStringContainsString("name: 'title'", $addDealChunk);
-		$this->assertStringContainsString('maxlength: 255', $addDealChunk);
-		$this->assertStringContainsString("name: 'notes'", $addDealChunk);
-		$this->assertStringContainsString("type: 'textarea'", $addDealChunk);
-		$titlePos = strpos($addDealChunk, "name: 'title'");
-		$notesPos = strpos($addDealChunk, "name: 'notes'");
+		$form = (string)file_get_contents(dirname(__DIR__, 2) . '/js/common/new-deal-form.js');
+		$titlePos = strpos($form, 'name="title" required maxlength="255"');
+		$notesPos = strpos($form, 'name="notes" rows="3" maxlength="4000"');
 		$this->assertNotFalse($titlePos);
 		$this->assertNotFalse($notesPos);
 		$this->assertGreaterThan($titlePos, $notesPos);
-		$titleOnly = substr($addDealChunk, (int)$titlePos, (int)$notesPos - (int)$titlePos);
-		$this->assertStringNotContainsString("type: 'textarea'", $titleOnly);
+		$titleTag = substr($form, max(0, $titlePos - 90), 200);
+		$this->assertStringContainsString('<input class="form-input crm-input"', $titleTag);
+		$this->assertStringNotContainsString('<textarea', $titleTag);
+		$notesTag = substr($form, max(0, $notesPos - 90), 180);
+		$this->assertStringContainsString('<textarea', $notesTag);
 
 		// Email subject stays one line; optional snippet is the multi-line field.
 		$this->assertMatchesRegularExpression(

@@ -13,7 +13,7 @@ trait PageShellTrait
 {
 	private const WIDE_SHELL_PAGE_IDS = [
 		'today', 'pulse', 'brief', 'my-accounts', 'team', 'workload', 'strategy',
-		'companies', 'company-detail', 'company-form', 'prepare-meeting', 'pipeline',
+		'companies', 'company-detail', 'company-form', 'pipeline',
 		'agreements', 'agreement-form', 'money', 'activities', 'mail-triage', 'sales-inbox', 'review',
 		'conflicts', 'import',
 		'settings', 'app-settings', 'support-us',

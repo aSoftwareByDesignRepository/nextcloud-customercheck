@@ -18,8 +18,9 @@ $de = json_decode((string) file_get_contents($base . '/de.json'), true, 512, JSO
 /** @var array<string, true> Brand names, technical tokens, and bilingual allowlist. */
 $allowExact = [
 	'CustomerCheck' => true,
+	'CustomerCheck Mobile' => true,
 	'MaintenanceCheck' => true,
-	'To-dos' => true,
+	'dd.mm.yyyy' => true,
 	'ProjectCheck' => true,
 	'TicketCheck' => true,
 	'InvoiceCheck' => true,

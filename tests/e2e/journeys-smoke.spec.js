@@ -1,6 +1,7 @@
 // @ts-check
 import { test, expect } from '@playwright/test';
-import { login, credsFromEnv } from './helpers/auth.js';
+import { login, credsFromEnv, gotoCrm, dismissOrFailOnUpdateNeeded } from './helpers/auth.js';
+import { openFilterPanel } from './helpers/new-deal-form.js';
 
 /**
  * Keyboard-friendly smoke for core journeys (PSD §8 / S10).
@@ -11,8 +12,7 @@ test.describe('CustomerCheck journeys smoke', () => {
   test('create company form validates slug and lands on 360', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await login(page, credsFromEnv('ADMIN'));
-    await page.goto('/apps/customercheck/companies/new');
-    await page.waitForSelector('#crm-main-content', { timeout: 30000 });
+    await gotoCrm(page, '/apps/customercheck/companies/new');
     await expect(page.locator('.crm-page-stack').first()).toBeVisible();
 
     const name = page.locator('#crm-company-name');
@@ -31,6 +31,8 @@ test.describe('CustomerCheck journeys smoke', () => {
       }
     });
     await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
+    await dismissOrFailOnUpdateNeeded(page);
+    await page.waitForSelector('#crm-main-content', { timeout: 30000 });
     await expect(page.locator('#crm-main-content')).toBeVisible();
     await expect(page.locator('.crm-page-stack')).toBeVisible();
     await expect(page.locator('[data-crm-focus-tab="people"]')).toBeVisible();
@@ -51,25 +53,24 @@ test.describe('CustomerCheck journeys smoke', () => {
   test('pipeline exposes table/board toggle and filter panel', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await login(page, credsFromEnv('ADMIN'));
-    await page.goto('/apps/customercheck/pipeline');
-    await page.waitForSelector('#crm-main-content', { timeout: 30000 });
+    await gotoCrm(page, '/apps/customercheck/pipeline');
     await expect(page.locator('.crm-page-stack')).toBeVisible();
 
-    const tableBtn = page.locator('#crm-page-actions [data-crm-pipeline-view="table"], [data-crm-pipeline-view="table"]').first();
-    const boardBtn = page.locator('#crm-page-actions [data-crm-pipeline-view="board"], [data-crm-pipeline-view="board"]').first();
+    await expect(page.locator('#crm-pipeline-toolbar')).toBeVisible({ timeout: 10000 });
+    const tableBtn = page.locator('#crm-pipeline-toolbar [data-crm-pipeline-view="table"]').first();
+    const boardBtn = page.locator('#crm-pipeline-toolbar [data-crm-pipeline-view="board"]').first();
     await expect(tableBtn).toBeVisible({ timeout: 10000 });
     await expect(boardBtn).toBeVisible({ timeout: 10000 });
-    await boardBtn.click({ force: true });
-    await expect(page.locator('#crm-pipeline-board')).toBeVisible({ timeout: 10000 });
-    await tableBtn.click({ force: true });
-    await expect(page.locator('#crm-pipeline-table')).toBeVisible({ timeout: 10000 });
 
-    const filterBtn = page.locator('#crm-pipeline-filter-toggle');
-    await expect(filterBtn).toBeVisible({ timeout: 10000 });
-    await filterBtn.click({ force: true });
-    await expect(page.locator('#crm-pipeline-filter')).toBeVisible({ timeout: 10000 });
-    await expect(page.locator('#crm-pipeline-filter.crm-filter-panel')).toBeVisible();
+    await openFilterPanel(page, 'crm-pipeline-filter-toggle', 'crm-pipeline-filter', 'crm-pipeline-controls--filter-open');
+    await expect(page.locator('#crm-pipeline-controls')).toHaveClass(/crm-pipeline-controls--filter-open/);
     await expect(page.locator('#crm-pipeline-new-deal')).toBeVisible();
+
+    await boardBtn.click();
+    await expect(page.locator('#crm-pipeline-board')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('#crm-pipeline-table')).toBeHidden();
+    await expect(boardBtn).toHaveAttribute('aria-pressed', 'true');
+    await expect(tableBtn).toHaveAttribute('aria-pressed', 'false');
   });
 
   test('app settings documents ICS and lead webhook for app admins', async ({ page }) => {
@@ -92,8 +93,7 @@ test.describe('CustomerCheck journeys smoke', () => {
   test('company 360 exposes GDPR export and tickets jump link', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await login(page, credsFromEnv('ADMIN'));
-    await page.goto('/apps/customercheck/companies/new');
-    await page.waitForSelector('#crm-main-content', { timeout: 30000 });
+    await gotoCrm(page, '/apps/customercheck/companies/new');
     const suffix = Date.now().toString(36);
     await page.locator('#crm-company-name').fill(`Export Co ${suffix}`);
     await page.locator('#crm-company-advanced').evaluate((el) => {
@@ -104,6 +104,8 @@ test.describe('CustomerCheck journeys smoke', () => {
       if (form instanceof HTMLFormElement) form.requestSubmit();
     });
     await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
+    await dismissOrFailOnUpdateNeeded(page);
+    await page.waitForSelector('#crm-main-content', { timeout: 30000 });
     await expect(page.locator('#crm-company-gdpr-export')).toBeAttached({ timeout: 10000 });
     // Relocated into the page header actions strip (must not stay in the hidden source).
     await expect(page.locator('#crm-page-actions #crm-company-gdpr-export')).toBeVisible({ timeout: 10000 });
@@ -117,8 +119,8 @@ test.describe('CustomerCheck journeys smoke', () => {
   test('companies filter panel supports archived filter', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await login(page, credsFromEnv('ADMIN'));
-    await page.goto('/apps/customercheck/companies');
-    await page.waitForSelector('#crm-main-content', { timeout: 30000 });
+    await gotoCrm(page, '/apps/customercheck/companies');
+    await expect(page.locator('#crm-companies-toolbar')).toBeVisible();
     await expect(page.locator('.crm-quick-filters')).toBeVisible();
     await page.locator('.crm-quick-filter[href*="archived=1"]').click();
     await page.waitForURL(/archived=1/, { timeout: 15000 });
@@ -131,8 +133,7 @@ test.describe('CustomerCheck journeys smoke', () => {
   test('pipeline new deal opens company picker dialog', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await login(page, credsFromEnv('ADMIN'));
-    await page.goto('/apps/customercheck/pipeline');
-    await page.waitForSelector('#crm-main-content', { timeout: 30000 });
+    await gotoCrm(page, '/apps/customercheck/pipeline');
     await page.locator('#crm-pipeline-new-deal').click({ force: true });
     const dialog = page.locator('dialog.crm-native-dialog[open]').first();
     await expect(dialog).toBeVisible({ timeout: 10000 });
@@ -148,6 +149,11 @@ test.describe('CustomerCheck journeys smoke', () => {
     await expect(dialog.getByText('Showing %s companies')).toHaveCount(0);
     await expect(dialog.locator('form.crm-form--new-deal')).toBeVisible();
     await expect(dialog.locator('input[name="title"]')).toBeVisible();
+    await expect(dialog.locator('select[name="personId"]')).toBeAttached();
+    await expect(dialog.locator('select[name="leadSource"]')).toBeVisible();
+    await expect(dialog.locator('select[name="forecastBucket"] option[value=""]')).toHaveCount(1);
+    await expect(dialog.locator('select[name="forecastBucket"] option[value="certain"]')).toHaveCount(1);
+    await expect(dialog.locator('.crm-form-section__legend').first()).toBeVisible();
     await expect(dialog.locator('.modal-close, .crm-btn--secondary[data-cancel]').first()).toBeVisible();
     // Confirm helper also ships aria-modal (smoke the Confirm path via cancel then reopen not required).
     const hasPresent = await page.evaluate(() => !!(window.CustomerCheckDialogPresent && typeof window.CustomerCheckDialogPresent.safeExternalHref === 'function'));
@@ -167,29 +173,28 @@ test.describe('CustomerCheck journeys smoke', () => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await login(page, credsFromEnv('ADMIN'));
 
-    await page.goto('/apps/customercheck/agreements');
-    await page.waitForSelector('#crm-main-content', { timeout: 30000 });
-    await page.locator('#crm-agreements-filter-toggle').click({ force: true });
-    await expect(page.locator('#crm-agreements-filter.crm-filter-panel')).toBeVisible({ timeout: 10000 });
+    await gotoCrm(page, '/apps/customercheck/agreements');
+    await expect(page.locator('#crm-agreements-toolbar')).toBeVisible();
+    await openFilterPanel(page, 'crm-agreements-filter-toggle', 'crm-agreements-filter', 'crm-list-controls--filter-open');
+    await expect(page.locator('#crm-agreements-controls')).toHaveClass(/crm-list-controls--filter-open/);
     await expect(page.locator('#crm-filter-kind')).toBeVisible();
 
-    await page.goto('/apps/customercheck/money');
-    await page.waitForSelector('#crm-main-content', { timeout: 30000 });
-    await page.locator('#crm-money-filter-toggle').click({ force: true });
-    await expect(page.locator('#crm-money-filter.crm-filter-panel')).toBeVisible({ timeout: 10000 });
+    await gotoCrm(page, '/apps/customercheck/money');
+    await expect(page.locator('#crm-money-toolbar')).toBeVisible();
+    await openFilterPanel(page, 'crm-money-filter-toggle', 'crm-money-filter', 'crm-list-controls--filter-open');
+    await expect(page.locator('#crm-money-controls')).toHaveClass(/crm-list-controls--filter-open/);
 
-    await page.goto('/apps/customercheck/activities');
-    await page.waitForSelector('#crm-main-content', { timeout: 30000 });
-    await page.locator('#crm-activities-filter-toggle').click({ force: true });
-    await expect(page.locator('#crm-activities-filter.crm-filter-panel')).toBeVisible({ timeout: 10000 });
+    await gotoCrm(page, '/apps/customercheck/activities');
+    await expect(page.locator('#crm-activities-toolbar')).toBeVisible();
+    await openFilterPanel(page, 'crm-activities-filter-toggle', 'crm-activities-filter', 'crm-list-controls--filter-open');
+    await expect(page.locator('#crm-activities-controls')).toHaveClass(/crm-list-controls--filter-open/);
     await expect(page.locator('#crm-filter-scope')).toBeVisible();
   });
 
   test('company form exposes sibling link fields', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await login(page, credsFromEnv('ADMIN'));
-    await page.goto('/apps/customercheck/companies/new');
-    await page.waitForSelector('#crm-main-content', { timeout: 30000 });
+    await gotoCrm(page, '/apps/customercheck/companies/new');
     await expect(page.locator('#crm-company-name')).toBeVisible();
     await expect(page.locator('#crm-company-advanced')).toBeVisible();
     // Slug + sibling links live under Advanced (collapsed on create)

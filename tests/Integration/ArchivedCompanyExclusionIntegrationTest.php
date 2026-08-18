@@ -6,8 +6,10 @@ namespace OCA\CustomerCheck\Tests\Integration;
 
 use OCA\CustomerCheck\Db\ActivityMapper;
 use OCA\CustomerCheck\Db\AgreementMapper;
+use OCA\CustomerCheck\Db\CompanyMapper;
 use OCA\CustomerCheck\Db\Deal;
 use OCA\CustomerCheck\Db\DealMapper;
+use OCA\CustomerCheck\Db\PersonMapper;
 use OCA\CustomerCheck\Service\ActivityService;
 use OCA\CustomerCheck\Service\AgreementService;
 use OCA\CustomerCheck\Service\CompanyService;
@@ -29,6 +31,7 @@ class ArchivedCompanyExclusionIntegrationTest extends TestCase
 	private const ACTOR = 'admin';
 
 	private ?int $companyId = null;
+	private int $workspaceId = 0;
 	private string $slug = '';
 
 	protected function setUp(): void
@@ -72,6 +75,8 @@ class ArchivedCompanyExclusionIntegrationTest extends TestCase
 			'slug' => $this->slug,
 		], self::ACTOR);
 		$this->companyId = (int)$company->getId();
+		$this->workspaceId = (int)($company->getWorkspaceId() ?? 0);
+		self::assertGreaterThan(0, $this->workspaceId, 'fixture company must live in a real workspace');
 
 		$agreement = $this->service(AgreementService::class)->create([
 			'companyId' => $this->companyId,
@@ -114,6 +119,11 @@ class ArchivedCompanyExclusionIntegrationTest extends TestCase
 		self::assertContains($agreementId, $this->defaultAgreementSearchIds());
 		self::assertContains($dealId, $this->defaultDealSearchIds());
 		self::assertContains($activityId, $this->defaultActivitySearchIds());
+		self::assertSame([], $this->unscopedCompanySearch(), 'unscoped company search must be empty');
+		self::assertSame([], $this->unscopedAgreementSearch(), 'unscoped agreement search must be empty');
+		self::assertSame([], $this->unscopedDealSearch(), 'unscoped deal search must be empty');
+		self::assertSame([], $this->unscopedActivitySearch(), 'unscoped activity search must be empty');
+		self::assertSame([], $this->unscopedPersonSearch(), 'unscoped person search must be empty');
 
 		// ── Archived: everything drops out of the default queues ─────────
 		$companies->archive($this->companyId, self::ACTOR, null);
@@ -196,7 +206,7 @@ class ArchivedCompanyExclusionIntegrationTest extends TestCase
 	{
 		return array_map(
 			static fn ($a): int => (int)$a->getId(),
-			$this->service(AgreementMapper::class)->search([], 5000),
+			$this->service(AgreementMapper::class)->search(['workspaceId' => $this->workspaceId], 5000),
 		);
 	}
 
@@ -205,7 +215,7 @@ class ArchivedCompanyExclusionIntegrationTest extends TestCase
 	{
 		return array_map(
 			static fn (Deal $d): int => (int)$d->getId(),
-			$this->service(DealMapper::class)->search(['openOnly' => true], 5000),
+			$this->service(DealMapper::class)->search(['openOnly' => true, 'workspaceId' => $this->workspaceId], 5000),
 		);
 	}
 
@@ -214,7 +224,37 @@ class ArchivedCompanyExclusionIntegrationTest extends TestCase
 	{
 		return array_map(
 			static fn ($a): int => (int)$a->getId(),
-			$this->service(ActivityMapper::class)->search(['openOnly' => true], 5000),
+			$this->service(ActivityMapper::class)->search(['openOnly' => true, 'workspaceId' => $this->workspaceId], 5000),
 		);
+	}
+
+	/** @return list<mixed> */
+	private function unscopedCompanySearch(): array
+	{
+		return $this->service(CompanyMapper::class)->search([], 5000);
+	}
+
+	/** @return list<mixed> */
+	private function unscopedAgreementSearch(): array
+	{
+		return $this->service(AgreementMapper::class)->search([], 5000);
+	}
+
+	/** @return list<mixed> */
+	private function unscopedDealSearch(): array
+	{
+		return $this->service(DealMapper::class)->search(['openOnly' => true], 5000);
+	}
+
+	/** @return list<mixed> */
+	private function unscopedActivitySearch(): array
+	{
+		return $this->service(ActivityMapper::class)->search(['openOnly' => true], 5000);
+	}
+
+	/** @return list<mixed> */
+	private function unscopedPersonSearch(): array
+	{
+		return $this->service(PersonMapper::class)->search(['search' => 'Arch Excl'], 5000);
 	}
 }

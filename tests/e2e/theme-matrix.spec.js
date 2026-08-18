@@ -16,7 +16,7 @@
  */
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { login, credsFromEnv } from './helpers/auth.js';
+import { login, credsFromEnv, gotoCrm } from './helpers/auth.js';
 
 const THEMES = ['light', 'dark', 'light-highcontrast', 'dark-highcontrast'];
 
@@ -87,8 +87,7 @@ for (const theme of THEMES) {
       await enableTheme(page, theme);
 
       for (const path of PAGES) {
-        await page.goto(path, { waitUntil: 'domcontentloaded' });
-        await page.waitForSelector('#crm-main-content', { timeout: 30000 });
+        await gotoCrm(page, path);
 
         const results = await new AxeBuilder({ page })
           .include('#crm-main-content')
@@ -119,8 +118,7 @@ for (const theme of THEMES) {
     await login(page, credsFromEnv('ADMIN'));
     try {
       await enableTheme(page, theme);
-      await page.goto('/apps/customercheck/companies', { waitUntil: 'domcontentloaded' });
-      await page.waitForSelector('#crm-main-content', { timeout: 30000 });
+      await gotoCrm(page, '/apps/customercheck/companies');
       // Page CTAs relocate from .crm-page-actions-source into #crm-page-actions (header, not main).
       await page.waitForSelector(
         '#crm-page-actions .crm-btn--primary, #crm-main-content .crm-btn--primary',
@@ -158,8 +156,7 @@ for (const theme of THEMES) {
     await login(page, credsFromEnv('ADMIN'));
     try {
       await enableTheme(page, theme);
-      await page.goto('/apps/customercheck/companies', { waitUntil: 'domcontentloaded' });
-      await page.waitForSelector('#crm-main-content', { timeout: 30000 });
+      await gotoCrm(page, '/apps/customercheck/companies');
 
       // Real keyboard modality so :focus-visible applies: land on <main>, Tab once.
       await page.evaluate(() => {

@@ -165,6 +165,7 @@ final class ChaseOooAndLossCodeTest extends TestCase
 			$l10n,
 			$this->createMock(IDBConnection::class),
 			$this->createMock(AgreementMapper::class),
+			$this->createMock(\OCA\CustomerCheck\Db\PersonMapper::class),
 		);
 
 		try {
@@ -223,6 +224,7 @@ final class ChaseOooAndLossCodeTest extends TestCase
 			$l10n,
 			$this->createMock(IDBConnection::class),
 			$this->createMock(AgreementMapper::class),
+			$this->createMock(\OCA\CustomerCheck\Db\PersonMapper::class),
 		);
 		$result = $svc->changeStage(1, 'lost', null, '2026-07-01T12:00:00+00:00', 'ae', [
 			'lostReasonCode' => 'competitor',

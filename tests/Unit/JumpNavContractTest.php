@@ -28,7 +28,7 @@ final class JumpNavContractTest extends TestCase
 		$html = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/company-detail.php');
 		$this->assertStringContainsString('crm-360-focus-tabs.php', $html);
 		$this->assertStringNotContainsString('crm-jump-nav.php', $html);
-		foreach (['crm-glance', 'crm-communication', 'crm-persons', 'crm-next-steps', 'crm-contracts', 'crm-billing', 'crm-deals', 'crm-projects', 'crm-documents', 'crm-identity-links', 'crm-prepare-meeting', 'crm-timeline', 'crm-account-plan', 'crm-tickets', 'crm-invoices'] as $id) {
+		foreach (['crm-glance', 'crm-communication', 'crm-persons', 'crm-next-steps', 'crm-contracts', 'crm-billing', 'crm-deals', 'crm-projects', 'crm-documents', 'crm-identity-links', 'crm-timeline', 'crm-account-plan', 'crm-tickets', 'crm-invoices'] as $id) {
 			$this->assertStringContainsString('id="' . $id . '"', $html);
 		}
 		$this->assertStringContainsString("\$l->t('Talk')", $html);
@@ -53,7 +53,7 @@ final class JumpNavContractTest extends TestCase
 	public function testFocusScriptIsRegisteredForCompanyDetail(): void
 	{
 		$controller = (string)file_get_contents(dirname(__DIR__, 2) . '/lib/Controller/PageController.php');
-		$this->assertStringContainsString("registerFrontEndAssets('pages/company-detail', null, ['common/identity-links'], ['common/company360-focus', 'common/folder-picker', 'common/glance-summary', 'common/company360-present', 'common/deal-checklist-ux', 'common/mail-sync-now', 'common/rich-mail-composer', 'common/shared-mail-send', 'pages/persona'])", $controller);
+		$this->assertStringContainsString("registerFrontEndAssets('pages/company-detail', null, ['common/identity-links'], ['common/person-picker', 'common/new-deal-form', 'common/company360-focus', 'common/person-dialog-core', 'common/folder-picker', 'common/glance-summary', 'common/company360-present', 'common/deal-checklist-ux', 'common/mail-sync-now', 'common/rich-mail-composer', 'common/shared-mail-send', 'pages/persona'])", $controller);
 		$js = (string)file_get_contents(dirname(__DIR__, 2) . '/js/common/company360-focus.js');
 		$this->assertStringContainsString('aria-selected', $js);
 		$this->assertStringContainsString('hashchange', $js);

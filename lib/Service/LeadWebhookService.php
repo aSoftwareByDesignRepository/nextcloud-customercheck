@@ -13,6 +13,7 @@ use OCA\CustomerCheck\Db\DealMapper;
 use OCA\CustomerCheck\Db\PersonMapper;
 use OCA\CustomerCheck\Exception\ValidationException;
 use OCA\CustomerCheck\Support\DateMath;
+use OCA\CustomerCheck\Support\LeadSource;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\IL10N;
 
@@ -119,7 +120,12 @@ class LeadWebhookService
 			}
 		}
 
-		$deal = $this->findOrCreateLeadDeal($company, $productInterest, $now);
+		$deal = $this->findOrCreateLeadDeal(
+			$company,
+			$productInterest,
+			$now,
+			LeadSource::normalize((string)($payload['source'] ?? 'website'), false) ?? 'website',
+		);
 
 		$activity = new Activity();
 		$activity->setCompanyId((int)$company->getId());
@@ -158,8 +164,12 @@ class LeadWebhookService
 		];
 	}
 
-	private function findOrCreateLeadDeal(Company $company, string $productInterest, \DateTimeInterface $now): Deal
-	{
+	private function findOrCreateLeadDeal(
+		Company $company,
+		string $productInterest,
+		\DateTimeInterface $now,
+		string $leadSource,
+	): Deal {
 		$openDeals = $this->dealMapper->findOpenByCompany((int)$company->getId());
 		foreach ($openDeals as $candidate) {
 			if ((string)$candidate->getStage() === 'lead') {
@@ -173,12 +183,18 @@ class LeadWebhookService
 			$slaHours = max(1, (int)$this->workspaces->getSettings($wsId)['leadSlaHours']);
 		}
 
+		$primaryPersonId = $this->primaryPersonIdForCompany((int)$company->getId());
+
 		$stamp = $now instanceof \DateTime ? clone $now : \DateTime::createFromInterface($now);
 		$deal = new Deal();
 		$deal->setCompanyId((int)$company->getId());
 		$deal->setTitle($productInterest !== '' ? $productInterest : $this->l10n->t('Website inquiry'));
 		$deal->setStage('lead');
 		$deal->setValueCents(0);
+		$deal->setLeadSource(LeadSource::isKnown($leadSource) ? $leadSource : 'website');
+		if ($primaryPersonId !== null) {
+			$deal->setPersonId($primaryPersonId);
+		}
 		// Unowned until claimed on Today (§18.7) — chase surfaces with Claim CTA.
 		$deal->setOwnerUserId(null);
 		$deal->setLeadSlaDueAt((clone $stamp)->modify('+' . $slaHours . ' hours'));
@@ -188,5 +204,15 @@ class LeadWebhookService
 		$deal->setUpdatedAt($stamp);
 
 		return $this->dealMapper->insert($deal);
+	}
+
+	private function primaryPersonIdForCompany(int $companyId): ?int
+	{
+		if ($companyId <= 0) {
+			return null;
+		}
+		$primary = $this->personMapper->findPrimary($companyId);
+
+		return $primary !== null ? (int)$primary->getId() : null;
 	}
 }

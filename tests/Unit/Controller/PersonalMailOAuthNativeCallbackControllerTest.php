@@ -43,6 +43,12 @@ final class PersonalMailOAuthNativeCallbackControllerTest extends TestCase
 		}
 		$this->assertStringContainsString('CustomerCheck', $body);
 		$this->assertStringContainsString('role="status"', $body);
+		$this->assertStringContainsString('lang="de"', $body);
+		$this->assertStringContainsString('color-scheme', $body);
+		$this->assertStringContainsString('CanvasText', $body);
+		$this->assertStringContainsString('background:Canvas', $body);
+		$this->assertStringNotContainsString('#111', $body);
+		$this->assertDoesNotMatchRegularExpression('/#[0-9a-fA-F]{3,8}/', $body);
 	}
 
 	private function buildController(IRequest $request, AccessControlService $access, PersonalMailOAuthService $oauth): PersonaApiController
@@ -73,6 +79,7 @@ final class PersonalMailOAuthNativeCallbackControllerTest extends TestCase
 	{
 		$l10n = $this->createMock(\OCP\IL10N::class);
 		$l10n->method('t')->willReturnCallback(static fn (string $s): string => $s);
+		$l10n->method('getLanguageCode')->willReturn('de');
 
 		return $l10n;
 	}

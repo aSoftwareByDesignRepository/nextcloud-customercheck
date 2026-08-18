@@ -65,6 +65,7 @@ final class DealServiceApplyConflictTest extends TestCase
 			$l10n,
 			$db,
 			$this->createMock(AgreementMapper::class),
+			$this->createMock(\OCA\CustomerCheck\Db\PersonMapper::class),
 		);
 
 		$result = $svc->applyConflictResolution(5, ['title' => 'Resolved title', 'valueCents' => 500], 'manager', true);
@@ -106,6 +107,7 @@ final class DealServiceApplyConflictTest extends TestCase
 			$l10n,
 			$db,
 			$this->createMock(AgreementMapper::class),
+			$this->createMock(\OCA\CustomerCheck\Db\PersonMapper::class),
 		);
 
 		$this->expectException(\OCA\CustomerCheck\Exception\ConflictException::class);

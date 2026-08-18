@@ -527,20 +527,47 @@ final class DisplayLabelService
 	public function forecastBucket(string $bucket): string
 	{
 		return match ($bucket) {
-			'commit' => $this->l10n->t('This month likely'),
-			'upside' => $this->l10n->t('Possible'),
-			'pipeline' => $this->l10n->t('Later'),
-			default => $bucket !== '' ? $bucket : $this->l10n->t('None'),
+			'pipeline' => \OCA\CustomerCheck\Support\WinChance::percentLabel(25),
+			'upside' => \OCA\CustomerCheck\Support\WinChance::percentLabel(50),
+			'commit' => \OCA\CustomerCheck\Support\WinChance::percentLabel(75),
+			'certain' => \OCA\CustomerCheck\Support\WinChance::percentLabel(100),
+			default => $bucket !== '' ? $bucket : $this->l10n->t('Not set'),
 		};
 	}
 
 	/** @return list<array{value: string, label: string}> */
 	public function forecastBucketOptions(): array
 	{
-		$out = [['value' => '', 'label' => $this->l10n->t('None')]];
+		$out = [];
 		foreach (\OCA\CustomerCheck\Constants::FORECAST_BUCKETS as $bucket) {
 			$out[] = ['value' => $bucket, 'label' => $this->forecastBucket($bucket)];
 		}
+		return $out;
+	}
+
+	public function leadSource(string $source): string
+	{
+		return match ($source) {
+			'manual' => $this->l10n->t('Manual entry'),
+			'website' => $this->l10n->t('Website'),
+			'referral' => $this->l10n->t('Referral'),
+			'partner' => $this->l10n->t('Partner'),
+			'event' => $this->l10n->t('Event or trade show'),
+			'cold_outreach' => $this->l10n->t('Cold outreach'),
+			'existing_customer' => $this->l10n->t('Existing customer'),
+			'other' => $this->l10n->t('Other'),
+			default => $source !== '' ? $source : $this->l10n->t('Unknown'),
+		};
+	}
+
+	/** @return list<array{value: string, label: string}> */
+	public function leadSourceOptions(): array
+	{
+		$out = [];
+		foreach (\OCA\CustomerCheck\Constants::LEAD_SOURCES as $source) {
+			$out[] = ['value' => $source, 'label' => $this->leadSource($source)];
+		}
+
 		return $out;
 	}
 

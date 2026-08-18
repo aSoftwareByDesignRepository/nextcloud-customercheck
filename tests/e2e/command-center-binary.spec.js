@@ -260,12 +260,65 @@ test.describe('Command Center binary ACs', () => {
     // Always create — list-row links can be filters/other routes and flake waitForURL.
     await createCompany(page, `Platform Co ${Date.now().toString(36)}`);
     await expect(page.locator('#crm-platform-links')).toBeAttached();
+    await expect(page.locator('#crm-platform-links')).toHaveAttribute('data-platform-painted', '1', { timeout: 20000 });
+    const companyId = companyIdFromUrl(page);
+    const api = await page.evaluate(async (id) => {
+      const token =
+        (window.OC && window.OC.requestToken)
+        || (document.querySelector('head') || {}).getAttribute?.('data-requesttoken')
+        || (document.querySelector('meta[name="requesttoken"]') || {}).content
+        || '';
+      const stack = document.querySelector('.crm-page-stack[data-workspace-id]');
+      const ws = stack ? parseInt(stack.getAttribute('data-workspace-id') || '0', 10) : 0;
+      let url = (window.OC && typeof window.OC.generateUrl === 'function')
+        ? window.OC.generateUrl('/apps/customercheck/api/v1/companies/' + id + '/platform-links')
+        : '/apps/customercheck/api/v1/companies/' + id + '/platform-links';
+      if (ws > 0) {
+        url += (url.indexOf('?') >= 0 ? '&' : '?') + 'workspaceId=' + encodeURIComponent(String(ws));
+      }
+      const res = await fetch(url, {
+        credentials: 'same-origin',
+        headers: { Accept: 'application/json', requesttoken: token },
+      });
+      let json = null;
+      try {
+        json = await res.json();
+      } catch (e) {
+        json = { parseError: true };
+      }
+      return { ok: res.ok, status: res.status, json };
+    }, companyId);
+    expect(api.ok, JSON.stringify({ status: api.status, json: api.json })).toBeTruthy();
+    const payload = api.json;
+    const data = payload.data && typeof payload.data === 'object' && !Array.isArray(payload.data)
+      ? payload.data
+      : {};
+    const keys = Object.keys(data);
     const chips = page.locator('#crm-platform-links a.crm-platform-links__chip');
-    const n = await chips.count();
-    for (let i = 0; i < n; i++) {
-      const href = await chips.nth(i).getAttribute('href');
-      expect(href || '').toMatch(/\/apps\//);
+    await expect(chips).toHaveCount(keys.length);
+    const moreTab = page.locator('[data-crm-focus-tab="more"]');
+    if ((await moreTab.count()) > 0) {
+      await moreTab.click();
     }
+    if (keys.length === 0) {
+      await expect(page.locator('#crm-platform-links')).toBeHidden();
+    } else {
+      await expect(page.locator('#crm-platform-links')).toBeVisible();
+      await expect(page.locator('#crm-platform-links-lead')).toBeVisible();
+      for (const key of keys) {
+        expect(data[key].available).toBe(true);
+        const href = String(data[key].url || '');
+        expect(href).toMatch(/\/apps\//);
+        await expect(page.locator('#crm-platform-links a.crm-platform-links__chip[href="' + href + '"]')).toHaveCount(1);
+        expect(href).not.toMatch(/javascript:/i);
+      }
+    }
+    await expect(page.locator('#crm-platform-links a.crm-platform-links__chip[href*="/apps/tasks/"]')).toHaveCount(
+      keys.includes('tasks') ? 1 : 0,
+    );
+    await expect(page.locator('#crm-platform-links a.crm-platform-links__chip[href*="/apps/calendar/"]')).toHaveCount(
+      keys.includes('calendar') ? 1 : 0,
+    );
 
     await page.goto('/apps/customercheck/today');
     await expect(page.locator('#crm-main-content')).toBeVisible({ timeout: 30000 });

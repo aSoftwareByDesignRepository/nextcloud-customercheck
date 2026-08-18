@@ -21,8 +21,9 @@ final class AccountPlanUxContractTest extends TestCase
 	public function testWriteUiUsesTextareaMovesAndDone(): void
 	{
 		$js = (string)file_get_contents(dirname(__DIR__, 2) . '/js/pages/company-detail.js');
-		$this->assertStringContainsString('crm-plan-more', $js);
-		$this->assertStringContainsString("t('Priority, owner & review')", $js);
+		$this->assertStringContainsString('crm-advanced crm-account-plan__more', $js);
+		$this->assertStringContainsString("t('More options')", $js);
+		$this->assertStringContainsString("t('Add the next moves')", $js);
 		$this->assertStringContainsString("t('Next moves')", $js);
 		$this->assertStringContainsString("t('Plan moves stay here. Day-to-day to-dos live under To-dos above.')", $js);
 		$this->assertStringContainsString("t('What should happen next?')", $js);

@@ -20,7 +20,7 @@ import { test, expect } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { login, credsFromEnv } from './helpers/auth.js';
+import { login, credsFromEnv, gotoCrm } from './helpers/auth.js';
 
 const VIEWPORTS = [
   { name: 'phone-320', width: 320, height: 568 },
@@ -60,8 +60,7 @@ for (const viewport of VIEWPORTS) {
     await login(page, creds);
 
     for (const { path, name, shell } of PAGES) {
-      await page.goto(path, { waitUntil: 'domcontentloaded' });
-      await page.waitForSelector('#crm-main-content', { timeout: 30000 });
+      await gotoCrm(page, path);
 
       // 1. Shell chrome present.
       await expect(

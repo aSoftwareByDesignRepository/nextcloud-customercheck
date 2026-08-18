@@ -274,19 +274,29 @@ class CompanyMapper extends QBMapper
 	}
 
 	/**
-	 * Case-insensitive exact name match, used by the import matcher (§8.6 rule b).
+	 * Case-insensitive exact name match within one workspace (import §8.6 rule b).
+	 * Fail closed without a workspace — never scan every book.
 	 *
 	 * @return Company[]
 	 */
-	public function findByNameCaseInsensitive(string $name): array
+	public function findByNameCaseInsensitive(string $name, int $workspaceId): array
 	{
+		if ($workspaceId <= 0) {
+			return [];
+		}
+		$name = trim($name);
+		if ($name === '') {
+			return [];
+		}
 		$qb = $this->db->getQueryBuilder();
 		$qb->select('*')
 			->from($this->getTableName())
 			->where($qb->expr()->eq(
 				$qb->func()->lower('name'),
-				$qb->createNamedParameter(mb_strtolower(trim($name)))
+				$qb->createNamedParameter(mb_strtolower($name))
 			))
+			->andWhere($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, IQueryBuilder::PARAM_INT)))
+			->andWhere($qb->expr()->isNull('archived_at'))
 			->setMaxResults(50);
 
 		return $this->findEntities($qb);
@@ -331,6 +341,9 @@ class CompanyMapper extends QBMapper
 			}
 		} elseif ($workspaceId > 0) {
 			$qb->andWhere($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, IQueryBuilder::PARAM_INT)));
+		} else {
+			// Fail closed: unscoped company search is every book.
+			$qb->andWhere($qb->expr()->eq($qb->createNamedParameter(1), $qb->createNamedParameter(0)));
 		}
 
 		$search = trim((string)($filters['search'] ?? ''));

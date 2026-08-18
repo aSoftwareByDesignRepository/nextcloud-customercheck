@@ -237,6 +237,7 @@ class ActivityMapper extends QBMapper
 	{
 		$companyId = (int)($filters['companyId'] ?? 0);
 		$workspaceId = (int)($filters['workspaceId'] ?? 0);
+		$workspaceIds = $filters['workspaceIds'] ?? null;
 		if ($companyId > 0) {
 			$qb->andWhere($qb->expr()->eq('company_id', $qb->createNamedParameter($companyId, IQueryBuilder::PARAM_INT)));
 		}
@@ -251,8 +252,12 @@ class ActivityMapper extends QBMapper
 			// explicit company/deal context keeps history reachable.
 			$this->excludeArchivedCompanies($qb);
 		}
-		if ($workspaceId > 0) {
+		if (is_array($workspaceIds)) {
+			$this->restrictToWorkspaces($qb, $workspaceIds);
+		} elseif ($workspaceId > 0) {
 			$this->restrictToWorkspace($qb, $workspaceId);
+		} elseif ($companyId <= 0 && $dealId <= 0) {
+			$qb->andWhere($qb->expr()->eq($qb->createNamedParameter(1), $qb->createNamedParameter(0)));
 		}
 
 		$type = (string)($filters['type'] ?? '');

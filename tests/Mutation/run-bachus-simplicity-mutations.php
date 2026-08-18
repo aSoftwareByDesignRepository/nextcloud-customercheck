@@ -41,10 +41,10 @@ function bachus_simplicity_mutations(string $appRoot): array
 			'filter' => 'BachusSimplicityUxContractTest::testCompanyFormNeverForceOpensAdvancedOnEdit|ExtremeSimplicityUxContractTest::testCompanyFormDemotesSlugToAdvanced',
 		],
 		[
-			'file' => $appRoot . '/js/pages/company-detail.js',
-			'from' => "name: 'notes',\n          label: t('Notes'),\n          type: 'textarea',\n          advanced: true,\n          maxlength: 4000,",
-			'to' => "name: 'notes',\n          label: t('Notes'),\n          type: 'textarea',\n          maxlength: 4000,",
-			'label' => 'add_deal_notes_leave_primary',
+			'file' => $appRoot . '/js/common/new-deal-form.js',
+			'from' => "t('More options')",
+			'to' => "t('Extra fields')",
+			'label' => 'add_deal_notes_lose_more_options_landmark',
 			'filter' => 'DealNotesUxContractTest::testCompanyDetailEditDealHandlerAndNotesFields',
 		],
 		[
@@ -171,6 +171,22 @@ function bachus_simplicity_mutations(string $appRoot): array
 
 function run_phpunit(string $phpunit, string $appRoot, string $filter): int
 {
+	$composeDir = dirname($appRoot, 2);
+	$dockerPhpunit = '/var/www/html/custom_apps/customercheck/vendor/bin/phpunit';
+	$dockerConfig = '/var/www/html/custom_apps/customercheck/phpunit.xml';
+	if (is_file($composeDir . '/docker-compose.yml')) {
+		$probe = 'docker compose -f ' . escapeshellarg($composeDir . '/docker-compose.yml')
+			. ' exec -T -u www-data nextcloud php -r ' . escapeshellarg('echo "ok";');
+		exec($probe . ' 2>/dev/null', $probeOut, $probeCode);
+		if ($probeCode === 0) {
+			$cmd = 'docker compose -f ' . escapeshellarg($composeDir . '/docker-compose.yml')
+				. ' exec -T -u www-data nextcloud php ' . escapeshellarg($dockerPhpunit)
+				. ' -c ' . escapeshellarg($dockerConfig)
+				. ' --filter ' . escapeshellarg($filter);
+			passthru($cmd, $code);
+			return (int) $code;
+		}
+	}
 	$cmd = escapeshellarg($phpunit)
 		. ' -c ' . escapeshellarg($appRoot . '/phpunit.xml')
 		. ' --filter ' . escapeshellarg($filter);

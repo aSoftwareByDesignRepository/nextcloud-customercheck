@@ -52,7 +52,7 @@ final class PageQuickStartCatalog
 	{
 		return [
 			'today', 'pulse', 'brief', 'my-accounts', 'team', 'strategy',
-			'mail-triage', 'sales-inbox', 'review', 'conflicts', 'prepare-meeting', 'companies', 'company-form',
+			'mail-triage', 'sales-inbox', 'review', 'conflicts', 'companies', 'company-form',
 			'pipeline', 'agreements', 'agreement-form', 'money', 'activities',
 			'import', 'settings', 'app-settings', 'support-us',
 		];
@@ -257,23 +257,6 @@ final class PageQuickStartCatalog
 						'text' => $l->t('When the queue is empty, jump back to Today.'),
 						'href' => $link('today'),
 						'linkLabel' => $l->t('Open Today'),
-					],
-				],
-			],
-			'prepare-meeting' => [
-				'lead' => $l->t('One stack for the next call or review meeting — context without tab chaos.'),
-				'steps' => [
-					[
-						'title' => $l->t('1. Skim the stack'),
-						'text' => $l->t('Open tasks, recent talk, and plan goal sit in one place for this company.'),
-					],
-					[
-						'title' => $l->t('2. Note what you will ask'),
-						'text' => $l->t('Use gaps and overdue items as your meeting agenda. Keep it to three questions if you can.'),
-					],
-					[
-						'title' => $l->t('3. After the call'),
-						'text' => $l->t('Log the activity and update promises on the company page so Today stays truthful.'),
 					],
 				],
 			],

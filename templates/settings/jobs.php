@@ -19,8 +19,18 @@ $serverTz = (string)(($_['clientHints']['timezone'] ?? null) ?: (date_default_ti
 				</label>
 				<div class="form-group">
 					<label for="crm-reminder-hour" class="form-label"><?php p($l->t('Reminder hour')); ?></label>
-					<input type="number" id="crm-reminder-hour" name="reminder_hour" class="form-input crm-input" min="0" max="23" value="<?php p((int)($settings['reminder_hour'] ?? 5)); ?>">
-					<p class="form-help"><?php p($l->t('Hour on the server clock (%s). Callbacks and due activities use the same hour.', [$serverTz])); ?></p>
+					<select id="crm-reminder-hour" name="reminder_hour" class="form-select crm-input" aria-describedby="crm-reminder-hour-help">
+						<?php
+						$reminderHour = (int)($settings['reminder_hour'] ?? 5);
+						if ($reminderHour < 0 || $reminderHour > 23) {
+							$reminderHour = 5;
+						}
+						for ($h = 0; $h <= 23; $h++):
+							?>
+							<option value="<?php p($h); ?>" <?php if ($reminderHour === $h): ?>selected<?php endif; ?>><?php p(sprintf('%02d:00', $h)); ?></option>
+						<?php endfor; ?>
+					</select>
+					<p class="form-help" id="crm-reminder-hour-help"><?php p($l->t('Hour on the server clock (%s). Callbacks and due activities use the same hour.', [$serverTz])); ?></p>
 				</div>
 				<label class="crm-switch">
 					<input type="checkbox" name="digest_enabled" value="1" <?php echo !empty($settings['digest_enabled']) ? 'checked' : ''; ?>>
@@ -43,8 +53,18 @@ $serverTz = (string)(($_['clientHints']['timezone'] ?? null) ?: (date_default_ti
 				</div>
 				<div class="form-group">
 					<label for="crm-digest-hour" class="form-label"><?php p($l->t('Digest hour')); ?></label>
-					<input type="number" id="crm-digest-hour" name="digest_hour" class="form-input crm-input" min="0" max="23" value="<?php p((int)($settings['digest_hour'] ?? 7)); ?>">
-					<p class="form-help"><?php p($l->t('Hour on the server clock (%s).', [$serverTz])); ?></p>
+					<select id="crm-digest-hour" name="digest_hour" class="form-select crm-input" aria-describedby="crm-digest-hour-help">
+						<?php
+						$digestHour = (int)($settings['digest_hour'] ?? 7);
+						if ($digestHour < 0 || $digestHour > 23) {
+							$digestHour = 7;
+						}
+						for ($h = 0; $h <= 23; $h++):
+							?>
+							<option value="<?php p($h); ?>" <?php if ($digestHour === $h): ?>selected<?php endif; ?>><?php p(sprintf('%02d:00', $h)); ?></option>
+						<?php endfor; ?>
+					</select>
+					<p class="form-help" id="crm-digest-hour-help"><?php p($l->t('Hour on the server clock (%s).', [$serverTz])); ?></p>
 				</div>
 				<div class="form-group">
 					<label for="crm-stale-days" class="form-label"><?php p($l->t('Stale deal days')); ?></label>

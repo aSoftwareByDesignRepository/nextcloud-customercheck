@@ -44,6 +44,25 @@
     return y + '-' + m + '-' + day;
   }
 
+  function dateIso(el) {
+    const DP = window.CustomerCheckDatepicker;
+    if (DP && typeof DP.isoValue === 'function') {
+      return DP.isoValue(el);
+    }
+    return el ? String(el.value || '').trim() : '';
+  }
+
+  function setDateIso(el, iso) {
+    const DP = window.CustomerCheckDatepicker;
+    if (DP && typeof DP.setIsoValue === 'function') {
+      DP.setIsoValue(el, iso);
+      return;
+    }
+    if (el) {
+      el.value = iso;
+    }
+  }
+
   function addYears(isoDate, years) {
     const y = Number(years);
     if (!Number.isFinite(y)) {
@@ -126,8 +145,8 @@
       }
     }
     const startsEl = document.getElementById('crm-ag-starts');
-    if (startsEl && !startsEl.value) {
-      startsEl.value = todayIso();
+    if (startsEl && !dateIso(startsEl)) {
+      setDateIso(startsEl, todayIso());
     }
   }
 
@@ -176,7 +195,7 @@
     }
     const kind = document.getElementById('crm-ag-kind').value;
     const untilEl = document.getElementById('crm-ag-until');
-    const validUntil = untilEl ? untilEl.value : '';
+    const validUntil = dateIso(untilEl);
     if (kind !== 'onetime' && !validUntil) {
       showError(t('Licenses and Check Partner packages need an end date.'), untilEl);
       return;
@@ -184,10 +203,10 @@
 
     const companyId = companyIdFromForm();
     const startsEl = document.getElementById('crm-ag-starts');
-    let startsAt = startsEl ? startsEl.value : '';
+    let startsAt = dateIso(startsEl);
     if (!startsAt && form.dataset.mode === 'create') {
       startsAt = todayIso();
-      if (startsEl) startsEl.value = startsAt;
+      setDateIso(startsEl, startsAt);
     }
 
     const body = buildAgreementSaveBody({
@@ -239,7 +258,7 @@
         title: t('Renew agreement'),
         content: '<form id="' + dialogId + '-form" class="crm-form crm-form--stack">' +
           '<div class="form-group"><label class="form-label" for="' + dialogId + '-until">' + escapeHtml(t('New valid until')) + '</label>' +
-          '<input class="crm-input form-input" id="' + dialogId + '-until" name="validUntil" type="date" value="' + escapeHtml(suggested) + '" required />' +
+          '<input class="crm-input form-input datepicker-input" id="' + dialogId + '-until" name="validUntil" type="date" value="' + escapeHtml(suggested) + '" required autocomplete="off" />' +
           '<p class="form-help">' + escapeHtml(t('Creates a new agreement and marks this one superseded. Reminders re-arm for the new date.')) + '</p></div>' +
           '<div class="form-group"><label class="form-label" for="' + dialogId + '-amount">' + escapeHtml(t('Amount (EUR)')) + '</label>' +
           '<input class="crm-input form-input" id="' + dialogId + '-amount" name="amountEur" type="number" min="0" step="0.01" value="' + escapeHtml((amountCents / 100).toFixed(2)) + '" /></div>' +

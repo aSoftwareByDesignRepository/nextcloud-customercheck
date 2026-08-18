@@ -35,7 +35,7 @@
   --radius-none: 0;
   --radius-sm: var(--crm-radius-sm, 6px);
   --radius-base: var(--crm-radius-sm, 6px);
-  --radius-md: var(--crm-radius-sm, 6px);
+  --radius-md: var(--crm-radius-md, 12px);
   --radius-lg: var(--crm-radius-md, 12px);
   --radius-xl: var(--crm-radius-md, 12px);
   --radius-2xl: var(--crm-radius-lg, 16px);

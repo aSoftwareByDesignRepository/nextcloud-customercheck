@@ -38,8 +38,12 @@ final class FrontEndAssetService
 		Util::addScript(Application::APP_ID, 'common/navigation');
 		Util::addScript(Application::APP_ID, 'common/navigation-icons');
 		Util::addScript(Application::APP_ID, 'common/app-feedback');
+		Util::addScript(Application::APP_ID, 'common/datepicker-core');
+		Util::addScript(Application::APP_ID, 'common/datepicker');
+		Util::addScript(Application::APP_ID, 'common/platform-links-core');
 		Util::addScript(Application::APP_ID, 'common/filter-live-core');
 		Util::addScript(Application::APP_ID, 'common/filter-live');
+		Util::addScript(Application::APP_ID, 'common/list-toolbar-core');
 	}
 
 	/**

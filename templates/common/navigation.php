@@ -94,7 +94,7 @@ $navItem = static function (
 		</li>
 		<?php
 		$navItem($is('my-accounts'), $u('myAccounts'), 'users', $l->t('My customers'), $l->t('Companies you own or plan'));
-		$navItem($is('companies', 'company-detail', 'company-form', 'prepare-meeting'), $u('companies'), 'building-2', $l->t('Companies'), $l->t('Full customer registry'));
+		$navItem($is('companies', 'company-detail', 'company-form'), $u('companies'), 'building-2', $l->t('Companies'), $l->t('Full customer registry'));
 		$navItem($is('strategy'), $u('strategy'), 'map', $l->t('Plans'), $l->t('Account plans for your customers'));
 		if (!empty($_['showTeamNav'])) {
 			$navItem($is('team', 'workload'), $u('team'), 'user-cog', $l->t('Team'), $l->t('Who needs help — managers only'));

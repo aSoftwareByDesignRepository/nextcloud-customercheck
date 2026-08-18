@@ -26,12 +26,31 @@ foreach (($_['persons'] ?? []) as $pRow) {
 	];
 }
 $crmPersonsJson = json_encode($crmPersonsForLog, JSON_THROW_ON_ERROR | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT);
+$forecastBucketOptions = $_['forecastBucketOptions'] ?? [];
+$dealStageOptions = $_['dealStageOptions'] ?? [];
+$leadSourceOptions = $_['leadSourceOptions'] ?? [];
+$companyDisplayName = (string)($_['companyDisplayName'] ?? $company->getName());
 $ticketsHasData = ($_['tickets'] ?? []) !== [];
 $invoicesHasData = ($_['invoices'] ?? []) !== [];
 $projectsHasData = ($_['projects'] ?? []) !== [];
 // No sibling lists yet → collapse into one calm Linked apps surface (no triple empty walls).
 $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasData;
 ?>
+<script type="application/json" id="crm-deal-form-forecast-options"><?php
+	echo json_encode($forecastBucketOptions, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR);
+?></script>
+<script type="application/json" id="crm-deal-form-stage-options"><?php
+	echo json_encode($dealStageOptions, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR);
+?></script>
+<script type="application/json" id="crm-deal-form-lead-source-options"><?php
+	echo json_encode($leadSourceOptions, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR);
+?></script>
+<script type="application/json" id="crm-deal-form-company-meta"><?php
+	echo json_encode([
+		'companyId' => (int)$company->getId(),
+		'companyName' => $companyDisplayName,
+	], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR);
+?></script>
 <div class="crm-page-actions-source header-actions" hidden>
 	<?php if (!empty($_['canWrite'])): ?>
 	<a class="crm-btn crm-btn--primary" href="<?php p($urlGenerator->linkToRoute('customercheck.page.companyEdit', ['id' => $company->getId()])); ?>"><?php p($l->t('Edit')); ?></a>
@@ -88,7 +107,6 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 		}
 	}
 	?>
-
 
 
 	<?php
@@ -417,48 +435,55 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 	</div>
 
 	<div id="crm-360-panel-people" class="crm-360-focus__panel" role="tabpanel" data-crm-focus-panel="people" aria-labelledby="crm-360-tab-people" aria-hidden="true" hidden>
-	<?php /* People is its own focus tab — coach Add person on Today must switch here before opening the form. */ ?>
+	<?php /* People tab owns the roster; Add person opens a native dialog (teleported to body so inert/hidden tabs cannot trap it). */ ?>
 	<section class="crm-card" id="crm-persons" aria-labelledby="crm-persons-title" data-contacts-available="<?php p(!empty($_['contactsAvailable']) ? '1' : '0'); ?>" data-contacts-home="<?php p((string)($_['contactsHomeUrl'] ?? '/apps/contacts/')); ?>">
 		<header class="crm-card__header">
 			<div class="crm-card__header-text">
 				<h2 id="crm-persons-title" class="crm-card__title"><?php p($l->t('People')); ?></h2>
 				<p class="crm-card__lead"><?php p($l->t('Contacts at this company.')); ?></p>
 			</div>
-			<button type="button" class="crm-btn crm-btn--primary crm-btn--lg" id="crm-add-person" aria-expanded="false" aria-controls="crm-person-form"<?php if (empty($_['canWrite'])): ?> hidden<?php endif; ?>><?php p($l->t('Add person')); ?></button>
+			<button type="button" class="crm-btn crm-btn--primary crm-btn--lg" id="crm-add-person" aria-haspopup="dialog" aria-expanded="false" aria-controls="crm-person-dialog"<?php if (empty($_['canWrite'])): ?> hidden<?php endif; ?>><?php p($l->t('Add person')); ?></button>
 		</header>
 		<div class="crm-card__body">
 			<?php if (!empty($_['canWrite'])): ?>
-			<form id="crm-person-form" class="crm-identity-form" hidden data-mode="add" novalidate aria-labelledby="crm-person-form-title">
-				<h3 class="crm-identity-block-title" id="crm-person-form-title"><?php p($l->t('Add person')); ?></h3>
-				<div class="form-group">
-					<label class="form-label" for="crm-person-name"><?php p($l->t('Name')); ?></label>
-					<input class="crm-input form-input crm-input--lg" id="crm-person-name" name="name" required maxlength="255" autocomplete="name" aria-describedby="crm-person-name-help" />
-					<p class="form-help" id="crm-person-name-help"><?php p($l->t('Who do you talk to at this company?')); ?></p>
+			<dialog id="crm-person-dialog" class="crm-native-dialog modal modal--md crm-dialog crm-dialog--content crm-person-dialog" role="dialog" aria-modal="true" aria-labelledby="crm-person-form-title" aria-hidden="true" data-azc-modal-persist="true" data-azc-focus-trap-standalone="1">
+				<div class="modal-header">
+					<h2 class="modal-title" id="crm-person-form-title"><?php p($l->t('Add person')); ?></h2>
+					<button type="button" class="modal-close crm-btn crm-btn--ghost" id="crm-person-dialog-close" aria-label="<?php p($l->t('Close')); ?>">&times;</button>
 				</div>
-				<div class="form-group">
-					<label class="form-label" for="crm-person-email"><?php p($l->t('Email')); ?></label>
-					<input class="crm-input form-input crm-input--lg" id="crm-person-email" name="email" type="email" maxlength="255" autocomplete="email" aria-describedby="crm-person-email-help" />
-					<p class="form-help" id="crm-person-email-help"><?php p($l->t('Optional — needed to log emails with them.')); ?></p>
-				</div>
-				<details class="crm-advanced" id="crm-person-advanced">
-					<summary class="crm-advanced__summary"><?php p($l->t('More options')); ?></summary>
-					<div class="crm-advanced__body">
+				<div class="modal-body">
+					<form id="crm-person-form" class="crm-form crm-form--stack" data-mode="add" novalidate aria-labelledby="crm-person-form-title">
 						<div class="form-group">
-							<label class="form-label" for="crm-person-phone"><?php p($l->t('Phone')); ?></label>
-							<input class="crm-input form-input crm-input--lg" id="crm-person-phone" name="phone" maxlength="64" autocomplete="tel" inputmode="tel" pattern="[0-9+()\/.\s-]{4,64}" />
+							<label class="form-label" for="crm-person-name"><?php p($l->t('Name')); ?></label>
+							<input class="crm-input form-input crm-input--lg" id="crm-person-name" name="name" required maxlength="255" autocomplete="name" aria-describedby="crm-person-name-help" />
+							<p class="form-help" id="crm-person-name-help"><?php p($l->t('Who do you talk to at this company?')); ?></p>
 						</div>
 						<div class="form-group">
-							<label class="form-label" for="crm-person-role"><?php p($l->t('Job title')); ?></label>
-							<input class="crm-input form-input crm-input--lg" id="crm-person-role" name="role" maxlength="128" autocomplete="organization-title" />
+							<label class="form-label" for="crm-person-email"><?php p($l->t('Email')); ?></label>
+							<input class="crm-input form-input crm-input--lg" id="crm-person-email" name="email" type="email" maxlength="255" autocomplete="email" aria-describedby="crm-person-email-help" />
+							<p class="form-help" id="crm-person-email-help"><?php p($l->t('Optional — needed to log emails with them.')); ?></p>
 						</div>
-					</div>
-				</details>
-				<div id="crm-person-form-error" class="crm-callout crm-callout--danger" role="alert" tabindex="-1" hidden></div>
-				<div class="crm-form-actions crm-form-actions--start">
-					<button type="submit" class="crm-btn crm-btn--primary"><?php p($l->t('Save')); ?></button>
-					<button type="button" class="crm-btn crm-btn--secondary" id="crm-person-cancel"><?php p($l->t('Cancel')); ?></button>
+						<details class="crm-advanced" id="crm-person-advanced">
+							<summary class="crm-advanced__summary"><?php p($l->t('More options')); ?></summary>
+							<div class="crm-advanced__body">
+								<div class="form-group">
+									<label class="form-label" for="crm-person-phone"><?php p($l->t('Phone')); ?></label>
+									<input class="crm-input form-input crm-input--lg" id="crm-person-phone" name="phone" maxlength="64" autocomplete="tel" inputmode="tel" pattern="[0-9+()\/.\s-]{4,64}" />
+								</div>
+								<div class="form-group">
+									<label class="form-label" for="crm-person-role"><?php p($l->t('Job title')); ?></label>
+									<input class="crm-input form-input crm-input--lg" id="crm-person-role" name="role" maxlength="128" autocomplete="organization-title" />
+								</div>
+							</div>
+						</details>
+						<div id="crm-person-form-error" class="crm-callout crm-callout--danger" role="alert" tabindex="-1" hidden></div>
+						<div class="crm-form-actions">
+							<button type="submit" class="crm-btn crm-btn--primary crm-btn--lg"><?php p($l->t('Save')); ?></button>
+							<button type="button" class="crm-btn crm-btn--secondary crm-btn--lg" id="crm-person-cancel"><?php p($l->t('Cancel')); ?></button>
+						</div>
+					</form>
 				</div>
-			</form>
+			</dialog>
 			<?php endif; ?>
 			<?php if ($personsEmpty): ?>
 				<div class="crm-empty-state" role="status">
@@ -829,10 +854,13 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 	<?php if ($linkedBundleCollapsed): ?>
 	<details class="crm-card crm-linked-bundle<?php if ($identityMergedIntoBundle): ?> crm-linked-bundle--setup<?php endif; ?>" id="crm-linked-bundle"<?php if ($identityMergedIntoBundle && $identityForceOpen): ?> open<?php endif; ?>>
 		<summary class="crm-card__header crm-linked-bundle__summary">
-			<span class="crm-card__title crm-linked-bundle__title"><?php p($identityMergedIntoBundle ? $l->t('Link apps') : $l->t('Linked apps')); ?></span>
-			<span class="crm-muted crm-linked-bundle__hint"><?php p($identityMergedIntoBundle
-				? $l->t('One ProjectCheck or TicketCheck link unlocks projects, tickets, and invoices.')
-				: $l->t('Projects, tickets, and invoices from your linked apps.')); ?></span>
+			<div class="crm-card__header-text">
+				<span class="crm-card__title crm-linked-bundle__title"><?php p($identityMergedIntoBundle ? $l->t('Link apps') : $l->t('Linked apps')); ?></span>
+				<span class="crm-muted crm-linked-bundle__hint"><?php p($identityMergedIntoBundle
+					? $l->t('One ProjectCheck or TicketCheck link unlocks projects, tickets, and invoices.')
+					: $l->t('Projects, tickets, and invoices from your linked apps.')); ?></span>
+			</div>
+			<?php include __DIR__ . '/common/crm-collapsible-disclosure.php'; ?>
 		</summary>
 		<div class="crm-card__body crm-linked-bundle__body">
 			<?php if ($identityMergedIntoBundle): ?>
@@ -1107,17 +1135,17 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 	</div>
 
 	<div id="crm-360-panel-more" class="crm-360-focus__panel" role="tabpanel" data-crm-focus-panel="more" aria-labelledby="crm-360-tab-more" aria-hidden="true" hidden>
-	<details class="crm-card crm-card--collapsible" id="crm-account-plan" aria-labelledby="crm-account-plan-title">
-		<summary class="crm-card__header crm-card__header--summary">
+	<section class="crm-card crm-card--account-plan" id="crm-account-plan" aria-labelledby="crm-account-plan-title">
+		<header class="crm-card__header">
 			<div class="crm-card__header-text">
 				<h2 id="crm-account-plan-title" class="crm-card__title"><?php p($l->t('Account plan')); ?></h2>
 				<p class="crm-card__lead"><?php p($l->t('Where this customer should go — write the goal, then the next moves.')); ?></p>
 			</div>
-		</summary>
+		</header>
 		<div class="crm-card__body" id="crm-account-plan-body">
 			<p class="crm-muted"><?php p($l->t('Loading account plan…')); ?></p>
 		</div>
-	</details>
+	</section>
 
 <?php if (empty($identityMergedIntoBundle)): ?>
 	<details class="crm-card crm-card--collapsible" id="crm-identity-links" aria-labelledby="crm-identity-links-title"<?php if (!empty($identityForceOpen)): ?> open<?php endif; ?>
@@ -1130,6 +1158,7 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 				<h2 id="crm-identity-links-title" class="crm-card__title"><?php p($l->t('App links')); ?></h2>
 				<p class="crm-card__lead"><?php p($l->t('Change or fix ProjectCheck and TicketCheck links.')); ?></p>
 			</div>
+			<?php include __DIR__ . '/common/crm-collapsible-disclosure.php'; ?>
 		</summary>
 		<div class="crm-card__body">
 			<?php
@@ -1143,31 +1172,15 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 		<?php include __DIR__ . '/common/crm-emails-section.php'; ?>
 
 
-	<nav class="crm-platform-links" id="crm-platform-links" aria-label="<?php p($l->t('Open related Nextcloud apps')); ?>" data-company-id="<?php p((int)$company->getId()); ?>">
-		<p class="crm-muted crm-platform-links__hint"><?php p($l->t('Related apps load here when available.')); ?></p>
-	</nav>
+	<nav class="crm-platform-links" id="crm-platform-links" hidden aria-label="<?php p($l->t('Open related Nextcloud apps')); ?>" data-company-id="<?php p((int)$company->getId()); ?>"></nav>
 
-	<details class="crm-card crm-card--collapsible" id="crm-prepare-meeting">
-		<summary class="crm-card__header">
-			<span class="crm-card__header-text">
-				<span id="crm-prepare-meeting-title" class="crm-card__title"><?php p($l->t('Prepare meeting')); ?></span>
-				<span class="crm-card__lead"><?php p($l->t('One stack for the next call or quarterly review.')); ?></span>
-			</span>
-		</summary>
-		<div class="crm-card__body">
-			<p class="crm-muted"><?php p($l->t('Coverage, people, recent talk, open promises, next steps and money in one pack.')); ?></p>
-			<div class="crm-empty-state__actions">
-				<a class="crm-btn crm-btn--primary" href="<?php p((string)($_['prepareMeetingUrl'] ?? '#')); ?>"><?php p($l->t('Open prepare meeting')); ?></a>
+	<details class="crm-card crm-card--collapsible" id="crm-timeline" aria-labelledby="crm-timeline-title">
+		<summary class="crm-card__header crm-card__header--summary">
+			<div class="crm-card__header-text">
+				<h2 id="crm-timeline-title" class="crm-card__title"><?php p($l->t('Timeline')); ?></h2>
+				<p class="crm-card__lead"><?php p($l->t('What happened on this account, newest first.')); ?></p>
 			</div>
-		</div>
-	</details>
-
-<details class="crm-card crm-card--collapsible" id="crm-timeline">
-		<summary class="crm-card__header">
-			<span class="crm-card__header-text">
-				<span id="crm-timeline-title" class="crm-card__title"><?php p($l->t('Timeline')); ?></span>
-				<span class="crm-card__lead"><?php p($l->t('What happened on this account, newest first.')); ?></span>
-			</span>
+			<?php include __DIR__ . '/common/crm-collapsible-disclosure.php'; ?>
 		</summary>
 		<div class="crm-card__body">
 			<?php if (($_['timeline'] ?? []) === []): ?>

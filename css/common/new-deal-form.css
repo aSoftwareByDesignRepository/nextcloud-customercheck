@@ -1,0 +1,50 @@
+/* New deal dialog — sectioned layout (WCAG fieldsets, clear spacing). */
+
+dialog.crm-native-dialog .crm-form--new-deal .crm-form-section {
+  border: 0;
+  margin: 0 0 1.25rem;
+  padding: 0;
+  min-width: 0;
+}
+
+dialog.crm-native-dialog .crm-form--new-deal .crm-form-section__legend {
+  display: block;
+  font-size: var(--font-size-small, 0.875rem);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--crm-text-muted);
+  margin: 0 0 0.65rem;
+  padding: 0;
+  width: 100%;
+}
+
+dialog.crm-native-dialog .crm-form--new-deal .crm-new-deal__company-fixed {
+  margin: 0 0 1rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: var(--border-radius-large, 8px);
+  background: var(--crm-surface-muted);
+}
+
+dialog.crm-native-dialog .crm-form--new-deal .crm-new-deal__section--basics .form-group + .form-group {
+  margin-top: 0.85rem;
+}
+
+dialog.crm-native-dialog .crm-next-step-form .crm-muted {
+  margin: 0 0 1rem;
+}
+
+dialog.crm-native-dialog .crm-next-step-form .crm-form-actions {
+  margin-top: 1rem;
+}
+
+dialog.crm-native-dialog .crm-form--new-deal .crm-form-actions .crm-btn,
+dialog.crm-native-dialog .crm-next-step-form .crm-form-actions .crm-btn {
+  min-height: var(--crm-touch, 44px);
+}
+
+@media (max-width: 480px) {
+  dialog.crm-native-dialog .crm-form--new-deal .crm-form-actions .crm-btn {
+    width: 100%;
+  }
+}

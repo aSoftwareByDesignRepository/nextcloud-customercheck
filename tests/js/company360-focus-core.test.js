@@ -130,7 +130,6 @@ describe('SECTION_TAB_MAP', () => {
       'crm-invoices',
       'crm-account-plan',
       'crm-identity-links',
-      'crm-prepare-meeting',
       'crm-timeline',
     ];
     required.forEach((id) => {

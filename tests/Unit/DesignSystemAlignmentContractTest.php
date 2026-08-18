@@ -27,6 +27,8 @@ final class DesignSystemAlignmentContractTest extends TestCase
 		foreach (['--crm-space-1: 4px', '--crm-space-5: 24px', '--crm-radius-sm: 6px', '--crm-radius-md: 12px', '--crm-fs-2xl: 1.875rem', '--crm-touch: 44px', '--crm-touch-lg: 48px'] as $needle) {
 			$this->assertStringContainsString($needle, $tokens);
 		}
+		$this->assertStringContainsString('--crm-radius-lg: var(--border-radius-large', $tokens);
+		$this->assertStringContainsString('--crm-scrim:', $tokens);
 		$this->assertStringContainsString('--crm-danger-fill: var(--color-element-error', $tokens);
 		$this->assertStringContainsString('--crm-danger-on-fill:', $tokens);
 		$this->assertStringContainsString('body[data-theme-dark]', $tokens);
@@ -55,6 +57,8 @@ final class DesignSystemAlignmentContractTest extends TestCase
 		$this->assertStringNotContainsString('@media (prefers-contrast: high)', $a11y);
 		$this->assertStringContainsString('body[data-theme-light-highcontrast]', $a11y);
 		$this->assertStringContainsString('body[data-theme-dark-highcontrast]', $a11y);
+		$this->assertStringContainsString('dialog.crm-native-dialog .crm-btn', $a11y);
+		$this->assertStringContainsString('dialog.crm-native-dialog :focus-visible', $a11y);
 		$base = (string)file_get_contents($this->root . '/css/common/base.css');
 		$this->assertStringContainsString('@media (prefers-contrast: more)', $base);
 		$this->assertStringNotContainsString('@media (prefers-contrast: high)', $base);

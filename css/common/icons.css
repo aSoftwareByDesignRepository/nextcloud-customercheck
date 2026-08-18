@@ -99,39 +99,40 @@ svg[class*='__glyph'],
 
 /* Host wrapper created by js/common/datepicker.js */
 .crm-datepicker-host {
-	position: relative;
-	display: inline-block;
+	display: flex;
+	align-items: stretch;
+	gap: var(--crm-space-2, 0.5rem);
 	width: 100%;
 	max-width: 100%;
+	box-sizing: border-box;
 }
 
 .crm-datepicker-host--flex {
-	display: block;
-	position: relative;
 	flex: 1 1 10rem;
 	min-width: 0;
+	width: auto;
 }
 
 .crm-datepicker-host .datepicker-input {
-	width: 100%;
+	flex: 1 1 auto;
+	min-width: 0;
+	width: auto;
 	box-sizing: border-box;
-	padding-inline-end: 3rem;
 }
 
-/* Datepicker toggle injected beside inputs */
+/* Datepicker toggle sits beside the field (same rhythm as user-picker clear). */
 .crm-datepicker-toggle {
-	position: absolute;
-	inset-inline-end: 0;
-	top: 50%;
-	transform: translateY(-50%);
+	flex: 0 0 auto;
+	align-self: center;
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
 	min-width: 44px;
 	min-height: 44px;
-	padding: 4px 8px;
-	background: none;
-	border: none;
+	padding: 0 var(--crm-space-2, 0.5rem);
+	background: color-mix(in srgb, var(--color-primary-element) 12%, var(--color-main-background));
+	border: 1px solid color-mix(in srgb, var(--color-primary-element) 35%, var(--color-border));
+	border-radius: var(--crm-radius-sm, 6px);
 	cursor: pointer;
 	color: var(--color-main-text, inherit);
 }
@@ -139,6 +140,10 @@ svg[class*='__glyph'],
 .crm-datepicker-toggle:focus-visible {
 	outline: 2px solid var(--color-primary-element);
 	outline-offset: 2px;
+}
+
+.crm-datepicker-toggle:hover:not(:disabled) {
+	background: color-mix(in srgb, var(--color-primary-element) 18%, var(--color-main-background));
 }
 
 .crm-datepicker-toggle .crm-icon,

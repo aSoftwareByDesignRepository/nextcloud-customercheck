@@ -338,6 +338,16 @@
   }
 
   /**
+   * Only list islands we own. A poisoned fragment must not drive querySelector.
+   *
+   * @param {unknown} name
+   * @returns {boolean}
+   */
+  function isAllowedSwapName(name) {
+    return name === 'nav' || name === 'main';
+  }
+
+  /**
    * @param {unknown} html
    * @returns {string[]}
    */
@@ -345,11 +355,11 @@
     const src = String(html || '');
     const names = [];
     const seen = Object.create(null);
-    const re = /data-crm-filter-swap=["']([^"']+)["']/g;
+    const re = /data-crm-filter-swap=(["'])(nav|main)\1(?=[\s>/])/g;
     let m = re.exec(src);
     while (m) {
-      const name = m[1];
-      if (name && !seen[name]) {
+      const name = m[2];
+      if (isAllowedSwapName(name) && !seen[name]) {
         seen[name] = true;
         names.push(name);
       }
@@ -404,6 +414,7 @@
     selectValueFromParams: selectValueFromParams,
     hiddenFilterValue: hiddenFilterValue,
     extractSwapNames: extractSwapNames,
+    isAllowedSwapName: isAllowedSwapName,
     canSwapInPlace: canSwapInPlace,
     fragmentRequestHeaders: fragmentRequestHeaders,
   };

@@ -75,6 +75,7 @@ final class DealServiceLeadSlaTest extends TestCase
 			$l10n,
 			$this->createMock(IDBConnection::class),
 			$this->createMock(AgreementMapper::class),
+			$this->createMock(\OCA\CustomerCheck\Db\PersonMapper::class),
 		);
 
 		$deal = $svc->create([
@@ -127,6 +128,7 @@ final class DealServiceLeadSlaTest extends TestCase
 			$l10n,
 			$this->createMock(IDBConnection::class),
 			$this->createMock(AgreementMapper::class),
+			$this->createMock(\OCA\CustomerCheck\Db\PersonMapper::class),
 		);
 
 		$svc->create(['companyId' => 5, 'title' => 'X', 'stage' => 'lead'], 'ae');

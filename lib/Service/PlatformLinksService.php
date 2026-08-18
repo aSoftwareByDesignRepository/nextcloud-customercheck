@@ -5,10 +5,15 @@ declare(strict_types=1);
 namespace OCA\CustomerCheck\Service;
 
 use OCP\App\IAppManager;
+use OCP\IL10N;
 use OCP\IURLGenerator;
 
 /**
  * Official Nextcloud platform hub chips — COMMAND-CENTER-SPEC §16.4.
+ *
+ * Chips are shortcuts to sibling apps on this Nextcloud. They must never
+ * advertise Calendar/Tasks/Files (or any other app) that is not installed
+ * and enabled for the current user — a dead /apps/{id}/ link is a 404.
  */
 class PlatformLinksService
 {
@@ -27,40 +32,71 @@ class PlatformLinksService
 	public function __construct(
 		private readonly IAppManager $appManager,
 		private readonly IURLGenerator $urlGenerator,
-		private readonly VTodoService $vTodo,
+		private readonly IL10N $l10n,
 	) {
 	}
 
 	/**
-	 * @return array<string, array{available: bool, url: string|null, label: string}>
+	 * @return array<string, array{available: bool, url: string, label: string}>
 	 */
 	public function forUser(string $userId, ?int $filesFolderId = null): array
 	{
+		if (trim($userId) === '') {
+			return [];
+		}
 		$out = [];
 		foreach (self::APPS as $app) {
 			$id = $app['id'];
 			$appId = $app['appId'];
-			$available = $appId === 'files' || $this->appManager->isEnabledForUser($appId);
-			if ($id === 'tasks') {
-				$available = $available || $this->vTodo->isAvailable($userId);
-			}
-			if (!$available) {
+			if (!$this->appOpenForUser($appId)) {
 				continue;
 			}
-			$url = match ($id) {
-				'files' => $filesFolderId !== null && $filesFolderId > 0
-					? $this->urlGenerator->getAbsoluteURL('/apps/files/?fileid=' . $filesFolderId)
-					: $this->urlGenerator->getAbsoluteURL('/apps/files/'),
-				'talk' => $this->urlGenerator->getAbsoluteURL('/apps/spreed/'),
-				default => $this->urlGenerator->getAbsoluteURL('/apps/' . $appId . '/'),
-			};
+			$url = $this->appHomeUrl($id, $appId, $filesFolderId);
+			if ($url === '') {
+				continue;
+			}
 			$out[$id] = [
 				'available' => true,
 				'url' => $url,
-				'label' => $app['labelKey'],
+				'label' => $this->l10n->t($app['labelKey']),
 			];
 		}
 
 		return $out;
+	}
+
+	private function appOpenForUser(string $appId): bool
+	{
+		if ($appId === '' || str_contains($appId, '/') || str_contains($appId, '\\')) {
+			return false;
+		}
+		try {
+			if (!$this->appManager->isInstalled($appId)) {
+				return false;
+			}
+
+			return $this->appManager->isEnabledForUser($appId) === true;
+		} catch (\Throwable) {
+			return false;
+		}
+	}
+
+	private function appHomeUrl(string $id, string $appId, ?int $filesFolderId): string
+	{
+		$path = match ($id) {
+			'files' => '/apps/files/' . (
+				$filesFolderId !== null && $filesFolderId > 0
+					? ('?fileid=' . $filesFolderId)
+					: ''
+			),
+			'talk' => '/apps/spreed/',
+			default => '/apps/' . $appId . '/',
+		};
+		$absolute = $this->urlGenerator->getAbsoluteURL($path);
+		if (!is_string($absolute) || $absolute === '') {
+			return '';
+		}
+
+		return $absolute;
 	}
 }

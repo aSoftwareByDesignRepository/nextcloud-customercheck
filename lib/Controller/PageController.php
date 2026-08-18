@@ -31,6 +31,7 @@ use OCA\CustomerCheck\Service\WorkspaceCapability;
 use OCA\CustomerCheck\Service\WorkspaceService;
 use OCA\CustomerCheck\Service\WorkspaceSettingsSectionCatalog;
 use OCA\CustomerCheck\Support\DensityCounts;
+use OCA\CustomerCheck\Support\ListWorkspaceGuard;
 use OCA\CustomerCheck\Support\MobileAppLinks;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
@@ -113,12 +114,11 @@ class PageController extends Controller
 			} catch (\Throwable) {
 			}
 		}
-		$queue = $this->today->build(null, $wsId > 0 ? $wsId : null);
-		$board = $this->commandBoard->build(null, $uid !== '' ? $uid : null, $wsId > 0 ? $wsId : null, $role, $isAdmin);
-		$companyFilters = ['archived' => false];
-		if ($wsId > 0) {
-			$companyFilters['workspaceId'] = $wsId;
-		}
+		$queue = $this->today->build(null, ListWorkspaceGuard::isListable($wsId) ? $wsId : null);
+		$board = $this->commandBoard->build(null, $uid !== '' ? $uid : null, ListWorkspaceGuard::isListable($wsId) ? $wsId : null, $role, $isAdmin);
+		$companyCount = ListWorkspaceGuard::isListable($wsId)
+			? $this->companies->count(['archived' => false, 'workspaceId' => $wsId])
+			: 0;
 		return new TemplateResponse('customercheck', 'today', $this->mergeShellPageParams(
 			'today',
 			$this->l10n->t('Today'),
@@ -126,7 +126,7 @@ class PageController extends Controller
 			[
 				'queue' => $queue,
 				'commandBoard' => $board,
-				'companyCount' => $this->companies->count($companyFilters),
+				'companyCount' => $companyCount,
 				'workspaceId' => $wsId,
 			],
 		));
@@ -285,18 +285,32 @@ class PageController extends Controller
 		));
 	}
 
+	/**
+	 * Legacy prepare-meeting URL — permanently folded into Company 360.
+	 * ACL first: unknown/foreign companies stay 404 (no existence leak via redirect).
+	 */
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
-	public function prepareMeeting(int $id): TemplateResponse
+	public function prepareMeeting(int $id): RedirectResponse
 	{
 		$this->requireCompanyPage($id);
-		$this->registerFrontEndAssets('pages/persona', null, [], ['common/mail-sync-now']);
-		return new TemplateResponse('customercheck', 'prepare-meeting', $this->mergeShellPageParams(
-			'prepare-meeting',
-			$this->l10n->t('Prepare meeting'),
-			$this->l10n->t('One stack for the next call or QBR.'),
-			['companyId' => $id],
-		));
+		$ws = (int)$this->request->getParam('workspaceId', 0);
+		$params = ['id' => $id];
+		if ($ws > 0) {
+			$params['workspaceId'] = $ws;
+		}
+		$rel = $this->urlGenerator->linkToRoute('customercheck.page.companyDetail', $params);
+		if (!str_contains($rel, '/companies/' . $id)) {
+			$rel = '/apps/customercheck/companies/' . $id;
+			if ($ws > 0) {
+				$rel .= '?workspaceId=' . $ws;
+			}
+		}
+
+		return new RedirectResponse(
+			$this->urlGenerator->getAbsoluteURL($rel),
+			Http::STATUS_MOVED_PERMANENTLY,
+		);
 	}
 
 	#[NoAdminRequired]
@@ -310,54 +324,58 @@ class PageController extends Controller
 		);
 		$status = trim((string)$this->request->getParam('status', ''));
 		$archived = $this->request->getParam('archived', '') === '1';
-		$filters = ['archived' => $archived, 'workspaceId' => $wsId];
-		if ($search !== '') {
-			$filters['search'] = $search;
-			$filters['statusSearchCodes'] = \OCA\CustomerCheck\Support\CompanyListSearch::matchingStatusCodes(
-				$search,
-				fn (string $code): string => $this->labels->companyStatus($code),
-			);
-			$ownerRoster = [];
-			try {
-				foreach ($this->workspaceService->listMembers($wsId) as $member) {
-					$uid = trim((string)$member->getUserId());
-					if ($uid !== '') {
-						$ownerRoster[] = ['id' => $uid];
-					}
-				}
-			} catch (\Throwable) {
-				$ownerRoster = [];
-			}
-			if ($ownerRoster !== []) {
-				$resolved = $this->directory->resolveUsers(array_column($ownerRoster, 'id'));
-				$filters['ownerUserIds'] = \OCA\CustomerCheck\Support\CompanyListSearch::matchingOwnerIds(
-					$search,
-					$resolved
-				);
-			}
-			if (\OCA\CustomerCheck\Support\CompanyListSearch::wantsOpenCallbacks($search, $this->l10n)) {
-				$filters['matchOpenCallbacks'] = true;
-			}
-		}
-		if ($status !== '') {
-			$filters['status'] = $status;
-		}
-		$list = $this->companies->search($filters, 200, 0);
-		$health = $this->companyHealth->enrich($list);
+		$list = [];
+		$health = [];
 		$duplicateNameKeys = [];
-		if (!$archived && $wsId > 0) {
-			$duplicateNameKeys = $this->companies->activeDuplicateNameKeys($wsId);
-		}
-		$ownerUids = [];
-		foreach ($list as $company) {
-			$oid = trim((string)($company->getAccountOwnerUserId() ?? ''));
-			if ($oid !== '') {
-				$ownerUids[] = $oid;
-			}
-		}
 		$ownerDisplayNames = [];
-		foreach ($this->directory->resolveUsers(array_values(array_unique($ownerUids))) as $u) {
-			$ownerDisplayNames[$u['id']] = (string)($u['displayName'] ?? $u['id']);
+		if (ListWorkspaceGuard::isListable($wsId)) {
+			$filters = ['archived' => $archived, 'workspaceId' => $wsId];
+			if ($search !== '') {
+				$filters['search'] = $search;
+				$filters['statusSearchCodes'] = \OCA\CustomerCheck\Support\CompanyListSearch::matchingStatusCodes(
+					$search,
+					fn (string $code): string => $this->labels->companyStatus($code),
+				);
+				$ownerRoster = [];
+				try {
+					foreach ($this->workspaceService->listMembers($wsId) as $member) {
+						$uid = trim((string)$member->getUserId());
+						if ($uid !== '') {
+							$ownerRoster[] = ['id' => $uid];
+						}
+					}
+				} catch (\Throwable) {
+					$ownerRoster = [];
+				}
+				if ($ownerRoster !== []) {
+					$resolved = $this->directory->resolveUsers(array_column($ownerRoster, 'id'));
+					$filters['ownerUserIds'] = \OCA\CustomerCheck\Support\CompanyListSearch::matchingOwnerIds(
+						$search,
+						$resolved
+					);
+				}
+				if (\OCA\CustomerCheck\Support\CompanyListSearch::wantsOpenCallbacks($search, $this->l10n)) {
+					$filters['matchOpenCallbacks'] = true;
+				}
+			}
+			if ($status !== '') {
+				$filters['status'] = $status;
+			}
+			$list = $this->companies->search($filters, 200, 0);
+			$health = $this->companyHealth->enrich($list);
+			if (!$archived) {
+				$duplicateNameKeys = $this->companies->activeDuplicateNameKeys($wsId);
+			}
+			$ownerUids = [];
+			foreach ($list as $company) {
+				$oid = trim((string)($company->getAccountOwnerUserId() ?? ''));
+				if ($oid !== '') {
+					$ownerUids[] = $oid;
+				}
+			}
+			foreach ($this->directory->resolveUsers(array_values(array_unique($ownerUids))) as $u) {
+				$ownerDisplayNames[$u['id']] = (string)($u['displayName'] ?? $u['id']);
+			}
 		}
 		return $this->listPageResponse('companies', $this->mergeListPageParams(
 			'companies',
@@ -494,7 +512,7 @@ class PageController extends Controller
 	#[NoCSRFRequired]
 	public function companyDetail(int $id): TemplateResponse
 	{
-		$this->registerFrontEndAssets('pages/company-detail', null, ['common/identity-links'], ['common/company360-focus', 'common/folder-picker', 'common/glance-summary', 'common/company360-present', 'common/deal-checklist-ux', 'common/mail-sync-now', 'common/rich-mail-composer', 'common/shared-mail-send', 'pages/persona']);
+		$this->registerFrontEndAssets('pages/company-detail', null, ['common/identity-links'], ['common/person-picker', 'common/new-deal-form', 'common/company360-focus', 'common/person-dialog-core', 'common/folder-picker', 'common/glance-summary', 'common/company360-present', 'common/deal-checklist-ux', 'common/mail-sync-now', 'common/rich-mail-composer', 'common/shared-mail-send', 'pages/persona']);
 		$company = $this->requireCompanyPage($id);
 		$now = $this->timeFactory->getDateTime();
 		$agreements = [];
@@ -716,10 +734,10 @@ class PageController extends Controller
 				'companyUpdatedAt' => \OCA\CustomerCheck\Support\OptimisticLock::format($company->getUpdatedAt()),
 				'buyingRoleOptions' => $this->labels->buyingRoleOptions(),
 				'nextTouchOn' => $company->getNextTouchOn()?->format('Y-m-d'),
-				'prepareMeetingUrl' => $this->urlGenerator->linkToRoute(
-					'customercheck.page.prepareMeeting',
-					['id' => (int)$company->getId()],
-				) . '?workspaceId=' . (int)($company->getWorkspaceId() ?? 0),
+				'forecastBucketOptions' => $this->labels->forecastBucketOptions(),
+				'dealStageOptions' => $this->labels->dealStageOptions(),
+				'leadSourceOptions' => $this->labels->leadSourceOptions(),
+				'companyDisplayName' => (string)$company->getName(),
 			],
 		));
 	}
@@ -728,11 +746,13 @@ class PageController extends Controller
 	#[NoCSRFRequired]
 	public function pipeline(): TemplateResponse
 	{
-		$this->registerFrontEndAssets('pages/pipeline', null, [], ['common/folder-picker']);
+		$this->registerFrontEndAssets('pages/pipeline', null, [], ['common/person-picker', 'common/new-deal-form', 'common/folder-picker', 'common/pipeline-view-core']);
 		$uid = $this->accessControl->currentUserId();
 		$wsId = $this->resolvedWorkspaceId();
 		$settings = $this->settings->getForUser($uid);
-		$deals = $this->deals->search(['openOnly' => false, 'workspaceId' => $wsId], 500);
+		$deals = ListWorkspaceGuard::isListable($wsId)
+			? $this->deals->search(['openOnly' => false, 'workspaceId' => $wsId], 500)
+			: [];
 		$companyIds = array_map(static fn ($d): int => (int)$d->getCompanyId(), $deals);
 		$companyMap = $this->companies->mapByIds($companyIds);
 		$dealRows = [];
@@ -808,7 +828,9 @@ class PageController extends Controller
 				},
 			));
 		}
-		$companyCount = $this->companies->count(['workspaceId' => $wsId]);
+		$companyCount = ListWorkspaceGuard::isListable($wsId)
+			? $this->companies->count(['workspaceId' => $wsId])
+			: 0;
 		return new TemplateResponse('customercheck', 'pipeline', $this->mergeShellPageParams(
 			'pipeline',
 			$this->l10n->t('Deals'),
@@ -826,6 +848,8 @@ class PageController extends Controller
 				'forecastBuckets' => \OCA\CustomerCheck\Constants::FORECAST_BUCKETS,
 				'lossReasonCodeOptions' => $this->labels->lossReasonCodeOptions(),
 				'forecastBucketOptions' => $this->labels->forecastBucketOptions(),
+				'dealStageOptions' => $this->labels->dealStageOptions(),
+				'leadSourceOptions' => $this->labels->leadSourceOptions(),
 			],
 		));
 	}
@@ -854,21 +878,23 @@ class PageController extends Controller
 		$list = [];
 		$companyIds = [];
 		$wsId = $this->resolvedWorkspaceId();
-		$filters['workspaceId'] = $wsId;
-		foreach ($this->agreements->search($filters, 200) as $a) {
-			$companyIds[] = (int)$a->getCompanyId();
-			$list[] = [
-				'id' => (int)$a->getId(),
-				'companyId' => (int)$a->getCompanyId(),
-				'label' => (string)$a->getLabel(),
-				'kind' => (string)$a->getKind(),
-				'productCode' => (string)$a->getProductCode(),
-				'status' => (string)$a->getStatus(),
-				'invoiceStatus' => (string)$a->getInvoiceStatus(),
-				'amountCents' => (int)$a->getAmountCents(),
-				'validUntil' => $a->getValidUntil()?->format('Y-m-d'),
-				'chip' => $this->agreementStatus->expiryBadge($a, $now),
-			];
+		if (ListWorkspaceGuard::isListable($wsId)) {
+			$filters['workspaceId'] = $wsId;
+			foreach ($this->agreements->search($filters, 200) as $a) {
+				$companyIds[] = (int)$a->getCompanyId();
+				$list[] = [
+					'id' => (int)$a->getId(),
+					'companyId' => (int)$a->getCompanyId(),
+					'label' => (string)$a->getLabel(),
+					'kind' => (string)$a->getKind(),
+					'productCode' => (string)$a->getProductCode(),
+					'status' => (string)$a->getStatus(),
+					'invoiceStatus' => (string)$a->getInvoiceStatus(),
+					'amountCents' => (int)$a->getAmountCents(),
+					'validUntil' => $a->getValidUntil()?->format('Y-m-d'),
+					'chip' => $this->agreementStatus->expiryBadge($a, $now),
+				];
+			}
 		}
 		$companyMap = $this->companies->mapByIds($companyIds);
 		foreach ($list as &$row) {
@@ -949,11 +975,12 @@ class PageController extends Controller
 	{
 		$this->registerListPageAssets('pages/money');
 		$state = trim((string)$this->request->getParam('state', ''));
+		$wsId = $this->resolvedWorkspaceId();
 		// Workspace scope is mandatory — never blend foreign-book € (§3.3 / §15.3 / §20).
 		$overview = $this->money->overview(
 			200,
 			$state !== '' ? $state : null,
-			$this->resolvedWorkspaceId(),
+			ListWorkspaceGuard::isListable($wsId) ? $wsId : 0,
 		);
 		return $this->listPageResponse('money', $this->mergeListPageParams(
 			'money',
@@ -986,19 +1013,22 @@ class PageController extends Controller
 		$groups = ['overdue' => [], 'today' => [], 'later' => [], 'done' => []];
 		$rows = [];
 		$companyIds = [];
-		$filters['workspaceId'] = $this->resolvedWorkspaceId();
-		foreach ($this->activities->search($filters, 200) as $act) {
-			$companyIds[] = (int)$act->getCompanyId();
-			$rows[] = [
-				'id' => (int)$act->getId(),
-				'companyId' => (int)$act->getCompanyId(),
-				'title' => (string)$act->getTitle(),
-				'type' => (string)$act->getType(),
-				'dueDate' => $act->getDueDate()?->format('Y-m-d'),
-				'origin' => (string)$act->getOrigin(),
-				'doneAt' => $act->getDoneAt()?->format(\DateTimeInterface::ATOM),
-				'updatedAt' => $act->getUpdatedAt()?->format(\DateTimeInterface::ATOM),
-			];
+		$wsId = $this->resolvedWorkspaceId();
+		if (ListWorkspaceGuard::isListable($wsId)) {
+			$filters['workspaceId'] = $wsId;
+			foreach ($this->activities->search($filters, 200) as $act) {
+				$companyIds[] = (int)$act->getCompanyId();
+				$rows[] = [
+					'id' => (int)$act->getId(),
+					'companyId' => (int)$act->getCompanyId(),
+					'title' => (string)$act->getTitle(),
+					'type' => (string)$act->getType(),
+					'dueDate' => $act->getDueDate()?->format('Y-m-d'),
+					'origin' => (string)$act->getOrigin(),
+					'doneAt' => $act->getDoneAt()?->format(\DateTimeInterface::ATOM),
+					'updatedAt' => $act->getUpdatedAt()?->format(\DateTimeInterface::ATOM),
+				];
+			}
 		}
 		$companyMap = $this->companies->mapByIds($companyIds);
 		foreach ($rows as $row) {
@@ -1286,7 +1316,6 @@ class PageController extends Controller
 			[],
 		));
 	}
-
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]

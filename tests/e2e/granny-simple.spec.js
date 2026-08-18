@@ -72,24 +72,26 @@ test.describe('Granny-simple company 360', () => {
 
     await page.locator('[data-crm-focus-tab="more"]').click();
     await expect(page.locator('#crm-account-plan')).toBeVisible();
-    await expect(page.locator('#crm-account-plan')).not.toHaveAttribute('open', '');
-    await page.locator('#crm-account-plan > summary').click();
-    await expect(page.locator('#crm-account-plan')).toHaveAttribute('open', '');
+    await expect(page.locator('#crm-account-plan .crm-welcome-coach__steps')).toBeVisible({ timeout: 20000 });
     await expect(page.locator('#crm-account-plan-form')).toBeVisible({ timeout: 20000 });
     await expect(page.locator('#crm-account-plan-body')).not.toContainText(/Loading account plan|Account-Plan wird geladen/i);
     await expect(page.locator('#crm-plan-goal')).toBeVisible();
     await expect(page.locator('#crm-map-step-title')).toBeVisible();
     await expect(page.locator('#crm-map-step-title')).toHaveJSProperty('tagName', 'TEXTAREA');
-    await expect(page.locator('.crm-plan-more')).toBeVisible();
-    await page.locator('.crm-plan-more > summary').click();
+    await expect(page.locator('#crm-account-plan .crm-account-plan__more')).toBeVisible();
+    await expect(page.locator('#crm-account-plan .crm-account-plan__more summary')).toContainText(/More options|Weitere Optionen/i);
+    await page.locator('#crm-account-plan .crm-account-plan__more > summary').click();
     await expect(page.locator('#crm-plan-priority')).toBeVisible();
     await expect(page.locator('#crm-account-plan-form button[type="submit"]')).toBeVisible();
 
     await page.locator('[data-crm-focus-tab="today"]').click();
     // Add a person via the coach (single CTA owner — empty state has no duplicate).
     await page.locator('#crm-welcome-coach [data-crm-trigger="crm-add-person"]').click();
+    const personDialog = page.locator('#crm-person-dialog');
+    await expect(personDialog).toBeVisible({ timeout: 10000 });
+    await expect(personDialog).toHaveJSProperty('open', true);
     const personForm = page.locator('#crm-person-form');
-    await expect(personForm).toBeVisible({ timeout: 10000 });
+    await expect(personForm).toBeVisible();
     await personForm.locator('#crm-person-name').fill(`Granny Person ${suffix}`);
     await personForm.locator('button[type="submit"]').click();
     await page.waitForLoadState('networkidle');
@@ -132,9 +134,8 @@ test.describe('Granny-simple company 360', () => {
     await focus.locator('[data-crm-focus-tab="deals"]').click();
     await expect(page.locator('#crm-deals')).toBeVisible();
     await focus.locator('[data-crm-focus-tab="more"]').click();
-    await expect(page.locator('#crm-prepare-meeting')).toBeAttached();
+    await expect(page.locator('#crm-prepare-meeting')).toHaveCount(0);
     await expect(page.locator('#crm-timeline')).toBeAttached();
-    await expect(page.locator('#crm-prepare-meeting')).not.toHaveAttribute('open', '');
     await expect(page.locator('#crm-timeline')).not.toHaveAttribute('open', '');
     // Role cue stays hidden while the welcome coach is teaching.
     await expect(page.locator('#crm-360-role-title')).toHaveCount(0);

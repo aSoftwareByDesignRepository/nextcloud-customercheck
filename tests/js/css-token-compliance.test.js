@@ -143,6 +143,7 @@ describe('CSS design-token compliance (no hardcoded colors)', () => {
       '--crm-tint-info',
       '--crm-shadow-sm',
       '--crm-shadow-md',
+      '--crm-scrim',
       '--crm-danger-fill',
       '--crm-danger-on-fill',
       '--crm-danger-ink',
@@ -194,6 +195,7 @@ describe('CSS design-token compliance (no hardcoded colors)', () => {
       '--color-warning',
       '--color-error',
       '--color-primary-element',
+      '--border-radius-large',
     ]) {
       expect(tokens, `tokens.css must consume ${ncVar}`).toContain(`var(${ncVar}`);
     }

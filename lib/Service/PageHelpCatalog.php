@@ -69,7 +69,6 @@ final class PageHelpCatalog
 			'sales-inbox' => $l->t('Read mail from your connected personal folders and the team inbox. Private messages stay yours; shared folders can show on linked customers.'),
 			'review' => $l->t('Decide unmatched items — assign to a company or mark no relation. Shared mail: CC or forward to the team inbox; unique contacts auto-file, ambiguous ones stay here.'),
 			'conflicts' => $l->t('Two people edited the same field — pick what to keep and write a short reason.'),
-			'prepare-meeting' => $l->t('One pack for the next call: people, recent talk, open work, and money.'),
 			'companies' => $l->t('Find any customer — search, filter, then open.'),
 			'company-detail' => $l->t('Add a person first, then deals and messages. Linked apps show when connected — if you see two Acmes, open the identity support guide in Help docs.'),
 			'company-form' => $l->t('Name is enough to start — you open the customer page right after save.'),
@@ -82,6 +81,7 @@ final class PageHelpCatalog
 			'settings' => $l->t('Team members, shared mailbox, and your preferences.'),
 			'app-settings' => $l->t('Access, reminders, intake URLs, and seats for the whole Nextcloud — admins only.'),
 			'support-us' => $l->t('Optional support for the project. The web app stays free under AGPL either way.'),
+			'get-the-app' => $l->t('Official Android companion. Your organisation licenses seats; the Play listing is not public yet.'),
 		];
 	}
 }

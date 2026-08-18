@@ -157,6 +157,15 @@ describe('filter-live-core debounce + safety', () => {
     expect(Core.canSwapInPlace(null)).toBe(false);
     expect(Core.extractSwapNames('<div data-crm-filter-swap="nav"></div><div data-crm-filter-swap="main">rows</div>')).toEqual(['nav', 'main']);
     expect(Core.extractSwapNames('')).toEqual([]);
+    expect(Core.isAllowedSwapName('nav')).toBe(true);
+    expect(Core.isAllowedSwapName('main')).toBe(true);
+    expect(Core.isAllowedSwapName('main"] , body')).toBe(false);
+    expect(Core.isAllowedSwapName('x"][id="crm-main-content')).toBe(false);
+    expect(Core.isAllowedSwapName('')).toBe(false);
+    expect(Core.isAllowedSwapName(null)).toBe(false);
+    expect(Core.extractSwapNames('<div data-crm-filter-swap=\'main"] , body\'></div>')).toEqual([]);
+    expect(Core.extractSwapNames('<div data-crm-filter-swap="main"] , body"></div>')).toEqual([]);
+    expect(Core.extractSwapNames('<div data-crm-filter-swap="main"></div><div data-crm-filter-swap="evil"></div>')).toEqual(['main']);
   });
 
   it('urlsEqual ignores empty and matches hrefs', () => {

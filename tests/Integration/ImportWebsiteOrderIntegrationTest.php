@@ -95,7 +95,7 @@ class ImportWebsiteOrderIntegrationTest extends TestCase
 
 		/** @var CompanyMapper $companies */
 		$companies = \OC::$server->get(CompanyMapper::class);
-		$matches = $companies->findByNameCaseInsensitive($companyName);
+		$matches = $companies->findByNameCaseInsensitive($companyName, 1);
 		$this->assertNotEmpty($matches);
 		$company = $matches[0];
 		$companyId = (int)$company->getId();

@@ -83,7 +83,7 @@ final class CrmPageShellLayoutTest extends TestCase
 			'today.php', 'companies.php', 'pipeline.php', 'company-detail.php', 'import.php', 'settings.php',
 			'app-settings.php',
 			'money.php', 'activities.php', 'agreements.php',
-			'pulse.php', 'brief.php', 'team.php', 'strategy.php', 'my-accounts.php', 'mail-triage.php', 'prepare-meeting.php',
+			'pulse.php', 'brief.php', 'team.php', 'strategy.php', 'my-accounts.php', 'mail-triage.php',
 		] as $file) {
 			$html = (string)file_get_contents($root . '/' . $file);
 			$this->assertStringContainsString('crm-page-stack', $html, $file);

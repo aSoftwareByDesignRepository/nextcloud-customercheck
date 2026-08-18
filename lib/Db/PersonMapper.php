@@ -103,7 +103,7 @@ class PersonMapper extends QBMapper
 			->from($this->getTableName(), 'p')
 			->innerJoin('p', 'crm_company', 'c', $qb->expr()->eq('p.company_id', 'c.id'))
 			->where($qb->expr()->eq(
-				$qb->func()->lower($qb->func()->trim('p.email')),
+				$qb->func()->lower('p.email'),
 				$qb->createNamedParameter($email),
 			))
 			->andWhere($qb->expr()->eq('c.workspace_id', $qb->createNamedParameter($workspaceId, IQueryBuilder::PARAM_INT)))
@@ -182,6 +182,9 @@ class PersonMapper extends QBMapper
 			} elseif ($workspaceId > 0) {
 				$qb->andWhere($qb->expr()->eq('c.workspace_id', $qb->createNamedParameter($workspaceId, IQueryBuilder::PARAM_INT)));
 			}
+		} elseif ($companyId <= 0) {
+			// Fail closed: a contact search without a book or company is every person.
+			$qb->andWhere($qb->expr()->eq($qb->createNamedParameter(1), $qb->createNamedParameter(0)));
 		}
 
 		$search = trim((string)($filters['search'] ?? ''));

@@ -19,8 +19,11 @@ test.describe('Contacts link (Command Center)', () => {
     await page.locator('[data-crm-focus-tab="people"]').click();
     await page.locator('#crm-persons').scrollIntoViewIfNeeded();
     await page.locator('#crm-add-person').click();
+    const personDialog = page.locator('#crm-person-dialog');
+    await expect(personDialog).toBeVisible({ timeout: 10000 });
+    await expect(personDialog).toHaveJSProperty('open', true);
     const form = page.locator('#crm-person-form');
-    await expect(form).toBeVisible({ timeout: 10000 });
+    await expect(form).toBeVisible();
     await form.locator('#crm-person-name').fill(`Ada ${suffix}`);
     await form.locator('#crm-person-email').fill(`ada-${suffix}@example.com`);
     await form.locator('button[type="submit"]').click();
