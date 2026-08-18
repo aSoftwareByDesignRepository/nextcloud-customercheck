@@ -25,7 +25,7 @@ final class GetTheAppPageContractTest extends TestCase
 
 		$php = (string) file_get_contents($this->root . '/lib/Controller/PageController.php');
 		self::assertStringContainsString('function getTheApp(', $php);
-		self::assertMatchesRegularExpression('/#\[NoAdminRequired\][^;]*function getTheApp\(/s', $php);
+		self::assertMatchesRegularExpression('/#\[NoAdminRequired\]\s*#\[NoCSRFRequired\]\s*public function getTheApp\(/s', $php);
 		self::assertStringContainsString("'get-the-app'", $php);
 		self::assertStringContainsString('Get the App', $php);
 		self::assertStringContainsString('MobileAppLinks', $php);
