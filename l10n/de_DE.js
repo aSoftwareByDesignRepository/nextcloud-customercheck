@@ -1037,7 +1037,7 @@ OC.L10N.register(
 		"Files picker unavailable": "Dateien-Auswahl nicht verfügbar",
 		"Files: %s": "Dateien: %s",
 		"Filled automatically from the name. Lowercase letters, numbers and hyphens.": "Wird automatisch aus dem Namen gefüllt. Kleinbuchstaben, Zahlen und Bindestriche.",
-		"Filter": "Filter",
+		"Filter": "Filtern",
 		"Filter activities": "Aktivitäten filtern",
 		"Filter agreements": "Vereinbarungen filtern",
 		"Filter by account": "Nach Konto filtern",
