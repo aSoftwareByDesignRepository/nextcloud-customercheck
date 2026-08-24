@@ -112,8 +112,8 @@ function deal_checklist_mutations(string $appRoot): array
 		],
 		[
 			'file' => $appRoot . '/lib/Service/MobilePushService.php',
-			'from' => "Constants::NOTIFY_ACTIVITY_DUE,\n\t\tConstants::NOTIFY_DEAL_CHECKLIST,\n\t];",
-			'to' => "Constants::NOTIFY_ACTIVITY_DUE,\n\t];",
+			'from' => "Constants::NOTIFY_ACTIVITY_DUE,\n\t\tConstants::NOTIFY_ACTIVITY_ASSIGNED,\n\t\tConstants::NOTIFY_DEAL_CHECKLIST,\n\t\tConstants::NOTIFY_DEAL_ROTTING,\n\t];",
+			'to' => "Constants::NOTIFY_ACTIVITY_DUE,\n\t\tConstants::NOTIFY_ACTIVITY_ASSIGNED,\n\t\tConstants::NOTIFY_DEAL_ROTTING,\n\t];",
 			'label' => 'push_drops_deal_checklist_subject',
 			'filter' => 'MobilePushServiceTest::testIsPushSubjectOnlyReminderDigestActivityDueAndDealChecklist|DealChecklistUxContractTest::testTodayOverviewAndNotificationsSurface',
 		],

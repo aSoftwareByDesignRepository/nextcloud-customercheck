@@ -152,6 +152,8 @@ final class WorkspaceAclSurfaceContractTest extends TestCase
 		$src = (string)file_get_contents($this->root . '/lib/Service/ActivityDueReminderService.php');
 		$notify = $this->extractMethod($src, 'notifyOne');
 		$this->assertStringContainsString('notifyWorkspaceUsers', $notify);
+		$this->assertStringContainsString('notifyUser', $notify);
+		$this->assertStringContainsString('getAssigneeUserId', $notify);
 		$this->assertStringNotContainsString('notifyCrmUsers', $notify);
 		$this->assertStringContainsString('workspaceId <= 0', $notify);
 		$this->assertStringContainsString("return 'skipped'", $notify);

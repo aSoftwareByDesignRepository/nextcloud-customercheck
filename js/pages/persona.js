@@ -1036,6 +1036,7 @@
     const name = opts.name;
     const label = opts.label;
     const required = opts.required ? ' required' : '';
+    const showHelp = opts.help !== false;
     return (
       '<div class="form-group">' +
       '<label class="form-label" for="' + id + '-search">' + escapeHtml(label) + '</label>' +
@@ -1049,7 +1050,25 @@
       '<ul id="' + id + '-suggest" class="user-picker__list" role="listbox" hidden></ul>' +
       '<input type="hidden" id="' + id + '" name="' + name + '" value=""' + required + ' />' +
       '</div>' +
-      '<p class="form-help">' + escapeHtml(t('Search and pick. Never type a raw user id.')) + '</p></div>'
+      (showHelp
+        ? '<p class="form-help">' + escapeHtml(t('Search and pick. Never type a raw user id.')) + '</p>'
+        : '') +
+      '</div>'
+    );
+  }
+
+  function teamCapacityPanel(step, title, titleId, lead, bodyHtml, open) {
+    return (
+      '<details class="crm-team-capacity__panel"' + (open ? ' open' : '') +
+      ' aria-labelledby="' + escapeHtml(titleId) + '">' +
+      '<summary class="crm-team-capacity__panel-summary">' +
+      '<span class="crm-team-capacity__step" aria-hidden="true">' + String(step) + '</span>' +
+      '<span class="crm-team-capacity__panel-head">' +
+      '<span class="crm-team-capacity__panel-title" id="' + escapeHtml(titleId) + '">' + escapeHtml(title) + '</span>' +
+      '<span class="crm-team-capacity__panel-lead">' + escapeHtml(lead) + '</span>' +
+      '</span></summary>' +
+      '<div class="crm-team-capacity__panel-body">' + bodyHtml + '</div>' +
+      '</details>'
     );
   }
 
@@ -1154,57 +1173,73 @@
   function teamFormsHtml(opts) {
     opts = opts || {};
     const showBulk = opts.showBulk !== false;
-    let bulkCard = '';
+    const pickerOpts = { help: false };
+    let bulkSection = '';
     if (showBulk) {
-      bulkCard =
-      '<article class="crm-team-capacity__card">' +
-      '<h3 class="crm-team-capacity__title" id="crm-bulk-title">' + escapeHtml(t('Move work to someone else')) + '</h3>' +
-      '<p class="crm-team-capacity__lead">' + escapeHtml(t('Reassign deals, accounts, and promises in one safe step.')) + '</p>' +
-      '<form class="crm-form crm-form--stack" data-crm-bulk-form aria-labelledby="crm-bulk-title">' +
-      userPickerFieldHtml({ id: 'crm-bulk-from', name: 'fromUser', label: t('From colleague'), required: true }) +
-      userPickerFieldHtml({ id: 'crm-bulk-to', name: 'toUser', label: t('To colleague'), required: true }) +
-      '<div class="form-group"><label class="crm-check" for="crm-bulk-confirm">' +
-      '<input type="checkbox" id="crm-bulk-confirm" name="confirmReassign" value="1" required /> ' +
-      escapeHtml(t('I confirm reassigning work from the selected “from” colleague')) +
-      '</label>' +
-      '<p class="form-help">' + escapeHtml(t('Confirmation uses the person you picked above — never type a raw user id.')) + '</p></div>' +
-      '<fieldset class="crm-fieldset">' +
-      '<legend>' + escapeHtml(t('What to move')) + '</legend>' +
-      '<label class="crm-check"><input type="checkbox" name="entityTypes" value="deals" checked> ' + escapeHtml(t('Deals')) + '</label>' +
-      '<label class="crm-check"><input type="checkbox" name="entityTypes" value="accounts" checked> ' + escapeHtml(t('Account owners')) + '</label>' +
-      '<label class="crm-check"><input type="checkbox" name="entityTypes" value="promises" checked> ' + escapeHtml(t('Open promises')) + '</label>' +
-      '<label class="crm-check"><input type="checkbox" name="entityTypes" value="commitments"> ' + escapeHtml(t('Commitments')) + '</label>' +
-      '</fieldset>' +
-      '<div class="crm-form-actions"><button type="submit" class="crm-btn crm-btn--primary">' + escapeHtml(t('Reassign')) + '</button></div>' +
-      '</form></article>';
+      const bulkStep = 2;
+      bulkSection = teamCapacityPanel(
+        bulkStep,
+        t('Move work to someone else'),
+        'crm-bulk-title',
+        t('Hand deals, accounts, and open tasks to another colleague.'),
+        '<form class="crm-form crm-form--stack" data-crm-bulk-form aria-labelledby="crm-bulk-title">' +
+        '<div class="crm-form-row-2 crm-team-capacity__pickers">' +
+        userPickerFieldHtml(Object.assign({ id: 'crm-bulk-from', name: 'fromUser', label: t('From colleague'), required: true }, pickerOpts)) +
+        userPickerFieldHtml(Object.assign({ id: 'crm-bulk-to', name: 'toUser', label: t('To colleague'), required: true }, pickerOpts)) +
+        '</div>' +
+        '<div class="crm-team-capacity__confirm">' +
+        '<label class="crm-check" for="crm-bulk-confirm">' +
+        '<input type="checkbox" id="crm-bulk-confirm" name="confirmReassign" value="1" required /> ' +
+        escapeHtml(t('I confirm reassigning work from the selected “from” colleague')) +
+        '</label></div>' +
+        '<details class="crm-team-capacity__options">' +
+        '<summary class="crm-team-capacity__options-summary">' + escapeHtml(t('What to move')) + '</summary>' +
+        '<fieldset class="crm-fieldset crm-team-capacity__options-fieldset">' +
+        '<legend class="visually-hidden">' + escapeHtml(t('What to move')) + '</legend>' +
+        '<label class="crm-check"><input type="checkbox" name="entityTypes" value="deals" checked> ' + escapeHtml(t('Deals')) + '</label>' +
+        '<label class="crm-check"><input type="checkbox" name="entityTypes" value="accounts" checked> ' + escapeHtml(t('Account owners')) + '</label>' +
+        '<label class="crm-check"><input type="checkbox" name="entityTypes" value="promises" checked> ' + escapeHtml(t('Open promises')) + '</label>' +
+        '<label class="crm-check"><input type="checkbox" name="entityTypes" value="commitments"> ' + escapeHtml(t('Commitments')) + '</label>' +
+        '<label class="crm-check"><input type="checkbox" name="entityTypes" value="checklist" checked> ' + escapeHtml(t('Deal checklist')) + '</label>' +
+        '<label class="crm-check"><input type="checkbox" name="entityTypes" value="activities" checked> ' + escapeHtml(t('Open to-dos')) + '</label>' +
+        '</fieldset></details>' +
+        '<div class="crm-form-actions crm-team-capacity__actions">' +
+        '<button type="submit" class="crm-btn crm-btn--primary crm-btn--lg">' + escapeHtml(t('Reassign')) + '</button></div>' +
+        '</form>',
+        false,
+      );
     }
-    return '' +
-      '<div class="crm-team-capacity__grid">' +
-      '<article class="crm-team-capacity__card">' +
-      '<h3 class="crm-team-capacity__title" id="crm-ooo-title">' + escapeHtml(t('Cover while away')) + '</h3>' +
-      '<p class="crm-team-capacity__lead">' + escapeHtml(t('Pick who is out and who covers them. Ownership stays with the primary.')) + '</p>' +
+    const escStep = showBulk ? 3 : 2;
+    const oooBody =
       '<form class="crm-form crm-form--stack" data-crm-ooo-form aria-labelledby="crm-ooo-title">' +
-      userPickerFieldHtml({ id: 'crm-ooo-primary', name: 'primaryUserId', label: t('Person away'), required: true }) +
-      userPickerFieldHtml({ id: 'crm-ooo-backup', name: 'backupUserId', label: t('Covering colleague'), required: true }) +
-      '<div class="crm-form-row-2">' +
+      '<div class="crm-form-row-2 crm-team-capacity__pickers">' +
+      userPickerFieldHtml(Object.assign({ id: 'crm-ooo-primary', name: 'primaryUserId', label: t('Person away'), required: true }, pickerOpts)) +
+      userPickerFieldHtml(Object.assign({ id: 'crm-ooo-backup', name: 'backupUserId', label: t('Covering colleague'), required: true }, pickerOpts)) +
+      '</div>' +
+      '<div class="crm-form-row-2 crm-team-capacity__dates">' +
       '<div class="form-group"><label class="form-label" for="crm-ooo-from">' + escapeHtml(t('From')) + '</label>' +
       '<input id="crm-ooo-from" name="from" type="date" required class="crm-input form-input datepicker-input" autocomplete="off" /></div>' +
       '<div class="form-group"><label class="form-label" for="crm-ooo-until">' + escapeHtml(t('Until')) + '</label>' +
       '<input id="crm-ooo-until" name="until" type="date" required class="crm-input form-input datepicker-input" autocomplete="off" data-datepicker-min-from="crm-ooo-from" /></div>' +
       '</div>' +
-      '<p class="form-help">' + escapeHtml(t('Cover lasts at most 60 days.')) + '</p>' +
-      '<div class="crm-form-actions"><button type="submit" class="crm-btn crm-btn--primary">' + escapeHtml(t('Save cover')) + '</button></div>' +
-      '</form></article>' +
-      bulkCard +
-      '<article class="crm-team-capacity__card crm-team-capacity__card--wide">' +
-      '<h3 class="crm-team-capacity__title" id="crm-esc-title">' + escapeHtml(t('Escalate for help')) + '</h3>' +
-      '<p class="crm-team-capacity__lead">' + escapeHtml(t('Flag a teammate who needs a manager’s attention.')) + '</p>' +
+      '<p class="form-help crm-team-capacity__hint">' + escapeHtml(t('Cover lasts at most 60 days.')) + '</p>' +
+      '<div class="crm-form-actions crm-team-capacity__actions">' +
+      '<button type="submit" class="crm-btn crm-btn--primary crm-btn--lg">' + escapeHtml(t('Save cover')) + '</button></div>' +
+      '</form>';
+    const escBody =
       '<form class="crm-form crm-form--stack" data-crm-escalate-form aria-labelledby="crm-esc-title">' +
-      userPickerFieldHtml({ id: 'crm-esc-subject', name: 'subjectUserId', label: t('Teammate'), required: true }) +
+      userPickerFieldHtml(Object.assign({ id: 'crm-esc-subject', name: 'subjectUserId', label: t('Teammate'), required: true }, pickerOpts)) +
       '<div class="form-group"><label class="form-label" for="crm-esc-reason">' + escapeHtml(t('Why')) + '</label>' +
       '<textarea id="crm-esc-reason" name="reason" required class="crm-input form-input" rows="3" maxlength="2000"></textarea></div>' +
-      '<div class="crm-form-actions"><button type="submit" class="crm-btn crm-btn--primary">' + escapeHtml(t('Create escalation')) + '</button></div>' +
-      '</form></article>' +
+      '<div class="crm-form-actions crm-team-capacity__actions">' +
+      '<button type="submit" class="crm-btn crm-btn--primary crm-btn--lg">' + escapeHtml(t('Create escalation')) + '</button></div>' +
+      '</form>';
+    return '' +
+      '<div class="crm-team-capacity__stack">' +
+      '<p class="crm-team-capacity__intro">' + escapeHtml(t('One step at a time — open a section, complete it, then move on. Pick people from search.')) + '</p>' +
+      teamCapacityPanel(1, t('Cover while away'), 'crm-ooo-title', t('Who is out and who covers them.'), oooBody, true) +
+      bulkSection +
+      teamCapacityPanel(escStep, t('Escalate for help'), 'crm-esc-title', t('Ask leadership to look at a teammate.'), escBody, false) +
       '</div>';
   }
 
@@ -1346,6 +1381,37 @@
   }
 
   function wireTeamCapacityForms(mount, capacityHost, ws) {
+    const capacityUi = window.CustomerCheckTeamCapacityUi || {};
+    if (typeof capacityUi.bindExclusiveAccordion === 'function') {
+      capacityUi.bindExclusiveAccordion(capacityHost, 0);
+    }
+    const submitGuard = typeof capacityUi.withSubmitGuard === 'function'
+      ? capacityUi.withSubmitGuard
+      : async function (form, fn) { await fn(); };
+    const isoDate = function (form, name) {
+      const el = form.elements[name];
+      const DP = window.CustomerCheckDatepicker;
+      if (el && DP && typeof DP.isoValue === 'function') {
+        return String(DP.isoValue(el) || '').trim();
+      }
+      return String((el && el.value) || '').trim();
+    };
+    const oooErrorMessage = function (code) {
+      if (code === 'same_person') {
+        return t('Pick a different colleague to receive the work.');
+      }
+      if (code === 'missing_dates') {
+        return t('Choose a date');
+      }
+      if (code === 'invalid_range') {
+        return t('The end date cannot be before the start date.');
+      }
+      if (code === 'too_long') {
+        return t('Cover lasts at most 60 days.');
+      }
+      return t('Select a colleague from the directory first.');
+    };
+
     const wsFn = function () { return ws; };
     [
       { searchId: 'crm-ooo-primary-search', suggestId: 'crm-ooo-primary-suggest', hiddenId: 'crm-ooo-primary', clearId: 'crm-ooo-primary-clear' },
@@ -1359,15 +1425,20 @@
 
     const oooForm = capacityHost.querySelector('[data-crm-ooo-form]');
     if (oooForm) {
-      oooForm.addEventListener('submit', async function (ev) {
+      oooForm.addEventListener('submit', function (ev) {
         ev.preventDefault();
+        submitGuard(oooForm, async function () {
         const fd = new FormData(oooForm);
-        const from = String(fd.get('from') || '');
-        const until = String(fd.get('until') || '');
+        const from = isoDate(oooForm, 'from');
+        const until = isoDate(oooForm, 'until');
         const primary = String(fd.get('primaryUserId') || '').trim();
         const backup = String(fd.get('backupUserId') || '').trim();
-        if (!primary || !backup) {
-          showAlert(oooForm, t('Select a colleague from the directory first.'));
+        const validate = capacityUi.validateOooCoverInput;
+        const code = typeof validate === 'function'
+          ? validate({ primaryUserId: primary, backupUserId: backup, startsOn: from, endsOn: until, maxDays: 60 })
+          : null;
+        if (code) {
+          showAlert(oooForm, oooErrorMessage(code));
           return;
         }
         try {
@@ -1384,25 +1455,39 @@
         } catch (e) {
           showAlert(oooForm, e.message || String(e));
         }
+        });
       });
     }
 
     const bulkForm = capacityHost.querySelector('[data-crm-bulk-form]');
     if (bulkForm) {
-      bulkForm.addEventListener('submit', async function (ev) {
+      bulkForm.addEventListener('submit', function (ev) {
         ev.preventDefault();
+        submitGuard(bulkForm, async function () {
         const fd = new FormData(bulkForm);
         const entityTypes = Array.from(bulkForm.querySelectorAll('input[name="entityTypes"]:checked'))
           .map(function (el) { return el.value; });
         const fromUser = String(fd.get('fromUser') || '').trim();
         const toUser = String(fd.get('toUser') || '').trim();
         const confirmed = !!bulkForm.querySelector('#crm-bulk-confirm:checked');
-        if (!fromUser || !toUser) {
-          showAlert(bulkForm, t('Select a colleague from the directory first.'));
+        const bulkValidate = capacityUi.validateBulkReassignInput;
+        const bulkCode = typeof bulkValidate === 'function'
+          ? bulkValidate({ fromUser: fromUser, toUser: toUser, confirmed: confirmed, entityTypes: entityTypes })
+          : null;
+        if (bulkCode === 'same_person') {
+          showAlert(bulkForm, t('Pick a different colleague to receive the work.'));
           return;
         }
-        if (!confirmed) {
+        if (bulkCode === 'not_confirmed') {
           showAlert(bulkForm, t('Confirm the reassignment before continuing.'));
+          return;
+        }
+        if (bulkCode === 'nothing_selected') {
+          showAlert(bulkForm, t('Select 1–200 items to reassign.'));
+          return;
+        }
+        if (bulkCode) {
+          showAlert(bulkForm, t('Select a colleague from the directory first.'));
           return;
         }
         try {
@@ -1419,13 +1504,15 @@
         } catch (e) {
           showAlert(bulkForm, e.message || String(e));
         }
+        });
       });
     }
 
     const escForm = capacityHost.querySelector('[data-crm-escalate-form]');
     if (escForm) {
-      escForm.addEventListener('submit', async function (ev) {
+      escForm.addEventListener('submit', function (ev) {
         ev.preventDefault();
+        submitGuard(escForm, async function () {
         const fd = new FormData(escForm);
         const subject = String(fd.get('subjectUserId') || '').trim();
         if (!subject) {
@@ -1441,6 +1528,7 @@
         } catch (e) {
           showAlert(escForm, e.message || String(e));
         }
+        });
       });
     }
 

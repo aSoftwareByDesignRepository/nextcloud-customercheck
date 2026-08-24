@@ -6,7 +6,7 @@
 $filterType = (string)($_['filterType'] ?? '');
 $filterScope = (string)($_['filterScope'] ?? 'open');
 $groups = $_['groups'] ?? ['overdue' => [], 'today' => [], 'later' => [], 'done' => []];
-$filterOpen = ($filterType !== '' || $filterScope !== 'open');
+$filterOpen = ($filterType !== '' || ($filterScope !== 'open' && $filterScope !== 'mine'));
 $labels = $_['labels'] ?? null;
 $activitiesUrl = $urlGenerator->linkToRoute('customercheck.page.activities');
 $canWrite = !empty($_['canWrite']);
@@ -16,13 +16,14 @@ if (!$crmListFragment) {
 }
 ?>
 <?php if (!$crmListFragment): ?>
-<div class="crm-page-stack">
+<div class="crm-page-stack" data-workspace-id="<?php p((int)($_['workspaceId'] ?? 0)); ?>">
 	<div class="crm-list-controls<?php if ($filterOpen): ?> crm-list-controls--filter-open<?php endif; ?>" id="crm-activities-controls">
 		<section class="crm-list-toolbar" id="crm-activities-toolbar" aria-label="<?php p($l->t('Activity filters')); ?>">
 			<div class="crm-list-toolbar__primary">
 <?php endif; ?>
 				<nav class="crm-quick-filters" data-crm-filter-swap="nav" aria-label="<?php p($l->t('Quick filters')); ?>">
 					<a class="crm-quick-filter<?php if ($filterScope === 'open' && $filterType === ''): ?> is-active<?php endif; ?>" href="<?php p($activitiesUrl); ?>"<?php if ($filterScope === 'open' && $filterType === ''): ?> aria-current="page"<?php endif; ?>><?php p($l->t('Open')); ?></a>
+					<a class="crm-quick-filter<?php if ($filterScope === 'mine'): ?> is-active<?php endif; ?>" href="<?php p($activitiesUrl); ?>?scope=mine"<?php if ($filterScope === 'mine'): ?> aria-current="page"<?php endif; ?>><?php p($l->t('Assigned to me')); ?></a>
 					<a class="crm-quick-filter<?php if ($filterScope === 'done'): ?> is-active<?php endif; ?>" href="<?php p($activitiesUrl); ?>?scope=done"<?php if ($filterScope === 'done'): ?> aria-current="page"<?php endif; ?>><?php p($l->t('Done')); ?></a>
 					<a class="crm-quick-filter<?php if ($filterScope === 'all'): ?> is-active<?php endif; ?>" href="<?php p($activitiesUrl); ?>?scope=all"<?php if ($filterScope === 'all'): ?> aria-current="page"<?php endif; ?>><?php p($l->t('All')); ?></a>
 				</nav>
@@ -44,6 +45,7 @@ if (!$crmListFragment) {
 						<label for="crm-filter-scope" class="form-label"><?php p($l->t('Status')); ?></label>
 						<select id="crm-filter-scope" name="scope" class="form-select crm-input">
 							<option value="open" <?php if ($filterScope === 'open'): ?>selected<?php endif; ?>><?php p($l->t('Open')); ?></option>
+							<option value="mine" <?php if ($filterScope === 'mine'): ?>selected<?php endif; ?>><?php p($l->t('Assigned to me')); ?></option>
 							<option value="done" <?php if ($filterScope === 'done'): ?>selected<?php endif; ?>><?php p($l->t('Done')); ?></option>
 							<option value="all" <?php if ($filterScope === 'all'): ?>selected<?php endif; ?>><?php p($l->t('All')); ?></option>
 						</select>
@@ -93,19 +95,30 @@ if (!$crmListFragment) {
 					<thead><tr>
 						<th scope="col"><?php p($l->t('Title')); ?></th>
 						<th scope="col"><?php p($l->t('Company')); ?></th>
+						<th scope="col"><?php p($l->t('Who')); ?></th>
 						<th scope="col"><?php p($l->t('Type')); ?></th>
 						<th scope="col"><?php p($l->t('Due')); ?></th>
 						<th scope="col" class="crm-table-actions-col"><?php p($l->t('Actions')); ?></th>
 					</tr></thead>
 					<tbody>
 					<?php foreach ($rows as $act): ?>
-						<tr>
+						<tr data-activity-id="<?php p($act['id']); ?>" data-assignee-user-id="<?php p($act['assigneeUserId'] ?? ''); ?>" data-updated-at="<?php p($act['updatedAt'] ?? ''); ?>">
 							<td data-label="<?php p($l->t('Title')); ?>"><?php p($act['title']); ?></td>
 							<td data-label="<?php p($l->t('Company')); ?>">
 								<?php
 								$crmCompanyLinkId = (int)($act['companyId'] ?? 0);
 								$crmCompanyLinkLabel = (string)($act['companyName'] ?? '');
 								include __DIR__ . '/common/crm-company-link.php';
+								?>
+							</td>
+							<td data-label="<?php p($l->t('Who')); ?>" class="crm-activity-who">
+								<?php
+								$who = trim((string)($act['assigneeDisplayName'] ?? ''));
+								if ($who === '') {
+									p($l->t('Anyone'));
+								} else {
+									p($who);
+								}
 								?>
 							</td>
 							<td data-label="<?php p($l->t('Type')); ?>"><span class="crm-badge"><?php
@@ -132,6 +145,7 @@ if (!$crmListFragment) {
 									?>
 									<?php if ($canWrite): ?>
 										<?php if (empty($act['doneAt'])): ?>
+											<button type="button" class="crm-btn crm-btn--sm crm-btn--ghost" data-crm-assign-activity="<?php p($act['id']); ?>" data-updated-at="<?php p($act['updatedAt'] ?? ''); ?>" data-assignee-user-id="<?php p($act['assigneeUserId'] ?? ''); ?>"><?php p($l->t('Assign')); ?></button>
 											<button type="button" class="crm-btn crm-btn--sm crm-btn--secondary" data-crm-complete-activity="<?php p($act['id']); ?>" data-updated-at="<?php p($act['updatedAt'] ?? ''); ?>"><?php p($l->t('Done')); ?></button>
 										<?php else: ?>
 											<button type="button" class="crm-btn crm-btn--sm crm-btn--ghost" data-crm-undo-activity="<?php p($act['id']); ?>" data-updated-at="<?php p($act['updatedAt'] ?? ''); ?>"><?php p($l->t('Undo')); ?></button>

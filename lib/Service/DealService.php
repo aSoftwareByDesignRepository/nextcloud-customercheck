@@ -780,21 +780,29 @@ class DealService
 
 	public function isStale(Deal $deal, ?\DateTimeInterface $now = null): bool
 	{
-		if (in_array((string)$deal->getStage(), Constants::DEAL_TERMINAL_STAGES, true)) {
-			return false;
-		}
-		$changed = $deal->getStageChangedAt();
-		if ($changed === null) {
-			return false;
-		}
 		$now = $now ?? $this->timeFactory->getDateTime();
-		return DateMath::daysBetween($changed, $now) > $this->staleDealDays();
+
+		return DealFreshnessLogic::isRotting(
+			(string)$deal->getStage(),
+			$deal->getStageChangedAt(),
+			$this->staleDealDays(),
+			$now,
+		);
 	}
 
 	/** @return array<string, mixed> */
 	public function toArray(Deal $deal): array
 	{
 		$today = $this->timeFactory->getDateTime();
+		$fresh = DealFreshnessLogic::snapshot(
+			$deal->getCreatedAt(),
+			$deal->getUpdatedAt(),
+			$deal->getStageChangedAt(),
+			(string)$deal->getStage(),
+			$this->staleDealDays(),
+			$today,
+		);
+
 		return [
 			'id' => (int)$deal->getId(),
 			'title' => (string)$deal->getTitle(),
@@ -819,7 +827,12 @@ class DealService
 			'leadFirstTouchAt' => OptimisticLock::format($deal->getLeadFirstTouchAt()),
 			'leadSlaDueAt' => OptimisticLock::format($deal->getLeadSlaDueAt()),
 			'nextActionSkipUntil' => $deal->getNextActionSkipUntil()?->format('Y-m-d'),
-			'stale' => $this->isStale($deal),
+			'stale' => $fresh['stale'],
+			'rotting' => $fresh['rotting'],
+			'createdAt' => $fresh['createdAt'],
+			'ageDays' => $fresh['ageDays'],
+			'idleDays' => $fresh['idleDays'],
+			'stageIdleDays' => $fresh['stageIdleDays'],
 			'updatedAt' => OptimisticLock::format($deal->getUpdatedAt()),
 		];
 	}

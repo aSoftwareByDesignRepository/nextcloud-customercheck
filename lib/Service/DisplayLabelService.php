@@ -264,6 +264,7 @@ final class DisplayLabelService
 			'deal.stage' => $this->l10n->t('Deal stage changed'),
 			'deal_checklist.assigned' => $this->l10n->t('Checklist task assigned'),
 			'deal_checklist.done' => $this->l10n->t('Checklist task done'),
+			'activity.assigned' => $this->l10n->t('To-do assigned'),
 			'hours.logged' => $this->l10n->t('Hours logged'),
 			'import.linked' => $this->l10n->t('Import linked'),
 			'email.logged' => $this->l10n->t('Email logged'),
@@ -533,6 +534,41 @@ final class DisplayLabelService
 			'certain' => \OCA\CustomerCheck\Support\WinChance::percentLabel(100),
 			default => $bucket !== '' ? $bucket : $this->l10n->t('Not set'),
 		};
+	}
+
+	/**
+	 * One granny-readable line: age · last change · stage idle (and follow-up cue).
+	 *
+	 * @param array{ageDays?: ?int, idleDays?: ?int, stageIdleDays?: ?int, stale?: bool, rotting?: bool} $deal
+	 */
+	public function dealFreshnessLine(array $deal): string
+	{
+		$parts = [];
+		$age = $deal['ageDays'] ?? null;
+		if (is_int($age)) {
+			$parts[] = $age === 0
+				? $this->l10n->t('Opened today')
+				: $this->l10n->n('Open %n day', 'Open %n days', $age);
+		}
+		$idle = $deal['idleDays'] ?? null;
+		if (is_int($idle)) {
+			$parts[] = $idle === 0
+				? $this->l10n->t('Changed today')
+				: $this->l10n->n('Changed %n day ago', 'Changed %n days ago', $idle);
+		}
+		$stageIdle = $deal['stageIdleDays'] ?? null;
+		if (is_int($stageIdle)) {
+			$parts[] = $stageIdle === 0
+				? $this->l10n->t('Stage moved today')
+				: $this->l10n->n('%n day in stage', '%n days in stage', $stageIdle);
+		}
+		$line = $parts !== [] ? implode(' · ', $parts) : '';
+		if (!empty($deal['stale']) || !empty($deal['rotting'])) {
+			$cue = $this->l10n->t('Needs follow-up');
+			$line = $line !== '' ? ($line . ' · ' . $cue) : $cue;
+		}
+
+		return $line;
 	}
 
 	/** @return list<array{value: string, label: string}> */

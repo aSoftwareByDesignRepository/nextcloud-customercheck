@@ -76,6 +76,62 @@
     });
   }
 
+  const archiveBtn = document.getElementById('crm-company-archive');
+  if (archiveBtn) {
+    archiveBtn.addEventListener('click', async () => {
+      const ok = await C.confirmDialog({
+        title: t('Archive'),
+        message: t('Archive this company? It leaves active lists until you restore it. Merge also archives the source company.'),
+        confirmLabel: t('Archive'),
+        cancelLabel: t('Cancel'),
+        variant: 'warning',
+      });
+      if (!ok || !ok.confirmed) return;
+      archiveBtn.disabled = true;
+      try {
+        await Api.post('/companies/' + companyId + '/archive', {
+          updatedAt: archiveBtn.getAttribute('data-updated-at') || null,
+        });
+        window.location.reload();
+      } catch (e) {
+        archiveBtn.disabled = false;
+        await C.alertDialog({
+          title: t('Archive failed'),
+          message: (e.payload && e.payload.message) || e.message,
+          variant: 'danger',
+        });
+      }
+    });
+  }
+
+  const restoreBtn = document.getElementById('crm-company-restore');
+  if (restoreBtn) {
+    restoreBtn.addEventListener('click', async () => {
+      const ok = await C.confirmDialog({
+        title: t('Restore'),
+        message: t('Restore this company to the active register?'),
+        confirmLabel: t('Restore'),
+        cancelLabel: t('Cancel'),
+        variant: 'info',
+      });
+      if (!ok || !ok.confirmed) return;
+      restoreBtn.disabled = true;
+      try {
+        await Api.post('/companies/' + companyId + '/restore', {
+          updatedAt: restoreBtn.getAttribute('data-updated-at') || null,
+        });
+        window.location.reload();
+      } catch (e) {
+        restoreBtn.disabled = false;
+        await C.alertDialog({
+          title: t('Restore failed'),
+          message: (e.payload && e.payload.message) || e.message,
+          variant: 'danger',
+        });
+      }
+    });
+  }
+
   const mergeBtn = document.getElementById('crm-company-merge');
   if (mergeBtn && !mergeBtn.disabled) {
     mergeBtn.addEventListener('click', async () => {
@@ -1300,6 +1356,10 @@
   if (addActivity) {
     addActivity.addEventListener('click', async () => {
       const today = localYmd();
+      const memberOpts = await loadWorkspaceMemberOptions();
+      if (memberOpts.length && memberOpts[0].value === '') {
+        memberOpts[0] = { value: '', label: t('Me (you)') };
+      }
       const data = await promptFields(t('Add to-do'), [
         {
           name: 'title',
@@ -1311,6 +1371,14 @@
           hint: t('Example: Call Anna about renewal.'),
         },
         { name: 'dueDate', label: t('Due date'), type: 'date', required: true, value: today },
+        {
+          name: 'assigneeUserId',
+          label: t('Who should do this?'),
+          type: 'select',
+          options: memberOpts,
+          value: '',
+          hint: t('Defaults to you. Pick a colleague to hand it over — they get a notification.'),
+        },
         {
           name: 'type',
           label: t('Type'),
@@ -1342,13 +1410,18 @@
           await loadPromises();
           return;
         }
+        const assigneeUid = data.assigneeUserId ? String(data.assigneeUserId) : '';
         if (data.alsoOnPhone) {
-          await Api.post('/companies/' + companyId + '/tasks', {
+          const taskBody = {
             title: data.title,
             type: data.type || 'todo',
             dueDate: data.dueDate || today,
             pushToTasks: true,
-          });
+          };
+          if (assigneeUid !== '') {
+            taskBody.assigneeUserId = assigneeUid;
+          }
+          await Api.post('/companies/' + companyId + '/tasks', taskBody);
           if (liveRegion()) liveRegion().textContent = t('Sent to Tasks.');
           const phonePanel = document.getElementById('crm-open-tasks');
           if (phonePanel) phonePanel.open = true;
@@ -1356,12 +1429,16 @@
           location.reload();
           return;
         }
-        await Api.post('/activities', {
+        const activityBody = {
           companyId: companyId,
           title: data.title,
           dueDate: data.dueDate,
           type: data.type || 'todo',
-        });
+        };
+        if (assigneeUid !== '') {
+          activityBody.assigneeUserId = assigneeUid;
+        }
+        await Api.post('/activities', activityBody);
         location.reload();
       } catch (e) {
         await C.alertDialog({ title: t('Could not add reminder'), message: (e.payload && e.payload.message) || e.message, variant: 'danger' });

@@ -525,6 +525,68 @@
     return toIso(s);
   }
 
+  /**
+   * Open native <dialog> that owns the date field (modal top-layer host).
+   *
+   * Red-team: body-mounted calendars paint *under* showModal() dialogs —
+   * z-index cannot beat the top layer. Callers must mount into the top layer
+   * (Popover API) or inside this dialog as a fallback.
+   *
+   * @param {{closest?:Function}|null|undefined} el
+   * @returns {HTMLElement|null}
+   */
+  function findOpenDialogHost(el) {
+    if (!el || typeof el.closest !== 'function') {
+      return null;
+    }
+    const dialog = el.closest('dialog');
+    if (!dialog) {
+      return null;
+    }
+    if (dialog.open === true || (typeof dialog.hasAttribute === 'function' && dialog.hasAttribute('open'))) {
+      return dialog;
+    }
+    return null;
+  }
+
+  /**
+   * Whether the runtime can put the calendar into the top layer via Popover.
+   *
+   * @param {unknown} [proto]
+   * @returns {boolean}
+   */
+  function supportsCalendarPopover(proto) {
+    const p = proto != null
+      ? proto
+      : (typeof HTMLElement !== 'undefined' ? HTMLElement.prototype : null);
+    return !!(p && typeof p.showPopover === 'function' && typeof p.hidePopover === 'function');
+  }
+
+  /**
+   * Mount strategy for the calendar popup.
+   *
+   * - dialog-host: append inside the open dialog (same top-layer entry as showModal)
+   * - popover: top layer for page-level fields (escapes overflow:hidden ancestors)
+   * - body: last-resort page mount without Popover
+   *
+   * Red-team: Popover-above-dialog is NOT reliable across Chromium builds —
+   * :popover-open can be true while elementFromPoint still hits the modal.
+   * Sharing the dialog's top-layer entry is the foolproof modal path.
+   *
+   * @param {{supportsPopover?:boolean, insideOpenDialog?:boolean}} [opts]
+   * @returns {'popover'|'dialog-host'|'body'}
+   */
+  function resolveCalendarMountMode(opts) {
+    const options = opts && typeof opts === 'object' ? opts : {};
+    if (options.insideOpenDialog) {
+      return 'dialog-host';
+    }
+    if (options.supportsPopover) {
+      return 'popover';
+    }
+    return 'body';
+  }
+
   const api = {
     ISO_RE: ISO_RE,
     EU_RE: EU_RE,
@@ -564,6 +626,9 @@
     isoValue: isoValue,
     setIsoValue: setIsoValue,
     parseBoundAttr: parseBoundAttr,
+    findOpenDialogHost: findOpenDialogHost,
+    supportsCalendarPopover: supportsCalendarPopover,
+    resolveCalendarMountMode: resolveCalendarMountMode,
   };
 
   if (typeof module !== 'undefined' && module.exports) {

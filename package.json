@@ -1,7 +1,7 @@
 {
     "name": "customercheck",
     "private": true,
-    "version": "1.6.184",
+    "version": "1.6.188",
     "type": "module",
     "description": "CustomerCheck Playwright / frontend tooling",
     "scripts": {
@@ -22,6 +22,12 @@
         "test:mutation:mail-attach-picker": "php tests/Mutation/run-mail-attach-picker-mutations.php",
         "test:mutation:outbound-assign": "php tests/Mutation/run-outbound-assign-mutations.php",
         "test:mutation:deal-checklist": "php tests/Mutation/run-deal-checklist-mutations.php",
+        "test:mutation:activity-assignee": "php tests/Mutation/run-activity-assignee-mutations.php",
+        "test:mutation:deal-rotting": "php tests/Mutation/run-deal-rotting-mutations.php",
+        "test:mutation:coaching-activity-bulk": "php tests/Mutation/run-coaching-activity-bulk-mutations.php",
+        "test:mutation:settings-hygiene": "php tests/Mutation/run-settings-hygiene-mutations.php",
+        "test:mutation:inbox-create-company": "php tests/Mutation/run-inbox-create-company-mutations.php",
+        "test:mutation:team-capacity-ux": "php tests/Mutation/run-team-capacity-ux-mutations.php",
         "test:mutation:person-dialog": "php tests/Mutation/run-person-dialog-mutations.php",
         "test:mutation:company360-focus": "php tests/Mutation/run-company360-focus-mutations.php",
         "test:mutation:prepare-meeting-removed": "php tests/Mutation/run-prepare-meeting-removed-mutations.php",

@@ -45,6 +45,9 @@ final class ActivityServiceSetDoneLockTest extends TestCase
 			$this->createMock(DealMapper::class),
 			$this->createMock(AgreementMapper::class),
 			$this->createMock(PersonMapper::class),
+			$this->createMock(\OCA\CustomerCheck\Db\CompanyMapper::class),
+			$this->createMock(\OCA\CustomerCheck\Db\WorkspaceMemberMapper::class),
+			$this->createMock(\OCA\CustomerCheck\Service\NotificationService::class),
 		);
 
 		$this->expectException(ConflictException::class);
@@ -83,6 +86,9 @@ final class ActivityServiceSetDoneLockTest extends TestCase
 			$this->createMock(DealMapper::class),
 			$this->createMock(AgreementMapper::class),
 			$this->createMock(PersonMapper::class),
+			$this->createMock(\OCA\CustomerCheck\Db\CompanyMapper::class),
+			$this->createMock(\OCA\CustomerCheck\Db\WorkspaceMemberMapper::class),
+			$this->createMock(\OCA\CustomerCheck\Service\NotificationService::class),
 		);
 
 		$out = $svc->setDone(3, true, 'admin', '2026-07-27T10:00:00+00:00');
@@ -114,6 +120,9 @@ final class ActivityServiceSetDoneLockTest extends TestCase
 			$this->createMock(DealMapper::class),
 			$this->createMock(AgreementMapper::class),
 			$this->createMock(PersonMapper::class),
+			$this->createMock(\OCA\CustomerCheck\Db\CompanyMapper::class),
+			$this->createMock(\OCA\CustomerCheck\Db\WorkspaceMemberMapper::class),
+			$this->createMock(\OCA\CustomerCheck\Service\NotificationService::class),
 		);
 
 		$this->expectException(ConflictException::class);

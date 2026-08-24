@@ -228,9 +228,18 @@ class DomainWorkflowIntegrationTest extends TestCase
 		$followUps = array_values(array_filter(
 			$open,
 			static fn ($a): bool => (int)$a->getDealId() === (int)$deal->getId()
-				&& str_contains((string)$a->getTitle(), 'Follow up quote'),
+				&& (string)$a->getOrigin() === 'sequence_quoted',
 		));
-		$this->assertCount(3, $followUps);
+		$this->assertCount(3, $followUps, 'Quoted stage must create exactly three sequence follow-ups (locale-independent origin)');
+		$dueOffsets = array_map(static function ($a) use ($today): int {
+			$due = $a->getDueDate();
+			$dueImm = $due instanceof \DateTimeImmutable
+				? $due
+				: \DateTimeImmutable::createFromMutable($due);
+			return (int)$today->diff($dueImm)->days;
+		}, $followUps);
+		sort($dueOffsets);
+		$this->assertSame([3, 7, 14], $dueOffsets);
 	}
 
 	public function testHoursQuarterAndWrongKind(): void

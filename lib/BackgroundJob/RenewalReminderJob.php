@@ -5,13 +5,14 @@ declare(strict_types=1);
 namespace OCA\CustomerCheck\BackgroundJob;
 
 use OCA\CustomerCheck\Service\ActivityDueReminderService;
+use OCA\CustomerCheck\Service\DealRottingReminderService;
 use OCA\CustomerCheck\Service\ReminderScheduler;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\BackgroundJob\TimedJob;
 
 /**
  * Hourly TimedJob that fires the renewal cadence only at `reminder_hour` (§15).
- * Same hour also bridges activity-due NC notifications + companion push (P2).
+ * Same hour also bridges activity-due + deal-rotting NC notifications + companion push.
  * Status recompute for off-hour ticks lives in AgreementStatusRecomputeJob.
  */
 class RenewalReminderJob extends TimedJob
@@ -20,6 +21,7 @@ class RenewalReminderJob extends TimedJob
 		ITimeFactory $time,
 		private readonly ReminderScheduler $service,
 		private readonly ActivityDueReminderService $activityDue,
+		private readonly DealRottingReminderService $dealRotting,
 	) {
 		parent::__construct($time);
 		$this->setInterval(3600);
@@ -32,6 +34,9 @@ class RenewalReminderJob extends TimedJob
 		}
 		if ($this->activityDue->shouldRunNow()) {
 			$this->activityDue->run();
+		}
+		if ($this->dealRotting->shouldRunNow()) {
+			$this->dealRotting->run();
 		}
 	}
 }

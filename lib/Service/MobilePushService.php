@@ -37,7 +37,9 @@ class MobilePushService
 		Constants::NOTIFY_REMINDER,
 		Constants::NOTIFY_DIGEST,
 		Constants::NOTIFY_ACTIVITY_DUE,
+		Constants::NOTIFY_ACTIVITY_ASSIGNED,
 		Constants::NOTIFY_DEAL_CHECKLIST,
+		Constants::NOTIFY_DEAL_ROTTING,
 	];
 
 	private const REQUEST_TIMEOUT = 10;
@@ -218,7 +220,9 @@ class MobilePushService
 			Constants::NOTIFY_REMINDER => $l->t('Renewal reminder'),
 			Constants::NOTIFY_DIGEST => $l->t('CustomerCheck weekly digest'),
 			Constants::NOTIFY_ACTIVITY_DUE => $l->t('Activity due'),
+			Constants::NOTIFY_ACTIVITY_ASSIGNED => $l->t('Assigned to you'),
 			Constants::NOTIFY_DEAL_CHECKLIST => $l->t('Deal checklist'),
+			Constants::NOTIFY_DEAL_ROTTING => $l->t('Deal needs follow-up'),
 			default => $l->t('CustomerCheck'),
 		};
 	}
@@ -243,9 +247,24 @@ class MobilePushService
 				[(int)($p['renewals'] ?? 0), (int)($p['overdue'] ?? 0)],
 			),
 			Constants::NOTIFY_ACTIVITY_DUE => $this->activityDueBody($l, $company, $title, (int)($p['daysLate'] ?? 0)),
+			Constants::NOTIFY_ACTIVITY_ASSIGNED => $company !== ''
+				? $l->t('%1$s — %2$s', [$title !== '' ? $title : $l->t('To-do'), $company])
+				: ($title !== '' ? $title : $l->t('Open CustomerCheck.')),
 			Constants::NOTIFY_DEAL_CHECKLIST => $this->dealChecklistBody($l, $company, $dealTitle, $title),
+			Constants::NOTIFY_DEAL_ROTTING => $this->dealRottingBody($l, $company, $title, (int)($p['stageIdleDays'] ?? 0)),
 			default => $l->t('Open CustomerCheck.'),
 		};
+	}
+
+	private function dealRottingBody(IL10N $l, string $company, string $dealTitle, int $stageIdleDays): string
+	{
+		$what = $dealTitle !== '' ? $dealTitle : $l->t('Deal');
+		$where = $company !== '' ? $company : $l->t('a customer');
+		if ($stageIdleDays > 0) {
+			return $l->t('%1$s (%2$s) — %3$d days in stage. Open Pipeline.', [$what, $where, $stageIdleDays]);
+		}
+
+		return $l->t('%1$s (%2$s) needs follow-up. Open Pipeline.', [$what, $where]);
 	}
 
 	private function dealChecklistBody(IL10N $l, string $company, string $dealTitle, string $task): string

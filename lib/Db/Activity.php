@@ -32,6 +32,8 @@ use OCP\DB\Types;
  * @method void setIsCallback(int $isCallback)
  * @method int|null getPersonId()
  * @method void setPersonId(?int $personId)
+ * @method string|null getAssigneeUserId()
+ * @method void setAssigneeUserId(?string $assigneeUserId)
  * @method string|null getCreatedBy()
  * @method void setCreatedBy(?string $createdBy)
  * @method \DateTime|null getCreatedAt()
@@ -53,6 +55,7 @@ class Activity extends Entity
 	protected $todoUri = null;
 	protected $isCallback = 0;
 	protected $personId = null;
+	protected $assigneeUserId = null;
 	protected $createdBy = null;
 	protected $createdAt = null;
 	protected $updatedAt = null;

@@ -40,7 +40,7 @@ return [
 		// Keep the requirement literal (route files load without the app autoloader).
 		// tests/Unit/Controller/WorkspaceSettingsPagesContractTest pins it to WorkspaceSettingsSectionCatalog::routeRequirement().
 		['name' => 'page#settingsSection', 'url' => '/settings/{section}', 'verb' => 'GET',
-			'requirements' => ['section' => 'my-email|mailbox|preferences|checklists|review-sources|circles|integrations']],
+			'requirements' => ['section' => 'my-email|mailbox|preferences|checklists|review-sources|promises|integrations']],
 		['name' => 'page#appSettings', 'url' => '/app-settings', 'verb' => 'GET'],
 		// Keep the requirement literal (route files load without the app autoloader).
 		// tests/Unit/Controller/AppSettingsPagesContractTest pins it to AppSettingsSectionCatalog::routeRequirement().
@@ -220,7 +220,7 @@ return [
 		['name' => 'persona_api#accountPlan', 'url' => '/api/v1/companies/{companyId}/account-plan', 'verb' => 'GET', 'requirements' => ['companyId' => '\d+']],
 		['name' => 'persona_api#addMapStep', 'url' => '/api/v1/companies/{companyId}/account-plan/map-steps', 'verb' => 'POST', 'requirements' => ['companyId' => '\d+']],
 		['name' => 'persona_api#completeMapStep', 'url' => '/api/v1/companies/{companyId}/account-plan/map-steps/{id}/done', 'verb' => 'POST', 'requirements' => ['companyId' => '\d+', 'id' => '\d+']],
-		['name' => 'persona_api#circlesRollCall', 'url' => '/api/v1/circles-roll-call', 'verb' => 'GET'],
+		['name' => 'persona_api#promisesRollCall', 'url' => '/api/v1/promises-roll-call', 'verb' => 'GET'],
 		['name' => 'persona_api#oneOnOnePrep', 'url' => '/api/v1/workspaces/{workspaceId}/one-on-one/{reportUserId}', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\d+']],
 		['name' => 'persona_api#oneOnOneSave', 'url' => '/api/v1/workspaces/{workspaceId}/one-on-one/{reportUserId}', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\d+']],
 		['name' => 'persona_api#moveCompany', 'url' => '/api/v1/companies/{companyId}/move-workspace', 'verb' => 'POST', 'requirements' => ['companyId' => '\d+']],

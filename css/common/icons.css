@@ -120,6 +120,25 @@ svg[class*='__glyph'],
 	box-sizing: border-box;
 }
 
+/* Labelled fields: host spans the group; input + toggle share one row. */
+.form-group .crm-datepicker-host,
+.form-group .crm-datepicker-host--flex {
+	width: 100%;
+	max-width: 100%;
+	flex: none;
+}
+
+.form-group .crm-datepicker-host .datepicker-input {
+	width: auto;
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.form-group .crm-datepicker-host .crm-datepicker-toggle {
+	align-self: stretch;
+	height: auto;
+}
+
 /* Datepicker toggle sits beside the field (same rhythm as user-picker clear). */
 .crm-datepicker-toggle {
 	flex: 0 0 auto;

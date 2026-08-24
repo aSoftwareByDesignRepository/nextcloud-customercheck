@@ -79,7 +79,7 @@ final class SingleOrgModeContractTest extends TestCase
 		$nav = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/common/navigation.php');
 		$settings = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/settings.php');
 		$boot = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/parts/workspace-boot-status.php');
-		$circles = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/settings/circles-roll-call.php');
+		$promises = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/settings/promises-roll-call.php');
 		$tokens = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/settings/tokens.php');
 		$this->assertStringContainsString("\$l->t('Team & mailbox')", $nav);
 		$this->assertStringContainsString("\$l->t('My email')", $nav);
@@ -88,8 +88,8 @@ final class SingleOrgModeContractTest extends TestCase
 		$this->assertStringNotContainsString("\$l->t('Workspace')", $settings);
 		$this->assertStringContainsString("\$l->t('Loading team settings…')", $boot);
 		$this->assertStringNotContainsString('Loading workspace…', $boot);
-		$this->assertStringContainsString("\$l->t('Did the team keep its weekly promises?')", $circles);
-		$this->assertStringNotContainsString('each workspace', $circles);
+		$this->assertStringContainsString("\$l->t('Did the team keep its weekly promises?')", $promises);
+		$this->assertStringNotContainsString('each workspace', $promises);
 		$this->assertStringNotContainsString('Per-workspace feeds', $tokens);
 		$this->assertStringNotContainsString('Workspace & mailbox', $tokens);
 	}

@@ -142,14 +142,28 @@ class ActivityDueReminderService
 				'dueOn' => $dueYmd,
 				'daysLate' => $daysLate,
 				'overdue' => $daysLate > 0 ? 1 : 0,
+				'workspaceId' => $workspaceId,
 			];
-			$delivered = $this->notifications->notifyWorkspaceUsers(
-				$workspaceId,
-				Constants::NOTIFY_ACTIVITY_DUE,
-				'activity',
-				(string)$activityId,
-				$params,
-			);
+			$assignee = trim((string)($activity->getAssigneeUserId() ?? ''));
+			if ($assignee !== '') {
+				// Assigned to-do → only the colleague gets the due ping.
+				$delivered = $this->notifications->notifyUser(
+					$assignee,
+					Constants::NOTIFY_ACTIVITY_DUE,
+					'activity',
+					(string)$activityId,
+					$params,
+				) ? 1 : 0;
+			} else {
+				// Legacy / unassigned rows: whole workspace (shared queue).
+				$delivered = $this->notifications->notifyWorkspaceUsers(
+					$workspaceId,
+					Constants::NOTIFY_ACTIVITY_DUE,
+					'activity',
+					(string)$activityId,
+					$params,
+				);
+			}
 			if ($delivered === 0) {
 				// Empty membership — release so a later tick retries when members join.
 				$this->releaseClaim($row, $activityId, $dueYmd);

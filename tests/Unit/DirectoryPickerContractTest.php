@@ -97,12 +97,12 @@ final class DirectoryPickerContractTest extends TestCase
 		$this->assertStringContainsString("document.getElementById('section-workspace-mailbox')", $js);
 		$this->assertStringContainsString("document.getElementById('section-my-email')", $js);
 		$this->assertMatchesRegularExpression(
-			"/crm-review-sources-form[\s\S]{0,120}crm-circles-roll-call|crm-circles-roll-call[\s\S]{0,120}crm-review-sources-form/",
+			"/crm-review-sources-form[\s\S]{0,120}crm-promises-roll-call|crm-promises-roll-call[\s\S]{0,120}crm-review-sources-form/",
 			$js,
 		);
 		$controller = (string)file_get_contents($this->root . '/lib/Controller/PageController.php');
 		$this->assertStringContainsString(
-			"registerFrontEndAssets('pages/settings', null, [], ['common/folder-picker', 'common/signature-logo-core', 'common/personal-mail-settings-core', 'common/rich-mail-composer', 'common/mailbox-settings-present', 'workspace-settings-legacy-redirect'])",
+			"registerFrontEndAssets('pages/settings', null, [], ['common/folder-picker', 'common/signature-logo-core', 'common/personal-mail-settings-core', 'common/rich-mail-composer', 'common/mailbox-settings-present'])",
 			$controller,
 		);
 	}
@@ -117,7 +117,7 @@ final class DirectoryPickerContractTest extends TestCase
 			'templates/settings/workspace-mailbox.php',
 			'templates/settings/my-email.php',
 			'templates/settings/workspace-review-sources.php',
-			'templates/settings/circles-roll-call.php',
+			'templates/settings/promises-roll-call.php',
 		] as $rel) {
 			$html = (string)file_get_contents($this->root . '/' . $rel);
 			$this->assertStringContainsString("parts/workspace-boot-status.php", $html, $rel);

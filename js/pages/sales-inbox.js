@@ -65,6 +65,8 @@
   let inboxMoreBusy = false;
   let searchTimer = null;
   let companyPanel = null;
+  /** Resets inline-create form when the review row changes. */
+  let lastDecideReviewId = 0;
   /** @type {Array<{id:number,name:string}>} */
   let composeAttachments = [];
   let composeApi = null;
@@ -222,7 +224,7 @@
   }
 
   function setActionBusy(busy) {
-    ['crm-sales-inbox-open-assign', 'crm-sales-inbox-reply', 'crm-sales-inbox-spam', 'crm-sales-inbox-discard', 'crm-sales-inbox-assign-submit', 'crm-sales-inbox-quick-assign', 'crm-sales-inbox-no-relation'].forEach(function (id) {
+    ['crm-sales-inbox-open-assign', 'crm-sales-inbox-reply', 'crm-sales-inbox-spam', 'crm-sales-inbox-discard', 'crm-sales-inbox-assign-submit', 'crm-sales-inbox-quick-assign', 'crm-sales-inbox-no-relation', 'crm-sales-inbox-create-assign'].forEach(function (id) {
       const btn = document.getElementById(id);
       if (!btn) return;
       if (busy) {
@@ -237,8 +239,33 @@
         }
         // Assign submit still gated by company selection.
         if (id === 'crm-sales-inbox-assign-submit') syncAssignSubmitEnabled();
+        if (id === 'crm-sales-inbox-create-assign') syncInlineCreateSubmitEnabled();
       }
     });
+    const createName = document.getElementById('crm-sales-inbox-create-name');
+    if (createName) {
+      if (busy) {
+        createName.setAttribute('aria-busy', 'true');
+        if (!createName.disabled) createName.dataset.crmWasEnabled = '1';
+        createName.disabled = true;
+      } else {
+        createName.removeAttribute('aria-busy');
+        if (createName.dataset.crmWasEnabled === '1') {
+          createName.disabled = false;
+          delete createName.dataset.crmWasEnabled;
+        }
+      }
+    }
+    const companyFilter = document.getElementById('crm-sales-inbox-company-filter');
+    if (companyFilter) {
+      if (busy) {
+        if (!companyFilter.disabled) companyFilter.dataset.crmWasEnabled = '1';
+        companyFilter.disabled = true;
+      } else if (companyFilter.dataset.crmWasEnabled === '1') {
+        companyFilter.disabled = false;
+        delete companyFilter.dataset.crmWasEnabled;
+      }
+    }
   }
 
   function syncActionPressed() {
@@ -439,7 +466,48 @@
     const submit = document.getElementById('crm-sales-inbox-assign-submit');
     if (!submit) return;
     const cid = hid ? parseInt(String(hid.value || '0'), 10) : 0;
-    submit.disabled = !(cid > 0);
+    submit.disabled = !(cid > 0) || assignBusy;
+  }
+
+  function syncInlineCreateSubmitEnabled() {
+    const btn = document.getElementById('crm-sales-inbox-create-assign');
+    const nameEl = document.getElementById('crm-sales-inbox-create-name');
+    if (!btn) return;
+    const name = nameEl ? String(nameEl.value || '').trim() : '';
+    btn.disabled = !name || assignBusy;
+  }
+
+  function setInlineCreateError(msg) {
+    const errEl = document.getElementById('crm-sales-inbox-create-error');
+    if (!errEl) return;
+    const text = msg || '';
+    errEl.textContent = text;
+    errEl.hidden = text === '';
+  }
+
+  function resetInlineCreateCompany() {
+    const wrap = document.getElementById('crm-sales-inbox-create-wrap');
+    const nameEl = document.getElementById('crm-sales-inbox-create-name');
+    if (nameEl) nameEl.value = '';
+    setInlineCreateError('');
+    if (wrap && wrap.open) wrap.open = false;
+    syncInlineCreateSubmitEnabled();
+  }
+
+  function prefillInlineCreateCompany(query) {
+    if (!canWriteAssign) return;
+    const q = String(query || '').trim();
+    if (!q) return;
+    const nameEl = document.getElementById('crm-sales-inbox-create-name');
+    const wrap = document.getElementById('crm-sales-inbox-create-wrap');
+    if (!nameEl || !wrap) return;
+    if (String(nameEl.value || '').trim()) return;
+    nameEl.value = q;
+    wrap.open = true;
+    syncInlineCreateSubmitEnabled();
+    if (typeof nameEl.focus === 'function') {
+      nameEl.focus();
+    }
   }
 
   function destroyCompanyPanel() {
@@ -528,6 +596,9 @@
       onChangeRequest: function () {
         syncAssignSubmitEnabled();
       },
+      onEmptyResults: function (query) {
+        prefillInlineCreateCompany(query);
+      },
     });
   }
 
@@ -558,6 +629,8 @@
     if (hid) hid.value = '';
     if (filter) filter.value = '';
     if (list) list.innerHTML = '';
+    resetInlineCreateCompany();
+    lastDecideReviewId = 0;
     syncAssignSubmitEnabled();
   }
 
@@ -568,8 +641,14 @@
       hideDecideZone();
       return;
     }
+    const reviewId = parseInt(String(it.reviewItemId || 0), 10);
+    if (reviewId !== lastDecideReviewId) {
+      resetInlineCreateCompany();
+      lastDecideReviewId = reviewId;
+    }
     decide.hidden = false;
     const form = document.getElementById('crm-sales-inbox-assign-form');
+    const createWrap = document.getElementById('crm-sales-inbox-create-wrap');
     const ro = document.getElementById('crm-sales-inbox-decide-ro');
     const card = document.getElementById('crm-sales-inbox-suggest-card');
     const nameEl = document.getElementById('crm-sales-inbox-suggest-name');
@@ -584,6 +663,7 @@
 
     if (!canWriteAssign) {
       if (form) form.hidden = true;
+      if (createWrap) createWrap.hidden = true;
       if (card) card.hidden = true;
       clearAltSuggests();
       destroyCompanyPanel();
@@ -591,6 +671,7 @@
       return;
     }
     if (form) form.hidden = false;
+    if (createWrap) createWrap.hidden = false;
     if (ro) ro.hidden = true;
     mountCompanyPanel();
 
@@ -1647,6 +1728,78 @@
     return postAssignAction('assign', { companyId: cid });
   }
 
+  async function createCompanyAndAssign(rawName) {
+    const it = selectedItem();
+    const rid = it ? parseInt(String(it.reviewItemId || 0), 10) : 0;
+    const ws = workspaceId();
+    const Core = window.CustomerCheckInboxCreateCompanyCore;
+    const validation = Core && typeof Core.validateInlineCompanyName === 'function'
+      ? Core.validateInlineCompanyName(rawName)
+      : { ok: false, error: 'empty', name: '' };
+    if (!validation.ok) {
+      const msg = validation.error === 'too_long'
+        ? t('Keep the company name under 256 characters.')
+        : t('Enter the company name.');
+      setInlineCreateError(msg);
+      setStatus(msg);
+      const nameEl = document.getElementById('crm-sales-inbox-create-name');
+      if (nameEl && typeof nameEl.focus === 'function') nameEl.focus();
+      return false;
+    }
+    if (!(ws > 0) || !(rid > 0) || assignBusy) return false;
+    if (!canWriteAssign) {
+      setStatus(t('View only — ask a member to assign this.'));
+      return false;
+    }
+    setInlineCreateError('');
+    assignBusy = true;
+    setActionBusy(true);
+    setStatus(t('Creating company…'));
+    try {
+      const body = Core && typeof Core.buildMinimalCompanyCreateBody === 'function'
+        ? Core.buildMinimalCompanyCreateBody(validation.name)
+        : { name: validation.name };
+      const createRes = await Api.post('/companies', body);
+      const cid = Core && typeof Core.extractCompanyIdFromCreateResponse === 'function'
+        ? Core.extractCompanyIdFromCreateResponse(createRes)
+        : 0;
+      if (!(cid > 0)) {
+        const msg = t('Could not create company.');
+        setInlineCreateError(msg);
+        setStatus(msg);
+        if (C && C.alertDialog) {
+          await C.alertDialog({ title: t('Could not save'), message: msg, variant: 'danger' });
+        }
+        return false;
+      }
+      setStatus(t('Saving…'));
+      await Api.post('/workspaces/' + ws + '/review/items/' + rid + '/assign', { companyId: cid });
+      const live = document.getElementById('crm-live-region');
+      if (live) live.textContent = t('Saved.');
+      setStatus(t('Saved. Updating list…'));
+      await loadAssignInbox();
+      return true;
+    } catch (e) {
+      const msg = (e.payload && e.payload.message) || e.message || t('Could not save.');
+      setInlineCreateError(msg);
+      setStatus(msg);
+      if (C && C.alertDialog) {
+        await C.alertDialog({
+          title: t('Could not save'),
+          message: msg,
+          variant: 'danger',
+        });
+      }
+      if (/handled this message|not open for triage|Reload Assign|already/i.test(msg)) {
+        try { await loadAssignInbox(); } catch (reloadErr) { /* keep alert */ }
+      }
+      return false;
+    } finally {
+      assignBusy = false;
+      setActionBusy(false);
+    }
+  }
+
   async function loadInbox() {
     if (activeTab === 'unmatched') {
       return loadAssignInbox();
@@ -1953,6 +2106,30 @@
   if (noRelationBtn) {
     noRelationBtn.addEventListener('click', function () {
       void postAssignAction('no-relation', { note: '' });
+    });
+  }
+  const createNameInput = document.getElementById('crm-sales-inbox-create-name');
+  if (createNameInput) {
+    createNameInput.addEventListener('input', function () {
+      setInlineCreateError('');
+      syncInlineCreateSubmitEnabled();
+    });
+  }
+  const createAssignBtn = document.getElementById('crm-sales-inbox-create-assign');
+  if (createAssignBtn) {
+    createAssignBtn.addEventListener('click', function () {
+      const nameEl = document.getElementById('crm-sales-inbox-create-name');
+      void createCompanyAndAssign(nameEl ? nameEl.value : '');
+    });
+  }
+  if (createNameInput) {
+    createNameInput.addEventListener('keydown', function (ev) {
+      if (ev.key !== 'Enter') return;
+      ev.preventDefault();
+      const btn = document.getElementById('crm-sales-inbox-create-assign');
+      if (btn && !btn.disabled) {
+        void createCompanyAndAssign(createNameInput.value);
+      }
     });
   }
 

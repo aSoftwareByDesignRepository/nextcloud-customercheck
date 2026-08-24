@@ -134,7 +134,7 @@ final class ActivityDueReminderServiceTest extends TestCase
 		self::assertSame(1, $result['skipped']);
 	}
 
-	public function testRunInsertsLedgerThenNotifies(): void
+	public function testRunInsertsLedgerThenNotifiesWorkspaceWhenUnassigned(): void
 	{
 		$activity = new Activity();
 		$activity->setId(12);
@@ -162,11 +162,46 @@ final class ActivityDueReminderServiceTest extends TestCase
 					&& ($p['title'] ?? '') === 'Call back';
 			}),
 		)->willReturn(1);
+		$this->notifications->expects($this->never())->method('notifyUser');
 		$this->notifications->expects($this->never())->method('notifyCrmUsers');
 
 		$result = $this->service()->run();
 		self::assertSame(1, $result['sent']);
 		self::assertSame(0, $result['skipped']);
+	}
+
+	public function testRunNotifiesOnlyAssigneeWhenSet(): void
+	{
+		$activity = new Activity();
+		$activity->setId(12);
+		$activity->setCompanyId(3);
+		$activity->setTitle('Call back');
+		$activity->setDueDate(new \DateTime('2026-07-26'));
+		$activity->setAssigneeUserId('lara');
+
+		$company = new Company();
+		$company->setId(3);
+		$company->setName('Müller GmbH');
+		$company->setWorkspaceId(9);
+
+		$this->activities->method('findOpenDueUpTo')->willReturn([$activity]);
+		$this->ledger->method('exists')->willReturn(false);
+		$this->ledger->expects($this->once())->method('insert');
+		$this->companies->method('findById')->with(3)->willReturn($company);
+		$this->notifications->expects($this->once())->method('notifyUser')->with(
+			'lara',
+			Constants::NOTIFY_ACTIVITY_DUE,
+			'activity',
+			'12',
+			$this->callback(static function (array $p): bool {
+				return ($p['daysLate'] ?? -1) === 0 && ($p['title'] ?? '') === 'Call back';
+			}),
+		)->willReturn(true);
+		$this->notifications->expects($this->never())->method('notifyWorkspaceUsers');
+		$this->notifications->expects($this->never())->method('notifyCrmUsers');
+
+		$result = $this->service()->run();
+		self::assertSame(['scanned' => 1, 'sent' => 1, 'skipped' => 0], $result);
 	}
 
 	public function testLedgerExistsGuardIsRequiredForIdempotency(): void

@@ -5,6 +5,45 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.6.189 - 2026-08-24
+
+### Added (Sales Inbox — inline company create)
+- **Unassigned** tab: create a new company and assign the current message without leaving the inbox
+- Collapsible “Company not listed? Create one here” block with name field + **Create and assign**
+- Empty company search pre-fills the create name and opens the block
+- `inbox-create-company-core` helpers; company picker `onEmptyResults` hook; contract + mutation tests
+
+### Improved (Team — Manager tools UX)
+- Three manager jobs are **accordion panels** — only step 1 open by default (no more wall of forms)
+- Each step is a clear card with step badge, title, one-line hint, and chevron
+- Removed repeated “search by name / never type ID” clutter; bulk **What to move** tucked in collapsed options
+- Confirm checkbox in a highlighted box; large touch-friendly Save buttons
+
+## 1.6.188 - 2026-08-24
+
+### Cleaned (Settings — aggressive pre-production hygiene)
+- Removed legacy mega-page `#anchor` redirect scripts (not in production; chip nav is canonical)
+- Renamed settings section **`circles` → `promises`** (`/settings/promises`, `PromisesRollCallService`, `/api/v1/promises-roll-call`)
+- Jobs form now exposes **identity rename push** + **default VTODO calendar URI** (were API-only headless keys)
+- Integrations matrix: boolean probes only, human labels, MaintenanceCheck included
+
+### Added (Team coaching — bulk reassign open to-dos) — 1.6.187
+- Managers can bulk-move **open to-dos** (activity assignees) and deal checklist items with deals/accounts/promises
+- Activities have no `workspace_id` — scoped via **company join** (same ACL pattern as deals); done items stay put
+- CAS on assignee + open status; conflict if ownership changes mid-batch; new assignee gets `activity_assigned` (not the actor)
+- Team capacity form: checkboxes for Deal checklist + Open to-dos; clearer lead copy
+
+### Cleaned (Settings hygiene)
+- Removed unreachable non-admin branches on Access / Personal email OAuth (app-settings already gates admin)
+- Removed leftover create-workspace DOM scrub from `settings.js` (single-org; templates already gone)
+- Integrations: only boolean capability probes, human labels, MaintenanceCheck + write facades; fixed misleading “read-only” copy
+- Settings page help / quick-start match the chip nav (no mega-page leftovers)
+
+### Harden / Gauntlet
+- Unit + contract tests for company-join ACL, from≠to, membership, CAS rollback, notify skip-self
+- Mutation suite `test:mutation:coaching-activity-bulk`
+- `SettingsHygieneContractTest` locks the dead-code removals
+
 ## 1.6.184 - 2026-08-19
 
 ### Theme, layout, and WCAG 2.1 AA

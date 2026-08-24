@@ -45,15 +45,6 @@ final class AppSettingsSectionCatalogTest extends TestCase
 		self::assertSame(implode('|', AppSettingsSectionCatalog::SECTIONS), AppSettingsSectionCatalog::routeRequirement());
 	}
 
-	public function testLegacyAnchorsMapOnlyToKnownSections(): void
-	{
-		self::assertNotSame([], AppSettingsSectionCatalog::LEGACY_ANCHORS);
-		foreach (AppSettingsSectionCatalog::LEGACY_ANCHORS as $anchor => $section) {
-			self::assertNotSame('', $anchor);
-			self::assertTrue($this->catalog->isSection($section), "Anchor {$anchor} → {$section}");
-		}
-	}
-
 	public function testLabelsCoverEverySection(): void
 	{
 		foreach (AppSettingsSectionCatalog::SECTIONS as $section) {

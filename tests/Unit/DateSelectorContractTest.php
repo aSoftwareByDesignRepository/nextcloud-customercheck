@@ -69,9 +69,28 @@ final class DateSelectorContractTest extends TestCase
 		$this->assertStringContainsString("input.type = 'text'", $ui);
 		$this->assertStringContainsString('data-datepicker-required', $ui);
 		$this->assertStringContainsString('CustomerCheckDatepicker', $ui);
+		$this->assertStringContainsString('mountCalendarPopup', $ui);
+		$this->assertStringContainsString('showPopover', $ui);
+		$this->assertStringContainsString("setAttribute('popover', 'manual')", $ui);
+		$this->assertStringContainsString('resolveCalendarMountMode', $ui);
+		$this->assertStringContainsString('findOpenDialogHost', $ui);
+		$this->assertStringContainsString('dialog-host', $ui);
+		$this->assertStringContainsString('overflowBackup', $ui);
+		$this->assertStringContainsString("dialogHost.style.overflow = 'visible'", $ui);
+		$this->assertStringContainsString('stopImmediatePropagation', $ui);
 		$this->assertStringContainsString('ISO_RE', $core);
 		$this->assertStringContainsString('isRealYmd', $core);
 		$this->assertStringContainsString('dt.getDate() === d', $core);
+		$this->assertStringContainsString('supportsCalendarPopover', $core);
+		$this->assertStringContainsString('resolveCalendarMountMode', $core);
+		$this->assertStringContainsString("return 'popover'", $core);
+		$this->assertStringContainsString("return 'dialog-host'", $core);
+		$this->assertStringContainsString('insideOpenDialog', $core);
+		$this->assertMatchesRegularExpression(
+			"/if \\(options\\.insideOpenDialog\\) \\{\\s*return 'dialog-host';/s",
+			$core,
+			'Modal fields must mount inside the open dialog before considering Popover',
+		);
 		$this->assertStringNotContainsString('Date.parse(', $core);
 		$this->assertStringNotContainsString("new Date('", $core);
 		$this->assertStringNotContainsString('toISOString(', $core);
@@ -166,6 +185,9 @@ final class DateSelectorContractTest extends TestCase
 		$this->assertStringContainsString('prefers-reduced-motion', $css);
 		$this->assertStringContainsString('prefers-contrast: more', $css);
 		$this->assertStringContainsString('z-index: 11000', $css);
+		$this->assertStringContainsString('.crm-datepicker[popover]', $css);
+		$this->assertStringContainsString('inset: auto', $css);
+		$this->assertStringContainsString(':popover-open', $css);
 		$this->assertStringContainsString('width: min(24rem, calc(100vw - 1rem))', $css);
 		$this->assertStringContainsString('table.crm-datepicker__grid', $css);
 		$this->assertStringContainsString('display: table-cell', $css);
@@ -176,7 +198,8 @@ final class DateSelectorContractTest extends TestCase
 			'Popup must set a definite width; min-width-only lets table 100% fill the viewport',
 		);
 		$this->assertStringContainsString('.crm-datepicker-host', $icons);
-		$this->assertStringContainsString('js/common/datepicker.js', $icons);
+		$this->assertStringContainsString('.form-group .crm-datepicker-host', $icons);
+		$this->assertStringContainsString('align-self: stretch', $icons);
 		$this->assertStringContainsString('display: flex', $icons);
 		$this->assertStringContainsString('align-items: stretch', $icons);
 		$this->assertStringContainsString('align-self: center', $icons);

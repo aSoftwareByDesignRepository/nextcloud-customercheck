@@ -10,8 +10,10 @@ use OCA\CustomerCheck\Db\Activity;
 use OCA\CustomerCheck\Db\ActivityMapper;
 use OCA\CustomerCheck\Db\Agreement;
 use OCA\CustomerCheck\Db\AgreementMapper;
+use OCA\CustomerCheck\Db\CompanyMapper;
 use OCA\CustomerCheck\Db\DealMapper;
 use OCA\CustomerCheck\Db\PersonMapper;
+use OCA\CustomerCheck\Db\WorkspaceMemberMapper;
 use OCA\CustomerCheck\Exception\NotFoundException;
 use OCA\CustomerCheck\Exception\ValidationException;
 use OCA\CustomerCheck\Support\CompanyScopedFk;
@@ -27,7 +29,9 @@ use OCP\IL10N;
  *
  * Every activity carries a due date: a dateless note belongs on the timeline,
  * not in the work queue. `origin` records who created it so the UI can badge
- * automation-created rows as "Auto" (§14.2).
+ * automation-created rows as "Auto" (§14.2). `assignee_user_id` names the
+ * colleague who should act; due reminders target that person (workspace fan-out
+ * remains only for legacy unassigned rows).
  */
 class ActivityService
 {
@@ -42,6 +46,9 @@ class ActivityService
 		private readonly DealMapper $dealMapper,
 		private readonly AgreementMapper $agreementMapper,
 		private readonly PersonMapper $personMapper,
+		private readonly CompanyMapper $companyMapper,
+		private readonly WorkspaceMemberMapper $members,
+		private readonly NotificationService $notifications,
 	) {
 	}
 
@@ -75,15 +82,16 @@ class ActivityService
 	}
 
 	/**
-	 * Mobile may only see its own activities unless the caller is an app admin.
+	 * Mobile may only see activities it created or is assigned to, unless app admin.
 	 *
-	 * @param array{companyId?: int, dealId?: int, type?: string, createdBy?: string, openOnly?: bool, doneOnly?: bool, dueBefore?: \DateTimeInterface, workspaceId?: int} $filters
+	 * @param array{companyId?: int, dealId?: int, type?: string, createdBy?: string, assigneeUserId?: string, createdByOrAssignee?: string, openOnly?: bool, doneOnly?: bool, dueBefore?: \DateTimeInterface, workspaceId?: int} $filters
 	 * @return Activity[]
 	 */
 	public function searchForMobile(string $userId, array $filters = [], int $limit = 500, int $offset = 0): array
 	{
 		if (!$this->accessControl->isAppAdmin($userId)) {
-			$filters['createdBy'] = $userId;
+			$filters['createdByOrAssignee'] = $userId;
+			unset($filters['createdBy'], $filters['assigneeUserId']);
 		}
 
 		return $this->activityMapper->search($filters, $limit, $offset);
@@ -93,12 +101,13 @@ class ActivityService
 	 * Company 360 lite uses the same visibility as the mobile list to avoid
 	 * leaking counts for other users' open tasks.
 	 *
-	 * @param array{companyId?: int, dealId?: int, type?: string, createdBy?: string, openOnly?: bool, doneOnly?: bool, dueBefore?: \DateTimeInterface, workspaceId?: int} $filters
+	 * @param array{companyId?: int, dealId?: int, type?: string, createdBy?: string, assigneeUserId?: string, createdByOrAssignee?: string, openOnly?: bool, doneOnly?: bool, dueBefore?: \DateTimeInterface, workspaceId?: int} $filters
 	 */
 	public function countForMobile(string $userId, array $filters = []): int
 	{
 		if (!$this->accessControl->isAppAdmin($userId)) {
-			$filters['createdBy'] = $userId;
+			$filters['createdByOrAssignee'] = $userId;
+			unset($filters['createdBy'], $filters['assigneeUserId']);
 		}
 
 		return $this->activityMapper->countSearch($filters);
@@ -119,6 +128,11 @@ class ActivityService
 			);
 		}
 
+		// Granny default: you own the to-do unless you pick a colleague (or clear).
+		if (!array_key_exists('assigneeUserId', $input) && !array_key_exists('assignee', $input)) {
+			$input['assigneeUserId'] = $actor;
+		}
+
 		$now = $this->timeFactory->getDateTime();
 		$activity = new Activity();
 		$activity->setCompanyId($companyId);
@@ -129,7 +143,10 @@ class ActivityService
 
 		$this->applyInput($activity, $input);
 
-		return $this->activityMapper->insert($activity);
+		$stored = $this->activityMapper->insert($activity);
+		$this->notifyAssignIfNeeded($stored, $actor, null);
+
+		return $stored;
 	}
 
 	/**
@@ -140,6 +157,7 @@ class ActivityService
 	public function update(int $id, array $input, string $actor, ?string $updatedAtPrecondition): Activity
 	{
 		$this->db->beginTransaction();
+		$prevAssignee = null;
 		try {
 			// Serialize field edits — optimistic stamp alone loses to concurrent writers.
 			if (!$this->activityMapper->lockRow($id)) {
@@ -147,17 +165,20 @@ class ActivityService
 			}
 			$activity = $this->activityMapper->findById($id);
 			OptimisticLock::assertFresh($activity->getUpdatedAt(), $updatedAtPrecondition);
+			$prevAssignee = (string)($activity->getAssigneeUserId() ?? '');
 
 			$this->applyInput($activity, $input);
 			$activity->setUpdatedAt($this->timeFactory->getDateTime());
 			$stored = $this->activityMapper->update($activity);
 			$this->db->commit();
-
-			return $stored;
 		} catch (\Throwable $e) {
 			$this->db->rollBack();
 			throw $e;
 		}
+
+		$this->notifyAssignIfNeeded($stored, $actor, $prevAssignee);
+
+		return $stored;
 	}
 
 	/**
@@ -190,8 +211,8 @@ class ActivityService
 	}
 
 	/**
-	 * App admins may act on every activity. Regular mobile users may only act on
-	 * activities they created themselves.
+	 * App admins may act on every activity. Regular mobile users may act on
+	 * activities they created or are assigned to.
 	 *
 	 * @throws \OCA\CustomerCheck\Exception\AccessDeniedException
 	 */
@@ -201,13 +222,14 @@ class ActivityService
 		if ($this->accessControl->isAppAdmin($userId)) {
 			return $activity;
 		}
-		if ((string)$activity->getCreatedBy() !== $userId) {
-			throw new \OCA\CustomerCheck\Exception\AccessDeniedException(
-				$this->l10n->t('You may only change your own activities in the mobile app.')
-			);
+		$assignee = (string)($activity->getAssigneeUserId() ?? '');
+		$createdBy = (string)($activity->getCreatedBy() ?? '');
+		if ($createdBy === $userId || ($assignee !== '' && $assignee === $userId)) {
+			return $activity;
 		}
-
-		return $activity;
+		throw new \OCA\CustomerCheck\Exception\AccessDeniedException(
+			$this->l10n->t('You may only change activities assigned to you or that you created.')
+		);
 	}
 
 	/**
@@ -533,6 +555,21 @@ class ActivityService
 			$activity->setIsCallback($on ? 1 : 0);
 		}
 
+		if (array_key_exists('assigneeUserId', $input) || array_key_exists('assignee', $input)) {
+			try {
+				$activity->setAssigneeUserId(
+					$this->normaliseAssignee(
+						(int)$activity->getCompanyId(),
+						$input['assigneeUserId'] ?? $input['assignee'] ?? null,
+					),
+				);
+			} catch (ValidationException $e) {
+				foreach ($e->getFields() as $k => $msg) {
+					$fields[$k] = $msg;
+				}
+			}
+		}
+
 		if ($activity->getDueDate() === null) {
 			$fields['dueDate'] = $this->l10n->t('Every activity needs a due date. Use a timeline note for undated remarks.');
 		}
@@ -547,6 +584,73 @@ class ActivityService
 				$fields,
 			);
 		}
+	}
+
+	/**
+	 * @throws ValidationException
+	 */
+	private function normaliseAssignee(int $companyId, mixed $raw): ?string
+	{
+		$uid = trim((string)($raw ?? ''));
+		if ($uid === '') {
+			return null;
+		}
+		try {
+			$company = $this->companyMapper->findById($companyId);
+		} catch (DoesNotExistException) {
+			throw ValidationException::field(
+				Constants::ERR_VALIDATION,
+				'companyId',
+				$this->l10n->t('Pick the company this activity belongs to.'),
+			);
+		}
+		$ws = (int)($company->getWorkspaceId() ?? 0);
+		if ($ws <= 0 || $this->members->findMembershipOrNull($ws, $uid) === null) {
+			throw ValidationException::field(
+				Constants::ERR_VALIDATION,
+				'assigneeUserId',
+				$this->l10n->t('Pick a colleague in this workspace.'),
+			);
+		}
+
+		return $uid;
+	}
+
+	private function notifyAssignIfNeeded(Activity $activity, string $actor, ?string $prevAssignee): void
+	{
+		$uid = trim((string)($activity->getAssigneeUserId() ?? ''));
+		$prev = trim((string)($prevAssignee ?? ''));
+		if ($uid === '' || $uid === $actor || $uid === $prev) {
+			return;
+		}
+		$companyName = '';
+		$workspaceId = 0;
+		try {
+			$company = $this->companyMapper->findById((int)$activity->getCompanyId());
+			$companyName = (string)$company->getName();
+			$workspaceId = (int)($company->getWorkspaceId() ?? 0);
+		} catch (\Throwable) {
+			return;
+		}
+		$this->notifications->notifyUser(
+			$uid,
+			Constants::NOTIFY_ACTIVITY_ASSIGNED,
+			'activity',
+			(string)$activity->getId(),
+			[
+				'workspaceId' => $workspaceId,
+				'companyId' => (int)$activity->getCompanyId(),
+				'companyName' => $companyName,
+				'activityId' => (int)$activity->getId(),
+				'title' => (string)$activity->getTitle(),
+				'dueOn' => $activity->getDueDate()?->format('Y-m-d'),
+			],
+		);
+		$this->timelineService->append((int)$activity->getCompanyId(), 'activity.assigned', $actor, [
+			'activityId' => (int)$activity->getId(),
+			'title' => (string)$activity->getTitle(),
+			'assigneeUserId' => $uid,
+		]);
 	}
 
 	private function normaliseOrigin(string $origin): string

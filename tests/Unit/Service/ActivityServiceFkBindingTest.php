@@ -128,6 +128,14 @@ final class ActivityServiceFkBindingTest extends TestCase
 		$l10n = $this->createMock(IL10N::class);
 		$l10n->method('t')->willReturnCallback(static fn (string $s): string => $s);
 
+		$company = new \OCA\CustomerCheck\Db\Company();
+		$company->setId(1);
+		$company->setWorkspaceId(9);
+		$companies = $this->createMock(\OCA\CustomerCheck\Db\CompanyMapper::class);
+		$companies->method('findById')->willReturn($company);
+		$members = $this->createMock(\OCA\CustomerCheck\Db\WorkspaceMemberMapper::class);
+		$members->method('findMembershipOrNull')->willReturn(new \OCA\CustomerCheck\Db\WorkspaceMember());
+
 		return new ActivityService(
 			$mapper,
 			$this->createMock(AccessControlService::class),
@@ -139,6 +147,9 @@ final class ActivityServiceFkBindingTest extends TestCase
 			$deals,
 			$agreements,
 			$persons,
+			$companies,
+			$members,
+			$this->createMock(\OCA\CustomerCheck\Service\NotificationService::class),
 		);
 	}
 }

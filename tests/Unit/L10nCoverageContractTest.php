@@ -22,6 +22,11 @@ final class L10nCoverageContractTest extends TestCase
 	/** @var list<string> Regional variants mirrored from base catalogs (de_DE etc.). */
 	private const VARIANT_LOCALES = ['en_GB', 'de_DE', 'es_EC', 'es_MX'];
 
+	/** Product/brand names that stay identical in German by convention. */
+	private const IDENTITY_DE_ALLOW = [
+		'Nextcloud Mail' => true,
+	];
+
 	/** @return array{translations: array<string, string>, pluralForm?: string} */
 	private function loadJson(string $lang): array
 	{
@@ -146,7 +151,7 @@ final class L10nCoverageContractTest extends TestCase
 			}
 			if (!array_key_exists($key, $de)) {
 				$missingDe[] = $key;
-			} elseif ($de[$key] === $key && str_contains($key, ' ') && preg_match('/[A-Za-z]{4,}/', $key)) {
+			} elseif (!isset(self::IDENTITY_DE_ALLOW[$key]) && $de[$key] === $key && str_contains($key, ' ') && preg_match('/[A-Za-z]{4,}/', $key)) {
 				// Brand/single tokens may stay identical; multi-word English prose must be translated.
 				$identityDe[] = $key;
 			}

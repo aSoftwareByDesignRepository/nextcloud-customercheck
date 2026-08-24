@@ -36,6 +36,7 @@ final class FacadeProbeServiceCapabilityTest extends TestCase
 			'invoicecheck_detail',
 			'projectcheck_detail',
 			'ticketcheck_detail',
+			'maintenancecheck_detail',
 			'mail_detail',
 		] as $key) {
 			$detail = $matrix[$key];
@@ -43,5 +44,8 @@ final class FacadeProbeServiceCapabilityTest extends TestCase
 			$this->assertFalse($detail['usable']);
 			$this->assertSame('disabled', $detail['reason']);
 		}
+		$this->assertFalse($matrix['maintenancecheck']);
+		$this->assertFalse($matrix['projectcheckWrite']);
+		$this->assertFalse($matrix['ticketcheckWrite']);
 	}
 }

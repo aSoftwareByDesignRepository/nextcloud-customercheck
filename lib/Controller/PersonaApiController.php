@@ -8,7 +8,7 @@ use OCA\CustomerCheck\Service\AccessControlService;
 use OCA\CustomerCheck\Service\AccountPlanService;
 use OCA\CustomerCheck\Service\BriefService;
 use OCA\CustomerCheck\Service\ChaseService;
-use OCA\CustomerCheck\Service\CirclesRollCallService;
+use OCA\CustomerCheck\Service\PromisesRollCallService;
 use OCA\CustomerCheck\Service\CoachingService;
 use OCA\CustomerCheck\Service\CompanyService;
 use OCA\CustomerCheck\Service\CoverageService;
@@ -58,7 +58,7 @@ class PersonaApiController extends Controller
 		private readonly MailDraftService $mailDrafts,
 		private readonly AccountPlanService $plans,
 		private readonly EscalationService $escalations,
-		private readonly CirclesRollCallService $circles,
+		private readonly PromisesRollCallService $promisesRollCall,
 		private readonly CompanyService $companies,
 		private readonly \OCA\CustomerCheck\Service\OneOnOneService $oneOnOne,
 		private readonly DirectoryOptionsService $directory,
@@ -482,14 +482,14 @@ class PersonaApiController extends Controller
 	}
 
 	#[NoAdminRequired]
-	public function circlesRollCall(): JSONResponse
+	public function promisesRollCall(): JSONResponse
 	{
 		try {
 			$uid = $this->access->currentUserId();
 			if (!$this->access->isAppAdmin($uid)) {
 				return $this->fail('WS_ROLE_DENIED', 'Only app administrators can open the weekly promise check.', [], 403);
 			}
-			return $this->ok(['items' => $this->circles->build()]);
+			return $this->ok(['items' => $this->promisesRollCall->build()]);
 		} catch (\Throwable $e) {
 			return $this->fromThrowable($e);
 		}

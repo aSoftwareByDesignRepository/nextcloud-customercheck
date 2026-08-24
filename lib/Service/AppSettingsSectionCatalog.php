@@ -25,29 +25,6 @@ final class AppSettingsSectionCatalog
 		'personal-mail',
 	];
 
-	/**
-	 * Legacy mega-page anchors → section slug.
-	 *
-	 * @var array<string, string>
-	 */
-	public const LEGACY_ANCHORS = [
-		'section-access' => 'access',
-		'section-access-heading' => 'access',
-		'crm-settings-access-form' => 'access',
-		'section-jobs' => 'jobs',
-		'section-jobs-heading' => 'jobs',
-		'crm-settings-jobs-form' => 'jobs',
-		'section-tokens' => 'tokens',
-		'section-tokens-heading' => 'tokens',
-		'section-license' => 'license',
-		'section-license-heading' => 'license',
-		'crm-license-form' => 'license',
-		'section-product-codes' => 'product-codes',
-		'crm-product-codes-form' => 'product-codes',
-		'section-personal-mail' => 'personal-mail',
-		'crm-personal-mail-oauth-form' => 'personal-mail',
-	];
-
 	public function isSection(string $section): bool
 	{
 		return in_array($section, self::SECTIONS, true);

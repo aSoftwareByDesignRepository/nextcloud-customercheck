@@ -32,10 +32,6 @@ final class Identity360SurfaceIntegrationTest extends TestCase
 		if (!isset(\OC::$server)) {
 			return;
 		}
-		try {
-			\OC::$server->get(IUserSession::class)->setUser(null);
-		} catch (\Throwable) {
-		}
 		$companies = \OC::$server->get(CompanyService::class);
 		foreach (array_reverse($this->cleanup) as $row) {
 			try {

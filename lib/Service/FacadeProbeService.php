@@ -159,6 +159,11 @@ class FacadeProbeService
 			SiblingFacadeContracts::TICKET_CHECK_WRITE_MIN_VERSION,
 		);
 		$mailOn = $this->mailAvailable();
+		$mn = $this->probeApp(
+			SiblingFacadeContracts::MAINTENANCE_CHECK_APP,
+			SiblingFacadeContracts::MAINTENANCE_CHECK_IDENTITY_FACADE,
+			SiblingFacadeContracts::MAINTENANCE_CHECK_IDENTITY_MIN_VERSION,
+		);
 
 		return [
 			'sbdlicenseops' => $sbd['usable'],
@@ -167,6 +172,7 @@ class FacadeProbeService
 			'ticketcheck' => $tc['usable'],
 			'projectcheckWrite' => $pcWrite['usable'],
 			'ticketcheckWrite' => $tcWrite['usable'],
+			'maintenancecheck' => $mn['usable'],
 			'mail' => $mailOn,
 			'sbdlicenseops_detail' => $sbd,
 			'invoicecheck_detail' => $inv,
@@ -174,6 +180,7 @@ class FacadeProbeService
 			'ticketcheck_detail' => $tc,
 			'projectcheckWrite_detail' => $pcWrite,
 			'ticketcheckWrite_detail' => $tcWrite,
+			'maintenancecheck_detail' => $mn,
 			'mail_detail' => [
 				'available' => $mailOn,
 				'usable' => $mailOn,

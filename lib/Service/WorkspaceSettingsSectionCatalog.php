@@ -22,38 +22,8 @@ final class WorkspaceSettingsSectionCatalog
 		'preferences',
 		'checklists',
 		'review-sources',
-		'circles',
+		'promises',
 		'integrations',
-	];
-
-	/**
-	 * Legacy mega-page anchors → section slug.
-	 *
-	 * @var array<string, string>
-	 */
-	public const LEGACY_ANCHORS = [
-		'section-my-email' => 'my-email',
-		'section-my-email-heading' => 'my-email',
-		'crm-ws-personal-mail-mine' => 'my-email',
-		'crm-ws-personal-mail-mine-title' => 'my-email',
-		'section-workspace-mailbox' => 'mailbox',
-		'section-workspace-mailbox-heading' => 'mailbox',
-		'crm-ws-current' => 'mailbox',
-		'crm-mailbox-form' => 'mailbox',
-		'crm-value-maps' => 'mailbox',
-		'section-preferences' => 'preferences',
-		'section-preferences-heading' => 'preferences',
-		'crm-settings-me-form' => 'preferences',
-		'section-checklists' => 'checklists',
-		'section-checklists-heading' => 'checklists',
-		'crm-checklist-templates' => 'checklists',
-		'crm-review-sources' => 'review-sources',
-		'crm-review-sources-title' => 'review-sources',
-		'section-circles-roll-call' => 'circles',
-		'section-circles-heading' => 'circles',
-		'crm-circles-roll-call' => 'circles',
-		'section-integrations' => 'integrations',
-		'section-integrations-heading' => 'integrations',
 	];
 
 	public function isSection(string $section): bool
@@ -70,7 +40,7 @@ final class WorkspaceSettingsSectionCatalog
 	{
 		return match ($section) {
 			'my-email', 'preferences', 'integrations' => true,
-			'mailbox', 'checklists', 'review-sources', 'circles' => $canManageWorkspace,
+			'mailbox', 'checklists', 'review-sources', 'promises' => $canManageWorkspace,
 			default => false,
 		};
 	}
@@ -96,7 +66,7 @@ final class WorkspaceSettingsSectionCatalog
 			'preferences' => $l->t('Your preferences'),
 			'checklists' => $l->t('Checklist templates'),
 			'review-sources' => $l->t('Assign inbox sources'),
-			'circles' => $l->t('Weekly promise check'),
+			'promises' => $l->t('Weekly promise check'),
 			'integrations' => $l->t('Integrations'),
 			default => $l->t('Team & mailbox'),
 		};
@@ -110,7 +80,7 @@ final class WorkspaceSettingsSectionCatalog
 			'preferences' => $l->t('Preferences'),
 			'checklists' => $l->t('Checklists'),
 			'review-sources' => $l->t('Assign sources'),
-			'circles' => $l->t('Promises'),
+			'promises' => $l->t('Promises'),
 			'integrations' => $l->t('Integrations'),
 			default => $l->t('Settings'),
 		};
@@ -124,7 +94,7 @@ final class WorkspaceSettingsSectionCatalog
 			'preferences' => $l->t('How deals look for you.'),
 			'checklists' => $l->t('Reusable step lists for any deal — licenses, services, hardware, mixed carts. Make once, use on every order.'),
 			'review-sources' => $l->t('Which inboxes and folders feed Assign.'),
-			'circles' => $l->t('Who owes a weekly promise check.'),
+			'promises' => $l->t('Who owes a weekly promise check.'),
 			'integrations' => $l->t('Linked Check apps and how they show on companies.'),
 			default => $l->t('Preferences, members, mailbox, and integrations.'),
 		};

@@ -9,6 +9,7 @@
 
 .crm-datepicker {
 	position: fixed;
+	/* Above page chrome; Popover top-layer still wins over showModal() dialogs. */
 	z-index: 11000;
 	box-sizing: border-box;
 	width: min(24rem, calc(100vw - 1rem));
@@ -20,6 +21,20 @@
 	border-radius: var(--crm-radius-md, 12px);
 	box-shadow: var(--crm-shadow-md);
 	overflow: hidden;
+}
+
+/*
+ * UA popover stylesheet (inset:0; margin:auto) fights anchor positioning.
+ * Keep fixed + our left/top from JS. Closed popovers must not paint.
+ */
+.crm-datepicker[popover] {
+	inset: auto;
+	margin: 0;
+	overflow: hidden;
+}
+
+.crm-datepicker[popover]:not(:popover-open) {
+	display: none !important;
 }
 
 .crm-datepicker__header {

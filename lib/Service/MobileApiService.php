@@ -228,7 +228,11 @@ class MobileApiService
 		$deals = [];
 		if ($this->deals !== null) {
 			foreach ($this->deals->search(['companyId' => $companyId, 'workspaceId' => (int)($company->getWorkspaceId() ?? 0)], 200) as $deal) {
-				$deals[] = self::serialiseDeal($deal, fn ($d): bool => $this->deals->isStale($d));
+				$deals[] = self::serialiseDeal(
+					$deal,
+					fn ($d): bool => $this->deals->isStale($d),
+					$this->deals->staleDealDays(),
+				);
 			}
 		}
 
@@ -312,6 +316,8 @@ class MobileApiService
 			'dueDate' => $a->getDueDate()?->format('Y-m-d'),
 			'doneAt' => OptimisticLock::format($a->getDoneAt()),
 			'origin' => (string)$a->getOrigin(),
+			'assigneeUserId' => $a->getAssigneeUserId(),
+			'createdBy' => $a->getCreatedBy(),
 			'updatedAt' => OptimisticLock::format($a->getUpdatedAt()),
 		];
 	}
@@ -341,8 +347,18 @@ class MobileApiService
 	 * @param callable(Deal): bool $isStale
 	 * @return array<string, mixed>
 	 */
-	public static function serialiseDeal(Deal $deal, callable $isStale): array
+	public static function serialiseDeal(Deal $deal, callable $isStale, int $staleDays = 14, ?\DateTimeInterface $now = null): array
 	{
+		$now = $now ?? new \DateTimeImmutable('now');
+		$fresh = DealFreshnessLogic::snapshot(
+			$deal->getCreatedAt(),
+			$deal->getUpdatedAt(),
+			$deal->getStageChangedAt(),
+			(string)$deal->getStage(),
+			$staleDays,
+			$now,
+		);
+
 		return [
 			'id' => (int)$deal->getId(),
 			'title' => (string)$deal->getTitle(),
@@ -356,6 +372,11 @@ class MobileApiService
 			'lostReason' => $deal->getLostReason(),
 			'lostReasonCode' => $deal->getLostReasonCode(),
 			'stale' => $isStale($deal),
+			'rotting' => $fresh['rotting'],
+			'createdAt' => $fresh['createdAt'],
+			'ageDays' => $fresh['ageDays'],
+			'idleDays' => $fresh['idleDays'],
+			'stageIdleDays' => $fresh['stageIdleDays'],
 			'updatedAt' => OptimisticLock::format($deal->getUpdatedAt()),
 		];
 	}

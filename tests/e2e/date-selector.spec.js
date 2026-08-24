@@ -123,4 +123,81 @@ test.describe('Date and time selectors', () => {
     const dayBox = await day.boundingBox();
     expect(dayBox && dayBox.height).toBeGreaterThanOrEqual(44);
   });
+
+  test('Calendar opens above a native dialog (top layer), not behind it', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await login(page, credsFromEnv('ADMIN'));
+    await gotoCrm(page, '/apps/customercheck/pipeline');
+    await expect(page.locator('#crm-pipeline-toolbar')).toBeVisible({ timeout: 15000 });
+
+    const newDeal = page.locator('#crm-pipeline-new-deal');
+    await expect(newDeal).toBeVisible({ timeout: 15000 });
+    await newDeal.click();
+
+    const dialog = page.locator('dialog.crm-native-dialog[open]').first();
+    await expect(dialog).toBeVisible({ timeout: 15000 });
+
+    // Expected close lives under Bachus “More options” (collapsed by default).
+    const more = dialog.locator('details.crm-advanced, details.crm-new-deal__more').first();
+    await expect(more).toBeAttached({ timeout: 10000 });
+    await more.locator('summary').click();
+    await expect(more).toHaveAttribute('open', '');
+
+    const host = dialog.locator('.crm-datepicker-host').first();
+    await expect(host).toBeVisible({ timeout: 15000 });
+    const toggle = host.locator('.crm-datepicker-toggle');
+    await expect(toggle).toBeVisible({ timeout: 10000 });
+    await toggle.click();
+
+    const cal = page.locator('.crm-datepicker[role="dialog"]');
+    await expect(cal).toBeVisible({ timeout: 10000 });
+
+    const layering = await page.evaluate(() => {
+      const calendar = document.querySelector('.crm-datepicker[role="dialog"]');
+      const modal = document.querySelector('dialog.crm-native-dialog[open]');
+      if (!(calendar instanceof HTMLElement) || !(modal instanceof HTMLElement)) {
+        return { ok: false, reason: 'missing-nodes' };
+      }
+      const calRect = calendar.getBoundingClientRect();
+      if (calRect.width < 200 || calRect.height < 160) {
+        return { ok: false, reason: 'calendar-too-small', w: calRect.width, h: calRect.height };
+      }
+      // Hit-test the calendar's own center — do NOT clamp into the modal box
+      // (the popup often sits below/beside the dialog panel).
+      const cx = calRect.left + calRect.width / 2;
+      const cy = calRect.top + calRect.height / 2;
+      const topEl = document.elementFromPoint(cx, cy);
+      const calendarOnTop = !!(topEl && (calendar === topEl || calendar.contains(topEl)));
+      const coveredByModal = !!(topEl && modal.contains(topEl) && !calendar.contains(topEl));
+      const popoverOpen = calendar.matches(':popover-open');
+      const insideDialog = modal.contains(calendar);
+      const inTopLayer = popoverOpen || insideDialog;
+      return {
+        ok: calendarOnTop && inTopLayer && !coveredByModal,
+        calendarOnTop,
+        coveredByModal,
+        inTopLayer,
+        popoverOpen,
+        insideDialog,
+        reason: calendarOnTop ? '' : ('top=' + (topEl && (topEl.className || topEl.tagName))),
+        calTop: Math.round(calRect.top),
+        calLeft: Math.round(calRect.left),
+      };
+    });
+
+    expect(layering, JSON.stringify(layering)).toMatchObject({
+      ok: true,
+      coveredByModal: false,
+      insideDialog: true,
+    });
+    expect(layering.inTopLayer).toBe(true);
+
+    const enabledDay = cal.locator('button.crm-datepicker__day:not([disabled])').nth(8);
+    await expect(enabledDay).toBeVisible();
+    await enabledDay.click();
+    await expect(cal).toHaveCount(0);
+    await expect(dialog).toBeVisible();
+
+    await page.keyboard.press('Escape');
+  });
 });

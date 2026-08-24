@@ -48,7 +48,9 @@ final class MobilePushServiceTest extends TestCase
 		self::assertTrue(MobilePushService::isPushSubject(Constants::NOTIFY_REMINDER));
 		self::assertTrue(MobilePushService::isPushSubject(Constants::NOTIFY_DIGEST));
 		self::assertTrue(MobilePushService::isPushSubject(Constants::NOTIFY_ACTIVITY_DUE));
+		self::assertTrue(MobilePushService::isPushSubject(Constants::NOTIFY_ACTIVITY_ASSIGNED));
 		self::assertTrue(MobilePushService::isPushSubject(Constants::NOTIFY_DEAL_CHECKLIST));
+		self::assertTrue(MobilePushService::isPushSubject(Constants::NOTIFY_DEAL_ROTTING));
 		self::assertFalse(MobilePushService::isPushSubject(Constants::NOTIFY_LEAD));
 		self::assertFalse(MobilePushService::isPushSubject(Constants::NOTIFY_QUOTA80));
 	}

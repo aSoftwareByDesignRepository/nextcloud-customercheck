@@ -412,18 +412,22 @@ final class PageQuickStartCatalog
 				],
 			],
 			'settings' => [
-				'lead' => $l->t('Start with people and the shared mailbox — preferences come after.'),
+				'lead' => $l->t('Use the chips above — team mailbox for managers, preferences for everyone.'),
 				'steps' => [
 					[
-						'title' => $l->t('1. Add workspace members'),
-						'text' => $l->t('Managers, members, and viewers see different Team and write tools. Start with real people.'),
+						'title' => $l->t('1. Team mailbox (managers)'),
+						'text' => $l->t('Add members and set up the shared inbox under Team mailbox. That powers Assign mail.'),
+						'href' => $link('settingsSection', ['section' => 'mailbox']),
+						'linkLabel' => $l->t('Open Team mailbox'),
 					],
 					[
-						'title' => $l->t('2. Configure mailbox if shared'),
-						'text' => $l->t('Shared mailbox powers Assign mail. Keep credentials in Team & mailbox — never in chat.'),
+						'title' => $l->t('2. My email'),
+						'text' => $l->t('When managers allow personal sync, connect your inbox and pick folders here.'),
+						'href' => $link('settingsSection', ['section' => 'my-email']),
+						'linkLabel' => $l->t('Open My email'),
 					],
 					[
-						'title' => $l->t('3. Personal preference'),
+						'title' => $l->t('3. Preferences'),
 						'text' => $l->t('Pick table or board as your default deals view. Access policy and seats live under App settings.'),
 						'href' => $link('appSettings'),
 						'linkLabel' => $l->t('Open App settings'),

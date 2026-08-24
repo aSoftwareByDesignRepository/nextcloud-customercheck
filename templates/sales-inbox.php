@@ -165,6 +165,26 @@ include __DIR__ . '/common/page-start.php';
 								<button type="button" class="crm-btn crm-btn--ghost crm-btn--lg" id="crm-sales-inbox-no-relation"><?php p($l->t('No company')); ?></button>
 							</div>
 						</form>
+
+						<details class="crm-advanced crm-sales-inbox__create-company" id="crm-sales-inbox-create-wrap">
+							<summary class="crm-advanced__summary" id="crm-sales-inbox-create-summary"><?php p($l->t('Company not listed? Create one here')); ?></summary>
+							<div class="crm-sales-inbox__create-body">
+								<p class="crm-muted crm-sales-inbox__create-lead" id="crm-sales-inbox-create-lead"><?php p($l->t('Add a new company and assign this message in one step.')); ?></p>
+								<label class="crm-sales-compose__label" for="crm-sales-inbox-create-name"><?php p($l->t('Name')); ?></label>
+								<input
+									type="text"
+									id="crm-sales-inbox-create-name"
+									class="crm-input crm-input--lg"
+									autocomplete="organization"
+									maxlength="255"
+									aria-describedby="crm-sales-inbox-create-lead crm-sales-inbox-create-error" />
+								<p class="crm-form-error crm-sales-inbox__create-error" id="crm-sales-inbox-create-error" role="alert" hidden></p>
+								<div class="crm-form-actions crm-sales-inbox__create-actions">
+									<button type="button" class="crm-btn crm-btn--primary crm-btn--lg" id="crm-sales-inbox-create-assign" disabled><?php p($l->t('Create and assign')); ?></button>
+								</div>
+							</div>
+						</details>
+
 						<p class="crm-muted crm-sales-inbox__decide-ro" id="crm-sales-inbox-decide-ro" hidden><?php p($l->t('View only — ask a member to assign this.')); ?></p>
 					</section>
 

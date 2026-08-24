@@ -166,7 +166,7 @@ test.describe('Bachus whole-app effortless flows', () => {
     await expect(page.locator('#crm-page-actions #crm-my-accounts-add, #crm-my-accounts-add').first()).toContainText(/Add customer|Kunde hinzufügen|Kunden hinzufügen/i);
     await axeMain(page);
 
-    // Workspace settings are split (SETTINGS-PAGES-STANDARD): mailbox first, promises on /settings/circles.
+    // Workspace settings are split (SETTINGS-PAGES-STANDARD): mailbox first, promises on /settings/promises.
     await page.goto('/apps/customercheck/settings/mailbox');
     await page.waitForSelector('#section-workspace-mailbox', { timeout: 30000 });
     await expect(page.getByText(/^Slug$/i)).toHaveCount(0);
@@ -186,15 +186,15 @@ test.describe('Bachus whole-app effortless flows', () => {
     const settingsNav = page.locator('#crm-settings-pages');
     await expect(settingsNav.locator('a[href*="/settings/mailbox"]')).toBeVisible();
     await expect(settingsNav.locator('a[href*="/settings/my-email"]')).toBeVisible();
-    await expect(settingsNav.locator('a[href*="/settings/circles"]')).toBeVisible();
+    await expect(settingsNav.locator('a[href*="/settings/promises"]')).toBeVisible();
     const hasPresent = await page.evaluate(() => !!(window.CustomerCheckMailboxSettingsPresent && typeof window.CustomerCheckMailboxSettingsPresent.buildMailboxListRows === 'function'));
     expect(hasPresent).toBeTruthy();
     await axeMain(page);
 
-    await page.goto('/apps/customercheck/settings/circles');
-    await page.waitForSelector('#section-circles-roll-call', { timeout: 30000 });
-    await expect(page.locator('#section-circles-heading')).toBeVisible();
-    await expect(page.locator('#section-circles-heading')).toContainText(/Weekly promise check|Wöchentliche Zusagen/i);
+    await page.goto('/apps/customercheck/settings/promises');
+    await page.waitForSelector('#section-promises-roll-call', { timeout: 30000 });
+    await expect(page.locator('#section-promises-heading')).toBeVisible();
+    await expect(page.locator('#section-promises-heading')).toContainText(/Weekly promise check|Wöchentliche Zusagen/i);
     await axeMain(page);
   });
 

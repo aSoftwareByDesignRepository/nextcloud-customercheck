@@ -94,28 +94,13 @@ final class SettingsPagesContractTest extends TestCase
 		}
 	}
 
-	public function testLegacyJsAnchorsMatchCatalog(): void
+	public function testNoLegacyMegaPageRedirectScripts(): void
 	{
-		$wsJs = self::read('js/workspace-settings-legacy-redirect.js');
-		foreach (WorkspaceSettingsSectionCatalog::LEGACY_ANCHORS as $anchor => $section) {
-			self::assertStringContainsString("'" . $anchor . "': '" . $section . "'", $wsJs);
-		}
-		$appJs = self::read('js/app-settings-legacy-redirect.js');
-		foreach (AppSettingsSectionCatalog::LEGACY_ANCHORS as $anchor => $section) {
-			self::assertStringContainsString("'" . $anchor . "': '" . $section . "'", $appJs);
-		}
-	}
-
-	public function testSettingsJsConsumesLegacyRedirectsFirst(): void
-	{
+		self::assertFileDoesNotExist(self::appRoot() . '/js/workspace-settings-legacy-redirect.js');
+		self::assertFileDoesNotExist(self::appRoot() . '/js/app-settings-legacy-redirect.js');
 		$js = self::read('js/pages/settings.js');
-		self::assertStringContainsString('CustomerCheckWorkspaceSettingsLegacyRedirect', $js);
-		self::assertStringContainsString('CustomerCheckAppSettingsLegacyRedirect', $js);
-		$legacyPos = strpos($js, 'CustomerCheckWorkspaceSettingsLegacyRedirect');
-		$rootPos = strpos($js, "getElementById('crm-settings-root')");
-		self::assertNotFalse($legacyPos);
-		self::assertNotFalse($rootPos);
-		self::assertLessThan($rootPos, $legacyPos);
+		self::assertStringNotContainsString('CustomerCheckWorkspaceSettingsLegacyRedirect', $js);
+		self::assertStringNotContainsString('CustomerCheckAppSettingsLegacyRedirect', $js);
 	}
 
 	public function testPageChromeExposesSectionDataAttributes(): void
@@ -134,10 +119,16 @@ final class SettingsPagesContractTest extends TestCase
 		self::assertStringContainsString('appSettingsSection(string $section)', $controller);
 		self::assertStringContainsString('WorkspaceSettingsSectionCatalog', $controller);
 		self::assertStringContainsString('AppSettingsSectionCatalog', $controller);
-		self::assertStringContainsString('workspace-settings-legacy-redirect', $controller);
-		self::assertStringContainsString('app-settings-legacy-redirect', $controller);
+		self::assertStringNotContainsString('workspace-settings-legacy-redirect', $controller);
+		self::assertStringNotContainsString('app-settings-legacy-redirect', $controller);
 		$shell = self::read('lib/Controller/PageShellTrait.php');
 		self::assertStringContainsString("'settingsSections'", $shell);
 		self::assertStringContainsString("'appSettingsSections'", $shell);
+	}
+
+	public function testPromisesRollCallApiRouteRegistered(): void
+	{
+		$route = self::routeByName('persona_api#promisesRollCall');
+		self::assertSame('/api/v1/promises-roll-call', $route['url']);
 	}
 }

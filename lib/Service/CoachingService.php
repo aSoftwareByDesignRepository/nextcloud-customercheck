@@ -216,13 +216,16 @@ class CoachingService
 	/**
 	 * Bulk reassign — atomic, ≤200, confirm by typing from-user name.
 	 *
-	 * Accepts either explicit id lists **or** `entityTypes` (deals/accounts/promises/commitments)
+	 * Accepts either explicit id lists **or** `entityTypes` (deals/accounts/promises/commitments/checklist/activities)
 	 * which resolves owned open work for `$from` inside the workspace.
+	 *
+	 * Activities have no `workspace_id` — scoped via company join (same ACL pattern as deals).
 	 *
 	 * @param array{
 	 *   fromUserId?: string, toUserId?: string, confirmName?: string,
 	 *   fromUser?: string, toUser?: string, confirmFromUserName?: string,
 	 *   dealIds?: list<int>, companyIds?: list<int>, promiseIds?: list<int>, commitmentIds?: list<int>,
+	 *   checklistItemIds?: list<int>, activityIds?: list<int>,
 	 *   entityTypes?: list<string>
 	 * } $data
 	 */
@@ -234,11 +237,17 @@ class CoachingService
 		if ($from === '' || $to === '' || !hash_equals($from, $confirm)) {
 			throw ValidationException::field(Constants::ERR_VALIDATION, 'confirmName', $this->l10n->t('Confirm reassignment from the selected colleague before continuing.'));
 		}
+		if ($from === $to) {
+			throw ValidationException::field(Constants::ERR_VALIDATION, 'toUserId', $this->l10n->t('Pick a different colleague to receive the work.'));
+		}
+		$this->assertWorkspaceMember($workspaceId, $to, 'toUserId');
+
 		$dealIds = array_values(array_map('intval', $data['dealIds'] ?? []));
 		$companyIds = array_values(array_map('intval', $data['companyIds'] ?? []));
 		$promiseIds = array_values(array_map('intval', $data['promiseIds'] ?? []));
 		$commitmentIds = array_values(array_map('intval', $data['commitmentIds'] ?? []));
 		$checklistIds = array_values(array_map('intval', $data['checklistItemIds'] ?? $data['checklistIds'] ?? []));
+		$activityIds = array_values(array_map('intval', $data['activityIds'] ?? []));
 		$types = array_values(array_filter(array_map('strval', $data['entityTypes'] ?? [])));
 
 		if ($types !== []) {
@@ -259,6 +268,11 @@ class CoachingService
 					$checklistIds = array_values(array_unique(array_merge($checklistIds, $this->idsOwnedBy($workspaceId, 'crm_deal_cl_item', 'assignee_user_id', $from, false, 'open'))));
 				}
 			}
+			if (in_array('activities', $types, true) || in_array('activity', $types, true) || in_array('todos', $types, true)) {
+				if ($this->db->tableExists('crm_activity')) {
+					$activityIds = array_values(array_unique(array_merge($activityIds, $this->idsOwnedBy($workspaceId, 'crm_activity', 'assignee_user_id', $from, true))));
+				}
+			}
 		}
 
 		$scopedDealIds = $this->filterDealIdsInWorkspace($workspaceId, $dealIds, $from);
@@ -268,12 +282,17 @@ class CoachingService
 		$scopedChecklistIds = $this->db->tableExists('crm_deal_cl_item')
 			? $this->filterOwnedRowsInWorkspace($workspaceId, 'crm_deal_cl_item', 'assignee_user_id', $checklistIds, $from)
 			: [];
+		$scopedActivityIds = $this->db->tableExists('crm_activity')
+			? $this->filterActivityIdsInWorkspace($workspaceId, $activityIds, $from)
+			: [];
 		// Recompute total after ACL filter so cross-WS junk cannot pad the count.
-		$total = count($scopedDealIds) + count($scopedCompanyIds) + count($scopedPromiseIds) + count($scopedCommitmentIds) + count($scopedChecklistIds);
+		$total = count($scopedDealIds) + count($scopedCompanyIds) + count($scopedPromiseIds)
+			+ count($scopedCommitmentIds) + count($scopedChecklistIds) + count($scopedActivityIds);
 		if ($total === 0 || $total > Constants::BULK_REASSIGN_MAX) {
 			throw ValidationException::field(Constants::ERR_BULK_TOO_LARGE, 'bulk', $this->l10n->t('Select 1–200 items to reassign.'));
 		}
 
+		$now = $this->timeFactory->getDateTime()->format('Y-m-d H:i:s');
 		$this->db->beginTransaction();
 		try {
 			$dealAffected = 0;
@@ -325,7 +344,18 @@ class CoachingService
 					->andWhere($qb->expr()->eq('assignee_user_id', $qb->createNamedParameter($from)))
 					->executeStatement();
 			}
-			$affected = $dealAffected + $companyAffected + $promiseAffected + $commitmentAffected + $checklistAffected;
+			$activityAffected = 0;
+			foreach ($scopedActivityIds as $id) {
+				$qb = $this->db->getQueryBuilder();
+				$activityAffected += $qb->update('crm_activity')
+					->set('assignee_user_id', $qb->createNamedParameter($to))
+					->set('updated_at', $qb->createNamedParameter($now))
+					->where($qb->expr()->eq('id', $qb->createNamedParameter($id)))
+					->andWhere($qb->expr()->eq('assignee_user_id', $qb->createNamedParameter($from)))
+					->andWhere($qb->expr()->isNull('done_at'))
+					->executeStatement();
+			}
+			$affected = $dealAffected + $companyAffected + $promiseAffected + $commitmentAffected + $checklistAffected + $activityAffected;
 			// Concurrent claim/edit between filter and UPDATE must not report fake success.
 			if ($affected !== $total) {
 				$this->db->rollBack();
@@ -343,6 +373,7 @@ class CoachingService
 			throw $e;
 		}
 		$this->notifyChecklistBulkReassign($workspaceId, $scopedChecklistIds, $to, $actor);
+		$this->notifyActivityBulkReassign($workspaceId, $scopedActivityIds, $to, $actor);
 
 		return [
 			'reassigned' => $affected,
@@ -355,6 +386,7 @@ class CoachingService
 				'promises' => $promiseAffected,
 				'commitments' => $commitmentAffected,
 				'checklistItems' => $checklistAffected,
+				'activities' => $activityAffected,
 			],
 		];
 	}
@@ -388,6 +420,53 @@ class CoachingService
 		}
 		$r->closeCursor();
 		return $ids;
+	}
+
+	/**
+	 * Restrict open activity ids to this workspace + from-assignee (company join — no workspace_id on crm_activity).
+	 *
+	 * @param list<int> $activityIds
+	 * @return list<int>
+	 */
+	private function filterActivityIdsInWorkspace(int $workspaceId, array $activityIds, string $from): array
+	{
+		$activityIds = array_values(array_unique(array_filter(array_map('intval', $activityIds), static fn (int $id): bool => $id > 0)));
+		if ($activityIds === [] || !$this->db->tableExists('crm_activity')) {
+			return [];
+		}
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('a.id')
+			->from('crm_activity', 'a')
+			->innerJoin('a', 'crm_company', 'c', $qb->expr()->eq('a.company_id', 'c.id'))
+			->where($qb->expr()->eq('c.workspace_id', $qb->createNamedParameter($workspaceId)))
+			->andWhere($qb->expr()->eq('a.assignee_user_id', $qb->createNamedParameter($from)))
+			->andWhere($qb->expr()->isNull('a.done_at'))
+			->andWhere($qb->expr()->in(
+				'a.id',
+				$qb->createNamedParameter($activityIds, IQueryBuilder::PARAM_INT_ARRAY),
+			));
+		$r = $qb->executeQuery();
+		$ids = [];
+		while ($row = $r->fetch()) {
+			$ids[] = (int)$row['id'];
+		}
+		$r->closeCursor();
+
+		return $ids;
+	}
+
+	private function assertWorkspaceMember(int $workspaceId, string $userId, string $field): void
+	{
+		foreach ($this->workspaces->listMembers($workspaceId) as $m) {
+			if ((string)$m->getUserId() === $userId) {
+				return;
+			}
+		}
+		throw ValidationException::field(
+			Constants::ERR_VALIDATION,
+			$field,
+			$this->l10n->t('Pick a colleague in this workspace.'),
+		);
 	}
 
 	/**
@@ -450,6 +529,9 @@ class CoachingService
 			if ($table === 'crm_deal') {
 				$qb->andWhere($qb->expr()->neq('d.stage', $qb->createNamedParameter('won')))
 					->andWhere($qb->expr()->neq('d.stage', $qb->createNamedParameter('lost')));
+			}
+			if ($table === 'crm_activity') {
+				$qb->andWhere($qb->expr()->isNull('d.done_at'));
 			}
 		} else {
 			$qb->select('id')->from($table)
@@ -622,6 +704,56 @@ class CoachingService
 					'checklistItemId' => $itemId,
 					'title' => (string)($row['item_title'] ?? ''),
 					'dueOn' => $row['due_on'] !== null ? (string)$row['due_on'] : null,
+				],
+			);
+		}
+		$r->closeCursor();
+	}
+
+	/**
+	 * After bulk activity assignee move — wake the new assignee once per open to-do.
+	 *
+	 * @param list<int> $activityIds
+	 */
+	private function notifyActivityBulkReassign(int $workspaceId, array $activityIds, string $toUserId, string $actor): void
+	{
+		if ($this->notifications === null || $activityIds === [] || $toUserId === '' || $toUserId === $actor) {
+			return;
+		}
+		if (!$this->db->tableExists('crm_activity')) {
+			return;
+		}
+		$qb = $this->db->getQueryBuilder();
+		$params = [];
+		foreach ($activityIds as $i => $id) {
+			$params[] = $qb->createNamedParameter((int)$id, null, 'aid' . $i);
+		}
+		$qb->select('a.id')
+			->selectAlias('a.title', 'activity_title')
+			->selectAlias('a.company_id', 'company_id')
+			->selectAlias('a.due_date', 'due_date')
+			->selectAlias('c.name', 'company_name')
+			->from('crm_activity', 'a')
+			->innerJoin('a', 'crm_company', 'c', $qb->expr()->eq('a.company_id', 'c.id'))
+			->where($qb->expr()->eq('c.workspace_id', $qb->createNamedParameter($workspaceId)))
+			->andWhere($qb->expr()->eq('a.assignee_user_id', $qb->createNamedParameter($toUserId)))
+			->andWhere($qb->expr()->isNull('a.done_at'))
+			->andWhere($qb->expr()->in('a.id', $params));
+		$r = $qb->executeQuery();
+		while ($row = $r->fetch()) {
+			$activityId = (int)$row['id'];
+			$this->notifications->notifyUser(
+				$toUserId,
+				Constants::NOTIFY_ACTIVITY_ASSIGNED,
+				'activity',
+				(string)$activityId,
+				[
+					'workspaceId' => $workspaceId,
+					'companyId' => (int)$row['company_id'],
+					'companyName' => (string)($row['company_name'] ?? ''),
+					'activityId' => $activityId,
+					'title' => (string)($row['activity_title'] ?? ''),
+					'dueOn' => $row['due_date'] !== null ? (string)$row['due_date'] : null,
 				],
 			);
 		}

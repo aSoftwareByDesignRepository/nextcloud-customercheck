@@ -68,13 +68,27 @@ $serverTz = (string)(($_['clientHints']['timezone'] ?? null) ?: (date_default_ti
 				</div>
 				<div class="form-group">
 					<label for="crm-stale-days" class="form-label"><?php p($l->t('Stale deal days')); ?></label>
-					<input type="number" id="crm-stale-days" name="stale_deal_days" class="form-input crm-input" min="1" max="365" value="<?php p((int)($settings['stale_deal_days'] ?? 14)); ?>">
+					<input type="number" id="crm-stale-days" name="stale_deal_days" class="form-input crm-input" min="1" max="365" value="<?php p((int)($settings['stale_deal_days'] ?? 14)); ?>" aria-describedby="crm-stale-days-help">
+					<p class="form-help" id="crm-stale-days-help"><?php p($l->t('After this many days without a stage change, the deal shows “Needs follow-up” and the owner gets a reminder (at the reminder hour).')); ?></p>
 				</div>
 				<label class="crm-switch">
 					<input type="checkbox" name="mail_related_enabled" value="1" <?php echo !empty($settings['mail_related_enabled']) ? 'checked' : ''; ?>>
 					<span><?php p($l->t('Show Mail helpers on “Who wrote what”')); ?></span>
 				</label>
 				<p class="form-help"><?php p($l->t('Does not sync your inbox into CRM. When on, company pages can offer “Open in Mail” for each contact. Your CRM email log always works.')); ?></p>
+				<label class="crm-switch">
+					<input type="checkbox" name="identity_rename_push" value="1" <?php echo !empty($settings['identity_rename_push']) ? 'checked' : ''; ?>>
+					<span><?php p($l->t('Push company renames to linked Check apps')); ?></span>
+				</label>
+				<p class="form-help"><?php p($l->t('When on, renaming a company in CustomerCheck notifies ProjectCheck and TicketCheck to keep customer names in sync.')); ?></p>
+				<div class="form-group">
+					<label for="crm-vtodo-calendar-uri" class="form-label"><?php p($l->t('Default calendar for to-do export')); ?></label>
+					<input type="text" id="crm-vtodo-calendar-uri" name="vtodo_calendar_uri" class="form-input crm-input" autocomplete="off" spellcheck="false"
+						value="<?php p((string)($settings['vtodo_calendar_uri'] ?? '')); ?>"
+						placeholder="<?php p($l->t('Leave empty — each person uses their first writable calendar')); ?>"
+						aria-describedby="crm-vtodo-calendar-uri-help">
+					<p class="form-help" id="crm-vtodo-calendar-uri-help"><?php p($l->t('Optional. Calendar URI (not display name) when pushing an activity as a task. Applies per user when that calendar exists on their account.')); ?></p>
+				</div>
 				<div class="crm-form-actions">
 					<button type="submit" class="crm-btn crm-btn--primary"><?php p($l->t('Save jobs')); ?></button>
 				</div>

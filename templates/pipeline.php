@@ -168,11 +168,32 @@ include __DIR__ . '/common/page-start.php';
 							data-title="<?php p($d['title']); ?>">
 							<td data-label="<?php p($l->t('Title')); ?>">
 								<?php p($d['title']); ?>
-								<?php if (!empty($d['stale'])): ?> <span class="crm-badge crm-badge--warning"><?php p($l->t('Stale')); ?></span><?php endif; ?>
+								<?php include __DIR__ . '/common/crm-deal-freshness.php'; ?>
 								<details class="crm-more-menu crm-pipeline-deal-meta">
 									<summary class="crm-btn crm-btn--ghost crm-btn--sm"><?php p($l->t('Details')); ?></summary>
 									<div class="crm-more-menu__panel" role="group" aria-label="<?php p($l->t('Deal details')); ?>">
 										<p class="crm-muted"><strong><?php p($l->t('Owner')); ?>:</strong> <?php p($ownerLabel !== '' ? $ownerLabel : '—'); ?></p>
+										<p class="crm-muted"><strong><?php p($l->t('Opened')); ?>:</strong>
+											<?php if (isset($d['ageDays']) && is_int($d['ageDays'])): ?>
+												<?php p($l->n('%n day ago', '%n days ago', (int)$d['ageDays'])); ?>
+											<?php else: ?>
+												—
+											<?php endif; ?>
+										</p>
+										<p class="crm-muted"><strong><?php p($l->t('Last change')); ?>:</strong>
+											<?php if (isset($d['idleDays']) && is_int($d['idleDays'])): ?>
+												<?php p($l->n('%n day ago', '%n days ago', (int)$d['idleDays'])); ?>
+											<?php else: ?>
+												—
+											<?php endif; ?>
+										</p>
+										<p class="crm-muted"><strong><?php p($l->t('In this stage')); ?>:</strong>
+											<?php if (isset($d['stageIdleDays']) && is_int($d['stageIdleDays'])): ?>
+												<?php p($l->n('%n day', '%n days', (int)$d['stageIdleDays'])); ?>
+											<?php else: ?>
+												—
+											<?php endif; ?>
+										</p>
 										<p class="crm-muted"><strong><?php p($l->t('Quote age')); ?>:</strong>
 											<?php if ($quoteAge !== null): ?>
 												<?php p($l->t('%s days', [(string)(int)$quoteAge])); ?>
@@ -380,9 +401,7 @@ include __DIR__ . '/common/page-start.php';
 										: $forecast);
 								?></span>
 							<?php endif; ?>
-							<?php if (!empty($d['stale'])): ?>
-								<span class="crm-badge crm-badge--warning" title="<?php p($l->t('No stage change for a while')); ?>"><?php p($l->t('Stale')); ?></span>
-							<?php endif; ?>
+							<?php include __DIR__ . '/common/crm-deal-freshness.php'; ?>
 							<?php
 							$filesFolderId = (int)($d['companyFilesFolderId'] ?? $d['filesFolderId'] ?? 0);
 							$quoteFileId = (int)($d['quoteFileId'] ?? 0);

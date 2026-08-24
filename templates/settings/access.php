@@ -2,7 +2,6 @@
 /** @var array $_ */
 /** @var \OCP\IL10N $l */
 $settings = is_array($_['settings'] ?? null) ? $_['settings'] : [];
-$canManage = !empty($_['canManage']);
 $availableGroups = is_array($_['availableGroups'] ?? null) ? $_['availableGroups'] : [];
 $selectedAllowedUsers = is_array($_['selectedAllowedUsers'] ?? null) ? $_['selectedAllowedUsers'] : [];
 $selectedAppAdmins = is_array($_['selectedAppAdmins'] ?? null) ? $_['selectedAppAdmins'] : [];
@@ -17,10 +16,6 @@ $restrictionOn = !empty($settings['access_restriction_enabled']);
 			</div>
 		</header>
 		<div class="crm-card__body">
-			<?php if (!$canManage): ?>
-				<p><?php p($l->t('You can use CustomerCheck. Only app administrators can change access policy and tokens.')); ?></p>
-				<p class="crm-muted"><?php p($l->t('Your pipeline view preference can still be changed below.')); ?></p>
-			<?php else: ?>
 			<form id="crm-settings-access-form" class="crm-form" novalidate>
 				<div class="form-group">
 					<label for="crm-app-admins-search" class="form-label"><?php p($l->t('CustomerCheck app administrators')); ?></label>
@@ -114,6 +109,5 @@ $restrictionOn = !empty($settings['access_restriction_enabled']);
 					<button type="submit" class="crm-btn crm-btn--primary"><?php p($l->t('Save access control')); ?></button>
 				</div>
 			</form>
-			<?php endif; ?>
 		</div>
 	</section>

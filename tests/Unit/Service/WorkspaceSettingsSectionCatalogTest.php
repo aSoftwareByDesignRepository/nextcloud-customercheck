@@ -31,7 +31,7 @@ final class WorkspaceSettingsSectionCatalogTest extends TestCase
 		$sections = WorkspaceSettingsSectionCatalog::SECTIONS;
 		self::assertSame($sections, array_values(array_unique($sections)));
 		self::assertSame(
-			['my-email', 'mailbox', 'preferences', 'checklists', 'review-sources', 'circles', 'integrations'],
+			['my-email', 'mailbox', 'preferences', 'checklists', 'review-sources', 'promises', 'integrations'],
 			$sections,
 		);
 	}
@@ -54,7 +54,7 @@ final class WorkspaceSettingsSectionCatalogTest extends TestCase
 		self::assertFalse($this->catalog->isVisible('mailbox', false));
 		self::assertFalse($this->catalog->isVisible('checklists', false));
 		self::assertFalse($this->catalog->isVisible('review-sources', false));
-		self::assertFalse($this->catalog->isVisible('circles', false));
+		self::assertFalse($this->catalog->isVisible('promises', false));
 		self::assertTrue($this->catalog->isVisible('mailbox', true));
 		self::assertTrue($this->catalog->isVisible('my-email', true));
 		self::assertTrue($this->catalog->isVisible('checklists', true));
@@ -65,15 +65,6 @@ final class WorkspaceSettingsSectionCatalogTest extends TestCase
 	{
 		self::assertSame('mailbox', $this->catalog->defaultSection(true));
 		self::assertSame('my-email', $this->catalog->defaultSection(false));
-	}
-
-	public function testLegacyAnchorsMapOnlyToKnownSections(): void
-	{
-		self::assertNotSame([], WorkspaceSettingsSectionCatalog::LEGACY_ANCHORS);
-		foreach (WorkspaceSettingsSectionCatalog::LEGACY_ANCHORS as $anchor => $section) {
-			self::assertNotSame('', $anchor);
-			self::assertTrue($this->catalog->isSection($section), "Anchor {$anchor} → {$section}");
-		}
 	}
 
 	public function testLabelsCoverEverySection(): void

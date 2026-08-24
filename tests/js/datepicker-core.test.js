@@ -218,3 +218,40 @@ describe('CustomerCheckDatepickerCore hidden ISO source of truth', () => {
     expect(Core.parseBoundAttr('nope')).toBe('');
   });
 });
+
+describe('CustomerCheckDatepickerCore top-layer mount strategy', () => {
+  it('mounts inside the open dialog so the calendar shares showModal() top-layer', () => {
+    expect(Core.resolveCalendarMountMode({ supportsPopover: true, insideOpenDialog: true })).toBe('dialog-host');
+    expect(Core.resolveCalendarMountMode({ supportsPopover: false, insideOpenDialog: true })).toBe('dialog-host');
+  });
+
+  it('uses Popover on the page when no dialog owns the field', () => {
+    expect(Core.resolveCalendarMountMode({ supportsPopover: true, insideOpenDialog: false })).toBe('popover');
+    expect(Core.resolveCalendarMountMode({ supportsPopover: false, insideOpenDialog: false })).toBe('body');
+    expect(Core.resolveCalendarMountMode({})).toBe('body');
+    expect(Core.resolveCalendarMountMode(null)).toBe('body');
+  });
+
+  it('detects Popover capability from a prototype-like object', () => {
+    expect(Core.supportsCalendarPopover({
+      showPopover: () => {},
+      hidePopover: () => {},
+    })).toBe(true);
+    expect(Core.supportsCalendarPopover({ showPopover: () => {} })).toBe(false);
+    expect(Core.supportsCalendarPopover({})).toBe(false);
+    expect(Core.supportsCalendarPopover(null)).toBe(false);
+  });
+
+  it('finds only open dialog ancestors for the date field', () => {
+    const openDialog = { open: true, hasAttribute: () => true };
+    const closedDialog = { open: false, hasAttribute: () => false };
+    expect(Core.findOpenDialogHost({ closest: () => openDialog })).toBe(openDialog);
+    expect(Core.findOpenDialogHost({ closest: () => closedDialog })).toBeNull();
+    expect(Core.findOpenDialogHost({ closest: () => null })).toBeNull();
+    expect(Core.findOpenDialogHost(null)).toBeNull();
+    expect(Core.findOpenDialogHost({})).toBeNull();
+
+    const attrOpen = { open: false, hasAttribute: (name) => name === 'open' };
+    expect(Core.findOpenDialogHost({ closest: () => attrOpen })).toBe(attrOpen);
+  });
+});

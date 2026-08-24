@@ -32,6 +32,7 @@ include __DIR__ . '/common/page-start.php';
 				<h2 id="crm-capacity-title" class="crm-card__title"><?php p($l->t('Manager tools')); ?></h2>
 				<p class="crm-card__lead"><?php p($l->t('Cover absences, move ownership, or escalate when someone is stuck.')); ?></p>
 			</div>
+			<?php include __DIR__ . '/common/crm-collapsible-disclosure.php'; ?>
 		</summary>
 		<div class="crm-card__body">
 			<div

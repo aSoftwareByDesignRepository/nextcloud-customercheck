@@ -78,7 +78,7 @@ final class PageHelpCatalog
 			'money' => $l->t('Overdue, unpaid, paid and unknown invoice states.'),
 			'activities' => $l->t('Calls, emails, meetings, and to-dos — open items also show on Today.'),
 			'import' => $l->t('Drop a CSV or JSON file, or paste names. We show a preview first — nothing is saved yet.'),
-			'settings' => $l->t('Team members, shared mailbox, and your preferences.'),
+			'settings' => $l->t('Your email, team mailbox, preferences, checklists, and linked apps.'),
 			'app-settings' => $l->t('Access, reminders, intake URLs, and seats for the whole Nextcloud — admins only.'),
 			'support-us' => $l->t('Optional support for the project. The web app stays free under AGPL either way.'),
 			'get-the-app' => $l->t('Official Android companion. Your organisation licenses seats; the Play listing is not public yet.'),

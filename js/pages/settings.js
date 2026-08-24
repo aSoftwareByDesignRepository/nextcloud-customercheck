@@ -18,23 +18,6 @@
   };
   if (C && C.init) { C.init(); }
 
-  const LegacyWs = window.CustomerCheckWorkspaceSettingsLegacyRedirect;
-  if (LegacyWs && typeof LegacyWs.resolve === 'function') {
-    const redirectUrl = LegacyWs.resolve(document, window.location);
-    if (redirectUrl) {
-      window.location.replace(redirectUrl);
-      return;
-    }
-  }
-  const LegacyApp = window.CustomerCheckAppSettingsLegacyRedirect;
-  if (LegacyApp && typeof LegacyApp.resolve === 'function') {
-    const redirectUrl = LegacyApp.resolve(document, window.location);
-    if (redirectUrl) {
-      window.location.replace(redirectUrl);
-      return;
-    }
-  }
-
   const root = document.getElementById('crm-settings-root');
   if (!root) return;
   const canManage = root.getAttribute('data-can-manage') === '1';
@@ -649,6 +632,8 @@
         digest_hour: parseInt(String(fd.get('digest_hour') || '7'), 10),
         stale_deal_days: parseInt(String(fd.get('stale_deal_days') || '14'), 10),
         mail_related_enabled: fd.get('mail_related_enabled') === '1',
+        identity_rename_push: fd.get('identity_rename_push') === '1',
+        vtodo_calendar_uri: String(fd.get('vtodo_calendar_uri') || '').trim(),
       };
       try {
         await Api.put('/settings', payload);
@@ -1360,7 +1345,7 @@
       document.getElementById('section-workspace-mailbox')
       || document.getElementById('section-my-email')
       || document.getElementById('crm-review-sources-form')
-      || document.getElementById('crm-circles-roll-call')
+      || document.getElementById('crm-promises-roll-call')
       || document.getElementById('section-checklists')
       || document.getElementById('crm-ws-personal-mail-mine')
     );
@@ -1418,15 +1403,6 @@
       showWsStatus('');
       showWsError((e.payload && e.payload.message) || e.message || tr('Could not load team settings.'));
     }
-  }
-
-  const wsCreate = document.getElementById('crm-ws-create-form');
-  if (wsCreate) {
-    wsCreate.remove();
-  }
-  const wsCreateCard = document.getElementById('crm-ws-create-card');
-  if (wsCreateCard) {
-    wsCreateCard.remove();
   }
 
   const wsSettingsForm = document.getElementById('crm-ws-settings-form');
@@ -3289,11 +3265,11 @@
     });
   }
 
-  async function loadCirclesRollCall() {
-    const mount = document.getElementById('crm-circles-roll-call');
+  async function loadPromisesRollCall() {
+    const mount = document.getElementById('crm-promises-roll-call');
     if (!mount || !canManageWorkspace) return;
     try {
-      const res = await Api.get('/circles-roll-call');
+      const res = await Api.get('/promises-roll-call');
       const items = (res.data && res.data.items) || res.items || [];
       mount.removeAttribute('aria-busy');
       if (!items.length) {
@@ -3331,7 +3307,7 @@
     }
   }
 
-  loadCirclesRollCall();
+  loadPromisesRollCall();
 
   // Deep-link from Sales Inbox Reconnect / Connect CTA — land on My email.
   (function focusPersonalMailMineHash() {

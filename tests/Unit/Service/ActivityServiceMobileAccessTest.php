@@ -45,6 +45,9 @@ final class ActivityServiceMobileAccessTest extends TestCase
 			$this->createMock(DealMapper::class),
 			$this->createMock(AgreementMapper::class),
 			$this->createMock(PersonMapper::class),
+			$this->createMock(\OCA\CustomerCheck\Db\CompanyMapper::class),
+			$this->createMock(\OCA\CustomerCheck\Db\WorkspaceMemberMapper::class),
+			$this->createMock(\OCA\CustomerCheck\Service\NotificationService::class),
 		);
 	}
 
@@ -53,7 +56,7 @@ final class ActivityServiceMobileAccessTest extends TestCase
 		$this->access->method('isAppAdmin')->with('alice')->willReturn(false);
 		$this->mapper->expects($this->once())
 			->method('search')
-			->with(['companyId' => 3, 'openOnly' => true, 'createdBy' => 'alice'], 50, 10)
+			->with(['companyId' => 3, 'openOnly' => true, 'createdByOrAssignee' => 'alice'], 50, 10)
 			->willReturn([]);
 
 		$this->service->searchForMobile('alice', ['companyId' => 3, 'openOnly' => true], 50, 10);
@@ -81,11 +84,24 @@ final class ActivityServiceMobileAccessTest extends TestCase
 		$this->assertSame($activity, $this->service->requireMobileAccess(9, 'alice'));
 	}
 
+	public function testRequireMobileAccessAllowsAssignee(): void
+	{
+		$activity = new Activity();
+		$activity->setId(9);
+		$activity->setCreatedBy('alice');
+		$activity->setAssigneeUserId('bob');
+		$this->mapper->method('findById')->with(9)->willReturn($activity);
+		$this->access->method('isAppAdmin')->with('bob')->willReturn(false);
+
+		$this->assertSame($activity, $this->service->requireMobileAccess(9, 'bob'));
+	}
+
 	public function testRequireMobileAccessRejectsOtherUser(): void
 	{
 		$activity = new Activity();
 		$activity->setId(9);
 		$activity->setCreatedBy('alice');
+		$activity->setAssigneeUserId('carol');
 		$this->mapper->method('findById')->with(9)->willReturn($activity);
 		$this->access->method('isAppAdmin')->with('bob')->willReturn(false);
 

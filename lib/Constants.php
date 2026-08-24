@@ -406,8 +406,12 @@ final class Constants
 	public const NOTIFY_KEY_GENERATED = 'crm_key_generated';
 	/** Companion P2 — open activity due today / overdue (exactly-once ledger). */
 	public const NOTIFY_ACTIVITY_DUE = 'crm_activity_due';
+	/** Immediate ping when a to-do is assigned to a colleague. */
+	public const NOTIFY_ACTIVITY_ASSIGNED = 'crm_activity_assigned';
 	/** Deal checklist item assigned to a colleague. */
 	public const NOTIFY_DEAL_CHECKLIST = 'crm_deal_checklist';
+	/** Open deal stage idle ≥ stale_deal_days — owner follow-up nudge. */
+	public const NOTIFY_DEAL_ROTTING = 'crm_deal_rotting';
 	/** Parallel edit conflict opened — notify both actors (GNQ §6). */
 	public const NOTIFY_EDIT_CONFLICT = 'crm_edit_conflict';
 
@@ -420,7 +424,9 @@ final class Constants
 		self::NOTIFY_INVOICE_PAID,
 		self::NOTIFY_KEY_GENERATED,
 		self::NOTIFY_ACTIVITY_DUE,
+		self::NOTIFY_ACTIVITY_ASSIGNED,
 		self::NOTIFY_DEAL_CHECKLIST,
+		self::NOTIFY_DEAL_ROTTING,
 		self::NOTIFY_EDIT_CONFLICT,
 	];
 

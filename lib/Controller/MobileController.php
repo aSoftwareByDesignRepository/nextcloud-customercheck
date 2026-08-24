@@ -266,7 +266,7 @@ class MobileController extends Controller
 			);
 
 			return $this->success(
-				MobileApiService::serialiseDeal($deal, fn ($d): bool => $this->deals->isStale($d)),
+				MobileApiService::serialiseDeal($deal, fn ($d): bool => $this->deals->isStale($d), $this->deals->staleDealDays()),
 				null,
 				Http::STATUS_CREATED,
 			);
@@ -697,7 +697,7 @@ class MobileController extends Controller
 			], max(1, min(500, $limit)));
 
 			return $this->success(array_map(
-				fn ($deal): array => MobileApiService::serialiseDeal($deal, fn ($d): bool => $this->deals->isStale($d)),
+				fn ($deal): array => MobileApiService::serialiseDeal($deal, fn ($d): bool => $this->deals->isStale($d), $this->deals->staleDealDays()),
 				$rows,
 			));
 		});
@@ -721,7 +721,7 @@ class MobileController extends Controller
 				$uid,
 				$body,
 			);
-			$data = MobileApiService::serialiseDeal($result['deal'], fn ($d): bool => $this->deals->isStale($d));
+			$data = MobileApiService::serialiseDeal($result['deal'], fn ($d): bool => $this->deals->isStale($d), $this->deals->staleDealDays());
 			$data['sequencesFired'] = $result['sequencesFired'];
 
 			return $this->success($data);

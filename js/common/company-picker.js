@@ -75,6 +75,7 @@
    *   onReady?: (count: number) => void,
    *   onSelect?: (company: { id: number, name: string, updatedAt?: string }) => void,
    *   onChangeRequest?: () => void,
+   *   onEmptyResults?: (query: string) => void,
    * }} opts
    */
   function mountListPanel(opts) {
@@ -315,8 +316,12 @@
           normalizeCompanyHits(res && res.data !== undefined ? res.data : res),
           excludeIds,
         );
-        paint(rows.length ? rows : local, currentSelectedId());
+        var shown = rows.length ? rows : local;
+        paint(shown, currentSelectedId());
         setStatus('');
+        if (!shown.length && q && typeof opts.onEmptyResults === 'function') {
+          opts.onEmptyResults(q);
+        }
       } catch (_err) {
         if (destroyed || gen !== generation) {
           return;
@@ -324,6 +329,9 @@
         if (!local.length) {
           paint([], currentSelectedId());
           setStatus(t('Could not load companies'));
+          if (q && typeof opts.onEmptyResults === 'function') {
+            opts.onEmptyResults(q);
+          }
         }
       }
     }

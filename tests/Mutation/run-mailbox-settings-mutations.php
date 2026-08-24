@@ -53,8 +53,8 @@ $cases = [
 	],
 	[
 		'file' => $root . '/lib/Controller/PageController.php',
-		'find' => "registerFrontEndAssets('pages/settings', null, [], ['common/folder-picker', 'common/mailbox-settings-present', 'workspace-settings-legacy-redirect']);",
-		'replace' => "registerFrontEndAssets('pages/settings', null, [], ['common/folder-picker', 'workspace-settings-legacy-redirect']);",
+		'find' => "registerFrontEndAssets('pages/settings', null, [], ['common/folder-picker', 'common/signature-logo-core', 'common/personal-mail-settings-core', 'common/rich-mail-composer', 'common/mailbox-settings-present']);",
+		'replace' => "registerFrontEndAssets('pages/settings', null, [], ['common/folder-picker', 'common/mailbox-settings-present']);",
 		'test' => 'MailboxSettingsUxContractTest',
 		'label' => 'settings page drops mailbox-settings-present',
 	],
@@ -67,8 +67,8 @@ $cases = [
 	],
 	[
 		'file' => $root . '/lib/Controller/PageController.php',
-		'find' => "registerFrontEndAssets('pages/settings', null, [], ['common/folder-picker', 'common/mailbox-settings-present', 'workspace-settings-legacy-redirect']);",
-		'replace' => "registerFrontEndAssets('pages/settings', null, [], ['workspace-settings-legacy-redirect']);",
+		'find' => "registerFrontEndAssets('pages/settings', null, [], ['common/folder-picker', 'common/signature-logo-core', 'common/personal-mail-settings-core', 'common/rich-mail-composer', 'common/mailbox-settings-present']);",
+		'replace' => "registerFrontEndAssets('pages/settings', null, [], ['common/mailbox-settings-present']);",
 		'test' => 'DirectoryPickerContractTest',
 		'label' => 'settings page drops folder-picker asset',
 	],

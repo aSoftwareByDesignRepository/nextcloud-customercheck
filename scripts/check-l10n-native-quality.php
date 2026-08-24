@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /**
- * Mother-tongue gate for CustomerCheck locales (da/de/es/fr/it/nb/nl/pl/sv).
+ * Mother-tongue gate for CustomerCheck locales (da/de/es/fr/it/nb/nl/pl/pt_BR/sv).
  *
  * Fails when:
  * - user-facing prose is still identical to English (outside brand/token allowlist)
@@ -25,6 +25,7 @@ $allowExact = [
 	'InvoiceCheck' => true,
 	'BudgetCheck' => true,
 	'Nextcloud' => true,
+	'Nextcloud Mail' => true,
 	'GitHub' => true,
 	'Talk' => true,
 	'CSV' => true,
@@ -98,6 +99,7 @@ $allowExact = [
 	'Find: %s' => true,
 	'File %s' => true,
 	'%1$s: %2$s. %3$s. %4$s' => true,
+	'%1$s — %2$s' => true,
 	'Mail' => true,
 	'Logo' => true,
 	'Germany' => true,
@@ -193,6 +195,7 @@ $formalPatterns = [
 	'fr' => '/\b(vous|votre|vos|Vous|Votre|Vos)\b/u',
 	'it' => '/\b(Lei|Loro)\b/u',
 	'pl' => '/\b(Pan|Pani|Państwo)\b/u',
+	'pt_BR' => '/\b(senhor|senhora|Sr\.|Sra\.|Vossa|Vosso)\b/iu',
 ];
 
 /** @var array<string, true> */
@@ -200,7 +203,7 @@ $allowFormalKeys = [
 	'This marks the promise as cancelled. It will no longer appear as open.' => true,
 ];
 
-$locales = ['de', 'da', 'es', 'fr', 'it', 'nb', 'nl', 'pl', 'sv'];
+$locales = ['de', 'da', 'es', 'fr', 'it', 'nb', 'nl', 'pl', 'pt_BR', 'sv'];
 $ok = true;
 
 foreach ($locales as $lang) {

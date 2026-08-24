@@ -55,7 +55,7 @@ class ActivityMapper extends QBMapper
 	}
 
 	/**
-	 * @param array{companyId?: int, dealId?: int, type?: string, createdBy?: string, openOnly?: bool, doneOnly?: bool, dueBefore?: \DateTimeInterface} $filters
+	 * @param array{companyId?: int, dealId?: int, type?: string, createdBy?: string, assigneeUserId?: string, createdByOrAssignee?: string, openOnly?: bool, doneOnly?: bool, dueBefore?: \DateTimeInterface, workspaceId?: int} $filters
 	 * @return Activity[]
 	 */
 	public function search(array $filters = [], int $limit = 500, int $offset = 0): array
@@ -72,7 +72,7 @@ class ActivityMapper extends QBMapper
 	}
 
 	/**
-	 * @param array{companyId?: int, dealId?: int, type?: string, createdBy?: string, openOnly?: bool, doneOnly?: bool, dueBefore?: \DateTimeInterface} $filters
+	 * @param array{companyId?: int, dealId?: int, type?: string, createdBy?: string, assigneeUserId?: string, createdByOrAssignee?: string, openOnly?: bool, doneOnly?: bool, dueBefore?: \DateTimeInterface, workspaceId?: int} $filters
 	 */
 	public function countSearch(array $filters = []): int
 	{
@@ -231,7 +231,7 @@ class ActivityMapper extends QBMapper
 	}
 
 	/**
-	 * @param array{companyId?: int, dealId?: int, type?: string, createdBy?: string, openOnly?: bool, doneOnly?: bool, dueBefore?: \DateTimeInterface, workspaceId?: int} $filters
+	 * @param array{companyId?: int, dealId?: int, type?: string, createdBy?: string, assigneeUserId?: string, createdByOrAssignee?: string, openOnly?: bool, doneOnly?: bool, dueBefore?: \DateTimeInterface, workspaceId?: int} $filters
 	 */
 	private function applyFilters(IQueryBuilder $qb, array $filters): void
 	{
@@ -265,9 +265,21 @@ class ActivityMapper extends QBMapper
 			$qb->andWhere($qb->expr()->eq('type', $qb->createNamedParameter($type)));
 		}
 
-		$createdBy = trim((string)($filters['createdBy'] ?? ''));
-		if ($createdBy !== '') {
-			$qb->andWhere($qb->expr()->eq('created_by', $qb->createNamedParameter($createdBy)));
+		$mine = trim((string)($filters['createdByOrAssignee'] ?? ''));
+		if ($mine !== '') {
+			$qb->andWhere($qb->expr()->orX(
+				$qb->expr()->eq('created_by', $qb->createNamedParameter($mine)),
+				$qb->expr()->eq('assignee_user_id', $qb->createNamedParameter($mine)),
+			));
+		} else {
+			$createdBy = trim((string)($filters['createdBy'] ?? ''));
+			if ($createdBy !== '') {
+				$qb->andWhere($qb->expr()->eq('created_by', $qb->createNamedParameter($createdBy)));
+			}
+			$assignee = trim((string)($filters['assigneeUserId'] ?? ''));
+			if ($assignee !== '') {
+				$qb->andWhere($qb->expr()->eq('assignee_user_id', $qb->createNamedParameter($assignee)));
+			}
 		}
 
 		if (($filters['openOnly'] ?? false) === true) {

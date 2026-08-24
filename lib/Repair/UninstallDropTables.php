@@ -58,6 +58,7 @@ final class UninstallDropTables implements IRepairStep
 		'crm_deal',
 		'crm_deal_cl_file',
 		'crm_deal_cl_item',
+		'crm_dealrot',
 		'crm_digest_log',
 		'crm_edit_conflict',
 		'crm_email_touch',

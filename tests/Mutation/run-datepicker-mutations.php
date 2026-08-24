@@ -42,7 +42,7 @@ function datepicker_vitest_command(): string
 {
 	$appRoot = (string)($GLOBALS['appRoot'] ?? dirname(__DIR__, 2));
 	return 'npm --prefix ' . escapeshellarg($appRoot)
-		. ' run test:js -- tests/js/datepicker-core.test.js';
+		. ' run test:js -- tests/js/datepicker-core.test.js tests/js/datepicker-wrap.test.js';
 }
 
 $lockPath = $appRoot . '/.mutation.lock';
@@ -113,6 +113,28 @@ function datepicker_mutations(string $appRoot): array
 			'tool' => 'vitest',
 		],
 		[
+			'file' => $appRoot . '/js/common/datepicker-core.js',
+			'from' => "if (options.insideOpenDialog) {\n      return 'dialog-host';\n    }\n    if (options.supportsPopover) {\n      return 'popover';\n    }\n    return 'body';",
+			'to' => "if (false && options.insideOpenDialog) {\n      return 'dialog-host';\n    }\n    if (options.supportsPopover) {\n      return 'popover';\n    }\n    return 'body';",
+			'label' => 'mount_skips_dialog_host_for_modals',
+			'tool' => 'vitest',
+		],
+		[
+			'file' => $appRoot . '/js/common/datepicker-core.js',
+			'from' => "if (options.supportsPopover) {\n      return 'popover';\n    }\n    return 'body';",
+			'to' => "if (false && options.supportsPopover) {\n      return 'popover';\n    }\n    return 'body';",
+			'label' => 'mount_skips_popover_on_page',
+			'tool' => 'vitest',
+		],
+		[
+			'file' => $appRoot . '/js/common/datepicker.js',
+			'from' => "container.setAttribute('popover', 'manual');",
+			'to' => "container.setAttribute('popover', 'none');",
+			'label' => 'calendar_popover_attr_disabled',
+			'tool' => 'phpunit',
+			'filter' => 'DateSelectorContractTest::testDatepickerIsClassicIifeWithoutEval',
+		],
+		[
 			'file' => $appRoot . '/lib/Support/DateMath.php',
 			'from' => "if (\$parsed->format('Y-m-d') !== \$value) {\n\t\t\treturn null;\n\t\t}",
 			'to' => "if (false && \$parsed->format('Y-m-d') !== \$value) {\n\t\t\treturn null;\n\t\t}",
@@ -146,11 +168,10 @@ function datepicker_mutations(string $appRoot): array
 		],
 		[
 			'file' => $appRoot . '/js/common/datepicker.js',
-			'from' => "const grid = document.createElement('table');\n    grid.className = 'crm-datepicker__grid';",
-			'to' => "const grid = document.createElement('div');\n    grid.className = 'crm-datepicker__grid';\n    grid.setAttribute('role', 'grid');",
-			'label' => 'calendar_uses_invalid_aria_grid',
-			'tool' => 'phpunit',
-			'filter' => 'DateSelectorContractTest::testDatepickerIsClassicIifeWithoutEval',
+			'from' => "    // --flex only when the host is a direct child of a grid/flex row (not nested in form-group).\n    const inFlex = !!(parentEl && (\n      parentEl.classList.contains('crm-date-range__part')\n      || parentEl.classList.contains('crm-form-row-2')\n    ));",
+			'to' => "    const inFlex = !!(parentEl && (\n      parentEl.classList.contains('crm-date-range__part')\n      || parentEl.classList.contains('crm-form-row-2')\n      || (parentEl.closest && parentEl.closest('.crm-form-row-2'))\n    ));",
+			'label' => 'form_group_datepicker_gets_flex_width_auto',
+			'tool' => 'vitest',
 		],
 		[
 			'file' => $appRoot . '/js/common/datepicker.js',

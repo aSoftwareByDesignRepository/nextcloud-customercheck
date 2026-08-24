@@ -263,10 +263,20 @@ class Application extends App implements IBootstrap
 			$c->get(\OCP\AppFramework\Utility\ITimeFactory::class),
 			$c->get(ReminderScheduler::class),
 			$c->get(\OCA\CustomerCheck\Service\ActivityDueReminderService::class),
+			$c->get(\OCA\CustomerCheck\Service\DealRottingReminderService::class),
 		));
 		$context->registerService(\OCA\CustomerCheck\Service\ActivityDueReminderService::class, fn ($c) => new \OCA\CustomerCheck\Service\ActivityDueReminderService(
 			$c->get(\OCA\CustomerCheck\Db\ActivityMapper::class),
 			$c->get(\OCA\CustomerCheck\Db\ActivityDueLogMapper::class),
+			$c->get(\OCA\CustomerCheck\Db\CompanyMapper::class),
+			$c->get(NotificationService::class),
+			$c->get(\OCP\IConfig::class),
+			$c->get(\OCP\AppFramework\Utility\ITimeFactory::class),
+			$c->get(\Psr\Log\LoggerInterface::class),
+		));
+		$context->registerService(\OCA\CustomerCheck\Service\DealRottingReminderService::class, fn ($c) => new \OCA\CustomerCheck\Service\DealRottingReminderService(
+			$c->get(\OCA\CustomerCheck\Db\DealMapper::class),
+			$c->get(\OCA\CustomerCheck\Db\DealRotLogMapper::class),
 			$c->get(\OCA\CustomerCheck\Db\CompanyMapper::class),
 			$c->get(NotificationService::class),
 			$c->get(\OCP\IConfig::class),

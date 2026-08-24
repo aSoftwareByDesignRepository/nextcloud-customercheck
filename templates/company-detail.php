@@ -64,6 +64,11 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 			<button type="button" class="crm-btn crm-btn--secondary" id="crm-company-merge" data-company-id="<?php p($company->getId()); ?>" data-updated-at="<?php p(\OCA\CustomerCheck\Support\OptimisticLock::format($company->getUpdatedAt()) ?? ''); ?>" <?php if ($company->isArchived()): ?>disabled<?php endif; ?>><?php p($l->t('Merge into…')); ?></button>
 			<?php endif; ?>
 			<?php if (!empty($_['canDelete'])): ?>
+			<?php if ($company->isArchived()): ?>
+			<button type="button" class="crm-btn crm-btn--secondary" id="crm-company-restore" data-company-id="<?php p($company->getId()); ?>" data-updated-at="<?php p(\OCA\CustomerCheck\Support\OptimisticLock::format($company->getUpdatedAt()) ?? ''); ?>"><?php p($l->t('Restore')); ?></button>
+			<?php else: ?>
+			<button type="button" class="crm-btn crm-btn--secondary" id="crm-company-archive" data-company-id="<?php p($company->getId()); ?>" data-updated-at="<?php p(\OCA\CustomerCheck\Support\OptimisticLock::format($company->getUpdatedAt()) ?? ''); ?>"><?php p($l->t('Archive')); ?></button>
+			<?php endif; ?>
 			<button type="button" class="crm-btn crm-btn--danger" id="crm-company-gdpr-erase" data-company-id="<?php p($company->getId()); ?>" data-slug="<?php p($company->getSlug()); ?>"><?php p($l->t('Erase (GDPR)')); ?></button>
 			<?php endif; ?>
 		</div>
@@ -365,6 +370,13 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 								<p class="crm-muted crm-todo-list__meta">
 									<span><?php p($l->t('Due')); ?>: <?php p($dueLabel); ?></span>
 									<span class="crm-badge"><?php p($typeLabel); ?></span>
+									<?php
+										$who = trim((string)($act['assigneeDisplayName'] ?? ''));
+										if ($who === '') {
+											$who = $l->t('Anyone');
+										}
+									?>
+									<span><?php p($l->t('Who')); ?>: <?php p($who); ?></span>
 									<?php if ($isAuto): ?>
 										<span class="crm-badge crm-badge--info"><?php p($l->t('Auto')); ?></span>
 									<?php endif; ?>
@@ -642,7 +654,8 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 							data-expected-close="<?php p((string)($d['expectedClose'] ?? '')); ?>"
 							data-updated-at="<?php p((string)($d['updatedAt'] ?? '')); ?>">
 							<td data-label="<?php p($l->t('Title')); ?>">
-								<?php p($d['title']); ?><?php if (!empty($d['stale'])): ?> <span class="crm-badge crm-badge--warning"><?php p($l->t('Stale')); ?></span><?php endif; ?>
+								<?php p($d['title']); ?>
+								<?php include __DIR__ . '/common/crm-deal-freshness.php'; ?>
 								<?php if ($dealNotesPreview !== ''): ?>
 									<p class="crm-muted crm-deal-notes-preview"><?php p($dealNotesPreview); ?></p>
 								<?php endif; ?>

@@ -42,6 +42,9 @@ final class ActivityDismissFollowUpsTest extends TestCase
 			$this->createMock(DealMapper::class),
 			$this->createMock(AgreementMapper::class),
 			$this->createMock(PersonMapper::class),
+			$this->createMock(\OCA\CustomerCheck\Db\CompanyMapper::class),
+			$this->createMock(\OCA\CustomerCheck\Db\WorkspaceMemberMapper::class),
+			$this->createMock(\OCA\CustomerCheck\Service\NotificationService::class),
 		);
 	}
 

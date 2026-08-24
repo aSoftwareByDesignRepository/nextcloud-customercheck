@@ -27,6 +27,7 @@ English (`en.json`) is the source of truth for meaning. Every other locale must 
 | fr     | tu / ton / toi      |
 | it     | tu / tuo / ti       |
 | pl     | ty / twój / cię     |
+| pt_BR  | você / seu / te     |
 
 ## Recurring glossary (idea → prefer)
 

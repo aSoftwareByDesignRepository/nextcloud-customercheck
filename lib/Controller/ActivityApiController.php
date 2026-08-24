@@ -48,6 +48,8 @@ class ActivityApiController extends Controller
 			'dueDate' => $a->getDueDate()?->format('Y-m-d'),
 			'doneAt' => OptimisticLock::format($a->getDoneAt()),
 			'origin' => (string)$a->getOrigin(),
+			'assigneeUserId' => $a->getAssigneeUserId(),
+			'createdBy' => $a->getCreatedBy(),
 			'updatedAt' => OptimisticLock::format($a->getUpdatedAt()),
 		];
 	}

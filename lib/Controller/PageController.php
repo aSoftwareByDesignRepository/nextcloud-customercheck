@@ -172,7 +172,7 @@ class PageController extends Controller
 	#[NoCSRFRequired]
 	public function team(): TemplateResponse
 	{
-		$this->registerFrontEndAssets('pages/persona', null, [], ['common/mail-sync-now']);
+		$this->registerFrontEndAssets('pages/persona', null, [], ['common/mail-sync-now', 'common/team-capacity-ui']);
 		return new TemplateResponse('customercheck', 'team', $this->mergeShellPageParams(
 			'team',
 			$this->l10n->t('Team'),
@@ -223,7 +223,7 @@ class PageController extends Controller
 			'pages/sales-inbox',
 			null,
 			[],
-			['common/mail-sync-now', 'common/folder-picker', 'common/rich-mail-composer', 'common/shared-mail-send', 'common/user-picker-nav', 'common/inbox-assign-map', 'common/inbox-page-core'],
+			['common/mail-sync-now', 'common/folder-picker', 'common/rich-mail-composer', 'common/shared-mail-send', 'common/user-picker-nav', 'common/inbox-assign-map', 'common/inbox-page-core', 'common/inbox-create-company-core'],
 		);
 
 		return new TemplateResponse('customercheck', 'sales-inbox', $this->mergeShellPageParams(
@@ -543,7 +543,12 @@ class PageController extends Controller
 		$contactsHomeUrl = $this->urlGenerator->getAbsoluteURL('/apps/contacts/');
 		$deals = array_map(fn ($d) => $this->deals->toArray($d), $this->deals->search(['companyId' => $id], 100));
 		$activities = [];
+		$activityAssigneeUids = [];
 		foreach ($this->activities->search(['companyId' => $id, 'openOnly' => true], 100) as $act) {
+			$assignee = trim((string)($act->getAssigneeUserId() ?? ''));
+			if ($assignee !== '') {
+				$activityAssigneeUids[] = $assignee;
+			}
 			$activities[] = [
 				'id' => (int)$act->getId(),
 				'title' => (string)$act->getTitle(),
@@ -552,9 +557,21 @@ class PageController extends Controller
 				'origin' => (string)$act->getOrigin(),
 				'dealId' => $act->getDealId(),
 				'todoUri' => $act->getTodoUri(),
+				'assigneeUserId' => $assignee !== '' ? $assignee : null,
 				'updatedAt' => $act->getUpdatedAt()?->format(\DateTimeInterface::ATOM),
 			];
 		}
+		$assigneeDisplayNames = [];
+		foreach ($this->directory->resolveUsers(array_values(array_unique($activityAssigneeUids))) as $u) {
+			$assigneeDisplayNames[$u['id']] = (string)($u['displayName'] ?? $u['id']);
+		}
+		foreach ($activities as &$actRow) {
+			$uid = (string)($actRow['assigneeUserId'] ?? '');
+			$actRow['assigneeDisplayName'] = $uid !== ''
+				? ($assigneeDisplayNames[$uid] ?? $uid)
+				: null;
+		}
+		unset($actRow);
 		$timeline = [];
 		foreach ($this->timeline->listForCompany($id, 50) as $ev) {
 			$createdAt = $ev->getCreatedAt();
@@ -1004,8 +1021,14 @@ class PageController extends Controller
 		if ($type !== '') {
 			$filters['type'] = $type;
 		}
+		$uid = $this->accessControl->currentUserIdOrEmpty();
 		if ($scope === 'done') {
 			$filters['doneOnly'] = true;
+		} elseif ($scope === 'mine') {
+			$filters['openOnly'] = true;
+			if ($uid !== '') {
+				$filters['assigneeUserId'] = $uid;
+			}
 		} elseif ($scope !== 'all') {
 			$filters['openOnly'] = true;
 		}
@@ -1013,11 +1036,16 @@ class PageController extends Controller
 		$groups = ['overdue' => [], 'today' => [], 'later' => [], 'done' => []];
 		$rows = [];
 		$companyIds = [];
+		$assigneeUids = [];
 		$wsId = $this->resolvedWorkspaceId();
 		if (ListWorkspaceGuard::isListable($wsId)) {
 			$filters['workspaceId'] = $wsId;
 			foreach ($this->activities->search($filters, 200) as $act) {
 				$companyIds[] = (int)$act->getCompanyId();
+				$assignee = trim((string)($act->getAssigneeUserId() ?? ''));
+				if ($assignee !== '') {
+					$assigneeUids[] = $assignee;
+				}
 				$rows[] = [
 					'id' => (int)$act->getId(),
 					'companyId' => (int)$act->getCompanyId(),
@@ -1025,17 +1053,26 @@ class PageController extends Controller
 					'type' => (string)$act->getType(),
 					'dueDate' => $act->getDueDate()?->format('Y-m-d'),
 					'origin' => (string)$act->getOrigin(),
+					'assigneeUserId' => $assignee !== '' ? $assignee : null,
 					'doneAt' => $act->getDoneAt()?->format(\DateTimeInterface::ATOM),
 					'updatedAt' => $act->getUpdatedAt()?->format(\DateTimeInterface::ATOM),
 				];
 			}
 		}
 		$companyMap = $this->companies->mapByIds($companyIds);
+		$assigneeDisplayNames = [];
+		foreach ($this->directory->resolveUsers(array_values(array_unique($assigneeUids))) as $u) {
+			$assigneeDisplayNames[$u['id']] = (string)($u['displayName'] ?? $u['id']);
+		}
 		foreach ($rows as $row) {
 			$company = $companyMap[$row['companyId']] ?? null;
 			$row['companyName'] = $company !== null
 				? $this->labels->companyOrUnknown($company->getName())
 				: $this->labels->unknownCompany();
+			$aid = (string)($row['assigneeUserId'] ?? '');
+			$row['assigneeDisplayName'] = $aid !== ''
+				? ($assigneeDisplayNames[$aid] ?? $aid)
+				: null;
 			if ($row['doneAt'] !== null) {
 				$groups['done'][] = $row;
 				continue;
@@ -1139,7 +1176,7 @@ class PageController extends Controller
 			));
 		}
 
-		$this->registerFrontEndAssets('pages/settings', null, [], ['common/folder-picker', 'common/signature-logo-core', 'common/personal-mail-settings-core', 'common/rich-mail-composer', 'common/mailbox-settings-present', 'workspace-settings-legacy-redirect']);
+		$this->registerFrontEndAssets('pages/settings', null, [], ['common/folder-picker', 'common/signature-logo-core', 'common/personal-mail-settings-core', 'common/rich-mail-composer', 'common/mailbox-settings-present']);
 		$settings = $this->settings->getForUser($uid);
 		$settingsSectionLabels = [];
 		foreach (WorkspaceSettingsSectionCatalog::SECTIONS as $sectionId) {
@@ -1213,7 +1250,7 @@ class PageController extends Controller
 			return new NotFoundResponse();
 		}
 
-		$this->registerFrontEndAssets('pages/settings', null, [], ['app-settings-legacy-redirect']);
+		$this->registerFrontEndAssets('pages/settings', null, [], []);
 		$uid = $this->accessControl->currentUserId();
 		$settings = $this->settings->getForUser($uid);
 		$canManage = $this->accessControl->isAppAdmin($uid);

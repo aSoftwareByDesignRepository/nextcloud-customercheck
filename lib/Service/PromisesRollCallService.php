@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace OCA\CustomerCheck\Service;
 
 /**
- * Circles roll-call — product §10.6.
+ * Weekly promise roll-call — product §10.6.
  *
  * App-admin view: workspaces with commitment completeness / confidence.
  * Never includes a summed overdue € column (forbidden blend).
  */
-class CirclesRollCallService
+class PromisesRollCallService
 {
 	public function __construct(
 		private readonly WorkspaceService $workspaces,

@@ -166,6 +166,19 @@
     }
     const pack = activeCalendar;
     activeCalendar = null;
+    if (pack.onDialogClose && pack.dialogHost) {
+      pack.dialogHost.removeEventListener('close', pack.onDialogClose);
+    }
+    if (pack.mountMode === 'popover' && pack.element && typeof pack.element.hidePopover === 'function') {
+      try {
+        if (typeof pack.element.matches === 'function' && pack.element.matches(':popover-open')) {
+          pack.element.hidePopover();
+        }
+      } catch (_) { /* already closed / unsupported selector */ }
+    }
+    if (pack.mountMode === 'dialog-host' && pack.dialogHost && pack.overflowBackup != null) {
+      pack.dialogHost.style.overflow = pack.overflowBackup;
+    }
     if (pack.element && pack.element.parentNode) {
       pack.element.parentNode.removeChild(pack.element);
     }
@@ -186,6 +199,46 @@
     if (pack.restoreFocus && pack.input && typeof pack.input.focus === 'function') {
       pack.input.focus();
     }
+  }
+
+  /**
+   * Mount calendar into the open dialog's top-layer entry, or Popover on the page.
+   * Body + z-index alone loses to showModal() — auditor-known failure mode.
+   *
+   * @param {HTMLElement} container
+   * @param {HTMLElement} anchor
+   * @returns {{mountMode:string, dialogHost:HTMLElement|null, overflowBackup:string|null}}
+   */
+  function mountCalendarPopup(container, anchor) {
+    const dialogHost = Core.findOpenDialogHost(anchor);
+    const mountMode = Core.resolveCalendarMountMode({
+      supportsPopover: Core.supportsCalendarPopover(),
+      insideOpenDialog: !!dialogHost,
+    });
+
+    if (mountMode === 'dialog-host' && dialogHost) {
+      // Dialogs use overflow:hidden (rounded clip). Temporarily allow the
+      // fixed calendar to paint outside the panel while staying in-dialog
+      // (required for UA focus trap + top-layer stacking with showModal).
+      const overflowBackup = dialogHost.style.overflow;
+      dialogHost.style.overflow = 'visible';
+      dialogHost.appendChild(container);
+      return { mountMode: mountMode, dialogHost: dialogHost, overflowBackup: overflowBackup };
+    }
+
+    if (mountMode === 'popover') {
+      container.setAttribute('popover', 'manual');
+      document.body.appendChild(container);
+      try {
+        container.showPopover();
+      } catch (_) {
+        /* rare UA quirk — still fixed + high z-index as last resort */
+      }
+      return { mountMode: mountMode, dialogHost: null, overflowBackup: null };
+    }
+
+    document.body.appendChild(container);
+    return { mountMode: 'body', dialogHost: null, overflowBackup: null };
   }
 
   function positionCalendar(container, anchor) {
@@ -381,7 +434,8 @@
     header.appendChild(nextBtn);
     container.appendChild(header);
     container.appendChild(grid);
-    document.body.appendChild(container);
+
+    const mount = mountCalendarPopup(container, input);
 
     const state = {
       element: container,
@@ -395,8 +449,19 @@
       restoreFocus: false,
       onKey: null,
       onPointer: null,
+      onDialogClose: null,
+      mountMode: mount.mountMode,
+      dialogHost: mount.dialogHost,
+      overflowBackup: mount.overflowBackup,
       focusDay: function () { return false; },
     };
+
+    if (mount.dialogHost) {
+      state.onDialogClose = function () {
+        closeCalendar();
+      };
+      mount.dialogHost.addEventListener('close', state.onDialogClose);
+    }
 
     prevBtn.addEventListener('click', function () {
       const next = Core.shiftMonth(state.year, state.month, -1);
@@ -423,6 +488,10 @@
       }
       if (e.key === 'Escape') {
         e.preventDefault();
+        e.stopPropagation();
+        if (typeof e.stopImmediatePropagation === 'function') {
+          e.stopImmediatePropagation();
+        }
         state.restoreFocus = true;
         closeCalendar();
         return;
@@ -585,10 +654,11 @@
     const originalName = input.getAttribute('name') || '';
     const required = input.required || input.hasAttribute('required');
     const locked = !!(input.disabled || input.readOnly || input.hasAttribute('readonly'));
-    const inFlex = !!(input.parentElement && (
-      input.parentElement.classList.contains('crm-date-range__part')
-      || input.parentElement.classList.contains('crm-form-row-2')
-      || (input.parentElement.closest && input.parentElement.closest('.crm-form-row-2'))
+    const parentEl = input.parentElement;
+    // --flex only when the host is a direct child of a grid/flex row (not nested in form-group).
+    const inFlex = !!(parentEl && (
+      parentEl.classList.contains('crm-date-range__part')
+      || parentEl.classList.contains('crm-form-row-2')
     ));
 
     // type=date + readonly + leftover badInput blocks submit with no tooltip.
