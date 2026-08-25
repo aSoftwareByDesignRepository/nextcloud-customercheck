@@ -26,6 +26,8 @@ use OCP\IUserSession;
  */
 class TodayWidget implements IAPIWidgetV2, IIconWidget, IConditionalWidget, IReloadableWidget
 {
+	use RegistersDeskletStylesTrait;
+
 	public function __construct(
 		private readonly IL10N $l10n,
 		private readonly IURLGenerator $urlGenerator,
@@ -83,6 +85,7 @@ class TodayWidget implements IAPIWidgetV2, IIconWidget, IConditionalWidget, IRel
 
 	public function load(): void
 	{
+		$this->registerDeskletStylesForWidget();
 	}
 
 	public function getItemsV2(string $userId, ?string $since = null, int $limit = 7): WidgetItems

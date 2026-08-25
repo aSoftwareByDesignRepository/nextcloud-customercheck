@@ -298,7 +298,7 @@ Ikke Salesforce. Føringene blir i ProjectCheck, InvoiceCheck, TicketCheck, File
 - PHP 8.2+
 - MySQL/MariaDB eller PostgreSQL
 	]]></description>
-		<version>1.6.189</version>
+		<version>1.6.190</version>
 	<licence>AGPL-3.0-or-later</licence>
 	<author mail="info@software-by-design.de" homepage="https://nextcloud.software-by-design.de">Software by Design GbR</author>
 	<namespace>CustomerCheck</namespace>

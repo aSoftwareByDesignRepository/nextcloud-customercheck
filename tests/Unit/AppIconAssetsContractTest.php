@@ -90,6 +90,8 @@ final class AppIconAssetsContractTest extends TestCase
 		$today = (string)file_get_contents(dirname(__DIR__, 2) . '/lib/Dashboard/TodayWidget.php');
 		$this->assertStringContainsString('AppIconService', $today);
 		$this->assertStringContainsString('absoluteSurfaceIconUrl', $today);
+		$this->assertStringContainsString('RegistersDeskletStylesTrait', $today);
+		$this->assertStringContainsString('registerDeskletStylesForWidget()', $today);
 
 		foreach (['CompanySearchProvider', 'PersonSearchProvider', 'DealSearchProvider'] as $cls) {
 			$src = (string)file_get_contents(dirname(__DIR__, 2) . '/lib/Search/' . $cls . '.php');
