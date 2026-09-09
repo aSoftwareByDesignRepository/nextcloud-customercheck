@@ -186,7 +186,7 @@
 	font-weight: 600;
 	line-height: 1.25;
 	text-align: center;
-	color: var(--color-primary-element-text, #fff);
+	color: var(--color-primary-element-text);
 	background: var(--color-primary-element, var(--color-primary));
 	text-decoration: none;
 	isolation: isolate;
@@ -194,7 +194,7 @@
 }
 
 #app-dashboard .panel:has(.panel--header img[src*="/customercheck/"]) a.more:hover {
-	color: var(--color-primary-element-text, #fff);
+	color: var(--color-primary-element-text);
 	background: var(
 		--color-primary-element-hover,
 		var(--color-primary-element, var(--color-primary))

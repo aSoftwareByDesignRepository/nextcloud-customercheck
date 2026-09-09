@@ -28,6 +28,7 @@ use OCA\CustomerCheck\Service\MobileIdempotencyService;
 use OCA\CustomerCheck\Service\MobilePushService;
 use OCA\CustomerCheck\Service\PersonService;
 use OCA\CustomerCheck\Service\WorkspaceAccessService;
+use OCA\CustomerCheck\Service\WorkspaceCapability;
 use OCA\CustomerCheck\Service\WorkspaceService;
 use OCP\App\IAppManager;
 use OCP\AppFramework\Controller;
@@ -131,13 +132,15 @@ class MobileController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
-	public function companies(int $workspaceId, string $q = '', int $limit = 25, int $offset = 0): JSONResponse
+	public function companies(int $workspaceId, string $q = ''): JSONResponse
 	{
-		return $this->guard(function () use ($workspaceId, $q, $limit, $offset): JSONResponse {
+		return $this->guard(function () use ($workspaceId, $q): JSONResponse {
 			$uid = $this->requireGatedUid();
 			$wsId = $this->requireMobileWorkspace($uid, $workspaceId);
-			$limit = max(1, min(100, $limit));
-			$offset = max(0, $offset);
+			// Avoid typed `$limit` method params — NC 34 Dispatcher rejects out-of-range
+			// int `$limit` with uncaught ParameterOutOfRangeException (HTML 500).
+			$limit = $this->clampQueryLimit(25, 100);
+			$offset = max(0, (int)$this->request->getParam('offset', 0));
 			$filters = ['search' => trim($q), 'archived' => false, 'workspaceId' => $wsId];
 			$rows = $this->companies->search($filters, $limit, $offset);
 			$total = $this->companies->count($filters);
@@ -172,8 +175,14 @@ class MobileController extends Controller
 			$wsId = $this->requireMobileWorkspace($uid, $workspaceId, 'write');
 			$body = $this->jsonBody();
 			$body['workspaceId'] = $wsId;
-			// Folder binding goes through CompanyDocumentsService (actor ACL) — never mass-assign.
-			unset($body['filesFolderId'], $body['filesFolderPath']);
+			// Folder / cross-app / owner binding — never mass-assign from the companion.
+			unset(
+				$body['filesFolderId'],
+				$body['filesFolderPath'],
+				$body['accountOwnerUserId'],
+				$body['pcCustomerId'],
+				$body['tcCustomerId'],
+			);
 			$company = $this->idempotency->once(
 				$uid,
 				$this->scopedIdempotencyKey($body, 'co-create', '', $wsId),
@@ -197,11 +206,14 @@ class MobileController extends Controller
 		return $this->guard(function () use ($workspaceId, $id): JSONResponse {
 			$this->assertSafeMutationChannel();
 			$uid = $this->requireGatedUid();
-			$wsId = $this->requireMobileWorkspace($uid, $workspaceId, 'write');
+			$wsCtx = $this->requireMobileWorkspaceContext($uid, $workspaceId, 'write');
+			$wsId = $wsCtx['workspaceId'];
 			$this->requireCompanyInWorkspace($id, $wsId);
 			$body = $this->jsonBody();
 			unset($body['workspaceId'], $body['filesFolderId'], $body['filesFolderPath']);
-			$company = $this->companies->update($id, $body, $uid, $this->preconditionFrom($body));
+			$canReassign = $wsCtx['isAppAdmin']
+				|| WorkspaceCapability::allows($wsCtx['role'], 'bulk', false);
+			$company = $this->companies->update($id, $body, $uid, $this->preconditionFrom($body), $canReassign);
 
 			return $this->success($this->mobile->companyRoadDetail($company, $uid));
 		});
@@ -253,10 +265,17 @@ class MobileController extends Controller
 		return $this->guard(function () use ($workspaceId, $id): JSONResponse {
 			$this->assertSafeMutationChannel();
 			$uid = $this->requireGatedUid();
-			$wsId = $this->requireMobileWorkspace($uid, $workspaceId, 'write');
+			$wsCtx = $this->requireMobileWorkspaceContext($uid, $workspaceId, 'write');
+			$wsId = $wsCtx['workspaceId'];
 			$this->requireCompanyInWorkspace($id, $wsId);
 			$body = $this->jsonBody();
 			$body['companyId'] = $id;
+			// Mirror update's reassignment gate — create must not silently assign foreign owners.
+			$canReassign = $wsCtx['isAppAdmin']
+				|| WorkspaceCapability::allows($wsCtx['role'], 'bulk', false);
+			if (!$canReassign) {
+				unset($body['ownerUserId']);
+			}
 			$deal = $this->idempotency->once(
 				$uid,
 				$this->scopedIdempotencyKey($body, 'de-create', '', $wsId, $id),
@@ -308,7 +327,8 @@ class MobileController extends Controller
 	{
 		return $this->guard(function () use ($workspaceId): JSONResponse {
 			$uid = $this->requireGatedUid();
-			$wsId = $this->requireMobileWorkspace($uid, $workspaceId);
+			// Writers (owner pickers) only — viewers must not enumerate uids/roles.
+			$wsId = $this->requireMobileWorkspace($uid, $workspaceId, 'write');
 			$out = [];
 			foreach ($this->workspaceService->listMembers($wsId) as $member) {
 				$userId = (string)$member->getUserId();
@@ -537,9 +557,9 @@ class MobileController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
-	public function activities(int $workspaceId, int $open = 1, int $companyId = 0, int $limit = 100): JSONResponse
+	public function activities(int $workspaceId, int $open = 1, int $companyId = 0): JSONResponse
 	{
-		return $this->guard(function () use ($workspaceId, $open, $companyId, $limit): JSONResponse {
+		return $this->guard(function () use ($workspaceId, $open, $companyId): JSONResponse {
 			$uid = $this->requireGatedUid();
 			$wsId = $this->requireMobileWorkspace($uid, $workspaceId);
 			if ($companyId > 0) {
@@ -549,7 +569,7 @@ class MobileController extends Controller
 				'openOnly' => $open === 1,
 				'companyId' => $companyId,
 				'workspaceId' => $wsId,
-			], max(1, min(500, $limit)));
+			], $this->clampQueryLimit(100, 500));
 
 			return $this->success(array_map([MobileApiService::class, 'serialiseActivity'], $rows));
 		});
@@ -682,9 +702,9 @@ class MobileController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
-	public function deals(int $workspaceId, int $companyId = 0, int $limit = 200): JSONResponse
+	public function deals(int $workspaceId, int $companyId = 0): JSONResponse
 	{
-		return $this->guard(function () use ($workspaceId, $companyId, $limit): JSONResponse {
+		return $this->guard(function () use ($workspaceId, $companyId): JSONResponse {
 			$uid = $this->requireGatedUid();
 			$wsId = $this->requireMobileWorkspace($uid, $workspaceId);
 			if ($companyId > 0) {
@@ -694,7 +714,7 @@ class MobileController extends Controller
 				'openOnly' => true,
 				'companyId' => $companyId,
 				'workspaceId' => $wsId,
-			], max(1, min(500, $limit)));
+			], $this->clampQueryLimit(200, 500));
 
 			return $this->success(array_map(
 				fn ($deal): array => MobileApiService::serialiseDeal($deal, fn ($d): bool => $this->deals->isStale($d), $this->deals->staleDealDays()),
@@ -732,9 +752,9 @@ class MobileController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
-	public function agreements(int $workspaceId, int $expiringWithinDays = 60, int $companyId = 0, int $limit = 200): JSONResponse
+	public function agreements(int $workspaceId, int $expiringWithinDays = 60, int $companyId = 0): JSONResponse
 	{
-		return $this->guard(function () use ($workspaceId, $expiringWithinDays, $companyId, $limit): JSONResponse {
+		return $this->guard(function () use ($workspaceId, $expiringWithinDays, $companyId): JSONResponse {
 			$uid = $this->requireGatedUid();
 			$wsId = $this->requireMobileWorkspace($uid, $workspaceId);
 			if ($companyId > 0) {
@@ -745,7 +765,7 @@ class MobileController extends Controller
 				$horizon = new \DateTimeImmutable(sprintf('+%d days', min(3660, $expiringWithinDays)));
 				$filters['expiringBefore'] = $horizon;
 			}
-			$rows = $this->agreements->search($filters, max(1, min(500, $limit)));
+			$rows = $this->agreements->search($filters, $this->clampQueryLimit(200, 500));
 
 			return $this->success(array_map([MobileApiService::class, 'serialiseAgreement'], $rows));
 		});
@@ -806,15 +826,28 @@ class MobileController extends Controller
 	 *
 	 * @return int resolved workspace id
 	 */
-	private function requireMobileWorkspace(string $uid, int $workspaceId, string $capability = 'read'): int
+	/**
+	 * @return array{workspaceId: int, role: string, isAppAdmin: bool}
+	 */
+	private function requireMobileWorkspaceContext(string $uid, int $workspaceId, string $capability = 'read'): array
 	{
 		if ($workspaceId <= 0) {
 			throw new NotFoundException('Workspace not found.');
 		}
-		$this->workspaceAccess->assertCapability($uid, $workspaceId, $capability);
-		$ctx = $this->workspaceAccess->resolveForUser($uid, $workspaceId);
+		// Path-scoped companion routes: never rewrite ambient last-used (assert + resolve).
+		$this->workspaceAccess->assertCapability($uid, $workspaceId, $capability, false);
+		$ctx = $this->workspaceAccess->resolveForUser($uid, $workspaceId, false);
 
-		return (int)$ctx['workspace']->getId();
+		return [
+			'workspaceId' => (int)$ctx['workspace']->getId(),
+			'role' => (string)$ctx['role'],
+			'isAppAdmin' => (bool)$ctx['isAppAdmin'],
+		];
+	}
+
+	private function requireMobileWorkspace(string $uid, int $workspaceId, string $capability = 'read'): int
+	{
+		return $this->requireMobileWorkspaceContext($uid, $workspaceId, $capability)['workspaceId'];
 	}
 
 	/**
@@ -850,6 +883,20 @@ class MobileController extends Controller
 	{
 		$deal = $this->deals->get($dealId);
 		$this->requireCompanyInWorkspace((int)$deal->getCompanyId(), $workspaceId);
+	}
+
+	/**
+	 * Clamp query `limit` without a typed `$limit` method parameter.
+	 * NC 34 Dispatcher auto-rejects out-of-range int `$limit` with HTML 500.
+	 */
+	private function clampQueryLimit(int $default, int $max): int
+	{
+		$raw = $this->request->getParam('limit', $default);
+		if ($raw === null || $raw === '') {
+			return max(1, min($max, $default));
+		}
+
+		return max(1, min($max, (int)$raw));
 	}
 
 	/**

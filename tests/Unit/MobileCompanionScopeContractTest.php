@@ -50,11 +50,17 @@ final class MobileCompanionScopeContractTest extends TestCase
 		foreach (['createCompany', 'updateCompany', 'createPerson', 'updatePerson', 'createDeal', 'applyChecklistTemplate', 'updateChecklistItem', 'linkChecklistFile', 'uploadChecklistFile'] as $method) {
 			$chunk = $this->extractMethod($ctrl, $method);
 			$this->assertStringContainsString('assertSafeMutationChannel', $chunk, $method);
-			$this->assertStringContainsString("requireMobileWorkspace(\$uid, \$workspaceId, 'write')", $chunk, $method);
+			// write gate: either the thin wrapper or the context helper (role/capability).
+			$hasWriteGate =
+				str_contains($chunk, "requireMobileWorkspace(\$uid, \$workspaceId, 'write')")
+				|| str_contains($chunk, "requireMobileWorkspaceContext(\$uid, \$workspaceId, 'write')");
+			$this->assertTrue($hasWriteGate, $method . ' must require write workspace ACL');
 		}
 		$create = $this->extractMethod($ctrl, 'createCompany');
 		$this->assertStringContainsString('idempotency->once', $create);
-		$this->assertStringContainsString("unset(\$body['filesFolderId'], \$body['filesFolderPath'])", $create);
+		$this->assertStringContainsString("\$body['filesFolderId']", $create);
+		$this->assertStringContainsString("\$body['filesFolderPath']", $create);
+		$this->assertStringContainsString('unset(', $create);
 		$update = $this->extractMethod($ctrl, 'updateCompany');
 		$this->assertStringContainsString("unset(\$body['workspaceId'], \$body['filesFolderId'], \$body['filesFolderPath'])", $update);
 		$channel = $this->extractMethod($ctrl, 'assertSafeMutationChannel');

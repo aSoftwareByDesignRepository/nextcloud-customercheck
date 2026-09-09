@@ -63,13 +63,13 @@ class MobileMailController extends Controller
 		try {
 			$uid = $this->requireUser();
 			$this->gate->assertGatePassed($uid);
-			$this->workspaceAccess->assertCapability($uid, $workspaceId, 'mail.read');
+			$this->workspaceAccess->assertCapability($uid, $workspaceId, 'mail.read', false);
 			$tab = (string)$this->request->getParam('tab', 'mine');
 			$limit = (int)$this->request->getParam('limit', 50);
 			$mailboxId = (int)$this->request->getParam('mailboxId', 0);
 			$canTriage = false;
 			try {
-				$this->workspaceAccess->assertCapability($uid, $workspaceId, 'write');
+				$this->workspaceAccess->assertCapability($uid, $workspaceId, 'write', false);
 				$canTriage = true;
 			} catch (\Throwable) {
 				$canTriage = false;
@@ -88,17 +88,17 @@ class MobileMailController extends Controller
 		try {
 			$uid = $this->requireUser();
 			$this->gate->assertGatePassed($uid);
-			$this->workspaceAccess->assertCapability($uid, $workspaceId, 'mail.read');
+			$this->workspaceAccess->assertCapability($uid, $workspaceId, 'mail.read', false);
 			$canReadCompany = false;
 			try {
-				$this->workspaceAccess->assertCapability($uid, $workspaceId, 'read');
+				$this->workspaceAccess->assertCapability($uid, $workspaceId, 'read', false);
 				$canReadCompany = true;
 			} catch (\Throwable) {
 				$canReadCompany = false;
 			}
 			$canTriage = false;
 			try {
-				$this->workspaceAccess->assertCapability($uid, $workspaceId, 'write');
+				$this->workspaceAccess->assertCapability($uid, $workspaceId, 'write', false);
 				$canTriage = true;
 			} catch (\Throwable) {
 				$canTriage = false;
@@ -125,8 +125,8 @@ class MobileMailController extends Controller
 		try {
 			$uid = $this->requireUser();
 			$this->gate->assertGatePassed($uid);
-			$this->workspaceAccess->assertCapability($uid, $workspaceId, 'mail.read');
-			$ctx = $this->workspaceAccess->resolveForUser($uid, $workspaceId);
+			$this->workspaceAccess->assertCapability($uid, $workspaceId, 'mail.read', false);
+			$ctx = $this->workspaceAccess->resolveForUser($uid, $workspaceId, false);
 			$canSend = $ctx['isAppAdmin']
 				|| WorkspaceCapability::allows($ctx['role'], 'mail.send', false);
 			if ($ctx['member'] !== null && method_exists($ctx['member'], 'canMailSend')) {
@@ -147,8 +147,8 @@ class MobileMailController extends Controller
 			$this->assertSafeMutationChannel();
 			$uid = $this->requireUser();
 			$this->gate->assertGatePassed($uid);
-			$this->workspaceAccess->assertCapability($uid, $workspaceId, 'mail.read');
-			$ctx = $this->workspaceAccess->resolveForUser($uid, $workspaceId);
+			$this->workspaceAccess->assertCapability($uid, $workspaceId, 'mail.read', false);
+			$ctx = $this->workspaceAccess->resolveForUser($uid, $workspaceId, false);
 			$canSend = $ctx['isAppAdmin']
 				|| WorkspaceCapability::allows($ctx['role'], 'mail.send', false);
 			if ($ctx['member'] !== null && method_exists($ctx['member'], 'canMailSend')) {
@@ -170,7 +170,7 @@ class MobileMailController extends Controller
 			$this->assertSafeMutationChannel();
 			$uid = $this->requireUser();
 			$this->gate->assertGatePassed($uid);
-			$this->workspaceAccess->assertCapability($uid, $workspaceId, 'mail.read');
+			$this->workspaceAccess->assertCapability($uid, $workspaceId, 'mail.send', false);
 			$uploaded = $this->request->getUploadedFile('file');
 			if (!is_array($uploaded) || empty($uploaded['tmp_name']) || !is_uploaded_file((string)$uploaded['tmp_name'])) {
 				throw new ValidationException(
@@ -201,7 +201,7 @@ class MobileMailController extends Controller
 		try {
 			$uid = $this->requireUser();
 			$this->gate->assertGatePassed($uid);
-			$this->workspaceAccess->assertCapability($uid, $workspaceId, 'mail.read');
+			$this->workspaceAccess->assertCapability($uid, $workspaceId, 'mail.read', false);
 			$settings = $this->workspaceService->getSettings($workspaceId);
 
 			return $this->ok([
@@ -221,7 +221,7 @@ class MobileMailController extends Controller
 			$this->assertSafeMutationChannel();
 			$uid = $this->requireUser();
 			$this->gate->assertGatePassed($uid);
-			$this->workspaceAccess->assertCapability($uid, $workspaceId, 'write');
+			$this->workspaceAccess->assertCapability($uid, $workspaceId, 'write', false);
 
 			return $this->ok($this->personalMail->connectImap($workspaceId, $uid, $this->jsonBody()));
 		} catch (\Throwable $e) {
@@ -237,7 +237,7 @@ class MobileMailController extends Controller
 			$this->assertSafeMutationChannel();
 			$uid = $this->requireUser();
 			$this->gate->assertGatePassed($uid);
-			$this->workspaceAccess->assertCapability($uid, $workspaceId, 'write');
+			$this->workspaceAccess->assertCapability($uid, $workspaceId, 'write', false);
 			$body = $this->jsonBody();
 			$folders = isset($body['folders']) && is_array($body['folders']) ? $body['folders'] : [];
 
@@ -255,7 +255,7 @@ class MobileMailController extends Controller
 			$this->assertSafeMutationChannel();
 			$uid = $this->requireUser();
 			$this->gate->assertGatePassed($uid);
-			$this->workspaceAccess->assertCapability($uid, $workspaceId, 'write');
+			$this->workspaceAccess->assertCapability($uid, $workspaceId, 'write', false);
 			$this->personalMail->assertPersonalMailEnabled($workspaceId);
 			if (!$this->rateLimit->allow(
 				'pm_sync:' . $uid,
@@ -284,7 +284,7 @@ class MobileMailController extends Controller
 			$this->assertSafeMutationChannel();
 			$uid = $this->requireUser();
 			$this->gate->assertGatePassed($uid);
-			$this->workspaceAccess->assertCapability($uid, $workspaceId, 'write');
+			$this->workspaceAccess->assertCapability($uid, $workspaceId, 'write', false);
 			$this->personalMail->disconnect($workspaceId, $id, $uid);
 
 			return $this->ok(['deleted' => true, 'id' => $id]);
@@ -301,7 +301,7 @@ class MobileMailController extends Controller
 			$this->assertSafeMutationChannel();
 			$uid = $this->requireUser();
 			$this->gate->assertGatePassed($uid);
-			$this->workspaceAccess->assertCapability($uid, $workspaceId, 'write');
+			$this->workspaceAccess->assertCapability($uid, $workspaceId, 'write', false);
 			$this->personalMail->assertPersonalMailEnabled($workspaceId);
 			if (!$this->rateLimit->allow(
 				'pm_sync:' . $uid,
@@ -342,7 +342,7 @@ class MobileMailController extends Controller
 			$this->assertSafeMutationChannel();
 			$uid = $this->requireUser();
 			$this->gate->assertGatePassed($uid);
-			$this->workspaceAccess->assertCapability($uid, $workspaceId, 'write');
+			$this->workspaceAccess->assertCapability($uid, $workspaceId, 'write', false);
 
 			return $this->ok($this->personalMail->saveSignature($workspaceId, $id, $uid, $this->jsonBody()));
 		} catch (\Throwable $e) {
@@ -358,7 +358,7 @@ class MobileMailController extends Controller
 			$this->assertSafeMutationChannel();
 			$uid = $this->requireUser();
 			$this->gate->assertGatePassed($uid);
-			$this->workspaceAccess->assertCapability($uid, $workspaceId, 'write');
+			$this->workspaceAccess->assertCapability($uid, $workspaceId, 'write', false);
 
 			return $this->ok($this->personalMailOAuth->beginAuthorize($workspaceId, $uid, $provider, $this->jsonBody()));
 		} catch (\Throwable $e) {
@@ -377,7 +377,7 @@ class MobileMailController extends Controller
 			$this->assertSafeMutationChannel();
 			$uid = $this->requireUser();
 			$this->gate->assertGatePassed($uid);
-			$this->workspaceAccess->assertCapability($uid, $workspaceId, 'write');
+			$this->workspaceAccess->assertCapability($uid, $workspaceId, 'write', false);
 			$body = $this->jsonBody();
 			$state = trim((string)($body['state'] ?? ''));
 			$code = trim((string)($body['code'] ?? ''));
@@ -396,7 +396,7 @@ class MobileMailController extends Controller
 		try {
 			$uid = $this->requireUser();
 			$this->gate->assertGatePassed($uid);
-			$this->workspaceAccess->assertCapability($uid, $workspaceId, 'mail.read');
+			$this->workspaceAccess->assertCapability($uid, $workspaceId, 'mail.read', false);
 			$path = (string)$this->request->getParam('path', '');
 			$limit = (int)$this->request->getParam('limit', 80);
 

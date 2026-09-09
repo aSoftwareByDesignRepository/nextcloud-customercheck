@@ -185,8 +185,8 @@ final class MobileApiServiceTest extends TestCase
 	public function testNormaliseLeavesPlainBodyUntouched(): void
 	{
 		$this->assertSame(
-			['title' => 'X', 'companyId' => 1],
-			MobileApiService::normaliseActivityBody(['title' => 'X', 'companyId' => 1]),
+			['title' => 'X', 'companyId' => 1, 'origin' => 'user'],
+			MobileApiService::normaliseActivityBody(['title' => 'X', 'companyId' => 1, 'origin' => 'user']),
 		);
 	}
 

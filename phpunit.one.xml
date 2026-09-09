@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit bootstrap="/var/www/html/custom_apps/customercheck/tests/bootstrap.php" colors="false"
+         cacheResult="false">
+  <testsuites>
+    <testsuite name="unit">
+      <file>/var/www/html/custom_apps/customercheck/tests/Unit/Controller/HealthControllerTest.php</file>
+    </testsuite>
+  </testsuites>
+</phpunit>

@@ -45,7 +45,7 @@ class WorkspaceAccessService
 	 *   needsPicker: bool
 	 * }
 	 */
-	public function resolveForUser(string $userId, ?int $requestedWorkspaceId = null): array
+	public function resolveForUser(string $userId, ?int $requestedWorkspaceId = null, bool $rememberLast = true): array
 	{
 		$isAppAdmin = $this->access->isAppAdmin($userId);
 		$requested = $requestedWorkspaceId;
@@ -75,7 +75,9 @@ class WorkspaceAccessService
 				// Existence leak prevention: same as not found.
 				throw new NotFoundException($this->l10n->t('Workspace not found.'));
 			}
-			$this->remember($userId, (int)$ws->getId());
+			if ($rememberLast) {
+				$this->remember($userId, (int)$ws->getId());
+			}
 			return [
 				'workspace' => $ws,
 				'role' => $isAppAdmin ? 'manager' : (string)$member->getRole(),
@@ -91,7 +93,9 @@ class WorkspaceAccessService
 			if (!$isAppAdmin && $member === null) {
 				throw new NotFoundException($this->l10n->t('You are not a member of any workspace.'));
 			}
-			$this->remember($userId, (int)$ws->getId());
+			if ($rememberLast) {
+				$this->remember($userId, (int)$ws->getId());
+			}
 			return [
 				'workspace' => $ws,
 				'role' => $isAppAdmin ? 'manager' : (string)$member->getRole(),
@@ -127,7 +131,9 @@ class WorkspaceAccessService
 			}
 			if (count($all) === 1) {
 				$ws = $all[0];
-				$this->remember($userId, (int)$ws->getId());
+				if ($rememberLast) {
+					$this->remember($userId, (int)$ws->getId());
+				}
 				return [
 					'workspace' => $ws,
 					'role' => 'manager',
@@ -152,7 +158,9 @@ class WorkspaceAccessService
 		if (count($mine) === 1) {
 			$ws = $mine[0];
 			$member = $this->members->findMembership((int)$ws->getId(), $userId);
-			$this->remember($userId, (int)$ws->getId());
+			if ($rememberLast) {
+				$this->remember($userId, (int)$ws->getId());
+			}
 			return [
 				'workspace' => $ws,
 				'role' => (string)$member->getRole(),
@@ -171,9 +179,9 @@ class WorkspaceAccessService
 		];
 	}
 
-	public function assertCapability(string $userId, int $workspaceId, string $capability): void
+	public function assertCapability(string $userId, int $workspaceId, string $capability, bool $rememberLast = true): void
 	{
-		$ctx = $this->resolveForUser($userId, $workspaceId);
+		$ctx = $this->resolveForUser($userId, $workspaceId, $rememberLast);
 		if ($ctx['workspace']->isArchived() && $capability !== 'read' && $capability !== 'mail.read') {
 			throw ValidationException::field(
 				Constants::ERR_WS_ARCHIVED,

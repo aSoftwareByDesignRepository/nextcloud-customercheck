@@ -123,6 +123,8 @@ final class TeamUxContractTest extends TestCase
 		$this->assertStringContainsString('filterActivityIdsInWorkspace', $src);
 		$this->assertStringContainsString('notifyActivityBulkReassign', $src);
 		$this->assertStringContainsString("'activities' => \$activityAffected", $src);
+	}
+
 	public function testTeamCapacityUiExportsValidation(): void
 	{
 		$js = (string)file_get_contents(dirname(__DIR__, 2) . '/js/common/team-capacity-ui.js');

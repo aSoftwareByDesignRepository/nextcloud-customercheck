@@ -296,6 +296,9 @@ class MobileApiService
 			$body['dueDate'] = $body['dueOn'];
 		}
 		unset($body['summary'], $body['dueOn']);
+		// Companion creates are always human-authored. Never accept client-supplied
+		// system/sequence/webhook origins (property-level auth — mass assignment).
+		$body['origin'] = 'user';
 
 		return $body;
 	}

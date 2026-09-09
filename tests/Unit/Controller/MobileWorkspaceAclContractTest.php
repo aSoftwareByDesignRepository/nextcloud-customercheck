@@ -216,7 +216,7 @@ final class MobileWorkspaceAclContractTest extends TestCase
 			->with($this->callback(static fn (array $f): bool => ($f['workspaceId'] ?? null) === 12))
 			->willReturn(0);
 
-		$response = $this->controller()->companies(12, 'acme', 25, 0);
+		$response = $this->controller()->companies(12, 'acme');
 
 		$this->assertSame(Http::STATUS_OK, $response->getStatus());
 		$this->assertTrue($response->getData()['success']);
