@@ -2,6 +2,7 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { login, credsFromEnv, gotoCrm } from './helpers/auth.js';
+import { fillNextStepDueDate } from './helpers/new-deal-form.js';
 
 /**
  * Today Command Board — suite tables, role dashboard, jump chips, a11y.
@@ -105,7 +106,8 @@ test.describe('Today command board UX', () => {
     await form.locator('details.crm-advanced summary').click();
     await form.locator('[name="type"]').selectOption('call');
     const today = new Date().toISOString().slice(0, 10);
-    await form.locator('[name="dueDate"]').fill(today);
+    // Datepicker hosts make the ISO input hidden/readonly — set via helper.
+    await fillNextStepDueDate(form, today);
     await form.locator('button[type="submit"]').click();
     await page.waitForLoadState('networkidle');
 

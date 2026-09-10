@@ -38,7 +38,15 @@ test.describe('Bachus agreement form effortless flows', () => {
     const until = new Date();
     until.setFullYear(until.getFullYear() + 1);
     const untilIso = `${until.getFullYear()}-${String(until.getMonth() + 1).padStart(2, '0')}-${String(until.getDate()).padStart(2, '0')}`;
-    await page.locator('#crm-ag-until').fill(untilIso);
+    // #crm-ag-until is a readonly datepicker display; write ISO on the hidden host input.
+    const untilHost = page.locator('.crm-datepicker-host', { has: page.locator('#crm-ag-until') });
+    await untilHost.locator('input[data-crm-date-iso]').evaluate((el, value) => {
+      if (el instanceof HTMLInputElement) {
+        el.value = value;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    }, untilIso);
     await page.locator('#crm-ag-amount').fill('1200.00');
     await page.locator('#crm-agreement-form button[type="submit"]').click();
     const err = page.locator('#crm-agreement-form-error');
