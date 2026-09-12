@@ -34,6 +34,10 @@ Not Salesforce. Ledgers stay in ProjectCheck, InvoiceCheck, TicketCheck, Files, 
 - **Accessibility** — WCAG 2.1 AA; responsive from 320 px · EN + DE
 - **Web free (AGPL)** — companion seats never gate the web app
 
+## Feedback welcome
+
+We improve this app with real-world use. Bug reports, rough edges, and ideas help — open a GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-customercheck/issues) or write to info@software-by-design.de. Your feedback directly shapes what we build next.
+
 ## Requirements
 
 - Nextcloud 32–34
@@ -65,7 +69,11 @@ Kein Salesforce. Buchungen bleiben in ProjectCheck, InvoiceCheck, TicketCheck, F
 - **Integrationen** — optional ProjectCheck, InvoiceCheck, TicketCheck, SbdLicenseOps
 - **Barrierefreiheit** — WCAG 2.1 AA; responsiv ab 320 px · DE + EN
 - **Web frei (AGPL)** — Companion-Sitze sperren die Web-App nie
-	]]></description>
+
+## Feedback willkommen
+
+Wir verbessern diese App mit Rückmeldungen aus der Praxis. Fehlerberichte, Stolpersteine und Ideen helfen — öffnen Sie ein GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-customercheck/issues) oder schreiben Sie an info@software-by-design.de. Ihr Feedback prägt direkt, was wir als Nächstes bauen.
+]]></description>
 		<description lang="fr"><![CDATA[
 # CustomerCheck
 
@@ -88,6 +96,10 @@ Ce n’est pas Salesforce. Les écritures restent dans ProjectCheck, InvoiceChec
 - **Integrations** — ProjectCheck, InvoiceCheck, TicketCheck, SbdLicenseOps en option
 - **Accessibilité** — WCAG 2.1 AA ; responsive dès 320 px · EN + DE
 - **Web free (AGPL)** — les sièges du compagnon ne bloquent jamais l’application web
+
+## Retours bienvenus
+
+Nous améliorons cette app grâce à votre usage réel. Bugs, frottements et idées aident — ouvrez une GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-customercheck/issues) ou écrivez à info@software-by-design.de. Vos retours façonnent directement la suite.
 
 ## Exigences
 
@@ -118,6 +130,10 @@ No es Salesforce. Los libros contables permanecen en ProjectCheck, InvoiceCheck,
 - **Accesibilidad** — WCAG 2.1 AA; responsive desde 320 px · EN + DE
 - **Web free (AGPL)** — los asientos del compañero nunca bloquean la app web
 
+## Comentarios bienvenidos
+
+Mejoramos esta app con el uso real. Informes de errores, fricciones e ideas ayudan — abra un GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-customercheck/issues) o escriba a info@software-by-design.de. Su feedback da forma directa a lo que construimos después.
+
 ## Requisitos
 
 - Nextcloud 32–34
@@ -146,6 +162,10 @@ Det er ikke Salesforce. Bogføringerne bliver i ProjectCheck, InvoiceCheck, Tick
 - **Integrations** — valgfrit: ProjectCheck, InvoiceCheck, TicketCheck, SbdLicenseOps
 - **Tilgængelighed** — WCAG 2.1 AA; responsivt fra 320 px · EN + DE
 - **Web free (AGPL)** — companion seats blokerer aldrig webappen
+
+## Feedback er velkommen
+
+Vi forbedrer denne app med brug i praksis. Fejlrapporter, friktioner og idéer hjælper — åbn et GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-customercheck/issues) eller skriv til info@software-by-design.de. Jeres feedback former direkte det, vi bygger næste gang.
 
 ## Krav
 
@@ -176,6 +196,10 @@ Geen Salesforce. Administraties blijven in ProjectCheck, InvoiceCheck, TicketChe
 - **Toegankelijkheid** — WCAG 2.1 AA; responsief vanaf 320 px · EN + DE
 - **Web free (AGPL)** — companion seats blokkeren de webapp nooit
 
+## Feedback welkom
+
+We verbeteren deze app met gebruik in de praktijk. Bugmeldingen, struikelblokken en ideeën helpen — open een GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-customercheck/issues) of mail naar info@software-by-design.de. Uw feedback bepaalt mede wat we als volgende bouwen.
+
 ## Vereisten
 
 - Nextcloud 32–34
@@ -204,6 +228,10 @@ Non è Salesforce. I registri restano in ProjectCheck, InvoiceCheck, TicketCheck
 - **Integrations** — ProjectCheck, InvoiceCheck, TicketCheck, SbdLicenseOps opzionali
 - **Accessibilità** — WCAG 2.1 AA; responsive da 320 px · EN + DE
 - **Web free (AGPL)** — i posti del companion non bloccano mai l’app web
+
+## Feedback benvenuto
+
+Miglioriamo questa app con l’uso reale. Segnalazioni di bug, punti deboli e idee aiutano — aprite una GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-customercheck/issues) o scrivete a info@software-by-design.de. Il vostro feedback guida direttamente ciò che costruiamo dopo.
 
 ## Requisiti
 
@@ -234,6 +262,10 @@ To nie Salesforce. Rejestry pozostają w ProjectCheck, InvoiceCheck, TicketCheck
 - **Dostępność** — WCAG 2.1 AA; responsywność od 320 px · EN + DE
 - **Web free (AGPL)** — miejsca companion nigdy nie blokują aplikacji web
 
+## Feedback mile widziany
+
+Ulepszamy tę aplikację dzięki realnemu użyciu. Zgłoszenia błędów, tarcia i pomysły pomagają — otwórz GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-customercheck/issues) lub napisz na info@software-by-design.de. Wasza opinia bezpośrednio kształtuje to, co budujemy dalej.
+
 ## Wymagania
 
 - Nextcloud 32–34
@@ -263,6 +295,10 @@ Inte Salesforce. Redovisningarna ligger kvar i ProjectCheck, InvoiceCheck, Ticke
 - **Tillgänglighet** — WCAG 2.1 AA; responsivt från 320 px · EN + DE
 - **Web free (AGPL)** — companion seats spärrar aldrig webbappen
 
+## Feedback välkomnas
+
+Vi förbättrar den här appen med verklig användning. Felrapporter, friktioner och idéer hjälper — öppna en GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-customercheck/issues) eller skriv till info@software-by-design.de. Er feedback formar direkt det vi bygger härnäst.
+
 ## Krav
 
 - Nextcloud 32–34
@@ -291,6 +327,10 @@ Ikke Salesforce. Føringene blir i ProjectCheck, InvoiceCheck, TicketCheck, File
 - **Integrations** — valgfri ProjectCheck, InvoiceCheck, TicketCheck, SbdLicenseOps
 - **Tilgjengelighet** — WCAG 2.1 AA; responsivt fra 320 px · EN + DE
 - **Web free (AGPL)** — companion seats sperrer aldri nettappen
+
+## Feedback er velkommen
+
+Vi forbedrer denne appen med bruk i praksis. Feilrapporter, friksjon og idéer hjelper — åpne en GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-customercheck/issues) eller skriv til info@software-by-design.de. Tilbakemeldingen deres former direkte det vi bygger videre.
 
 ## Krav
 

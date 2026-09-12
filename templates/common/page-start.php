@@ -72,6 +72,20 @@ $urlsJson = htmlspecialchars(json_encode($urls, JSON_THROW_ON_ERROR | JSON_UNESC
 	<div id="crm-alert-region" class="crm-sr-only" role="alert" aria-live="assertive" aria-atomic="true"></div>
 	<div id="app-content-wrapper" class="crm-shell<?php p($shellWidthClass); ?>">
 		<header class="crm-page-header" aria-labelledby="crm-page-title">
+			<button type="button"
+				class="cuc-nav-toggle"
+				id="cuc-nav-toggle"
+				data-cuc-nav-toggle
+				aria-controls="app-navigation"
+				aria-expanded="false"
+				aria-label="<?php p($l->t('Open navigation menu')); ?>"
+				data-aria-label-open="<?php p($l->t('Open navigation menu')); ?>"
+				data-aria-label-close="<?php p($l->t('Close navigation menu')); ?>">
+				<span class="cuc-nav-toggle__icon" aria-hidden="true">
+					<?php print_unescaped(IconCatalog::render('menu', 'cuc-nav-toggle__icon-svg')); ?>
+				</span>
+				<span class="cuc-nav-toggle__label"><?php p($l->t('Menu')); ?></span>
+			</button>
 			<nav class="crm-breadcrumb" aria-label="<?php p($l->t('Breadcrumb')); ?>">
 				<ol class="crm-breadcrumb__list">
 					<li class="crm-breadcrumb__item"><a href="<?php p($urls['today'] ?? '#'); ?>"><?php p($l->t('CustomerCheck')); ?></a></li>

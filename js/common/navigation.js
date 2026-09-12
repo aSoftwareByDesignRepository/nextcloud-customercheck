@@ -1,8 +1,9 @@
 /**
  * Navigation JavaScript for CustomerCheck App
  * Submenu toggles, keyboard navigation, and workspace switcher (all pages).
- * Mobile drawer uses Nextcloud core (#app-navigation-toggle / body.snapjs-left
- * below 1024px), same as BudgetCheck and DutyCheck.
+ * Mobile drawer uses in-page Menu (#cuc-nav-toggle / common/mobile-nav.js)
+ * below 1024px (ATLAS_MOBILE_NAV_CONTRACT). Core #app-navigation-toggle alone
+ * is not enough when #content has overflow:hidden.
  *
  * Workspace switching uses a labelled disclosure + links (activation), never a
  * select onchange navigation — WCAG 2.1 AA 3.2.2 On Input.

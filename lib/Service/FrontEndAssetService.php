@@ -27,6 +27,7 @@ final class FrontEndAssetService
 		Util::addTranslations(Application::APP_ID);
 		Util::addStyle(Application::APP_ID, 'app');
 		Util::addStyle(Application::APP_ID, 'navigation');
+		Util::addStyle(Application::APP_ID, 'common/mobile-nav');
 		Util::addScript(Application::APP_ID, 'common/dialog-present');
 		Util::addScript(Application::APP_ID, 'common/company-picker');
 		Util::addScript(Application::APP_ID, 'common/components');
@@ -36,6 +37,7 @@ final class FrontEndAssetService
 		Util::addScript(Application::APP_ID, 'common/shared-mail-send');
 		Util::addScript(Application::APP_ID, 'common/user-picker-nav');
 		Util::addScript(Application::APP_ID, 'common/navigation');
+		Util::addScript(Application::APP_ID, 'common/mobile-nav');
 		Util::addScript(Application::APP_ID, 'common/navigation-icons');
 		Util::addScript(Application::APP_ID, 'common/app-feedback');
 		Util::addScript(Application::APP_ID, 'common/datepicker-core');

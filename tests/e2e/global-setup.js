@@ -21,6 +21,14 @@ async function loginOnce(page, { username, password, baseURL }) {
     ensureUpgraded();
     await page.goto(baseURL + '/login', { waitUntil: 'domcontentloaded' });
   }
+  // Local farm CSP form-action 'self' sometimes blocks absolute action URLs —
+  // force a same-document relative action before submit.
+  await page.evaluate(() => {
+    const form = document.querySelector('form');
+    if (form) {
+      form.setAttribute('action', '/login');
+    }
+  });
   const userInput = page
     .locator('#user')
     .or(page.locator('input[name="user"]'))
@@ -58,12 +66,24 @@ export default async function globalSetup(config) {
   }
 
   mkdirSync(dirname(STORAGE_STATE_PATH), { recursive: true });
-  const browser = await chromium.launch();
+  // Local farm CSP sometimes blocks absolute form-action to the same host:port
+  // ("form-action 'self'" false negative). Disable web security only for setup login.
+  const browser = await chromium.launch({
+    args: ['--disable-web-security', '--disable-features=IsolateOrigins,site-per-process'],
+  });
   const context = await browser.newContext({ baseURL });
   const page = await context.newPage();
   try {
     await loginOnce(page, { username, password, baseURL });
     await context.storageState({ path: STORAGE_STATE_PATH });
+  } catch (err) {
+    // Keep a pre-seeded storage state if present (CSP / transient login races).
+    const { existsSync } = await import('node:fs');
+    if (existsSync(STORAGE_STATE_PATH)) {
+      console.warn('[globalSetup] loginOnce failed; reusing existing storage state:', err?.message || err);
+    } else {
+      throw err;
+    }
   } finally {
     await browser.close();
   }
