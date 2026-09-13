@@ -443,7 +443,7 @@ OC.L10N.register(
 	"Bills & files" : "Regninger & filer",
 	"Blocked" : "Blokkert",
 	"Blocker" : "Blocker",
-	"Board" : "Board",
+	"Board" : "Tavle",
 	"Bold" : "Fet",
 	"Bookable help for your organisation — while the app stays free" : "Bookbar hjelp for organisasjonen din — mens appen forblir gratis",
 	"Both companies link to different ProjectCheck customers. Unlink one before merging." : "Begge selskapene lenker til forskjellige ProjectCheck kunder. Ta kontakt før du slår sammen.",
@@ -844,7 +844,7 @@ OC.L10N.register(
 	"Customer promises" : "Kunden lover",
 	"Customer sections" : "Kundeseksjoner",
 	"CustomerCheck" : "CustomerCheck",
-	"CustomerCheck Mobile" : "KundeSjekk Mobile",
+	"CustomerCheck Mobile" : "CustomerCheck Mobile",
 	"CustomerCheck Mobile needs a CUC2 license. Ask your administrator." : "KundeCheck Mobile trenger en CUC2-lisens. Spør din administrator.",
 	"CustomerCheck Today" : "CustomerCheck I dag",
 	"CustomerCheck app administrators" : "CustomerCheck-appadministratorer",
@@ -1404,7 +1404,7 @@ OC.L10N.register(
 	"Loss reason" : "Taper grunn",
 	"Lost" : "Mistet",
 	"Low" : "Lav",
-	"Luxembourg" : "Luxemburg",
+	"Luxembourg" : "Luxembourg",
 	"Mail" : "E-post",
 	"Mail OAuth" : "E-post-OAuth",
 	"Mail app is not available here. Log important messages so you still know what you wrote with whom." : "E-post app er ikke tilgjengelig her. Logg viktige meldinger slik at du fortsatt vet hva du skrev med hvem.",
@@ -1881,7 +1881,7 @@ OC.L10N.register(
 	"Or pick another company" : "Eller velg et annet firma",
 	"Or tap a ready-made promise:" : "Eller trykk på et klart løfte:",
 	"Order received" : "Bestill mottatt",
-	"Organisation" : "Publisert",
+	"Organisation" : "Organisasjon",
 	"Organisation name close match" : "Organisasjonens navn lukk match",
 	"Organisation name unique" : "Organisasjonsnavn unikt",
 	"Organisations can request prioritised features via the contact options on this page." : "Organisasjoner kan be om prioriterte funksjoner via kontaktalternativene på denne siden.",
@@ -2667,7 +2667,7 @@ OC.L10N.register(
 	"Tickets" : "Saker",
 	"Tickets waiting" : "Saker som venter",
 	"Timeline" : "Tidslinje",
-	"Timing" : "Timing",
+	"Timing" : "Tidspunkt",
 	"Title" : "Tittel",
 	"Title is too long." : "Tittelen er for lang.",
 	"To" : "Til",
@@ -2974,6 +2974,5 @@ OC.L10N.register(
 	"record" : "rekord",
 	"this workspace" : "dette arbeidsområdet",
 	"valid" : "gyldig"
-	},
-	"nplurals=2; plural=(n != 1);"
+	}
 );

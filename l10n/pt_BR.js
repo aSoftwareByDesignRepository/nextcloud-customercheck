@@ -2667,7 +2667,7 @@ OC.L10N.register(
 	"Tickets" : "Tickets",
 	"Tickets waiting" : "Tickets aguardando",
 	"Timeline" : "Linha do tempo",
-	"Timing" : "Tempo",
+	"Timing" : "Momento",
 	"Title" : "Título",
 	"Title is too long." : "O título é muito longo.",
 	"To" : "Para",
@@ -2974,6 +2974,5 @@ OC.L10N.register(
 	"record" : "registro",
 	"this workspace" : "este espaço de trabalho",
 	"valid" : "válido"
-	},
-	"nplurals=2; plural=(n > 1);"
+	}
 );

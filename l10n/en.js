@@ -2974,6 +2974,5 @@ OC.L10N.register(
 	"record" : "record",
 	"this workspace" : "this workspace",
 	"valid" : "valid"
-	},
-	"nplurals=2; plural=(n != 1);"
+	}
 );

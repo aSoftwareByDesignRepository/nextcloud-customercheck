@@ -425,7 +425,7 @@ OC.L10N.register(
 	"Attachment removed." : "Bijlage verwijderd.",
 	"Attachments (optional)" : "Bijlagen (optioneel)",
 	"Attachments together are too large (max %s)." : "Bijlagen samen zijn te groot (max %s).",
-	"Attention" : "Attentie.",
+	"Attention" : "Aandacht",
 	"Attention queue" : "Aandachtswachtrij",
 	"Austria" : "Oostenrijk",
 	"Auto" : "Automatisch",
@@ -443,7 +443,7 @@ OC.L10N.register(
 	"Bills & files" : "Rekeningen & bestanden",
 	"Blocked" : "Geblokkeerd",
 	"Blocker" : "Blokker",
-	"Board" : "Bestuur",
+	"Board" : "Bord",
 	"Bold" : "Vet",
 	"Bookable help for your organisation — while the app stays free" : "Boekbare hulp voor uw organisatie — terwijl de app gratis blijft",
 	"Both companies link to different ProjectCheck customers. Unlink one before merging." : "Beide bedrijven koppelen aan verschillende ProjectCheck klanten. Maak er één los voordat ze samengevoegd worden.",
@@ -844,7 +844,7 @@ OC.L10N.register(
 	"Customer promises" : "Beloften van de klant",
 	"Customer sections" : "Klantsecties",
 	"CustomerCheck" : "CustomerCheck",
-	"CustomerCheck Mobile" : "CustomerCheck Mobiel",
+	"CustomerCheck Mobile" : "CustomerCheck Mobile",
 	"CustomerCheck Mobile needs a CUC2 license. Ask your administrator." : "CustomerCheck Mobile heeft een CUC2-licentie nodig. Vraag het je beheerder.",
 	"CustomerCheck Today" : "CustomerCheck Vandaag",
 	"CustomerCheck app administrators" : "CustomerCheck-appbeheerders",
@@ -2667,7 +2667,7 @@ OC.L10N.register(
 	"Tickets" : "Tickets",
 	"Tickets waiting" : "Tickets die wachten",
 	"Timeline" : "Tijdlijn",
-	"Timing" : "Tijdschema",
+	"Timing" : "Timing",
 	"Title" : "Titel",
 	"Title is too long." : "Titel is te lang.",
 	"To" : "Aan",
@@ -2974,6 +2974,5 @@ OC.L10N.register(
 	"record" : "gegevensrecord",
 	"this workspace" : "deze werkruimte",
 	"valid" : "geldig"
-	},
-	"nplurals=2; plural=(n != 1);"
+	}
 );

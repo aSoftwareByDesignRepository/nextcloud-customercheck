@@ -443,7 +443,7 @@ OC.L10N.register(
 	"Bills & files" : "Factures & fichiers",
 	"Blocked" : "Bloqué",
 	"Blocker" : "Bloqueur",
-	"Board" : "Conseil",
+	"Board" : "Tableau",
 	"Bold" : "Gras",
 	"Bookable help for your organisation — while the app stays free" : "Aide réservable pour ton organisation — l’app reste gratuite",
 	"Both companies link to different ProjectCheck customers. Unlink one before merging." : "Les deux sociétés sont liées à différents clients ProjectCheck. Dissociez-en un avant de fusionner.",
@@ -1899,7 +1899,7 @@ OC.L10N.register(
 	"Overdue since %s" : "En retard depuis %s",
 	"Overdue work" : "Travaux en retard",
 	"Overdue, unpaid, paid and unknown invoice states." : "États de facture en retard, impayés, payés et inconnus.",
-	"Overhead" : "Aérien",
+	"Overhead" : "Frais généraux",
 	"Overview" : "Aperçu",
 	"Overview from linked apps and licenses — not a tax audit." : "Vue d’ensemble depuis les apps liées et les licences — pas un contrôle fiscal.",
 	"Overview shows health. Open Money when you need overdue and unpaid details." : "L’aperçu montre la santé. Ouvre Argent quand tu as besoin du détail des impayés et retards.",
@@ -2667,7 +2667,7 @@ OC.L10N.register(
 	"Tickets" : "Billets",
 	"Tickets waiting" : "Tickets en attente",
 	"Timeline" : "Chronologie",
-	"Timing" : "Calendrier",
+	"Timing" : "Timing",
 	"Title" : "Titre",
 	"Title is too long." : "Le titre est trop long.",
 	"To" : "À",
@@ -2974,6 +2974,5 @@ OC.L10N.register(
 	"record" : "enregistrer",
 	"this workspace" : "cet espace de travail",
 	"valid" : "valide"
-	},
-	"nplurals=2; plural=(n > 1);"
+	}
 );

@@ -443,7 +443,7 @@ OC.L10N.register(
 	"Bills & files" : "Rachunki i pliki",
 	"Blocked" : "Zablokowany",
 	"Blocker" : "Blocker",
-	"Board" : "Zarząd",
+	"Board" : "Tablica",
 	"Bold" : "Pogrubienie",
 	"Bookable help for your organisation — while the app stays free" : "Pomoc do zamówienia dla Twojej organizacji — podczas gdy aplikacja pozostaje darmowa",
 	"Both companies link to different ProjectCheck customers. Unlink one before merging." : "Obie firmy łączą się z różnymi klientami ProjectCheck. Odłącz jeden przed połączeniem.",
@@ -1050,7 +1050,7 @@ OC.L10N.register(
 	"Export failed" : "Eksportuj nieudany",
 	"Failed send" : "Nieudane wysłanie",
 	"Failed sends" : "Nie udało się wysłać",
-	"Feeds" : "Pasze",
+	"Feeds" : "Kanały",
 	"Fetch new messages for this tab" : "Pobierz nowe wiadomości dla tej karty",
 	"Fetch new messages from the team inbox" : "Pobierz nowe wiadomości ze skrzynki zespołu",
 	"Field customer created in MaintenanceCheck." : "Klient polowy stworzony w MaintenanceCheck.",
@@ -1899,7 +1899,7 @@ OC.L10N.register(
 	"Overdue since %s" : "Nadwyżka od czasu %s",
 	"Overdue work" : "Nadwyżka pracy",
 	"Overdue, unpaid, paid and unknown invoice states." : "Overdue, niezapłacone, zapłacone i nieznana faktura stanowi.",
-	"Overhead" : "Nagłówek",
+	"Overhead" : "Koszty pośrednie",
 	"Overview" : "Przegląd",
 	"Overview from linked apps and licenses — not a tax audit." : "Przegląd z powiązanych aplikacji i licencji — to nie audyt podatkowy.",
 	"Overview shows health. Open Money when you need overdue and unpaid details." : "Przegląd pokazuje zdrowie. Open Money, gdy potrzebujesz zaległych i niezapłaconych szczegółów.",
@@ -2667,7 +2667,7 @@ OC.L10N.register(
 	"Tickets" : "Zgłoszenia",
 	"Tickets waiting" : "Zgłoszenia oczekujące",
 	"Timeline" : "Terminy",
-	"Timing" : "Czas",
+	"Timing" : "Moment",
 	"Title" : "Tytuł",
 	"Title is too long." : "Tytuł jest za długi.",
 	"To" : "Do",
@@ -2974,6 +2974,5 @@ OC.L10N.register(
 	"record" : "zapis",
 	"this workspace" : "to miejsce pracy",
 	"valid" : "ważne"
-	},
-	"nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);"
+	}
 );

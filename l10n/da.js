@@ -443,7 +443,7 @@ OC.L10N.register(
 	"Bills & files" : "Regninger & filer",
 	"Blocked" : "Blokeret",
 	"Blocker" : "Blocker",
-	"Board" : "Bestyrelse",
+	"Board" : "Tavle",
 	"Bold" : "Fed",
 	"Bookable help for your organisation — while the app stays free" : "Bookbar hjælp til din organisation — mens appen forbliver gratis",
 	"Both companies link to different ProjectCheck customers. Unlink one before merging." : "Begge virksomheder linker til forskellige ProjectCheck-kunder. Fjern linket til en før sammenlægning.",
@@ -844,7 +844,7 @@ OC.L10N.register(
 	"Customer promises" : "Kundeløfter",
 	"Customer sections" : "Kundesektioner",
 	"CustomerCheck" : "CustomerCheck",
-	"CustomerCheck Mobile" : "Brugercheck- mobil",
+	"CustomerCheck Mobile" : "CustomerCheck Mobile",
 	"CustomerCheck Mobile needs a CUC2 license. Ask your administrator." : "CustomerCheck Mobile har brug for en CUC2-licens. Spørg din administrator.",
 	"CustomerCheck Today" : "CustomerCheck I dag",
 	"CustomerCheck app administrators" : "CustomerCheck app-administratorer",
@@ -1404,7 +1404,7 @@ OC.L10N.register(
 	"Loss reason" : "Årsag til tab",
 	"Lost" : "Tabt",
 	"Low" : "Lav",
-	"Luxembourg" : "Luxemburg",
+	"Luxembourg" : "Luxembourg",
 	"Mail" : "Post",
 	"Mail OAuth" : "E-mail-OAuth",
 	"Mail app is not available here. Log important messages so you still know what you wrote with whom." : "Mail-appen er ikke tilgængelig her. Log vigtige beskeder, så du stadig ved, hvad du skrev med hvem.",
@@ -2226,7 +2226,7 @@ OC.L10N.register(
 	"SSL (port 465)" : "SSL (port 465)",
 	"SSL (port 993)" : "SSL (port 993)",
 	"STARTTLS (port 143)" : "STARTTLS (port 143)",
-	"STARTTLS (port 587)" : "STARTLLS (port 587)",
+	"STARTTLS (port 587)" : "STARTTLS (port 587)",
 	"Same name" : "Samme navn",
 	"Saturday" : "lørdag",
 	"Save" : "Gem",
@@ -2974,6 +2974,5 @@ OC.L10N.register(
 	"record" : "optage",
 	"this workspace" : "dette arbejdsområde",
 	"valid" : "gyldig"
-	},
-	"nplurals=2; plural=(n != 1);"
+	}
 );

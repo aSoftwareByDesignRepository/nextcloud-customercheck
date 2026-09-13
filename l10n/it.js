@@ -443,7 +443,7 @@ OC.L10N.register(
 	"Bills & files" : "Fatture e file",
 	"Blocked" : "Bloccato",
 	"Blocker" : "Bloccante",
-	"Board" : "Asse",
+	"Board" : "Bacheca",
 	"Bold" : "Grassetto",
 	"Bookable help for your organisation — while the app stays free" : "Assistenza prenotabile per la tua organizzazione, mentre l'app rimane gratuita",
 	"Both companies link to different ProjectCheck customers. Unlink one before merging." : "Entrambe le società si collegano a diversi clienti ProjectCheck. Scollegane uno prima di unirlo.",
@@ -506,7 +506,7 @@ OC.L10N.register(
 	"Carried" : "Portato",
 	"Carry" : "Trasportare",
 	"Cash" : "Contanti",
-	"Catalogue" : "Catalogare",
+	"Catalogue" : "Catalogo",
 	"Cc" : "C",
 	"Champion" : "Campione",
 	"Champion left" : "Il campione se ne andò",
@@ -1899,7 +1899,7 @@ OC.L10N.register(
 	"Overdue since %s" : "Overdue da %s",
 	"Overdue work" : "Lavoro eccessivo",
 	"Overdue, unpaid, paid and unknown invoice states." : "Stati di fattura indebiti, non pagati, pagati e sconosciuti.",
-	"Overhead" : "Overhead",
+	"Overhead" : "Costi indiretti",
 	"Overview" : "Panoramica",
 	"Overview from linked apps and licenses — not a tax audit." : "Panoramica da app collegate e licenze — non è una verifica fiscale.",
 	"Overview shows health. Open Money when you need overdue and unpaid details." : "Panoramica mostra la salute. Apri i soldi quando hai bisogno di dettagli in ritardo e non pagato.",
@@ -2667,7 +2667,7 @@ OC.L10N.register(
 	"Tickets" : "Ticket",
 	"Tickets waiting" : "Ticket in attesa",
 	"Timeline" : "Cronologia",
-	"Timing" : "Timing",
+	"Timing" : "Tempistica",
 	"Title" : "Titolo",
 	"Title is too long." : "Il titolo è troppo lungo.",
 	"To" : "A",
@@ -2974,6 +2974,5 @@ OC.L10N.register(
 	"record" : "scheda",
 	"this workspace" : "questo spazio di lavoro",
 	"valid" : "valido"
-	},
-	"nplurals=2; plural=(n != 1);"
+	}
 );

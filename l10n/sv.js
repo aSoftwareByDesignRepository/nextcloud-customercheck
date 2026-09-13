@@ -443,7 +443,7 @@ OC.L10N.register(
 	"Bills & files" : "Fakturor & filer",
 	"Blocked" : "Blockerad",
 	"Blocker" : "Blocker",
-	"Board" : "Styrelse",
+	"Board" : "Tavla",
 	"Bold" : "Fet",
 	"Bookable help for your organisation — while the app stays free" : "Bokningsbar hjälp för din organisation — medan appen förblir gratis",
 	"Both companies link to different ProjectCheck customers. Unlink one before merging." : "Båda företagen länkar till olika ProjectCheck-kunder. Länka en innan du slår samman.",
@@ -506,7 +506,7 @@ OC.L10N.register(
 	"Carried" : "Överförd",
 	"Carry" : "Ta med",
 	"Cash" : "Pengar",
-	"Catalogue" : "Katalogen",
+	"Catalogue" : "Katalog",
 	"Cc" : "CC",
 	"Champion" : "Champion",
 	"Champion left" : "Champion vänster",
@@ -1050,7 +1050,7 @@ OC.L10N.register(
 	"Export failed" : "Export misslyckades",
 	"Failed send" : "Misslyckad skicka",
 	"Failed sends" : "Failed skickar",
-	"Feeds" : "Feeds",
+	"Feeds" : "Flöden",
 	"Fetch new messages for this tab" : "Hämta nya meddelanden för den här fliken",
 	"Fetch new messages from the team inbox" : "Hämta nya meddelanden från teaminboxen",
 	"Field customer created in MaintenanceCheck." : "Fältkund skapad i MaintenanceCheck.",
@@ -2226,7 +2226,7 @@ OC.L10N.register(
 	"SSL (port 465)" : "SSL (port 465)",
 	"SSL (port 993)" : "SSL (port 993)",
 	"STARTTLS (port 143)" : "STARTTLS (port 143)",
-	"STARTTLS (port 587)" : "Starttls (port 587)",
+	"STARTTLS (port 587)" : "STARTTLS (port 587)",
 	"Same name" : "Samma namn",
 	"Saturday" : "lördag",
 	"Save" : "Spara",
@@ -2974,6 +2974,5 @@ OC.L10N.register(
 	"record" : "rekord",
 	"this workspace" : "Denna arbetsyta",
 	"valid" : "giltigt"
-	},
-	"nplurals=2; plural=(n != 1);"
+	}
 );
