@@ -2973,7 +2973,10 @@ OC.L10N.register(
 		"promises": "promises",
 		"record": "record",
 		"this workspace": "this workspace",
-		"valid": "valid"
+		"valid": "valid",
+		"Open navigation menu": "Open navigation menu",
+		"Close navigation menu": "Close navigation menu",
+		"Menu": "Menu"
 	},
 	"nplurals=2; plural=(n != 1);"
 );

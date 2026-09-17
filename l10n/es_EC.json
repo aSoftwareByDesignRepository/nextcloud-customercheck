@@ -442,7 +442,7 @@
         "Bills & files": "Facturas y archivos",
         "Blocked": "Obstruido",
         "Blocker": "bloqueador",
-        "Board": "Junta",
+        "Board": "Tablero",
         "Bold": "Negrita",
         "Bookable help for your organisation — while the app stays free": "Ayuda que se puede reservar para su organización, mientras la aplicación sigue siendo gratuita",
         "Both companies link to different ProjectCheck customers. Unlink one before merging.": "Ambas empresas se vinculan con diferentes clientes de ProjectCheck. Desvincula uno antes de fusionarlo.",
@@ -505,7 +505,7 @@
         "Carried": "Transportado",
         "Carry": "Llevar",
         "Cash": "Dinero",
-        "Catalogue": "Catalogar",
+        "Catalogue": "Catálogo",
         "Cc": "Cc",
         "Champion": "Campeón",
         "Champion left": "Campeón se fue",
@@ -1880,7 +1880,7 @@
         "Or pick another company": "O elige otra empresa",
         "Or tap a ready-made promise:": "O toque una promesa ya hecha:",
         "Order received": "Pedido recibido",
-        "Organisation": "Organisation",
+        "Organisation": "Organización",
         "Organisation name close match": "Coincidencia cercana del nombre de la organización",
         "Organisation name unique": "Nombre de la organización único",
         "Organisations can request prioritised features via the contact options on this page.": "Las organizaciones pueden solicitar funciones prioritarias a través de las opciones de contacto en esta página.",
@@ -1898,7 +1898,7 @@
         "Overdue since %s": "Atrasado desde %s",
         "Overdue work": "Trabajo atrasado",
         "Overdue, unpaid, paid and unknown invoice states.": "Estados de facturas vencidas, impagas, pagadas y desconocidas.",
-        "Overhead": "Arriba",
+        "Overhead": "Gastos generales",
         "Overview": "Descripción general",
         "Overview from linked apps and licenses — not a tax audit.": "Resumen de apps vinculadas y licencias — no es una auditoría fiscal.",
         "Overview shows health. Open Money when you need overdue and unpaid details.": "La descripción general muestra la salud. Abra Money cuando necesite detalles vencidos y impagos.",
@@ -2972,7 +2972,10 @@
         "promises": "promesas",
         "record": "registro",
         "this workspace": "este espacio de trabajo",
-        "valid": "válido"
+        "valid": "válido",
+        "Open navigation menu": "Abrir menú de navegación",
+        "Close navigation menu": "Cerrar menú de navegación",
+        "Menu": "Menú"
     },
     "pluralForm": "nplurals=2; plural=(n != 1);"
 }

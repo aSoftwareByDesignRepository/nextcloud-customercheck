@@ -2972,7 +2972,10 @@
         "promises": "promises",
         "record": "record",
         "this workspace": "this workspace",
-        "valid": "valid"
+        "valid": "valid",
+        "Open navigation menu": "Open navigation menu",
+        "Close navigation menu": "Close navigation menu",
+        "Menu": "Menu"
     },
     "pluralForm": "nplurals=2; plural=(n != 1);"
 }

@@ -46,7 +46,9 @@ export default defineConfig({
   workers: 1,
   fullyParallel: false,
   use: {
-    baseURL: process.env.NC_BASE_URL || 'http://localhost:8081',
+    // Prefer 127.0.0.1 over localhost — Chromium CSP form-action 'self' rejects
+	// absolute http://localhost when overwritehost is the emulator alias 10.0.2.2.
+	baseURL: process.env.NC_BASE_URL || 'http://127.0.0.1:8081',
     trace: 'on-first-retry',
     // Path is created by globalSetup before any test context starts.
     ...(process.env.NC_ADMIN_USER ? { storageState: authState } : {}),

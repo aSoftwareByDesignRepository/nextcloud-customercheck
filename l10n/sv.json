@@ -2972,7 +2972,10 @@
 		"promises": "Löften",
 		"record": "rekord",
 		"this workspace": "Denna arbetsyta",
-		"valid": "giltigt"
+		"valid": "giltigt",
+		"Open navigation menu": "Öppna navigeringsmeny",
+		"Close navigation menu": "Stäng navigeringsmeny",
+		"Menu": "Meny"
 	},
 	"pluralForm": "nplurals=2; plural=(n != 1);"
 }

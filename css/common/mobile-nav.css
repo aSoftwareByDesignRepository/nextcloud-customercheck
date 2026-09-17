@@ -36,7 +36,7 @@
 	cursor: pointer;
 	touch-action: manipulation;
 	flex-shrink: 0;
-	box-shadow: 0 1px 2px color-mix(in srgb, var(--color-main-text, #000) 8%, transparent);
+	box-shadow: 0 1px 2px color-mix(in srgb, var(--color-main-text) 8%, transparent);
 }
 
 .cuc-nav-toggle__icon {
@@ -66,7 +66,7 @@
 .cuc-nav-toggle[aria-expanded='true'] {
 	background-color: color-mix(
 		in srgb,
-		var(--color-primary-element, #0082c9) 12%,
+		var(--color-primary-element) 12%,
 		var(--color-main-background)
 	);
 	border-color: var(--color-primary-element);
@@ -77,7 +77,7 @@
 	position: fixed;
 	inset: 0;
 	z-index: 1998;
-	background: color-mix(in srgb, var(--color-main-text, #000) 35%, transparent);
+	background: color-mix(in srgb, var(--color-main-text) 35%, transparent);
 	border: 0;
 	padding: 0;
 	margin: 0;
@@ -107,7 +107,7 @@ body.cuc-nav-open .cuc-nav-backdrop {
 		transform: translateX(-105%) !important;
 		transition: transform 180ms ease;
 		box-shadow:
-			0 4px 16px color-mix(in srgb, var(--color-main-text, #000) 18%, transparent),
+			0 4px 16px color-mix(in srgb, var(--color-main-text) 18%, transparent),
 			0 0 0 1px var(--color-border);
 		overflow-x: hidden;
 		overflow-y: auto;

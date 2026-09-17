@@ -2972,7 +2972,10 @@
 		"promises": "løfter",
 		"record": "optage",
 		"this workspace": "dette arbejdsområde",
-		"valid": "gyldig"
+		"valid": "gyldig",
+		"Open navigation menu": "Åbn navigationsmenu",
+		"Close navigation menu": "Luk navigationsmenu",
+		"Menu": "Navigationsmenu"
 	},
 	"pluralForm": "nplurals=2; plural=(n != 1);"
 }

@@ -2972,7 +2972,10 @@
 		"promises": "beloftes",
 		"record": "gegevensrecord",
 		"this workspace": "deze werkruimte",
-		"valid": "geldig"
+		"valid": "geldig",
+		"Open navigation menu": "Navigatiemenu openen",
+		"Close navigation menu": "Navigatiemenu sluiten",
+		"Menu": "Navigatiemenu"
 	},
 	"pluralForm": "nplurals=2; plural=(n != 1);"
 }

@@ -2973,7 +2973,10 @@ OC.L10N.register(
 		"promises": "Zusagen",
 		"record": "Datensatz",
 		"this workspace": "dieser Arbeitsbereich",
-		"valid": "gültig"
+		"valid": "gültig",
+		"Open navigation menu": "Navigationsmenü öffnen",
+		"Close navigation menu": "Navigationsmenü schließen",
+		"Menu": "Menü"
 	},
 	"nplurals=2; plural=(n != 1);"
 );

@@ -2972,7 +2972,10 @@
 		"promises": "Lover",
 		"record": "rekord",
 		"this workspace": "dette arbeidsområdet",
-		"valid": "gyldig"
+		"valid": "gyldig",
+		"Open navigation menu": "Åpne navigasjonsmeny",
+		"Close navigation menu": "Lukk navigasjonsmeny",
+		"Menu": "Meny"
 	},
 	"pluralForm": "nplurals=2; plural=(n != 1);"
 }
