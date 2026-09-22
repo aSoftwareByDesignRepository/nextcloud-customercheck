@@ -346,7 +346,7 @@ Vi forbedrer denne appen med bruk i praksis. Feilrapporter, friksjon og idéer h
 	<website>https://nextcloud.software-by-design.de</website>
 	<bugs>https://github.com/aSoftwareByDesignRepository/nextcloud-customercheck/issues</bugs>
 	<dependencies>
-		<nextcloud min-version="32" max-version="34"/>
+		<nextcloud min-version="32" max-version="35"/>
 		<php min-version="8.2"/>
 		<database>mysql</database>
 		<database>pgsql</database>
