@@ -3032,6 +3032,11 @@ dialog.crm-native-dialog .crm-advanced > .crm-form--stack {
 #app-content.crm-app .crm-today-stat--alert .crm-today-stat__value {
 	color: var(--color-error-text, var(--crm-danger-ink, var(--crm-text)));
 }
+/* WCAG 2.1 AA: the muted label fails contrast on the tinted error
+   background — use the same error-ink as the stat value. */
+#app-content.crm-app .crm-today-stat--alert .crm-today-stat__label {
+	color: var(--color-error-text, var(--crm-danger-ink, var(--crm-text)));
+}
 @media (max-width: 520px) {
 	#app-content.crm-app .crm-pulse-glance__stats {
 		grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3871,6 +3876,7 @@ dialog.crm-native-dialog .crm-advanced > .crm-form--stack {
 	display: -webkit-box;
 	-webkit-box-orient: vertical;
 	-webkit-line-clamp: 2;
+	line-clamp: 2;
 	overflow: hidden;
 }
 #app-content.crm-app .crm-mail-thread-row .crm-feed__meta {
@@ -3894,8 +3900,8 @@ dialog.crm-native-dialog .crm-advanced > .crm-form--stack {
 	margin: 0 0 var(--crm-space-3, 0.75rem);
 }
 #app-content.crm-app .crm-review-sort {
-	min-height: 2.5rem;
-	min-width: 0;
+	min-height: var(--crm-touch, 44px); /* WCAG 2.5.5: px token — rem collapses under NC 15px root font */
+	min-width: 44px;
 	width: auto;
 	flex: 0 0 auto;
 	padding-inline: 0.75rem;
@@ -4103,6 +4109,7 @@ dialog.crm-native-dialog .crm-advanced > .crm-form--stack {
 	display: -webkit-box;
 	-webkit-box-orient: vertical;
 	-webkit-line-clamp: 2;
+	line-clamp: 2;
 	overflow: hidden;
 }
 #app-content.crm-app .crm-review-table td .crm-badge {
@@ -5771,9 +5778,7 @@ dialog.crm-native-dialog .crm-form--stack .crm-datepicker-host .datepicker-input
 	font-weight: 600;
 	min-height: 44px;
 }
-#app-content.crm-app tbody.crm-review-list {
-	/* table body — actions live in the reading pane */
-}
+/* tbody.crm-review-list — actions live in the reading pane */
 #app-content.crm-app .crm-review-mail-tools {
 	margin: 0;
 }
@@ -6225,6 +6230,7 @@ dialog.crm-native-dialog label.crm-check {
 }
 #app-content.crm-app .crm-import-drop:hover,
 #app-content.crm-app .crm-import-drop:focus-visible,
+#app-content.crm-app .crm-import-drop:focus-within,
 #app-content.crm-app .crm-import-drop.is-dragover {
 	border-color: var(--color-primary-element);
 	border-style: solid;
@@ -7494,7 +7500,7 @@ dialog.crm-native-dialog label.crm-check {
 }
 #app-content.crm-app .crm-sales-compose__cc-toggle {
 	margin: 0;
-	min-height: 2rem;
+	min-height: var(--crm-touch, 44px); /* WCAG 2.5.5: px token — rem collapses under NC 15px root font */
 	padding: 0.2rem 0.55rem;
 	font-weight: 600;
 }
@@ -7697,7 +7703,6 @@ dialog.crm-native-dialog label.crm-check {
 	margin-inline-end: 0.4rem;
 	font-weight: 700;
 	color: var(--color-primary-element);
-	speak: never;
 }
 #app-content.crm-app .crm-personal-mail-folder__toggles {
 	display: flex;
@@ -7795,3 +7800,5 @@ dialog.crm-native-dialog label.crm-check {
 	box-sizing: border-box;
 }
 
+/* Inline field errors (.crm-field-error / [aria-invalid]) are synced to
+   css/common/field-errors.css from apps/_shared/field-errors — do not fork. */

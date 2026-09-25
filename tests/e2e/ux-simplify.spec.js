@@ -2,6 +2,7 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { login, credsFromEnv } from './helpers/auth.js';
+import { fillIsoDate } from './helpers/dates.js';
 
 test.describe('Simplified core UX journeys', () => {
   test('today first-run, companies list, one-click done, simple log email', async ({ page }) => {
@@ -91,7 +92,7 @@ test.describe('Simplified core UX journeys', () => {
     await form.locator('details.crm-advanced summary').click();
     await form.locator('[name="type"]').selectOption('call');
     const today = new Date().toISOString().slice(0, 10);
-    await form.locator('[name="dueDate"]').fill(today);
+    await fillIsoDate(form, 'dueDate', today);
     await form.locator('button[type="submit"]').click();
     await page.waitForLoadState('networkidle');
 

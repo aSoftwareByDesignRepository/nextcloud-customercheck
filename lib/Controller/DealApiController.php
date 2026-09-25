@@ -64,8 +64,10 @@ class DealApiController extends Controller
 			$body = $this->jsonBody();
 			$companyId = (int)($body['companyId'] ?? 0);
 			$ctx = $this->requireCompanyCapability($companyId, 'write');
+			$canReassign = $ctx['isAppAdmin']
+				|| WorkspaceCapability::allows($ctx['role'], 'bulk', false);
 
-			return $this->ok($this->deals->toArray($this->deals->create($body, $ctx['uid'])), Http::STATUS_CREATED);
+			return $this->ok($this->deals->toArray($this->deals->create($body, $ctx['uid'], $canReassign)), Http::STATUS_CREATED);
 		} catch (\Throwable $e) {
 			return $this->fromThrowable($e);
 		}

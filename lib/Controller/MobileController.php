@@ -279,7 +279,7 @@ class MobileController extends Controller
 			$deal = $this->idempotency->once(
 				$uid,
 				$this->scopedIdempotencyKey($body, 'de-create', '', $wsId, $id),
-				fn () => $this->deals->create($body, $uid),
+				fn () => $this->deals->create($body, $uid, $canReassign),
 				static fn ($d): int => (int)$d->getId(),
 				fn (int $did) => $this->loadDealForIdempotentReplay($did, $wsId, $id),
 			);
@@ -909,6 +909,10 @@ class MobileController extends Controller
 		} catch (MobileGateException $e) {
 			return $this->error($e->getErrorCode(), $e->getMessage(), Http::STATUS_PAYMENT_REQUIRED);
 		} catch (ValidationException $e) {
+			// Uniform-404: existence lookups must not disclose foreign ids.
+			if ($e->getErrorCode() === Constants::ERR_NOT_FOUND) {
+				return $this->error(Constants::ERR_NOT_FOUND, 'Not found.', Http::STATUS_NOT_FOUND);
+			}
 			return $this->error(
 				'VALIDATION',
 				$e->getMessage(),
@@ -924,9 +928,11 @@ class MobileController extends Controller
 				$e->getFields(),
 			);
 		} catch (NotFoundException $e) {
+			// Uniform-404: identical payload for missing and foreign ids —
+			// never echo entity-specific messages (existence oracle).
 			return $this->error(
 				Constants::ERR_NOT_FOUND,
-				$e->getMessage(),
+				'Not found.',
 				Http::STATUS_NOT_FOUND,
 			);
 		} catch (AccessDeniedException | AppAccessDeniedException $e) {

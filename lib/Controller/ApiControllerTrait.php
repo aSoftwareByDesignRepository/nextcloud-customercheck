@@ -52,9 +52,25 @@ trait ApiControllerTrait
 		], $status, [], JSON_INVALID_UTF8_SUBSTITUTE);
 	}
 
+	/**
+	 * Uniform-404 (existence-oracle defense): every "entity not visible" denial —
+	 * missing id, foreign-workspace id, or entity nested under a foreign scope —
+	 * collapses to ONE canonical payload. Response status, error code, message,
+	 * and fields must never disclose whether the id exists in another workspace.
+	 */
+	protected function notFound(): JSONResponse
+	{
+		return $this->fail(Constants::ERR_NOT_FOUND, 'Not found.', [], Http::STATUS_NOT_FOUND);
+	}
+
 	protected function fromThrowable(\Throwable $e): JSONResponse
 	{
 		if ($e instanceof ValidationException) {
+			// Entity-existence lookups carried as ValidationException collapse to
+			// the same canonical 404 as NotFoundException (uniform-404).
+			if ($e->getErrorCode() === Constants::ERR_NOT_FOUND) {
+				return $this->notFound();
+			}
 			$status = match ($e->getErrorCode()) {
 				Constants::ERR_HOOK_TOKEN_INVALID => Http::STATUS_UNAUTHORIZED,
 				Constants::ERR_HOOK_RATE_LIMITED, Constants::ERR_RATE_LIMITED => Http::STATUS_TOO_MANY_REQUESTS,
@@ -83,7 +99,7 @@ trait ApiControllerTrait
 			);
 		}
 		if ($e instanceof NotFoundException) {
-			return $this->fail($e->getErrorCode() ?: Constants::ERR_NOT_FOUND, $e->getMessage(), [], Http::STATUS_NOT_FOUND);
+			return $this->notFound();
 		}
 		if ($e instanceof AccessDeniedException || $e instanceof AppAccessDeniedException) {
 			return $this->fail(Constants::ERR_ACCESS_DENIED, $e->getMessage() !== '' ? $e->getMessage() : 'Access denied', [], Http::STATUS_FORBIDDEN);

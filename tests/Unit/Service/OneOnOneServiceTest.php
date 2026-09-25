@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace OCA\CustomerCheck\Tests\Unit\Service;
 
+use OCA\CustomerCheck\Constants;
 use OCA\CustomerCheck\Exception\ValidationException;
 use OCA\CustomerCheck\Service\ChaseService;
 use OCA\CustomerCheck\Service\OneOnOneService;
 use OCA\CustomerCheck\Service\PromiseService;
+use OCA\CustomerCheck\Service\WorkspaceService;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\IDBConnection;
 use OCP\IL10N;
@@ -48,7 +50,37 @@ final class OneOnOneServiceTest extends TestCase
 		$this->assertNull($prep['notes']);
 	}
 
-	private function service(): OneOnOneService
+	public function testPrepRejectsNonMemberReport(): void
+	{
+		$workspaces = $this->createMock(WorkspaceService::class);
+		$workspaces->method('assertOwnerCandidate')->willThrowException(
+			ValidationException::field(Constants::ERR_VALIDATION, 'reportUserId', 'nope'),
+		);
+		$svc = $this->service($workspaces);
+		try {
+			$svc->prep(1, 'mgr', 'mallory');
+			$this->fail('non-member report must fail');
+		} catch (ValidationException $e) {
+			$this->assertArrayHasKey('reportUserId', $e->getFields());
+		}
+	}
+
+	public function testSaveRejectsNonMemberReport(): void
+	{
+		$workspaces = $this->createMock(WorkspaceService::class);
+		$workspaces->method('assertOwnerCandidate')->willThrowException(
+			ValidationException::field(Constants::ERR_VALIDATION, 'reportUserId', 'nope'),
+		);
+		$svc = $this->service($workspaces);
+		try {
+			$svc->save(1, 'mgr', 'mallory', ['notes' => 'x']);
+			$this->fail('non-member report must fail');
+		} catch (ValidationException $e) {
+			$this->assertArrayHasKey('reportUserId', $e->getFields());
+		}
+	}
+
+	private function service(?WorkspaceService $workspaces = null): OneOnOneService
 	{
 		$l10n = $this->createMock(IL10N::class);
 		$l10n->method('t')->willReturnCallback(static fn (string $s): string => $s);
@@ -58,6 +90,7 @@ final class OneOnOneServiceTest extends TestCase
 			$this->createMock(PromiseService::class),
 			$this->createMock(ITimeFactory::class),
 			$l10n,
+			$workspaces,
 		);
 	}
 }

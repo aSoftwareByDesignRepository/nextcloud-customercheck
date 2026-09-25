@@ -1,6 +1,185 @@
 {
-  "schemaVersion": 1,
-  "appId": "customercheck",
-  "companionDir": "mobile/customercheck",
-  "contracts": []
+    "schemaVersion": 1,
+    "appId": "customercheck",
+    "companionDir": "mobile/customercheck",
+    "contracts": [
+        {
+            "id": "deal-lost-reason-code",
+            "param": "lostReasonCode",
+            "description": "Moving a deal to stage=lost requires a known loss-reason code on every client (LOSS_CODE_REQUIRED).",
+            "errorCodes": [
+                "LOSS_CODE_REQUIRED",
+                "LOST_REASON_REQUIRED"
+            ],
+            "server": [
+                {
+                    "file": "lib/Service/DealService.php",
+                    "needles": [
+                        "ERR_LOSS_CODE_REQUIRED",
+                        "lostReasonCode",
+                        "LOSS_REASON_CODES"
+                    ]
+                }
+            ],
+            "web": [
+                {
+                    "file": "js/pages/pipeline.js",
+                    "needles": [
+                        "name=\"lostReasonCode\" required>",
+                        "lostReasonCode: code",
+                        "lostReasonCode: extra.lostReasonCode"
+                    ]
+                }
+            ],
+            "mobile": [
+                {
+                    "file": "src/screens/DealsScreen.tsx",
+                    "needles": [
+                        "lostReasonCode"
+                    ]
+                },
+                {
+                    "file": "src/api/client.ts",
+                    "needles": [
+                        "lostReasonCode"
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "deal-lost-reason-detail-other",
+            "param": "lostReason",
+            "description": "loss code 'other' additionally requires free-text lostReason (LOST_REASON_REQUIRED) — web textarea + companion detail payload.",
+            "errorCodes": [
+                "LOST_REASON_REQUIRED"
+            ],
+            "server": [
+                {
+                    "file": "lib/Service/DealService.php",
+                    "needles": [
+                        "ERR_LOST_REASON_REQUIRED",
+                        "lostReason"
+                    ]
+                }
+            ],
+            "web": [
+                {
+                    "file": "js/pages/pipeline.js",
+                    "needles": [
+                        "name=\"lostReason\"",
+                        "lostReason: reason"
+                    ]
+                }
+            ],
+            "mobile": [
+                {
+                    "file": "src/screens/DealsScreen.tsx",
+                    "needles": [
+                        "lostReason:"
+                    ]
+                },
+                {
+                    "file": "src/api/client.ts",
+                    "needles": [
+                        "lostReason"
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "agreement-cancel-reason",
+            "param": "cancelReason",
+            "description": "Agreement cancel requires a mandatory reason (CANCEL_REASON_REQUIRED). Web collects it in a required dialog textarea; the companion agreement surface is read-only (list only — no cancel mutation), so no mobile control is required.",
+            "errorCodes": [
+                "CANCEL_REASON_REQUIRED"
+            ],
+            "server": [
+                {
+                    "file": "lib/Service/AgreementService.php",
+                    "needles": [
+                        "ERR_CANCEL_REASON_REQUIRED",
+                        "cancelReason"
+                    ]
+                }
+            ],
+            "web": [
+                {
+                    "file": "js/pages/agreement-form.js",
+                    "needles": [
+                        "name=\"reason\" rows=\"3\" required",
+                        "reason: dlgForm.elements.reason.value"
+                    ]
+                }
+            ],
+            "mobile": []
+        },
+        {
+            "id": "optimistic-lock-updated-at",
+            "param": "updatedAt",
+            "description": "User-facing mutations require the updatedAt precondition (body field or If-Match-Updated-At header); missing/stale → 409 CONFLICT_STALE. Web echoes form dataset, companion sends the header.",
+            "errorCodes": [
+                "CONFLICT_STALE"
+            ],
+            "server": [
+                {
+                    "file": "lib/Support/OptimisticLock.php",
+                    "needles": [
+                        "missing_updated_at_precondition",
+                        "stale_updated_at_precondition"
+                    ]
+                },
+                {
+                    "file": "lib/Controller/ApiControllerTrait.php",
+                    "needles": [
+                        "updatedAtPrecondition",
+                        "If-Match-Updated-At"
+                    ]
+                }
+            ],
+            "web": [
+                {
+                    "file": "js/pages/company-form.js",
+                    "needles": [
+                        "updatedAt: form.dataset.updatedAt",
+                        "form.dataset.updatedAt = company.updatedAt"
+                    ]
+                }
+            ],
+            "mobile": [
+                {
+                    "file": "src/api/client.ts",
+                    "needles": [
+                        "matchUpdatedAtHeaders",
+                        "If-Match-Updated-At"
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "mobile-idempotency-key",
+            "param": "idempotencyKey",
+            "description": "Companion POST mutations send an Idempotency-Key (header + body) so replays return the original resource instead of double-creating.",
+            "errorCodes": [],
+            "server": [
+                {
+                    "file": "lib/Controller/MobileController.php",
+                    "needles": [
+                        "scopedIdempotencyKey",
+                        "Idempotency-Key"
+                    ]
+                }
+            ],
+            "web": [],
+            "mobile": [
+                {
+                    "file": "src/api/client.ts",
+                    "needles": [
+                        "createIdempotencyKey",
+                        "'Idempotency-Key': trimmed",
+                        "idempotencyKey: key"
+                    ]
+                }
+            ]
+        }
+    ]
 }

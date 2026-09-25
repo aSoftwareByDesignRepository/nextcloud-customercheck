@@ -70,4 +70,17 @@ class WorkspaceMemberMapper extends QBMapper
 			->andWhere($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)));
 		$qb->executeStatement();
 	}
+
+	/**
+	 * Drop every membership row for a uid — used when the account itself is
+	 * deleted so stale member rows can never satisfy a membership check for a
+	 * nonexistent user (ghost-uid mass-assignment vector).
+	 */
+	public function deleteByUser(string $userId): void
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->delete($this->getTableName())
+			->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)));
+		$qb->executeStatement();
+	}
 }

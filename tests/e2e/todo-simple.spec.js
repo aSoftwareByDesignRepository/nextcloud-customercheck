@@ -2,6 +2,7 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { login, credsFromEnv } from './helpers/auth.js';
+import { fillIsoDate } from './helpers/dates.js';
 
 /**
  * Bachus To-do card: one Add, checklist Done, quiet promises/phone extras.
@@ -38,7 +39,7 @@ test.describe('To-do card extreme simplicity', () => {
     await expect(form.locator('[name="toldCustomer"]')).toBeAttached();
     await form.locator('[name="title"]').fill(`Call granny ${suffix}`);
     const today = new Date().toISOString().slice(0, 10);
-    await form.locator('[name="dueDate"]').fill(today);
+    await fillIsoDate(form, 'dueDate', today);
     await form.locator('button[type="submit"]').click();
     await page.waitForLoadState('networkidle');
 
@@ -59,7 +60,7 @@ test.describe('To-do card extreme simplicity', () => {
     const promiseForm = page.locator('form[id^="crm-prompt-"]');
     await expect(promiseForm).toBeVisible({ timeout: 10000 });
     await promiseForm.locator('[name="title"]').fill(`Quoted Friday ${suffix}`);
-    await promiseForm.locator('[name="dueOn"]').fill(today);
+    await fillIsoDate(promiseForm, 'dueOn', today);
     await promiseForm.locator('button[type="submit"]').click();
     await expect(page.locator('#crm-promises-body .crm-todo-list__item')).toContainText(`Quoted Friday ${suffix}`, {
       timeout: 15000,
@@ -88,7 +89,7 @@ test.describe('To-do card extreme simplicity', () => {
     const form = page.locator('form[id^="crm-prompt-"]');
     await expect(form).toBeVisible({ timeout: 10000 });
     await form.locator('[name="title"]').fill(`Mobile call ${suffix}`);
-    await form.locator('[name="dueDate"]').fill(new Date().toISOString().slice(0, 10));
+    await fillIsoDate(form, 'dueDate', new Date().toISOString().slice(0, 10));
     await form.locator('button[type="submit"]').click();
     await page.waitForLoadState('networkidle');
 

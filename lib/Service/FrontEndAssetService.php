@@ -28,9 +28,12 @@ final class FrontEndAssetService
 		Util::addStyle(Application::APP_ID, 'app');
 		Util::addStyle(Application::APP_ID, 'navigation');
 		Util::addStyle(Application::APP_ID, 'common/mobile-nav');
+		Util::addStyle(Application::APP_ID, 'common/field-errors');
 		Util::addScript(Application::APP_ID, 'common/dialog-present');
 		Util::addScript(Application::APP_ID, 'common/company-picker');
+		Util::addScript(Application::APP_ID, 'common/focus-preservation');
 		Util::addScript(Application::APP_ID, 'common/components');
+		Util::addScript(Application::APP_ID, 'common/field-errors');
 		Util::addScript(Application::APP_ID, 'common/api');
 		Util::addScript(Application::APP_ID, 'common/shell-can');
 		Util::addScript(Application::APP_ID, 'common/folder-picker');

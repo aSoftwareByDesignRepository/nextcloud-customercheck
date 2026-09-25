@@ -21,6 +21,7 @@ use OCP\AppFramework\Db\DoesNotExistException;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\IDBConnection;
 use OCP\IL10N;
+use OCP\IUserManager;
 
 /**
  * Deal checklists — handoffs on the deal (CUC-DEAL-CHECKLIST-1).
@@ -52,6 +53,7 @@ class DealChecklistService
 		private readonly ITimeFactory $timeFactory,
 		private readonly IL10N $l10n,
 		private readonly ?TimelineService $timeline = null,
+		private readonly ?IUserManager $userManager = null,
 	) {
 	}
 
@@ -870,7 +872,10 @@ class DealChecklistService
 		if ($uid === '') {
 			return null;
 		}
-		if ($this->members->findMembershipOrNull($workspaceId, $uid) === null) {
+		// Existence first: stale member rows outliving a deleted account must
+		// never satisfy this check (ghost-uid writes).
+		if (!$this->userManager?->userExists($uid)
+			|| $this->members->findMembershipOrNull($workspaceId, $uid) === null) {
 			throw ValidationException::field(
 				Constants::ERR_VALIDATION,
 				'assigneeUserId',

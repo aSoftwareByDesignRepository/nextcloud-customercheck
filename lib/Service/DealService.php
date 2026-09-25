@@ -63,7 +63,7 @@ class DealService
 		return $this->dealMapper->search($filters, $limit, $offset);
 	}
 
-	public function create(array $data, string $actor): Deal
+	public function create(array $data, string $actor, bool $canReassignOwners = false): Deal
 	{
 		$companyId = (int)($data['companyId'] ?? 0);
 		$company = $this->companyService->get($companyId);
@@ -91,6 +91,17 @@ class DealService
 		$close = DateMath::parseStrictDate((string)($data['expectedClose'] ?? ''));
 		$deal->setExpectedClose($close !== null ? new \DateTime($close->format('Y-m-d')) : null);
 		$owner = trim((string)($data['ownerUserId'] ?? $actor));
+		if (!$canReassignOwners) {
+			// Same strip the mobile create path applies — without the reassign
+			// capability the owner is always the actor (§13.5).
+			$owner = $actor;
+		} elseif ($owner !== '' && $owner !== $actor) {
+			$this->workspaces->assertOwnerCandidate(
+				(int)($company->getWorkspaceId() ?? 0),
+				$owner,
+				'ownerUserId',
+			);
+		}
 		$deal->setOwnerUserId($owner !== '' ? $owner : null);
 		$deal->setForecastBucket($this->resolveForecastBucket($data['forecastBucket'] ?? ($data['winChance'] ?? null)));
 		if ($stage === 'lead') {
@@ -147,7 +158,12 @@ class DealService
 				if (!$requirePrecondition || $this->editConflicts === null || $precondition === null || $precondition === '') {
 					throw $stale;
 				}
-				$baseSnap = $this->entityRevisions?->snapshotAt('deal', $id, (string)$precondition) ?? $currentSnap;
+				// Fail closed: no recorded base revision → cannot prove what the
+				// other writer changed; merging against current is silent LWW.
+				$baseSnap = $this->entityRevisions?->snapshotAt('deal', $id, (string)$precondition);
+				if ($baseSnap === null) {
+					throw $stale;
+				}
 				$incoming = $this->dealIncomingPatch($data);
 				if ($incoming === []) {
 					throw $stale;
@@ -261,6 +277,14 @@ class DealService
 							Constants::ERR_DEAL_OWNED,
 							'ownerUserId',
 							$this->l10n->t('This deal already has an owner. Ask them or a manager to reassign it.'),
+						);
+					}
+					if ($newOwner !== '') {
+						$ownerCompany = $this->companyService->get((int)$deal->getCompanyId());
+						$this->workspaces->assertOwnerCandidate(
+							(int)($ownerCompany->getWorkspaceId() ?? 0),
+							$newOwner,
+							'ownerUserId',
 						);
 					}
 					if ($current === '') {

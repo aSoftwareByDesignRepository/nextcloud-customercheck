@@ -56,6 +56,8 @@ final class ActivityServiceAssigneeTest extends TestCase
 		$l10n = $this->createMock(IL10N::class);
 		$l10n->method('t')->willReturnCallback(static fn (string $s): string => $s);
 
+		$existingUsers0 = $this->createMock(\OCP\IUserManager::class);
+		$existingUsers0->method('userExists')->willReturn(true);
 		return new ActivityService(
 			$this->mapper,
 			$this->createMock(AccessControlService::class),
@@ -70,6 +72,7 @@ final class ActivityServiceAssigneeTest extends TestCase
 			$this->companies,
 			$this->members,
 			$this->notifications,
+			$existingUsers0,
 		);
 	}
 

@@ -27,11 +27,17 @@ final class ReviewIngressServiceTest extends TestCase
 		$review->expects($this->once())->method('syncSharedMail')->with(3)->willReturn(2);
 
 		$l10n = $this->createMock(IL10N::class);
+		$existingUsers0 = $this->createMock(\OCP\IUserManager::class);
+		$existingUsers0->method('userExists')->willReturn(true);
 		$svc = new ReviewIngressService(
 			$ws,
 			$review,
 			$this->createMock(IRootFolder::class),
 			$l10n,
+			null,
+			null,
+			null,
+			$existingUsers0,
 		);
 
 		$this->assertSame(2, $svc->syncWorkspace(3));
@@ -54,11 +60,17 @@ final class ReviewIngressServiceTest extends TestCase
 		$review = $this->createMock(ReviewService::class);
 		$review->method('syncSharedMail')->willReturnOnConsecutiveCalls(1, 3);
 
+		$existingUsers1 = $this->createMock(\OCP\IUserManager::class);
+		$existingUsers1->method('userExists')->willReturn(true);
 		$svc = new ReviewIngressService(
 			$ws,
 			$review,
 			$this->createMock(IRootFolder::class),
 			$this->createMock(IL10N::class),
+			null,
+			null,
+			null,
+			$existingUsers1,
 		);
 
 		$this->assertSame(4, $svc->syncAll());
@@ -79,11 +91,17 @@ final class ReviewIngressServiceTest extends TestCase
 		$review->expects($this->never())->method('syncSharedMail');
 		$review->expects($this->never())->method('enqueueSourceItem');
 
+		$existingUsers2 = $this->createMock(\OCP\IUserManager::class);
+		$existingUsers2->method('userExists')->willReturn(true);
 		$svc = new ReviewIngressService(
 			$ws,
 			$review,
 			$this->createMock(IRootFolder::class),
 			$this->createMock(IL10N::class),
+			null,
+			null,
+			null,
+			$existingUsers2,
 		);
 
 		$this->assertSame(0, $svc->syncWorkspace(9));
@@ -108,11 +126,17 @@ final class ReviewIngressServiceTest extends TestCase
 		$review = $this->createMock(ReviewService::class);
 		$review->expects($this->never())->method('enqueueSourceItem');
 
+		$existingUsers3 = $this->createMock(\OCP\IUserManager::class);
+		$existingUsers3->method('userExists')->willReturn(true);
 		$svc = new ReviewIngressService(
 			$ws,
 			$review,
 			$root,
 			$this->createMock(IL10N::class),
+			null,
+			null,
+			null,
+			$existingUsers3,
 		);
 
 		$this->assertSame(0, $svc->syncWorkspace(9));
@@ -138,12 +162,17 @@ final class ReviewIngressServiceTest extends TestCase
 		$review = $this->createMock(ReviewService::class);
 		$review->expects($this->never())->method('enqueueSourceItem');
 
+		$existingUsers4 = $this->createMock(\OCP\IUserManager::class);
+		$existingUsers4->method('userExists')->willReturn(true);
 		$svc = new ReviewIngressService(
 			$ws,
 			$review,
 			$this->createMock(IRootFolder::class),
 			$this->createMock(IL10N::class),
 			null,
+			null,
+			null,
+			$existingUsers4,
 		);
 
 		$this->assertSame(0, $svc->syncWorkspace(4));

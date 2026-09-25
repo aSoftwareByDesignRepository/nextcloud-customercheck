@@ -201,6 +201,39 @@ describe('CSS design-token compliance (no hardcoded colors)', () => {
     }
   });
 
+  it('interactive controls never use sub-44px rem/em min-size (NC 15px root collapse)', () => {
+    // FARM-RECURRING BUG guard: rem-based min-heights collapse under Nextcloud's
+    // 15px root font (2.75rem -> 41.25px). Interactive selectors must use px or
+    // var(--crm-touch*) tokens. Threshold: 2.94rem = 44px at a 15px root.
+    const INTERACTIVE = /\.crm-btn\b|\.crm-quick-filter\b|\.crm-review-sort\b|__toggle\b|__remove\b|modal-close\b|toast-close\b|\.crm-suggest__item\b|\.crm-chip__remove\b/;
+    const offenders = [];
+    for (const file of files) {
+      const rel = relative(appRoot, file);
+      const css = stripComments(readFileSync(file, 'utf8'));
+      // Naive rule scan: selector { body } — sufficient for our flat authored CSS.
+      const ruleRe = /([^{}@]+)\{([^{}]*)\}/g;
+      let m;
+      while ((m = ruleRe.exec(css)) !== null) {
+        const selector = m[1].trim();
+        const bodyCss = m[2];
+        if (!INTERACTIVE.test(selector)) continue;
+        for (const decl of bodyCss.split(';')) {
+          const mm = decl.match(/min-(?:height|width)\s*:\s*([\d.]+)(rem|em)\b/);
+          if (mm && parseFloat(mm[1]) < 2.94) {
+            offenders.push(`${rel}: ${selector.replace(/\s+/g, ' ').slice(0, 90)} { ${decl.trim()} }`);
+          }
+        }
+      }
+    }
+    expect(offenders, `Sub-44px rem/em min-size on interactive controls:\n${offenders.join('\n')}`).toEqual([]);
+  });
+
+  it('regression: crm-review-sort + sales-compose cc-toggle keep >=44px floors', () => {
+    const app = stripComments(readFileSync(join(cssRoot, 'app.css'), 'utf8'));
+    expect(app).toMatch(/\.crm-review-sort\s*\{[^}]*min-height:\s*var\(--crm-touch/);
+    expect(app).toMatch(/\.crm-sales-compose__cc-toggle\s*\{[^}]*min-height:\s*var\(--crm-touch/);
+  });
+
   it('legacy primary alias maps to --color-primary-element (accent + AA)', () => {
     const colors = stripComments(readFileSync(join(cssRoot, 'common', 'colors.css'), 'utf8'));
     expect(colors).toContain('--arbeitszeitcheck-color-primary: var(--color-primary-element)');

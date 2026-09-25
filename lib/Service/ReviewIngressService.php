@@ -28,6 +28,7 @@ class ReviewIngressService
 		private readonly ?ICalendarManager $calendars = null,
 		private readonly ?ContactsSuggestService $contactsSuggest = null,
 		private readonly ?\OCA\CustomerCheck\Db\PersonMapper $persons = null,
+		private readonly ?\OCP\IUserManager $userManager = null,
 	) {
 	}
 
@@ -322,6 +323,11 @@ class ReviewIngressService
 
 	private function isWorkspaceMember(int $workspaceId, string $userId): bool
 	{
+		// Stale member rows outliving a deleted account must not count —
+		// otherwise review hits can be attributed to a ghost scan actor.
+		if ($userId === '' || !$this->userManager?->userExists($userId)) {
+			return false;
+		}
 		foreach ($this->workspaces->listMembers($workspaceId) as $member) {
 			if ((string)$member->getUserId() === $userId) {
 				return true;

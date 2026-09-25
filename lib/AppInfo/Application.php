@@ -420,6 +420,7 @@ class Application extends App implements IBootstrap
 			$c->get(\OCA\CustomerCheck\Db\MobileSeatMapper::class),
 			$c->get(\OCP\IConfig::class),
 			$c->get(\Psr\Log\LoggerInterface::class),
+			$c->get(\OCA\CustomerCheck\Db\WorkspaceMemberMapper::class),
 		));
 		$context->registerEventListener(UserDeletedEvent::class, UserDeletedListener::class);
 	}

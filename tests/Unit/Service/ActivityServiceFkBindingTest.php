@@ -136,6 +136,8 @@ final class ActivityServiceFkBindingTest extends TestCase
 		$members = $this->createMock(\OCA\CustomerCheck\Db\WorkspaceMemberMapper::class);
 		$members->method('findMembershipOrNull')->willReturn(new \OCA\CustomerCheck\Db\WorkspaceMember());
 
+		$existingUsers0 = $this->createMock(\OCP\IUserManager::class);
+		$existingUsers0->method('userExists')->willReturn(true);
 		return new ActivityService(
 			$mapper,
 			$this->createMock(AccessControlService::class),
@@ -150,6 +152,7 @@ final class ActivityServiceFkBindingTest extends TestCase
 			$companies,
 			$members,
 			$this->createMock(\OCA\CustomerCheck\Service\NotificationService::class),
+			$existingUsers0,
 		);
 	}
 }

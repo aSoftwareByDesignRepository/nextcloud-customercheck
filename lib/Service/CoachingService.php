@@ -189,6 +189,10 @@ class CoachingService
 		$lockKey = 'crm_ooo/' . $workspaceId . '/' . $primary;
 		$this->locking->acquireLock($lockKey, ILockingProvider::LOCK_EXCLUSIVE);
 		try {
+			// Cover targets are workspace members, never free-text uids
+			// (§13.5 mass-assignment gate).
+			$this->workspaces->assertOwnerCandidate($workspaceId, $primary, 'primaryUserId');
+			$this->workspaces->assertOwnerCandidate($workspaceId, $backup, 'backupUserId');
 			$existing = $this->oooCover->listAll($workspaceId);
 			$err = OooLogic::validate($primary, $backup, $starts, $ends, $existing);
 			if ($err !== null) {
@@ -457,9 +461,14 @@ class CoachingService
 
 	private function assertWorkspaceMember(int $workspaceId, string $userId, string $field): void
 	{
-		foreach ($this->workspaces->listMembers($workspaceId) as $m) {
-			if ((string)$m->getUserId() === $userId) {
-				return;
+		// Stale member rows can outlive the account (listener failure or
+		// legacy rows) — a membership row alone must never satisfy the check
+		// for a uid that no longer exists.
+		if ($userId !== '' && $this->userManager->userExists($userId)) {
+			foreach ($this->workspaces->listMembers($workspaceId) as $m) {
+				if ((string)$m->getUserId() === $userId) {
+					return;
+				}
 			}
 		}
 		throw ValidationException::field(

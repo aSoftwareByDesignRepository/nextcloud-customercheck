@@ -95,17 +95,47 @@ final class CoachingOooLockTest extends TestCase
 		}
 	}
 
+	public function testSetOooRejectsNonMemberTargets(): void
+	{
+		$db = $this->createMock(IDBConnection::class);
+		$ooo = $this->createMock(OooCoverService::class);
+		$ooo->expects($this->never())->method('listAll');
+
+		$workspaces = $this->createMock(WorkspaceService::class);
+		$workspaces->method('assertOwnerCandidate')->willThrowException(
+			ValidationException::field(Constants::ERR_VALIDATION, 'primaryUserId', 'nope'),
+		);
+
+		$locking = $this->createMock(ILockingProvider::class);
+		$locking->expects($this->once())->method('acquireLock');
+		$locking->expects($this->once())->method('releaseLock');
+
+		$svc = $this->service($db, $ooo, $this->createMock(ITimeFactory::class), $locking, $workspaces);
+		try {
+			$svc->setOoo(7, [
+				'primaryUserId' => 'mallory',
+				'backupUserId' => 'sam',
+				'startsOn' => '2026-08-10',
+				'endsOn' => '2026-08-12',
+			], 'mgr');
+			$this->fail('non-member cover target must fail');
+		} catch (ValidationException $e) {
+			$this->assertArrayHasKey('primaryUserId', $e->getFields());
+		}
+	}
+
 	private function service(
 		IDBConnection $db,
 		OooCoverService $ooo,
 		ITimeFactory $time,
 		ILockingProvider $locking,
+		?WorkspaceService $workspaces = null,
 	): CoachingService {
 		$l10n = $this->createMock(IL10N::class);
 		$l10n->method('t')->willReturnCallback(static fn (string $s): string => $s);
 		return new CoachingService(
 			$db,
-			$this->createMock(WorkspaceService::class),
+			$workspaces ?? $this->createMock(WorkspaceService::class),
 			$this->createMock(ChaseService::class),
 			$this->createMock(PromiseService::class),
 			$this->createMock(CoverageService::class),

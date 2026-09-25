@@ -448,8 +448,10 @@ class PersonaApiController extends Controller
 			$uid = $this->access->currentUserId();
 			$company = $this->companies->get($companyId);
 			$wsId = (int)($company->getWorkspaceId() ?? 0);
-			$this->workspaces->assertUserCanAccessCompany($uid, $wsId, 'write');
-			return $this->ok($this->plans->upsert($companyId, $this->requestBody(), $uid));
+			$ctx = $this->workspaces->assertUserCanAccessCompany($uid, $wsId, 'write');
+			$canReassign = $ctx['isAppAdmin']
+				|| WorkspaceCapability::allows($ctx['role'], 'bulk', false);
+			return $this->ok($this->plans->upsert($companyId, $this->requestBody(), $uid, $canReassign));
 		} catch (\Throwable $e) {
 			return $this->fromThrowable($e);
 		}
@@ -617,9 +619,11 @@ class PersonaApiController extends Controller
 			$uid = $this->access->currentUserId();
 			$company = $this->companies->get($companyId);
 			$wsId = (int)($company->getWorkspaceId() ?? 0);
-			$this->workspaces->assertUserCanAccessCompany($uid, $wsId, 'write');
+			$ctx = $this->workspaces->assertUserCanAccessCompany($uid, $wsId, 'write');
+			$canReassign = $ctx['isAppAdmin']
+				|| WorkspaceCapability::allows($ctx['role'], 'bulk', false);
 
-			return $this->ok($this->promises->create($companyId, $this->requestBody(), $uid));
+			return $this->ok($this->promises->create($companyId, $this->requestBody(), $uid, $canReassign));
 		} catch (\Throwable $e) {
 			return $this->fromThrowable($e);
 		}

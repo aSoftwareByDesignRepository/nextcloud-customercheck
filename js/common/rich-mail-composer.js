@@ -220,12 +220,21 @@
           }),
           body: body.toString(),
         }).then(function (res) {
-          return res.json().then(function (data) {
+          // Guarded parse — an HTML/plain-text error body must not surface
+          // as a SyntaxError ("Unexpected token '<'…") in the UI.
+          return res.text().then(function (text) {
+            let data = null;
+            try {
+              data = text ? JSON.parse(text) : null;
+            } catch (e) {
+              data = null;
+            }
             const status = data && data.ocs && data.ocs.meta ? Number(data.ocs.meta.statuscode) : 0;
-            if (!res.ok || (status && status >= 400)) {
+            if (!res.ok || !data || (status && status >= 400)) {
               throw new Error(
-                (data && data.ocs && data.ocs.meta && data.ocs.meta.message)
-                  || t('Could not create a public link for this file.'),
+                (data && data.ocs && data.ocs.meta && data.ocs.meta.message && res.status < 500)
+                  ? data.ocs.meta.message
+                  : t('Could not create a public link for this file.'),
               );
             }
             const shareUrl = shareUrlFromOcsPayload(data);
@@ -236,6 +245,13 @@
           });
         });
       });
+    }).catch(function (err) {
+      // fetch() rejections are TypeErrors with engine text ("Failed to
+      // fetch") — translate to a localized message; app Errors pass through.
+      if (err instanceof TypeError) {
+        throw new Error(t('Could not create a public link for this file.'));
+      }
+      throw err;
     });
   }
 

@@ -24,6 +24,7 @@ class EscalationService
 		private readonly ITimeFactory $timeFactory,
 		private readonly IL10N $l10n,
 		private readonly ILockingProvider $locking,
+		private readonly ?WorkspaceService $workspaces = null,
 	) {
 	}
 
@@ -74,6 +75,9 @@ class EscalationService
 			if ($subject === '' || $reason === '') {
 				throw ValidationException::field(Constants::ERR_VALIDATION, 'reason', $this->l10n->t('Subject and reason are required.'));
 			}
+			// The subject is a teammate — must resolve to a real member of
+			// this workspace (§13.5 mass-assignment gate).
+			$this->workspaces?->assertOwnerCandidate($workspaceId, $subject, 'subjectUserId');
 			$companyId = isset($data['companyId']) ? (int)$data['companyId'] : 0;
 			$dealId = isset($data['dealId']) ? (int)$data['dealId'] : 0;
 			if ($companyId > 0) {

@@ -80,7 +80,9 @@ class CompanyApiController extends Controller
 			$ctx = $this->requireWorkspaceCapability('write');
 			$body = $this->jsonBody();
 			$body['workspaceId'] = $ctx['workspaceId'];
-			$company = $this->companies->create($body, $ctx['uid']);
+			$canReassign = $ctx['isAppAdmin']
+				|| WorkspaceCapability::allows($ctx['role'], 'bulk', false);
+			$company = $this->companies->create($body, $ctx['uid'], $canReassign);
 
 			return $this->ok($this->serialize($company), Http::STATUS_CREATED);
 		} catch (\Throwable $e) {

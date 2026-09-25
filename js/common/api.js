@@ -45,27 +45,75 @@
 		return t.charAt(0) === '<' || /<\/?[a-z][\s\S]*>/i.test(t.slice(0, 200));
 	}
 
+	function tr(msg) {
+		return (typeof window !== 'undefined' && typeof window.t === 'function')
+			? window.t('customercheck', msg)
+			: msg;
+	}
+
 	function humanMessageFromBody(text, status) {
 		const raw = String(text || '').trim();
 		if (!raw) {
-			return status ? ('HTTP ' + status) : 'Empty response';
+			return status
+				? tr('Server error (HTTP {status}). Please try again.').replace('{status}', String(status))
+				: tr('The server returned an empty response. Please try again.');
 		}
 		if (looksLikeHtml(raw)) {
 			if (status === 503) {
-				return 'Server temporarily unavailable (HTTP 503). Wait a moment and try again — Apache may be busy (e.g. installing PHP extensions).';
+				return tr('Server temporarily unavailable (HTTP 503). Wait a moment and try again.');
 			}
 			if (status === 502 || status === 504) {
-				return 'Server gateway error (HTTP ' + status + '). Try again in a moment.';
+				return tr('Server gateway error (HTTP {status}). Try again in a moment.').replace('{status}', String(status));
 			}
 			if (status === 500) {
-				return 'The server had a problem loading this (HTTP 500). Please try again in a moment. If it keeps failing, ask an admin to check the Nextcloud log.';
+				return tr('The server had a problem loading this (HTTP 500). Please try again in a moment. If it keeps failing, ask an admin to check the Nextcloud log.');
 			}
-			return 'Server returned an HTML error page instead of JSON' + (status ? ' (HTTP ' + status + ')' : '') + '.';
+			return tr('Server returned an HTML error page instead of JSON')
+				+ (status ? ' (HTTP ' + status + ')' : '') + '.';
+		}
+		// 5xx bodies are upstream dumps (proxy text, SQLSTATE, stack traces) —
+		// never echo them to the UI. 4xx messages are intentional API copy.
+		if (status >= 500) {
+			return tr('The server had a problem loading this (HTTP {status}). Please try again in a moment.')
+				.replace('{status}', String(status));
 		}
 		if (raw.length > 280) {
-			return raw.slice(0, 277) + '…';
+			return tr('The server returned an unexpected response (HTTP {status}). Please try again.')
+				.replace('{status}', status ? String(status) : '—');
 		}
 		return raw;
+	}
+
+	/**
+	 * WCAG 3.3.1/3.3.3: VALIDATION responses carry a localized `fields` map
+	 * ({fieldKey: message}). Mark the matching inputs — name, id, or
+	 * data-field attribute — with aria-invalid + an inline error linked via
+	 * aria-describedby, and focus the first offender. Runs centrally so every
+	 * form gets it without per-callsite wiring.
+	 */
+	// Field-level validation rendering lives in the shared canonical module —
+	// apps/_shared/field-errors/field-errors.js, synced verbatim to
+	// js/common/field-errors.js (drift-checked). Wrappers keep the local call
+	// sites stable; install() is idempotent so lazy-install is safe.
+	function fe() {
+		const m = window.CheckFieldErrors;
+		if (m) m.install({ prefix: 'crm' });
+		return m;
+	}
+
+	function clearFieldMarks(root) {
+		const m = fe();
+		if (m) m.clearFieldMarks(root);
+	}
+
+	function markValidationFields(fields) {
+		const m = fe();
+		if (m) m.markValidationFields(fields);
+	}
+
+	function wireFieldClearOnEdit() {
+		const m = fe();
+		if (m) m.wireFieldClearOnEdit();
 	}
 
 	/**
@@ -107,7 +155,17 @@
 			headers['Content-Type'] = 'application/json';
 			opts.body = JSON.stringify(body);
 		}
-		const response = await fetch(BASE + withWorkspace(path), opts);
+		let response;
+		try {
+			response = await fetch(BASE + withWorkspace(path), opts);
+		} catch (e) {
+			// Network/abort failures carry engine text ("Failed to fetch") —
+			// never surface it; emit a localized message instead.
+			const err = new Error(tr('Could not reach the server. Check your connection and try again.'));
+			err.status = 0;
+			err.payload = { success: false, error: 'NETWORK', message: err.message };
+			throw err;
+		}
 		let payload = null;
 		const text = await response.text();
 		if (text) {
@@ -124,12 +182,20 @@
 		if (!response.ok) {
 			const msg = (payload && payload.message)
 				? humanMessageFromBody(payload.message, response.status)
-				: ('HTTP ' + response.status);
+				: tr('Server error (HTTP {status}). Please try again.').replace('{status}', String(response.status));
 			const err = new Error(msg);
 			err.status = response.status;
 			err.payload = payload && typeof payload === 'object'
 				? Object.assign({}, payload, { message: msg })
 				: { success: false, error: 'HTTP_ERROR', message: msg };
+			// Render the server's localized per-field errors onto the form.
+			if (payload && payload.fields && typeof payload.fields === 'object'
+				&& typeof document !== 'undefined') {
+				try {
+					wireFieldClearOnEdit();
+					markValidationFields(payload.fields);
+				} catch (_e) { /* never break the error path */ }
+			}
 			throw err;
 		}
 		return payload;
@@ -150,5 +216,9 @@
 		base: BASE,
 		activeWorkspaceId: activeWorkspaceId,
 		makeIdempotencyKey: makeIdempotencyKey,
+		markFields: (fields) => {
+			wireFieldClearOnEdit();
+			markValidationFields(fields);
+		},
 	};
 })();

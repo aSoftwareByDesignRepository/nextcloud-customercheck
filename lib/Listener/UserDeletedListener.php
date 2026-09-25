@@ -7,6 +7,7 @@ namespace OCA\CustomerCheck\Listener;
 use OCA\CustomerCheck\AppInfo\Application;
 use OCA\CustomerCheck\Constants;
 use OCA\CustomerCheck\Db\MobileSeatMapper;
+use OCA\CustomerCheck\Db\WorkspaceMemberMapper;
 use OCP\EventDispatcher\Event;
 use OCP\EventDispatcher\IEventListener;
 use OCP\IConfig;
@@ -25,6 +26,7 @@ class UserDeletedListener implements IEventListener
 		private readonly MobileSeatMapper $seats,
 		private readonly IConfig $config,
 		private readonly LoggerInterface $logger,
+		private readonly WorkspaceMemberMapper $members,
 	) {
 	}
 
@@ -39,6 +41,16 @@ class UserDeletedListener implements IEventListener
 		} catch (\Throwable $e) {
 			// Never block user deletion on CRM cleanup.
 			$this->logger->warning('CustomerCheck: could not free mobile seat of deleted user', [
+				'app' => 'customercheck',
+				'exception' => $e,
+			]);
+		}
+		try {
+			// Stale membership rows would otherwise satisfy member checks for
+			// a uid that no longer exists (ghost-uid writes, orphaned owners).
+			$this->members->deleteByUser($uid);
+		} catch (\Throwable $e) {
+			$this->logger->warning('CustomerCheck: could not drop workspace memberships of deleted user', [
 				'app' => 'customercheck',
 				'exception' => $e,
 			]);

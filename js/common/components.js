@@ -31,7 +31,12 @@ const CustomerCheckComponents = {
     this.initToasts();
     this.relocatePageActions();
     this.wireAllDismissibleHints();
+    // Focus rescue across container rebuilds lives in the shared canonical
+    // module — apps/_shared/focus-preservation/focus-preservation.js, synced
+    // verbatim to js/common/focus-preservation.js (drift-checked). Do not fork.
+    window.CheckFocusPreservation.install({ prefix: 'crm' });
   },
+
 
   /**
    * DutyCheck-style dismissible Quick start cards (localStorage per user).
@@ -131,6 +136,25 @@ const CustomerCheckComponents = {
     }
   },
 
+  // Lock accounting is per-dialog, not per-call: openModal on an
+  // already-open dialog must not double-count (its closeModal would
+  // release only once, stranding depth>0 — page inert forever), and
+  // closeModal on a dialog that never took a lock must not release a
+  // lock held by another modal or a lockBackground() overlay.
+  _acquireModalLock(modal) {
+    if (!modal._crmLockHeld) {
+      modal._crmLockHeld = true;
+      this._lockPageBehindModal();
+    }
+  },
+
+  _releaseModalLock(modal) {
+    if (modal && modal._crmLockHeld) {
+      modal._crmLockHeld = false;
+      this._unlockPageBehindModal();
+    }
+  },
+
   _getVisibleModalBackdrops() {
     return Array.from(document.querySelectorAll('.modal-backdrop')).filter((backdrop) => {
       if (backdrop.style.display === 'flex') {
@@ -219,13 +243,22 @@ const CustomerCheckComponents = {
   initModals() {
     const modalTriggers = document.querySelectorAll('[data-modal]');
 
+    // init() runs once on DOMContentLoaded AND once per js/pages/*.js
+    // boot — per-trigger wiring must be idempotent or every trigger
+    // gets two click handlers (double openModal: showModal() on an
+    // already-open dialog throws InvalidStateError).
     modalTriggers.forEach(trigger => {
+      if (trigger.dataset.crmModalWired === '1') return;
+      trigger.dataset.crmModalWired = '1';
       trigger.addEventListener('click', (e) => {
         e.preventDefault();
         const modalId = trigger.dataset.modal;
         this.openModal(modalId);
       });
     });
+
+    if (this._modalDocHandlersBound) return;
+    this._modalDocHandlersBound = true;
 
     // Legacy backdrop click (topmost only) — native dialogs use dialog click / cancel.
     document.addEventListener('click', (e) => {
@@ -330,7 +363,7 @@ const CustomerCheckComponents = {
       } else if (!modal.open) {
         modal.setAttribute('open', 'open');
       }
-      this._lockPageBehindModal();
+      this._acquireModalLock(modal);
       this._bindFocusTrap(modal);
       setTimeout(() => {
         const closeBtn = modal.querySelector('.modal-close');
@@ -383,7 +416,7 @@ const CustomerCheckComponents = {
       modalElement.setAttribute('aria-hidden', 'true');
       modalElement.dataset.azcClosed = '1';
       delete modalElement.dataset.azcClosing;
-      this._unlockPageBehindModal();
+      this._releaseModalLock(modalElement);
       if (!persist) {
         setTimeout(() => {
           if (modalElement.parentNode && !modalElement.open) {
@@ -406,7 +439,7 @@ const CustomerCheckComponents = {
     if (!backdrop) {
       modalElement.style.display = 'none';
       modalElement.setAttribute('aria-hidden', 'true');
-      this._unlockPageBehindModal();
+      this._releaseModalLock(modalElement);
       this._restoreModalFocus(returnFocus);
       window.dispatchEvent(new CustomEvent('modal-close', {
         detail: { modalId: modalElement.id, modal: modalElement }
@@ -417,7 +450,7 @@ const CustomerCheckComponents = {
     modalElement.style.display = 'none';
     modalElement.setAttribute('aria-hidden', 'true');
     backdrop.style.display = 'none';
-    this._unlockPageBehindModal();
+    this._releaseModalLock(modalElement);
 
     const removeFromDom = () => {
       if (persist) {
@@ -561,6 +594,22 @@ const CustomerCheckComponents = {
       }, 0);
     });
 
+    // Nextcloud core apps (e.g. notifications) may preventDefault() the Escape
+    // keydown globally, which suppresses the native `cancel` event for every
+    // <dialog>. If the dialog is still open after the keydown finished
+    // dispatching, close it ourselves — same path as the `cancel` handler.
+    modal.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape' || modal.dataset.azcModalDismiss === 'false') {
+        return;
+      }
+      setTimeout(() => {
+        if (modal.open) {
+          this.closeModal(modal);
+          runOnCloseOnce();
+        }
+      }, 0);
+    });
+
     // Chromium: click on ::backdrop targets the dialog element itself.
     modal.addEventListener('click', (e) => {
       if (e.target !== modal) {
@@ -607,8 +656,26 @@ const CustomerCheckComponents = {
       : ((type === 'error' || type === 'critical' || type === 'danger') ? 9000 : 5000);
 
     const container = document.getElementById('toast-container') || document.body;
+    // Dedup: an identical toast already showing just gets its timer reset
+    // instead of stacking duplicates (rapid retries, repeated API failures).
+    const dedupKey = type + '|' + String(title || '') + '|' + String(message || '');
+    const dupes = container.querySelectorAll('.toast[data-crm-toast-key]');
+    for (const existing of dupes) {
+      if (existing.dataset.crmToastKey === dedupKey) {
+        if (existing._crmDismissTimer) {
+          clearTimeout(existing._crmDismissTimer);
+        }
+        if (duration > 0) {
+          existing._crmDismissTimer = setTimeout(() => {
+            this.hideToast(existing);
+          }, duration);
+        }
+        return existing;
+      }
+    }
     const toast = document.createElement('div');
     toast.className = `toast toast--${type}`;
+    toast.dataset.crmToastKey = dedupKey;
     // Errors are assertive alerts; routine success/info/warning are polite status.
     const isAssertive = type === 'error' || type === 'critical' || type === 'danger';
     toast.setAttribute('role', isAssertive ? 'alert' : 'status');
@@ -646,7 +713,7 @@ const CustomerCheckComponents = {
 
     // Auto-dismiss
     if (duration > 0) {
-      setTimeout(() => {
+      toast._crmDismissTimer = setTimeout(() => {
         this.hideToast(toast);
       }, duration);
     }
@@ -835,6 +902,11 @@ const CustomerCheckComponents = {
         </div>
       `;
 
+      // Capture the return-focus target BEFORE showModal(): showModal moves
+      // focus into the dialog, so reading activeElement afterwards would store
+      // an element that is removed on close (focus would fall to <body>).
+      const previouslyFocused = document.activeElement;
+
       document.body.appendChild(dialog);
       if (typeof dialog.showModal === 'function') {
         dialog.showModal();
@@ -842,10 +914,9 @@ const CustomerCheckComponents = {
         dialog.setAttribute('open', 'open');
       }
 
-      this._lockPageBehindModal();
+      this._acquireModalLock(dialog);
       this._bindFocusTrap(dialog);
 
-      const previouslyFocused = document.activeElement;
       const confirmBtn = dialog.querySelector('.confirm-dialog__confirm');
       const ackBox = dialog.querySelector('.confirm-dialog__ack');
       const optionalBox = dialog.querySelector('.confirm-dialog__optional');
@@ -889,8 +960,9 @@ const CustomerCheckComponents = {
           }
         } catch (_err) { /* noop */ }
         dialog.remove();
-        this._unlockPageBehindModal();
-        if (previouslyFocused && previouslyFocused.focus) {
+        this._releaseModalLock(dialog);
+        if (previouslyFocused && previouslyFocused.isConnected
+          && typeof previouslyFocused.focus === 'function') {
           try {
             previouslyFocused.focus();
           } catch (_err) { /* detached */ }
@@ -920,6 +992,19 @@ const CustomerCheckComponents = {
           return;
         }
         cleanup(alertOnly ? true : false);
+      });
+      // Same Escape-suppression defence as createModal: when another script
+      // preventDefaults the keydown, `cancel` never fires — close explicitly.
+      // Destructive confirms stay guarded (they require an explicit choice).
+      dialog.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape' || (isDestructive && !alertOnly)) {
+          return;
+        }
+        setTimeout(() => {
+          if (dialog.open) {
+            cleanup(alertOnly ? true : false);
+          }
+        }, 0);
       });
       // Focus trap is _bindFocusTrap only — no second Tab handler (double-trap race).
     }).then((result) => {

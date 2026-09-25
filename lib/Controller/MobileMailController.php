@@ -497,9 +497,14 @@ class MobileMailController extends Controller
 			return new JSONResponse(['ok' => false, 'error' => 'ACCESS_DENIED', 'message' => $e->getMessage()], $code);
 		}
 		if ($e instanceof NotFoundException) {
-			return new JSONResponse(['ok' => false, 'error' => 'NOT_FOUND', 'message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
+			// Uniform-404: identical payload for missing and foreign ids —
+			// never echo entity-specific messages (existence oracle).
+			return new JSONResponse(['ok' => false, 'error' => 'NOT_FOUND', 'message' => 'Not found.'], Http::STATUS_NOT_FOUND);
 		}
 		if ($e instanceof ValidationException) {
+			if ($e->getErrorCode() === \OCA\CustomerCheck\Constants::ERR_NOT_FOUND) {
+				return new JSONResponse(['ok' => false, 'error' => 'NOT_FOUND', 'message' => 'Not found.'], Http::STATUS_NOT_FOUND);
+			}
 			$status = match ($e->getErrorCode()) {
 				\OCA\CustomerCheck\Service\PersonalMailService::ERR_PERSONAL_MAIL_DISABLED => Http::STATUS_FORBIDDEN,
 				\OCA\CustomerCheck\Service\PersonalMailService::ERR_MAIL_ACCOUNT_CONFLICT => Http::STATUS_CONFLICT,

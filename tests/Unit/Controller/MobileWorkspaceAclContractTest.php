@@ -196,6 +196,39 @@ final class MobileWorkspaceAclContractTest extends TestCase
 		$this->assertSame(Constants::ERR_NOT_FOUND, $body['error']);
 	}
 
+	/**
+	 * Uniform-404: foreign and missing ids must produce byte-identical bodies —
+	 * no entity-specific message/code may leak existence (oracle fix).
+	 */
+	public function testCompanyDetailForeignAndMissingAreByteIdentical(): void
+	{
+		$this->allowWorkspace(5);
+		$foreign = new Company();
+		$foreign->setId(10);
+		$foreign->setWorkspaceId(7);
+		$this->companies->method('get')
+			->willReturnCallback(static function (int $id) use ($foreign): Company {
+				if ($id === 10) {
+					return $foreign;
+				}
+				throw new NotFoundException('This company no longer exists.', Constants::ERR_COMPANY_NOT_FOUND);
+			});
+		$this->workspaceAccess->method('assertCompanyInWorkspace')
+			->willThrowException(new NotFoundException('Company not found.'));
+
+		$foreignResp = $this->controller()->companyDetail(5, 10);
+		$missingResp = $this->controller()->companyDetail(5, 999);
+
+		$this->assertSame(Http::STATUS_NOT_FOUND, $foreignResp->getStatus());
+		$this->assertSame(Http::STATUS_NOT_FOUND, $missingResp->getStatus());
+		$this->assertSame(
+			json_encode($foreignResp->getData()),
+			json_encode($missingResp->getData()),
+			'foreign and missing ids must be byte-identical',
+		);
+		$this->assertSame('Not found.', $missingResp->getData()['message']);
+	}
+
 	public function testCompaniesSearchPassesWorkspaceIdFilter(): void
 	{
 		$this->allowWorkspace(12);

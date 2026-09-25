@@ -175,7 +175,12 @@ class BriefService
 			} else {
 				$companyId = 0;
 			}
-			$owner = trim((string)($data['ownerUserId'] ?? $actor));
+			$owner = trim((string)($data['ownerUserId'] ?? ''));
+			$owner = $owner === '' ? $actor : $owner;
+			// The controller already strips plain members to self, but
+			// manager/admin picks are input too — owner must resolve to a
+			// real member of this workspace (§13.5 mass-assignment gate).
+			$this->workspaces->assertOwnerCandidate($workspaceId, $owner, 'ownerUserId');
 			$now = $this->timeFactory->getDateTime()->format('Y-m-d H:i:s');
 			$ins = $this->db->getQueryBuilder();
 			$ins->insert('crm_commit')->values([

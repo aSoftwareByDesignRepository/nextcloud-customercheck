@@ -34,6 +34,8 @@ final class ActivityServiceMobileAccessTest extends TestCase
 		$l10n = $this->createMock(IL10N::class);
 		$l10n->method('t')->willReturnCallback(static fn (string $text): string => $text);
 
+		$existingUsers0 = $this->createMock(\OCP\IUserManager::class);
+		$existingUsers0->method('userExists')->willReturn(true);
 		$this->service = new ActivityService(
 			$this->mapper,
 			$this->access,
@@ -48,6 +50,7 @@ final class ActivityServiceMobileAccessTest extends TestCase
 			$this->createMock(\OCA\CustomerCheck\Db\CompanyMapper::class),
 			$this->createMock(\OCA\CustomerCheck\Db\WorkspaceMemberMapper::class),
 			$this->createMock(\OCA\CustomerCheck\Service\NotificationService::class),
+			$existingUsers0,
 		);
 	}
 

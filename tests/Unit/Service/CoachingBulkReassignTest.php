@@ -449,6 +449,8 @@ final class CoachingBulkReassignTest extends TestCase
 				$this->member('sam'),
 			]);
 		}
+		$userManager = $this->createMock(IUserManager::class);
+		$userManager->method('userExists')->willReturn(true);
 		return new CoachingService(
 			$db,
 			$ws,
@@ -460,7 +462,7 @@ final class CoachingBulkReassignTest extends TestCase
 			$this->createMock(OooCoverService::class),
 			$time,
 			$l10n,
-			$this->createMock(IUserManager::class),
+			$userManager,
 			$locking,
 			$notifications,
 		);

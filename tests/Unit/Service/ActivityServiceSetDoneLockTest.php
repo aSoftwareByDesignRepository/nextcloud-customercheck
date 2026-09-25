@@ -34,6 +34,8 @@ final class ActivityServiceSetDoneLockTest extends TestCase
 		$l = $this->createMock(IL10N::class);
 		$l->method('t')->willReturnCallback(static fn (string $s): string => $s);
 
+		$existingUsers0 = $this->createMock(\OCP\IUserManager::class);
+		$existingUsers0->method('userExists')->willReturn(true);
 		$svc = new ActivityService(
 			$mapper,
 			$this->createMock(AccessControlService::class),
@@ -48,6 +50,7 @@ final class ActivityServiceSetDoneLockTest extends TestCase
 			$this->createMock(\OCA\CustomerCheck\Db\CompanyMapper::class),
 			$this->createMock(\OCA\CustomerCheck\Db\WorkspaceMemberMapper::class),
 			$this->createMock(\OCA\CustomerCheck\Service\NotificationService::class),
+			$existingUsers0,
 		);
 
 		$this->expectException(ConflictException::class);
@@ -75,6 +78,8 @@ final class ActivityServiceSetDoneLockTest extends TestCase
 		$l = $this->createMock(IL10N::class);
 		$l->method('t')->willReturnCallback(static fn (string $s): string => $s);
 
+		$existingUsers1 = $this->createMock(\OCP\IUserManager::class);
+		$existingUsers1->method('userExists')->willReturn(true);
 		$svc = new ActivityService(
 			$mapper,
 			$this->createMock(AccessControlService::class),
@@ -89,6 +94,7 @@ final class ActivityServiceSetDoneLockTest extends TestCase
 			$this->createMock(\OCA\CustomerCheck\Db\CompanyMapper::class),
 			$this->createMock(\OCA\CustomerCheck\Db\WorkspaceMemberMapper::class),
 			$this->createMock(\OCA\CustomerCheck\Service\NotificationService::class),
+			$existingUsers1,
 		);
 
 		$out = $svc->setDone(3, true, 'admin', '2026-07-27T10:00:00+00:00');
@@ -109,6 +115,8 @@ final class ActivityServiceSetDoneLockTest extends TestCase
 		$l = $this->createMock(IL10N::class);
 		$l->method('t')->willReturnCallback(static fn (string $s): string => $s);
 
+		$existingUsers2 = $this->createMock(\OCP\IUserManager::class);
+		$existingUsers2->method('userExists')->willReturn(true);
 		$svc = new ActivityService(
 			$mapper,
 			$this->createMock(AccessControlService::class),
@@ -123,6 +131,7 @@ final class ActivityServiceSetDoneLockTest extends TestCase
 			$this->createMock(\OCA\CustomerCheck\Db\CompanyMapper::class),
 			$this->createMock(\OCA\CustomerCheck\Db\WorkspaceMemberMapper::class),
 			$this->createMock(\OCA\CustomerCheck\Service\NotificationService::class),
+			$existingUsers2,
 		);
 
 		$this->expectException(ConflictException::class);

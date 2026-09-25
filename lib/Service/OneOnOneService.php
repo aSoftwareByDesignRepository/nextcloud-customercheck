@@ -23,6 +23,7 @@ class OneOnOneService
 		private readonly PromiseService $promises,
 		private readonly ITimeFactory $timeFactory,
 		private readonly IL10N $l10n,
+		private readonly ?WorkspaceService $workspaces = null,
 	) {
 	}
 
@@ -41,6 +42,10 @@ class OneOnOneService
 		if ($reportUserId === '') {
 			throw ValidationException::field(Constants::ERR_VALIDATION, 'reportUserId', $this->l10n->t('Pick a teammate for 1:1 prep.'));
 		}
+		// The report is a teammate — must resolve to a real member of this
+		// workspace (§13.5 mass-assignment gate; also kills the member-existence
+		// oracle the response diff would otherwise expose).
+		$this->workspaces?->assertOwnerCandidate($workspaceId, $reportUserId, 'reportUserId');
 		$today = $this->timeFactory->getDateTime();
 		$chase = $this->chase->myChase($reportUserId, $workspaceId, $today);
 		$promises = [];
@@ -66,10 +71,11 @@ class OneOnOneService
 	public function save(int $workspaceId, string $managerUserId, string $reportUserId, array $data): array
 	{
 		$reportUserId = trim($reportUserId);
-		$notes = trim((string)($data['notes'] ?? ''));
 		if ($reportUserId === '') {
 			throw ValidationException::field(Constants::ERR_VALIDATION, 'reportUserId', $this->l10n->t('Pick a teammate for 1:1 prep.'));
 		}
+		$this->workspaces?->assertOwnerCandidate($workspaceId, $reportUserId, 'reportUserId');
+		$notes = trim((string)($data['notes'] ?? ''));
 		if (mb_strlen($notes) > 8000) {
 			throw ValidationException::field(Constants::ERR_VALIDATION, 'notes', $this->l10n->t('Notes are too long (max 8000 characters).'));
 		}

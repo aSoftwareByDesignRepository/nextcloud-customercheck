@@ -31,6 +31,8 @@ final class ActivityDismissFollowUpsTest extends TestCase
 		$this->mapper = $this->createMock(ActivityMapper::class);
 		$this->time = $this->createMock(ITimeFactory::class);
 		$this->time->method('getDateTime')->willReturn(new \DateTime('2026-07-25 12:00:00'));
+		$existingUsers0 = $this->createMock(\OCP\IUserManager::class);
+		$existingUsers0->method('userExists')->willReturn(true);
 		$this->service = new ActivityService(
 			$this->mapper,
 			$this->createMock(AccessControlService::class),
@@ -45,6 +47,7 @@ final class ActivityDismissFollowUpsTest extends TestCase
 			$this->createMock(\OCA\CustomerCheck\Db\CompanyMapper::class),
 			$this->createMock(\OCA\CustomerCheck\Db\WorkspaceMemberMapper::class),
 			$this->createMock(\OCA\CustomerCheck\Service\NotificationService::class),
+			$existingUsers0,
 		);
 	}
 

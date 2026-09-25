@@ -98,7 +98,13 @@ final class AtlasPersonaWorkspaceInvokeCoverageTest extends TestCase
 		$workspaces = $this->createMock(WorkspaceAccessService::class);
 		$workspaces->method('resolveForUser')->willReturn($this->wsCtx());
 		$workspaces->method('assertCapability');
-		$workspaces->method('assertUserCanAccessCompany');
+		$workspaces->method('assertUserCanAccessCompany')->willReturnCallback(
+			fn (string $uid, int $wsId, string $cap = 'read') => [
+				'workspaceId' => $wsId,
+				'role' => 'manager',
+				'isAppAdmin' => true,
+			],
+		);
 
 		return $workspaces;
 	}

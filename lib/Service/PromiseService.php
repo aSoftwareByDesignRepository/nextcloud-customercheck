@@ -23,6 +23,7 @@ class PromiseService
 		private readonly ITimeFactory $timeFactory,
 		private readonly IL10N $l10n,
 		private readonly PersonMapper $personMapper,
+		private readonly ?WorkspaceService $workspaces = null,
 	) {
 	}
 
@@ -71,7 +72,7 @@ class PromiseService
 	}
 
 	/** @param array<string, mixed> $data */
-	public function create(int $companyId, array $data, string $actor): array
+	public function create(int $companyId, array $data, string $actor, bool $canReassignOwners = false): array
 	{
 		$company = $this->companies->get($companyId);
 		$ws = (int)($company->getWorkspaceId() ?? 0);
@@ -105,6 +106,14 @@ class PromiseService
 			);
 			$boundPersonId = $personId;
 		}
+		$owner = trim((string)($data['ownerUserId'] ?? $actor));
+		if (!$canReassignOwners) {
+			// Same strip the deal path applies — without the reassign
+			// capability the owner is always the actor (§13.5).
+			$owner = $actor;
+		} elseif ($owner !== '' && $owner !== $actor) {
+			$this->workspaces?->assertOwnerCandidate($ws, $owner, 'ownerUserId');
+		}
 		$ins = $this->db->getQueryBuilder();
 		$ins->insert('crm_cust_prm')->values([
 			'company_id' => $ins->createNamedParameter($companyId),
@@ -113,7 +122,7 @@ class PromiseService
 			'due_on' => $ins->createNamedParameter($dueOn),
 			'status' => $ins->createNamedParameter('open'),
 			'person_id' => $ins->createNamedParameter($boundPersonId),
-			'owner_user_id' => $ins->createNamedParameter($data['ownerUserId'] ?? $actor),
+			'owner_user_id' => $ins->createNamedParameter($owner !== '' ? $owner : null),
 			'created_by' => $ins->createNamedParameter($actor),
 			'created_at' => $ins->createNamedParameter($now),
 			'updated_at' => $ins->createNamedParameter($now),

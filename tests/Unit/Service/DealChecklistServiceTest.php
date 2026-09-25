@@ -322,6 +322,8 @@ final class DealChecklistServiceTest extends TestCase
 		$time = $this->createMock(ITimeFactory::class);
 		$time->method('getDateTime')->willReturn(new \DateTime('2026-08-11 12:00:00'));
 
+		$existingUsers0 = $this->createMock(\OCP\IUserManager::class);
+		$existingUsers0->method('userExists')->willReturn(true);
 		$svc = new DealChecklistService(
 			$this->createMock(IDBConnection::class),
 			$this->createMock(DealMapper::class),
@@ -335,6 +337,8 @@ final class DealChecklistServiceTest extends TestCase
 			$this->createMock(NotificationService::class),
 			$time,
 			$l10n,
+			null,
+			$existingUsers0,
 		);
 
 		try {
@@ -385,6 +389,8 @@ final class DealChecklistServiceTest extends TestCase
 		$time = $this->createMock(ITimeFactory::class);
 		$time->method('getDateTime')->willReturn(new \DateTime('2026-08-11 12:00:00'));
 
+		$existingUsers1 = $this->createMock(\OCP\IUserManager::class);
+		$existingUsers1->method('userExists')->willReturn(true);
 		$svc = new DealChecklistService(
 			$db,
 			$this->createMock(DealMapper::class),
@@ -398,6 +404,8 @@ final class DealChecklistServiceTest extends TestCase
 			$this->createMock(NotificationService::class),
 			$time,
 			$l10n,
+			null,
+			$existingUsers1,
 		);
 
 		$this->expectException(\RuntimeException::class);
@@ -1107,6 +1115,8 @@ final class DealChecklistServiceTest extends TestCase
 		$db ??= $this->createMock(IDBConnection::class);
 		$db->method('tableExists')->willReturn(true);
 
+		$existingUsers2 = $this->createMock(\OCP\IUserManager::class);
+		$existingUsers2->method('userExists')->willReturn(true);
 		return new DealChecklistService(
 			$db,
 			$dealMapper,
@@ -1120,6 +1130,8 @@ final class DealChecklistServiceTest extends TestCase
 			$notifications ?? $this->createMock(NotificationService::class),
 			$time,
 			$l10n,
+			null,
+			$existingUsers2,
 		);
 	}
 }

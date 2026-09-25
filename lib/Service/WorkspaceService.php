@@ -376,6 +376,25 @@ class WorkspaceService
 	}
 
 	/**
+	 * Owner fields are never free-text: a candidate must resolve to a real
+	 * account AND be a member of the owning workspace (§13.5 gate applies on
+	 * create as well as update — mass assignment is the same boundary).
+	 */
+	public function assertOwnerCandidate(int $workspaceId, string $uid, string $field): void
+	{
+		if ($uid === ''
+			|| !$this->userManager->userExists($uid)
+			|| $this->members->findMembershipOrNull($workspaceId, $uid) === null
+		) {
+			throw ValidationException::field(
+				Constants::ERR_VALIDATION,
+				$field,
+				$this->l10n->t('Choose a member of this workspace as the owner.'),
+			);
+		}
+	}
+
+	/**
 	 * Nextcloud account emails for workspace members — used so shared-mail
 	 * auto-match never files a colleague's outbound CC copy onto a customer.
 	 *
@@ -523,7 +542,8 @@ class WorkspaceService
 					if (array_key_exists('scanActor', $incoming)) {
 						$actorName = trim((string)$incoming['scanActor']);
 						if ($actorName !== '') {
-							if ($this->members->findMembershipOrNull($workspaceId, $actorName) === null) {
+							if (!$this->userManager->userExists($actorName)
+								|| $this->members->findMembershipOrNull($workspaceId, $actorName) === null) {
 								throw ValidationException::field(
 									Constants::ERR_VALIDATION,
 									'scanActor',
@@ -565,7 +585,8 @@ class WorkspaceService
 				if (in_array($kind, ['calendar_event', 'task', 'contact_suggest'], true) && array_key_exists('scanActor', $incoming)) {
 					$actorName = trim((string)$incoming['scanActor']);
 					if ($actorName !== '') {
-						if ($this->members->findMembershipOrNull($workspaceId, $actorName) === null) {
+						if (!$this->userManager->userExists($actorName)
+							|| $this->members->findMembershipOrNull($workspaceId, $actorName) === null) {
 							throw ValidationException::field(
 								Constants::ERR_VALIDATION,
 								'scanActor',

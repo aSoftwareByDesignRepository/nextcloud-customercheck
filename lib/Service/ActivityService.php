@@ -23,6 +23,7 @@ use OCP\AppFramework\Db\DoesNotExistException;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\IDBConnection;
 use OCP\IL10N;
+use OCP\IUserManager;
 
 /**
  * Activities — the single "what do I owe whom" list (§4.5, §8.3).
@@ -49,6 +50,7 @@ class ActivityService
 		private readonly CompanyMapper $companyMapper,
 		private readonly WorkspaceMemberMapper $members,
 		private readonly NotificationService $notifications,
+		private readonly ?IUserManager $userManager = null,
 	) {
 	}
 
@@ -605,7 +607,11 @@ class ActivityService
 			);
 		}
 		$ws = (int)($company->getWorkspaceId() ?? 0);
-		if ($ws <= 0 || $this->members->findMembershipOrNull($ws, $uid) === null) {
+		// Existence first: stale member rows outliving a deleted account must
+		// never satisfy this check (ghost-uid writes).
+		if ($ws <= 0
+			|| !$this->userManager?->userExists($uid)
+			|| $this->members->findMembershipOrNull($ws, $uid) === null) {
 			throw ValidationException::field(
 				Constants::ERR_VALIDATION,
 				'assigneeUserId',

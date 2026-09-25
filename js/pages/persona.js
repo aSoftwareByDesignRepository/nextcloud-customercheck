@@ -210,16 +210,58 @@
     return 0;
   }
 
+  /**
+   * Guarded JSON read: res.json() on an HTML/plain-text error body throws
+   * SyntaxError ("Unexpected token '<'...") — render a localized message
+   * instead. 5xx payload messages are upstream dumps — never echo them.
+   */
+  async function readApiJson(res) {
+    const text = await res.text();
+    let json = null;
+    try {
+      json = text ? JSON.parse(text) : null;
+    } catch (e) {
+      json = null;
+    }
+    if (!res.ok || !json || typeof json !== 'object' || !json.success) {
+      const generic = t('The server returned an unexpected response (HTTP {status}). Please try again.')
+        .replace('{status}', String(res.status));
+      const msg = (json && typeof json.message === 'string' && res.status < 500)
+        ? json.message
+        : generic;
+      const err = new Error(msg);
+      err.status = res.status;
+      err.payload = json;
+      if (json && json.fields && typeof json.fields === 'object'
+        && window.CustomerCheckApi && typeof window.CustomerCheckApi.markFields === 'function') {
+        try { window.CustomerCheckApi.markFields(json.fields); } catch (e) { /* noop */ }
+      }
+      throw err;
+    }
+    return json.data;
+  }
+
+  // fetch() rejections are TypeErrors with engine text ("Failed to fetch")
+  // — translate to a localized message; aborts pass through untouched.
+  async function safeFetch(url, opts) {
+    try {
+      return await fetch(url, opts);
+    } catch (e) {
+      if (isAbortError(e)) {
+        throw e;
+      }
+      const err = new Error(t('Could not reach the server. Check your connection and try again.'));
+      err.status = 0;
+      throw err;
+    }
+  }
+
   async function apiGet(path) {
-    const res = await fetch(OC.generateUrl('/apps/customercheck' + path), {
+    const res = await safeFetch(OC.generateUrl('/apps/customercheck' + path), {
       credentials: 'same-origin',
       headers: { requesttoken: OC.requestToken },
     });
-    const json = await res.json();
-    if (!json.success) {
-      throw new Error(json.message || 'Request failed');
-    }
-    return json.data;
+    return readApiJson(res);
   }
 
   async function apiPost(path, body, opts) {
@@ -235,12 +277,8 @@
     if (opts && opts.signal) {
       fetchOpts.signal = opts.signal;
     }
-    const res = await fetch(OC.generateUrl('/apps/customercheck' + path), fetchOpts);
-    const json = await res.json();
-    if (!json.success) {
-      throw new Error(json.message || 'Request failed');
-    }
-    return json.data;
+    const res = await safeFetch(OC.generateUrl('/apps/customercheck' + path), fetchOpts);
+    return readApiJson(res);
   }
 
   function isAbortError(err) {
@@ -248,7 +286,7 @@
   }
 
   async function apiPut(path, body) {
-    const res = await fetch(OC.generateUrl('/apps/customercheck' + path), {
+    const res = await safeFetch(OC.generateUrl('/apps/customercheck' + path), {
       method: 'PUT',
       credentials: 'same-origin',
       headers: {
@@ -257,24 +295,16 @@
       },
       body: JSON.stringify(body || {}),
     });
-    const json = await res.json();
-    if (!json.success) {
-      throw new Error(json.message || 'Request failed');
-    }
-    return json.data;
+    return readApiJson(res);
   }
 
   async function apiDelete(path) {
-    const res = await fetch(OC.generateUrl('/apps/customercheck' + path), {
+    const res = await safeFetch(OC.generateUrl('/apps/customercheck' + path), {
       method: 'DELETE',
       credentials: 'same-origin',
       headers: { requesttoken: OC.requestToken },
     });
-    const json = await res.json();
-    if (!json.success) {
-      throw new Error(json.message || 'Request failed');
-    }
-    return json.data;
+    return readApiJson(res);
   }
 
   function makeDraftSendKey() {

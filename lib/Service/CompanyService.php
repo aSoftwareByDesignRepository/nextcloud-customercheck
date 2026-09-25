@@ -60,6 +60,7 @@ class CompanyService
 		private readonly ?EntityRevisionService $entityRevisions = null,
 		private readonly ?ValueMapService $valueMaps = null,
 		private readonly ?NotificationService $notifications = null,
+		private readonly ?WorkspaceService $workspaces = null,
 	) {
 	}
 
@@ -158,8 +159,13 @@ class CompanyService
 	 * @param array<string, mixed> $input
 	 * @throws ValidationException
 	 */
-	public function create(array $input, string $actor): Company
+	public function create(array $input, string $actor, bool $canReassignOwners = false): Company
 	{
+		if (!$canReassignOwners) {
+			// Without the reassign capability the owner is always the actor —
+			// same strip the mobile create path applies (§13.5).
+			unset($input['accountOwnerUserId']);
+		}
 		$wsId = (int)($input['workspaceId'] ?? 0);
 		if ($wsId <= 0) {
 			$wsId = $this->resolveDefaultWorkspaceId();
@@ -187,6 +193,10 @@ class CompanyService
 
 		if (trim((string)($company->getAccountOwnerUserId() ?? '')) === '') {
 			$company->setAccountOwnerUserId($actor);
+		}
+		$createdOwner = trim((string)($company->getAccountOwnerUserId() ?? ''));
+		if ($createdOwner !== '' && $createdOwner !== $actor && $this->workspaces !== null) {
+			$this->workspaces->assertOwnerCandidate($wsId, $createdOwner, 'accountOwnerUserId');
 		}
 
 		$requestedSlug = trim((string)($input['slug'] ?? ''));
@@ -236,11 +246,17 @@ class CompanyService
 			try {
 				OptimisticLock::assertFresh($company->getUpdatedAt(), $updatedAtPrecondition, $requirePrecondition);
 			} catch (ConflictException $stale) {
-				if (!$requirePrecondition || $this->editConflicts === null) {
+				if (!$requirePrecondition || $this->editConflicts === null
+					|| $updatedAtPrecondition === null || trim($updatedAtPrecondition) === '') {
 					throw $stale;
 				}
-				$baseSnap = $this->entityRevisions?->snapshotAt('company', $id, $updatedAtPrecondition)
-					?? $currentSnap;
+				// Fail closed: no recorded base revision at the precondition stamp
+				// means we cannot prove which fields the other writer touched —
+				// never merge against current (that is silent last-write-wins).
+				$baseSnap = $this->entityRevisions?->snapshotAt('company', $id, (string)$updatedAtPrecondition);
+				if ($baseSnap === null) {
+					throw $stale;
+				}
 				$incoming = $this->companyIncomingPatch($input);
 				if ($incoming === []) {
 					throw $stale;
@@ -303,6 +319,13 @@ class CompanyService
 							Constants::ERR_DEAL_OWNED,
 							'accountOwnerUserId',
 							$this->l10n->t('This account already has an owner. Ask them or a manager to reassign it.'),
+						);
+					}
+					if ($newOwner !== '') {
+						$this->workspaces?->assertOwnerCandidate(
+							(int)($company->getWorkspaceId() ?? 0),
+							$newOwner,
+							'accountOwnerUserId',
 						);
 					}
 				}

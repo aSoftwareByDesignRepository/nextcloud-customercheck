@@ -4,13 +4,16 @@ declare(strict_types=1);
 
 namespace OCA\CustomerCheck\Tests\Unit\Service;
 
+use OCA\CustomerCheck\Constants;
 use OCA\CustomerCheck\Db\Company;
 use OCA\CustomerCheck\Db\PersonMapper;
 use OCA\CustomerCheck\Exception\ValidationException;
 use OCA\CustomerCheck\Service\CompanyService;
 use OCA\CustomerCheck\Service\DisplayLabelService;
 use OCA\CustomerCheck\Service\PromiseService;
+use OCA\CustomerCheck\Service\WorkspaceService;
 use OCP\AppFramework\Utility\ITimeFactory;
+use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\IDBConnection;
 use OCP\IL10N;
 use PHPUnit\Framework\TestCase;
@@ -116,10 +119,72 @@ final class PromiseServiceTest extends TestCase
 		}
 	}
 
+	public function testCreateRejectsForeignOwnerForReassignCallers(): void
+	{
+		$company = new Company();
+		$company->setId(9);
+		$company->setWorkspaceId(3);
+		$companies = $this->createMock(CompanyService::class);
+		$companies->method('get')->willReturn($company);
+
+		$workspaces = $this->createMock(WorkspaceService::class);
+		$workspaces->method('assertOwnerCandidate')->willThrowException(
+			ValidationException::field(Constants::ERR_VALIDATION, 'ownerUserId', 'nope'),
+		);
+
+		$svc = $this->service($this->createMock(IDBConnection::class), $companies, null, $workspaces);
+		try {
+			$svc->create(9, [
+				'title' => 'Ship',
+				'dueOn' => '2026-08-01',
+				'ownerUserId' => 'mallory',
+			], 'alex', true);
+			$this->fail('foreign owner must fail');
+		} catch (ValidationException $e) {
+			$this->assertArrayHasKey('ownerUserId', $e->getFields());
+		}
+	}
+
+	public function testCreateStripsOwnerWithoutReassignCapability(): void
+	{
+		$company = new Company();
+		$company->setId(9);
+		$company->setWorkspaceId(3);
+		$companies = $this->createMock(CompanyService::class);
+		$companies->method('get')->willReturn($company);
+
+		$captured = null;
+		$qb = $this->createMock(IQueryBuilder::class);
+		$qb->method('insert')->willReturnSelf();
+		$qb->method('values')->willReturnCallback(static function (array $v) use ($qb, &$captured) {
+			$captured = $v;
+			return $qb;
+		});
+		$qb->method('createNamedParameter')->willReturnArgument(0);
+		$qb->method('executeStatement')->willReturn(1);
+		$db = $this->createMock(IDBConnection::class);
+		$db->method('getQueryBuilder')->willReturn($qb);
+		$db->method('lastInsertId')->willReturn(7);
+
+		$workspaces = $this->createMock(WorkspaceService::class);
+		$workspaces->expects($this->never())->method('assertOwnerCandidate');
+
+		$svc = $this->service($db, $companies, null, $workspaces);
+		$out = $svc->create(9, [
+			'title' => 'Ship',
+			'dueOn' => '2026-08-01',
+			'ownerUserId' => 'mallory',
+		], 'alex');
+
+		$this->assertSame(7, $out['id']);
+		$this->assertSame('alex', $captured['owner_user_id']);
+	}
+
 	private function service(
 		IDBConnection $db,
 		CompanyService $companies,
 		?PersonMapper $persons = null,
+		?WorkspaceService $workspaces = null,
 	): PromiseService {
 		$time = $this->createMock(ITimeFactory::class);
 		$time->method('getDateTime')->willReturn(new \DateTime('2026-07-31 12:00:00'));
@@ -133,6 +198,7 @@ final class PromiseServiceTest extends TestCase
 			$time,
 			$l10n,
 			$persons ?? $this->createMock(PersonMapper::class),
+			$workspaces,
 		);
 	}
 }

@@ -175,6 +175,10 @@ test.describe('Bachus whole-app effortless flows', () => {
     await expect(page.locator('#section-workspace-mailbox.crm-mailbox-settings')).toBeVisible();
     await expect(page.locator('#crm-ws-limits-card')).toBeVisible();
     await expect(page.locator('#crm-ws-mailbox-card')).toBeVisible();
+    // The compose form lives behind the "Add or edit mailbox" disclosure; it only
+    // auto-opens when no mailbox exists, so open it explicitly for determinism.
+    await page.locator('#crm-mailbox-compose > summary').click();
+    await expect(page.locator('#crm-mailbox-compose')).toHaveAttribute('open', '');
     await expect(page.locator('#crm-mailbox-form.crm-form--stack')).toBeVisible();
     // Bachus: primary Inbox fieldset + Mail servers under progressive disclosure.
     await expect(page.locator('#crm-mailbox-form > fieldset.crm-fieldset')).toHaveCount(1);

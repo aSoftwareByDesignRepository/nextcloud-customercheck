@@ -30,6 +30,7 @@ class AccountPlanService
 		private readonly ITimeFactory $timeFactory,
 		private readonly IL10N $l10n,
 		private readonly DirectoryOptionsService $directory,
+		private readonly ?WorkspaceService $workspaces = null,
 	) {
 	}
 
@@ -75,7 +76,7 @@ class AccountPlanService
 	 * @param array<string, mixed> $data
 	 * @return array<string, mixed>
 	 */
-	public function upsert(int $companyId, array $data, string $actor): array
+	public function upsert(int $companyId, array $data, string $actor, bool $canReassignOwners = false): array
 	{
 		$company = $this->companies->get($companyId);
 		$ws = (int)($company->getWorkspaceId() ?? 0);
@@ -88,6 +89,13 @@ class AccountPlanService
 			$priority = 'p2';
 		}
 		$owner = trim((string)($data['ownerUserId'] ?? $actor));
+		if (!$canReassignOwners) {
+			// Same strip the deal path applies — without the reassign
+			// capability the owner is always the actor (§13.5).
+			$owner = $actor;
+		} elseif ($owner !== '' && $owner !== $actor) {
+			$this->workspaces?->assertOwnerCandidate($ws, $owner, 'ownerUserId');
+		}
 		$horizon = trim((string)($data['horizon'] ?? ''));
 		$nextAssignRaw = trim((string)($data['nextAssignOn'] ?? ''));
 		$nextAssign = '';

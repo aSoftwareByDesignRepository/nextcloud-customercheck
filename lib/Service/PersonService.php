@@ -131,10 +131,16 @@ class PersonService
 			try {
 				OptimisticLock::assertFresh($person->getUpdatedAt(), $updatedAtPrecondition, $requirePrecondition);
 			} catch (\OCA\CustomerCheck\Exception\ConflictException $stale) {
-				if (!$requirePrecondition || $this->editConflicts === null) {
+				if (!$requirePrecondition || $this->editConflicts === null
+					|| $updatedAtPrecondition === null || trim($updatedAtPrecondition) === '') {
 					throw $stale;
 				}
-				$baseSnap = $this->entityRevisions?->snapshotAt('person', $id, $updatedAtPrecondition) ?? $currentSnap;
+				// Fail closed: no recorded base revision → cannot prove what the
+				// other writer changed; merging against current is silent LWW.
+				$baseSnap = $this->entityRevisions?->snapshotAt('person', $id, (string)$updatedAtPrecondition);
+				if ($baseSnap === null) {
+					throw $stale;
+				}
 				$incoming = $this->personIncomingPatch($input);
 				if ($incoming === []) {
 					throw $stale;

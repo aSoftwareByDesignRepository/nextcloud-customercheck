@@ -18,6 +18,23 @@
   };
   if (C && C.init) { C.init(); }
 
+  const LegacyWs = window.CustomerCheckWorkspaceSettingsLegacyRedirect;
+  if (LegacyWs && typeof LegacyWs.resolve === 'function') {
+    const redirectUrl = LegacyWs.resolve(document, window.location);
+    if (redirectUrl) {
+      window.location.replace(redirectUrl);
+      return;
+    }
+  }
+  const LegacyApp = window.CustomerCheckAppSettingsLegacyRedirect;
+  if (LegacyApp && typeof LegacyApp.resolve === 'function') {
+    const redirectUrl = LegacyApp.resolve(document, window.location);
+    if (redirectUrl) {
+      window.location.replace(redirectUrl);
+      return;
+    }
+  }
+
   const root = document.getElementById('crm-settings-root');
   if (!root) return;
   const canManage = root.getAttribute('data-can-manage') === '1';

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace OCA\CustomerCheck\Tests\Unit\Service;
 
+use OCA\CustomerCheck\Constants;
 use OCA\CustomerCheck\Db\Company;
 use OCA\CustomerCheck\Exception\ValidationException;
 use OCA\CustomerCheck\Service\AccountPlanService;
@@ -11,6 +12,7 @@ use OCA\CustomerCheck\Service\CompanyService;
 use OCA\CustomerCheck\Service\CoverageService;
 use OCA\CustomerCheck\Service\DirectoryOptionsService;
 use OCA\CustomerCheck\Service\DisplayLabelService;
+use OCA\CustomerCheck\Service\WorkspaceService;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\IDBConnection;
 use OCP\IL10N;
@@ -56,6 +58,46 @@ final class AccountPlanStatusValidationTest extends TestCase
 			$this->fail('Expected ValidationException');
 		} catch (ValidationException $e) {
 			$this->assertStringContainsString('Unknown plan status.', $e->getMessage());
+		}
+	}
+
+	public function testForeignOwnerRejectedForReassignCallers(): void
+	{
+		$company = new Company();
+		$company->setId(4);
+		$company->setWorkspaceId(1);
+		$company->setName('Acme');
+
+		$companies = $this->createMock(CompanyService::class);
+		$companies->method('get')->willReturn($company);
+		$companies->expects($this->never())->method('lockRow');
+
+		$db = $this->createMock(IDBConnection::class);
+		$db->expects($this->never())->method('beginTransaction');
+		$db->method('tableExists')->willReturn(true);
+
+		$l10n = $this->createMock(IL10N::class);
+		$l10n->method('t')->willReturnCallback(static fn (string $s): string => $s);
+		$labels = new DisplayLabelService($l10n);
+		$coverage = $this->createMock(CoverageService::class);
+		$time = $this->createMock(ITimeFactory::class);
+		$directory = $this->createMock(DirectoryOptionsService::class);
+
+		$workspaces = $this->createMock(WorkspaceService::class);
+		$workspaces->method('assertOwnerCandidate')->willThrowException(
+			ValidationException::field(Constants::ERR_VALIDATION, 'ownerUserId', 'nope'),
+		);
+
+		$svc = new AccountPlanService($db, $companies, $coverage, $labels, $time, $l10n, $directory, $workspaces);
+
+		try {
+			$svc->upsert(4, [
+				'goal' => 'Grow',
+				'ownerUserId' => 'mallory',
+			], 'mgr', true);
+			$this->fail('foreign owner must fail');
+		} catch (ValidationException $e) {
+			$this->assertArrayHasKey('ownerUserId', $e->getFields());
 		}
 	}
 

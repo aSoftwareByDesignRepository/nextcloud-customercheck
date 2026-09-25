@@ -21,6 +21,76 @@ use PHPUnit\Framework\TestCase;
  */
 final class BriefVerifyEvidenceTest extends TestCase
 {
+	public function testConfirmRejectsNonMemberOwner(): void
+	{
+		$db = $this->createMock(IDBConnection::class);
+		$db->method('tableExists')->willReturn(true);
+
+		$result = $this->getMockBuilder(\stdClass::class)->addMethods(['fetch', 'closeCursor'])->getMock();
+		$result->method('fetch')->willReturn(false);
+		$expr = $this->getMockBuilder(\stdClass::class)->addMethods(['eq'])->getMock();
+		$expr->method('eq')->willReturn('eq');
+		$qb = $this->getMockBuilder(\stdClass::class)
+			->addMethods(['select', 'from', 'where', 'andWhere', 'orderBy', 'setMaxResults', 'executeQuery', 'expr', 'createNamedParameter'])
+			->getMock();
+		$qb->method('expr')->willReturn($expr);
+		$qb->method('createNamedParameter')->willReturnArgument(0);
+		$qb->method('select')->willReturnSelf();
+		$qb->method('from')->willReturnSelf();
+		$qb->method('where')->willReturnSelf();
+		$qb->method('andWhere')->willReturnSelf();
+		$qb->method('orderBy')->willReturnSelf();
+		$qb->method('setMaxResults')->willReturnSelf();
+		$qb->method('executeQuery')->willReturn($result);
+		$db->method('getQueryBuilder')->willReturn($qb);
+
+		$workspaces = $this->createMock(WorkspaceService::class);
+		$workspaces->method('getSettings')->willReturn([
+			'wipLimit' => 3,
+			'leadSlaHours' => 24,
+			'stuckChaseDays' => 3,
+			'mailRetentionDays' => 365,
+			'digestEnabled' => true,
+			'personalMailEnabled' => false,
+			'personalMailDsgvoAt' => null,
+			'personalMailDsgvoBy' => null,
+			'reviewSources' => [],
+		]);
+		$workspaces->method('assertOwnerCandidate')->willThrowException(
+			ValidationException::field('VALIDATION', 'ownerUserId', 'nope'),
+		);
+
+		$l10n = $this->createMock(IL10N::class);
+		$l10n->method('t')->willReturnCallback(static fn (string $s): string => $s);
+		$time = $this->createMock(ITimeFactory::class);
+		$time->method('getDateTime')->willReturn(new \DateTime('2026-07-31 12:00:00'));
+		$locking = $this->createMock(ILockingProvider::class);
+		$locking->expects($this->once())->method('acquireLock');
+		$locking->expects($this->once())->method('releaseLock');
+
+		$svc = new BriefService(
+			$db,
+			$workspaces,
+			$this->createMock(PulseService::class),
+			$this->createMock(MoneyService::class),
+			$this->createMock(AgreementRenewalMoney::class),
+			$time,
+			$l10n,
+			$locking,
+		);
+
+		try {
+			$svc->confirm(7, [
+				'kind' => 'custom',
+				'title' => 'Call Acme',
+				'ownerUserId' => 'mallory',
+			], 'actor');
+			$this->fail('non-member owner must fail');
+		} catch (ValidationException $e) {
+			$this->assertArrayHasKey('ownerUserId', $e->getFields());
+		}
+	}
+
 	private function serviceWithCommitRow(array $row): BriefService
 	{
 		$db = $this->createMock(IDBConnection::class);

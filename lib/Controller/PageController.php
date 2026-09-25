@@ -1176,7 +1176,7 @@ class PageController extends Controller
 			));
 		}
 
-		$this->registerFrontEndAssets('pages/settings', null, [], ['common/folder-picker', 'common/signature-logo-core', 'common/personal-mail-settings-core', 'common/rich-mail-composer', 'common/mailbox-settings-present']);
+		$this->registerFrontEndAssets('pages/settings', null, [], ['common/folder-picker', 'common/signature-logo-core', 'common/personal-mail-settings-core', 'common/rich-mail-composer', 'common/mailbox-settings-present', 'workspace-settings-legacy-redirect']);
 		$settings = $this->settings->getForUser($uid);
 		$settingsSectionLabels = [];
 		foreach (WorkspaceSettingsSectionCatalog::SECTIONS as $sectionId) {
@@ -1250,7 +1250,7 @@ class PageController extends Controller
 			return new NotFoundResponse();
 		}
 
-		$this->registerFrontEndAssets('pages/settings', null, [], []);
+		$this->registerFrontEndAssets('pages/settings', null, [], ['app-settings-legacy-redirect']);
 		$uid = $this->accessControl->currentUserId();
 		$settings = $this->settings->getForUser($uid);
 		$canManage = $this->accessControl->isAppAdmin($uid);

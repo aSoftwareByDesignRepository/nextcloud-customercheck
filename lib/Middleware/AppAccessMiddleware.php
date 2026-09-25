@@ -58,12 +58,13 @@ class AppAccessMiddleware extends Middleware
 		if ($exception instanceof NotFoundException) {
 			$path = (string)($this->request->getPathInfo() ?? '');
 			$wantsJson = str_contains($path, '/api/') || $this->request->getMethod() !== 'GET';
-			$message = $exception->getMessage() !== '' ? $exception->getMessage() : 'Not found';
 			if ($wantsJson) {
+				// Uniform-404: identical payload for missing and foreign ids —
+				// never echo entity-specific messages/codes (existence oracle).
 				return new JSONResponse([
 					'success' => false,
-					'error' => $exception->getErrorCode() ?: 'NOT_FOUND',
-					'message' => $message,
+					'error' => 'NOT_FOUND',
+					'message' => 'Not found.',
 					'fields' => new \stdClass(),
 				], Http::STATUS_NOT_FOUND);
 			}

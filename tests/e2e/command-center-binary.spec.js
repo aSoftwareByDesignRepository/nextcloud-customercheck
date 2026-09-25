@@ -3,6 +3,7 @@
  */
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { fillIsoDate } from './helpers/dates.js';
 
 async function createCompany(page, name) {
   await page.goto('/apps/customercheck/companies/new');
@@ -74,7 +75,9 @@ test.describe('Command Center binary ACs', () => {
     await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
     await expect(page.locator('#crm-glance')).toBeVisible({ timeout: 10000 });
     await expect(page.locator('#crm-glance-summary .crm-glance-dl.crm-stat-strip')).toBeVisible({ timeout: 10000 });
-    await expect(page.locator('#crm-glance-summary .crm-stat-tile')).toHaveCount(8, { timeout: 10000 });
+    // Four calm glance tiles (primary/nextAction/money/renewal) — pinned by
+    // tests/js/glance-summary.test.js + GlanceSummaryContractTest.
+    await expect(page.locator('#crm-glance-summary .crm-stat-tile')).toHaveCount(4, { timeout: 10000 });
     // Billing lives on the Money focus panel — activate it before asserting visibility.
     await page.locator('[data-crm-focus-tab="money"]').click();
     await expect(page.locator('#crm-360-panel-money')).toBeVisible({ timeout: 10000 });
@@ -210,7 +213,7 @@ test.describe('Command Center binary ACs', () => {
     await form.locator('[name="title"]').fill('Follow up tomorrow');
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
-    await form.locator('[name="dueDate"]').fill(tomorrow.toISOString().slice(0, 10));
+    await fillIsoDate(form, 'dueDate', tomorrow.toISOString().slice(0, 10));
     await form.locator('button[type="submit"]').click();
     await page.waitForLoadState('networkidle');
     await expect(page.locator('#crm-open-tasks-body')).toContainText(/Follow up tomorrow/i, { timeout: 15000 });
