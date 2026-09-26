@@ -524,7 +524,7 @@ OC.L10N.register(
 		"Changed %n days ago": "Changed %n il y a quelques jours",
 		"Changed today": "Change aujourd'hui",
 		"Check Partner": "Vérifier le partenaire",
-		"Check Partner quota reached 80 percent": "Le quota de partenaires de vérification a atteint 80 %",
+		"Check Partner quota reached 80 percent": "Le quota de partenaires de vérification a atteint 80 pour cent",
 		"Check Partner quota reached 80%% for %s (%s)": "Quota Check Partner atteint 80%% pour %s (%s)",
 		"Check before import": "Vérifier avant d'importer",
 		"Check my list": "Vérifiez ma liste",

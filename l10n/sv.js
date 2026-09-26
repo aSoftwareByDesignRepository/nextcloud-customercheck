@@ -31,7 +31,7 @@ OC.L10N.register(
 		"%n contact with email": "%n kontakt med e-post",
 		"%n contacts with email": "%n kontakter med e-post",
 		"%n day": "%n dag",
-		"%n day ago": "% för dag sedan",
+		"%n day ago": "%n dag sedan",
 		"%n day in stage": "%n dag i etapp",
 		"%n day past due": "%n dag förfallet",
 		"%n days": "%n dagar",

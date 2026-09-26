@@ -15,12 +15,29 @@ $base = __DIR__ . '/../l10n';
 $localeFiles = ['en', 'de', 'da', 'es', 'fr', 'it', 'nb', 'nl', 'pl', 'sv'];
 
 /**
+ * Placeholder tokens understood by the app's t()/n() helpers:
+ *  - `%%` literal percent escape
+ *  - `%n` Nextcloud plural counter (replaced before vsprintf runs)
+ *  - `%s` / `%d` / `%1$s` … positional printf placeholders
+ *
  * @return list<string>
  */
 function cucPrintfPlaceholders(string $s): array {
-	preg_match_all('/%%|%(?:\d+\$)?[sd]/', $s, $m);
+	preg_match_all('/%%|%n|%(?:\d+\$)?[sd]/', $s, $m);
 
 	return $m[0];
+}
+
+/**
+ * True when the string still contains a bare `%` after every valid token is
+ * stripped. PHP's vsprintf treats e.g. `% d` as a (space-padded) conversion and
+ * throws on trailing `%`, so a stray percent in a translation is a fatal 500
+ * waiting to happen (see 2026-09-26: `it` "%n days" => "% dei giorni" 500).
+ */
+function cucHasStrayPercent(string $s): bool {
+	$stripped = preg_replace('/%%|%n|%(?:\d+\$)?[sd]/', '', $s);
+
+	return $stripped !== null && str_contains($stripped, '%');
 }
 
 /**
@@ -62,6 +79,12 @@ foreach ($enT as $key => $enVal) {
 			fwrite(STDERR, "{$lang}.json printf placeholder mismatch for key: $key\n");
 			fwrite(STDERR, '  expected: ' . implode(', ', $keyPrintf) . "\n");
 			fwrite(STDERR, '  got:      ' . implode(', ', $valPrintf) . "\n");
+		}
+
+		if (cucHasStrayPercent($val)) {
+			$failed = true;
+			fwrite(STDERR, "{$lang}.json stray '%' (would fatal in vsprintf) for key: $key\n");
+			fwrite(STDERR, "  value: $val\n");
 		}
 
 		$valNamed = cucNamedPlaceholders($val);
