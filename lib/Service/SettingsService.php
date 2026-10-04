@@ -110,10 +110,69 @@ class SettingsService
 			if (in_array($key, Constants::SECRET_CONFIG_KEYS, true)) {
 				continue; // rotate endpoints only
 			}
+			$this->assertWritableValueValid($key, $payload[$key]);
 			$this->config->setAppValue(Application::APP_ID, $key, $this->encodeValue($key, $payload[$key]));
 		}
 
 		return $this->getForUser($userId);
+	}
+
+	/**
+	 * Numeric knobs must land inside the same bounds the settings UI offers —
+	 * an out-of-range value silently disables digests/reminders forever
+	 * (`(int)now->format('G') === 99` never matches). Boolean knobs reject
+	 * non-boolean garbage (e.g. "banana") instead of persisting it.
+	 *
+	 * @var array<string, array{0:int,1:int}>
+	 */
+	private const NUMERIC_KNOB_RANGES = [
+		Constants::CONFIG_STALE_DEAL_DAYS => [1, 365],
+		Constants::CONFIG_DIGEST_WEEKDAY => [1, 7],
+		Constants::CONFIG_DIGEST_HOUR => [0, 23],
+		Constants::CONFIG_REMINDER_HOUR => [0, 23],
+	];
+
+	/** @var list<string> */
+	private const BOOL_CONFIG_KEYS = [
+		Constants::CONFIG_ACCESS_RESTRICTION_ENABLED,
+		Constants::CONFIG_DIGEST_ENABLED,
+		Constants::CONFIG_CADENCE_ENABLED,
+		Constants::CONFIG_MAIL_RELATED_ENABLED,
+		Constants::CONFIG_IDENTITY_RENAME_PUSH,
+	];
+
+	/**
+	 * @throws ValidationException
+	 */
+	private function assertWritableValueValid(string $key, mixed $value): void
+	{
+		if (isset(self::NUMERIC_KNOB_RANGES[$key])) {
+			[$min, $max] = self::NUMERIC_KNOB_RANGES[$key];
+			$ok = false;
+			if (is_int($value) || is_float($value)) {
+				$ok = $value >= $min && $value <= $max && (float)(int)$value === (float)$value;
+			} elseif (is_string($value) && preg_match('/^-?\d+$/', $value) === 1) {
+				$int = (int)$value;
+				$ok = $int >= $min && $int <= $max;
+			}
+			if (!$ok) {
+				throw ValidationException::field(
+					Constants::ERR_VALIDATION,
+					$key,
+					sprintf('Enter a whole number between %d and %d.', $min, $max),
+				);
+			}
+			return;
+		}
+		if (in_array($key, self::BOOL_CONFIG_KEYS, true)
+			&& !is_bool($value)
+			&& !in_array($value, ['0', '1', 0, 1, 'true', 'false'], true)) {
+			throw ValidationException::field(
+				Constants::ERR_VALIDATION,
+				$key,
+				'Choose on or off.',
+			);
+		}
 	}
 
 	/**

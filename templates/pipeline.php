@@ -135,7 +135,7 @@ include __DIR__ . '/common/page-start.php';
 	<section class="crm-card" id="crm-pipeline-table" <?php if ($pipelineView === 'board'): ?>hidden<?php endif; ?>>
 		<header class="crm-card__header"><h2 class="crm-card__title"><?php p($l->t('Deals')); ?></h2></header>
 		<div class="crm-card__body">
-			<div class="table-container crm-table--responsive">
+			<div class="table-container crm-table--responsive" role="region" tabindex="0" aria-label="<?php p($l->t('Deals')); ?>">
 				<table class="table table--hover">
 					<thead>
 						<tr>

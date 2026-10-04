@@ -2985,7 +2985,7 @@
         "record": "enregistrer",
         "this workspace": "cet espace de travail",
         "valid": "valide",
-        "Could not reach the server. Check your connection and try again.": "Impossible de joindre le serveur. Vérifiez votre connexion et réessayez."
+        "Could not reach the server. Check your connection and try again.": "Impossible de joindre le serveur. Vérifie ta connexion et réessaie."
     },
     "pluralForm": "nplurals=2; plural=(n > 1);"
 }

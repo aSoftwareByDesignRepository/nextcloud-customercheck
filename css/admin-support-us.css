@@ -628,6 +628,16 @@
 		grid-template-columns: 1fr;
 	}
 
+	/* WCAG 2.5.5: 44px touch floor for inline text links in hint/tertiary copy. */
+	.crm-support-us__hint a,
+	.crm-support-us__more a,
+	.crm-support-us__contact a {
+		display: inline-flex;
+		align-items: center;
+		min-height: 44px;
+		min-width: 44px;
+	}
+
 	.crm-support-us__cta,
 	.crm-support-us__primary-actions .crm-support-us__cta {
 		width: 100%;

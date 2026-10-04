@@ -49,7 +49,10 @@ test.describe('CUC identity 360 surfaces', () => {
     const statusText = await identity.locator('.crm-identity-row__head').first().innerText();
     expect(/Linked|Not linked|Broken|Unavailable|Verknüpft|Nicht verknüpft/i.test(statusText)).toBeTruthy();
     await expect(identity.locator('.crm-identity-row__app', { hasText: /ProjectCheck/i })).toBeVisible();
-    await expect(identity.getByText(/Nicht mit ProjectCheck verknüpft|Not linked to ProjectCheck/i)).toHaveCount(0);
+    // Literal jargon bans — fixed phrases, locale-independent.
+    for (const jargon of ['Nicht mit ProjectCheck verknüpft', 'Not linked to ProjectCheck']) {
+      await expect(identity.getByText(jargon)).toHaveCount(0);
+    }
     const createPc = identity.locator('[data-crm-identity-create="pc"]');
     const linkPc = identity.locator('[data-crm-identity-link="pc"]');
     const primary = (await createPc.count()) ? createPc.first() : ((await linkPc.count()) ? linkPc.first() : null);

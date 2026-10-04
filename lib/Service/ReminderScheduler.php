@@ -160,6 +160,9 @@ class ReminderScheduler
 						$summary['statusChanged']++;
 					}
 				} catch (\Throwable $e) {
+					// best-effort: one bad agreement must not abort the sweep —
+					// recompute is idempotent and the next scheduled run retries
+					// it; the failure is logged with the agreement id.
 					$this->logger->warning('CustomerCheck status recompute failed for agreement', [
 						'app' => Application::APP_ID,
 						'agreementId' => (int)$agreement->getId(),

@@ -71,7 +71,10 @@ $urlsJson = htmlspecialchars(json_encode($urls, JSON_THROW_ON_ERROR | JSON_UNESC
 	<div id="crm-live-region" class="crm-sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
 	<div id="crm-alert-region" class="crm-sr-only" role="alert" aria-live="assertive" aria-atomic="true"></div>
 	<div id="app-content-wrapper" class="crm-shell<?php p($shellWidthClass); ?>">
-		<header class="crm-page-header" aria-labelledby="crm-page-title">
+		<?php /* role="group" (not bare <header>): a top-level header outside <main> is a
+		 * second banner landmark and trips axe landmark-no-duplicate-banner against
+		 * the NC #header. BudgetCheck pins the same pattern (bc-page-header). */ ?>
+		<header class="crm-page-header" role="group" aria-labelledby="crm-page-title">
 			<button type="button"
 				class="cuc-nav-toggle"
 				id="cuc-nav-toggle"

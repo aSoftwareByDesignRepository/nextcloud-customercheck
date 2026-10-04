@@ -17,7 +17,8 @@ test.describe('Bachus company 360 effortless flows', () => {
     await page.goto('/apps/customercheck/companies/new');
     await page.waitForSelector('#crm-company-form', { timeout: 30000 });
     await expect(page.locator('#crm-company-name-help')).toBeVisible();
-    await expect(page.getByText(/^Slug$/)).toHaveCount(0);
+    // Literal jargon ban: "Slug" is a fixed technical term — locale-independent.
+    await expect(page.getByText('Slug', { exact: true })).toHaveCount(0);
     const suffix = Date.now().toString(36);
     await page.locator('#crm-company-name').fill(`Bachus Easy ${suffix}`);
     await page.locator('#crm-company-form button[type="submit"]').click();
@@ -148,7 +149,10 @@ test.describe('Bachus company 360 effortless flows', () => {
     await expect(form.locator('[name="title"]')).toBeVisible();
     await expect(form.locator('details.crm-advanced')).not.toHaveAttribute('open', '');
     await expect(form.locator('.crm-advanced__body')).toBeAttached();
-    await expect(form.getByText(/Products \/ SKUs|Produkte\/SKUs/i)).toHaveCount(0);
+    // Literal jargon bans — fixed product strings, locale-independent.
+    for (const jargon of ['Products / SKUs', 'Produkte/SKUs']) {
+      await expect(form.getByText(jargon)).toHaveCount(0);
+    }
     await form.locator('[data-cancel]').click();
 
     const results = await new AxeBuilder({ page })

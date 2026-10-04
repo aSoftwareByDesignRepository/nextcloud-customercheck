@@ -90,7 +90,7 @@ if (!$crmListFragment) {
 	<section class="crm-card">
 		<header class="crm-card__header"><h2 class="crm-card__title"><?php p($title); ?></h2></header>
 		<div class="crm-card__body">
-			<div class="table-container crm-table--responsive">
+			<div class="table-container crm-table--responsive" role="region" tabindex="0" aria-label="<?php p($title); ?>">
 				<table class="table table--hover">
 					<thead><tr>
 						<th scope="col"><?php p($l->t('Title')); ?></th>

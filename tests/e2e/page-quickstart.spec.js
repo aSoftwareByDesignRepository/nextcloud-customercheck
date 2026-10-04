@@ -26,10 +26,10 @@ test.describe('Page Quick start how-tos', () => {
     await page.waitForSelector('#crm-main-content', { timeout: 30000 });
     const todayTips = page.locator('#crm-quickstart-today');
     await expect(todayTips).toBeVisible({ timeout: 15000 });
-    await expect(todayTips.getByRole('heading', { name: /Quick start|Schnellstart/i })).toBeVisible();
+    await expect(page.locator('#crm-quickstart-today-title')).toBeVisible();
     await expect(todayTips).toContainText(/Scan the queues|Queues prüfen|Take one action|Eine Aktion/i);
     await expect(page.locator('.crm-page-header__lead')).toContainText(/Pick one|Folgen|finish|erledig|waiting on you|wartet/i);
-    await todayTips.getByRole('button', { name: /Hide tips|Tipps ausblenden/i }).click();
+    await todayTips.locator('button[data-crm-dismiss-hint]').click();
     await expect(todayTips).toBeHidden();
     // Provenance must survive tip dismiss
     await expect(page.locator('.crm-page-header__lead')).toContainText(/Pick one|Folgen|finish|erledig|waiting on you|wartet|chase|Chase/i);
@@ -58,7 +58,7 @@ test.describe('Page Quick start how-tos', () => {
     await expect(tips).toBeVisible({ timeout: 15000 });
     await expect(tips).toContainText(/who needs help|wer Hilfe braucht|Cover while away|Vertretung|Move or escalate|Verschieben oder eskalieren/i);
     await expect(page.locator('.crm-page-header__lead')).toContainText(/Needs help|On track|coach|Hilfe|im Plan|teammate|Kolleg/i);
-    await tips.getByRole('button', { name: /Hide tips|Tipps ausblenden/i }).click();
+    await tips.locator('button[data-crm-dismiss-hint]').click();
     await expect(tips).toBeHidden();
     await expect(page.locator('.crm-page-header__lead')).toContainText(/Needs help|On track|coach|Hilfe|teammate|Kolleg/i);
   });

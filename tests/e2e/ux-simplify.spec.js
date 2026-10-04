@@ -124,11 +124,14 @@ test.describe('Simplified core UX journeys', () => {
       await tableToggle.click();
     }
     await expect(page.locator('#crm-pipeline-table:not([hidden]), #crm-pipeline-board:not([hidden])').first()).toBeVisible({ timeout: 15000 });
-    await expect(page.getByText(/Edit chase|Chase bearbeiten/i)).toHaveCount(0);
-    const editDeal = page.getByRole('button', { name: /Edit deal|Deal bearbeiten/i });
-    const empty = page.getByText(/No deals yet\. Tap New deal|Noch keine Deals\. Tippe auf Neuer Deal/i);
+    // Literal jargon bans — fixed phrases, locale-independent.
+    for (const jargon of ['Edit chase', 'Chase bearbeiten', 'website lead webhook']) {
+      await expect(page.getByText(jargon)).toHaveCount(0);
+    }
+    // Structural: either an edit control on a deal row or the empty state.
+    const editDeal = page.locator('[data-crm-edit-chase]');
+    const empty = page.locator('.crm-empty-state');
     await expect(editDeal.or(empty).first()).toBeVisible();
-    await expect(page.getByText(/website lead webhook/i)).toHaveCount(0);
     await page.waitForLoadState('networkidle');
     await expect(page.locator('#crm-main-content')).toBeVisible();
     const results = await new AxeBuilder({ page })

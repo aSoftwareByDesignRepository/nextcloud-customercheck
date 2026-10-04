@@ -148,7 +148,7 @@ if (!$crmListFragment) {
 	<?php endif; ?>
 
 	<section class="crm-card">
-		<header class="crm-card__header"><h2 class="crm-card__title"><?php
+		<header class="crm-card__header"><h2 class="crm-card__title" id="crm-companies-table-title"><?php
 			if ($filterQ !== '') {
 				p($l->t('Search results'));
 			} else {
@@ -156,7 +156,7 @@ if (!$crmListFragment) {
 			}
 		?></h2></header>
 		<div class="crm-card__body">
-			<div class="table-container crm-table--responsive">
+			<div class="table-container crm-table--responsive" role="region" tabindex="0" aria-labelledby="crm-companies-table-title">
 				<table class="table table--hover" id="crm-companies-table">
 					<thead><tr>
 						<th scope="col"><?php p($l->t('Name')); ?></th>

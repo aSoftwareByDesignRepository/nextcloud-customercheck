@@ -97,7 +97,7 @@ $lastLabel = (string)($mailSummary['lastContactLabel'] ?? '');
 		<?php if ($mailRelated !== []): ?>
 			<div class="crm-emails__related">
 				<h3 class="crm-emails__subheading" id="crm-emails-related"><?php p($l->t('From your Mail')); ?></h3>
-				<div class="table-container crm-table--responsive">
+				<div class="table-container crm-table--responsive" role="region" tabindex="0" aria-labelledby="crm-emails-related">
 					<table class="table table--hover" aria-labelledby="crm-emails-related">
 						<thead>
 							<tr>
@@ -157,7 +157,7 @@ $lastLabel = (string)($mailSummary['lastContactLabel'] ?? '');
 					<?php endif; ?>
 				</div>
 			<?php else: ?>
-			<div class="table-container crm-table--responsive">
+			<div class="table-container crm-table--responsive" role="region" tabindex="0" aria-labelledby="crm-emails-log">
 				<table class="table table--hover" aria-labelledby="crm-emails-log">
 					<thead>
 						<tr>

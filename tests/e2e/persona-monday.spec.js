@@ -20,7 +20,7 @@ test.describe('Persona Monday operating path', () => {
 
     await openPersona(page, '/pulse');
     await expect(page.locator('#app-content.crm-app')).toBeVisible({ timeout: 15000 });
-    await expect(page.getByRole('heading', { name: /At a glance|Auf einen Blick/i }).first()).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('#crm-pulse-metrics-title')).toBeVisible({ timeout: 15000 });
     // Legal honesty is not Pulse chrome — no tax/GoBD lectures on the ops glance.
     await expect(page.locator('[data-crm-persona-mount="pulse"]')).not.toContainText(/GoBD|Ops overview — not tax|tax filing|Steuererklärung|Not available yet|Noch nicht verfügbar|honesty_blocked|Health metrics/i);
     await expect(page.locator('.crm-page-header')).not.toContainText(/GoBD|tax filing|Steuererklärung|not tax/i);
@@ -32,7 +32,10 @@ test.describe('Persona Monday operating path', () => {
 
     // Return to Pulse — Money has no persona mount; workspace race + escapeHTML checks belong here.
     await openPersona(page, '/pulse');
-    await expect(page.getByText(/Select a workspace first|Wähle zuerst einen Arbeitsbereich/i)).toHaveCount(0, { timeout: 15000 });
+    // Literal guard strings — the workspace-picker prompt must not render here.
+    for (const jargon of ['Select a workspace first', 'Wähle zuerst einen Arbeitsbereich']) {
+      await expect(page.getByText(jargon)).toHaveCount(0, { timeout: 15000 });
+    }
     // NC 34 removed OC.Util.escapeHTML — persona boot must not crash.
     await expect(page.locator('[data-crm-persona-mount="pulse"] [role="alert"]')).toHaveCount(0);
     await expect(page.locator('[data-crm-persona-mount="pulse"]')).not.toContainText(/escapeHTML is not a function/i);
@@ -51,8 +54,8 @@ test.describe('Persona Monday operating path', () => {
 
     await openPersona(page, '/team');
     await expect(page.locator('#capacity, [data-crm-persona-mount="team"], .crm-page-stack').first()).toBeVisible();
-    await expect(page.getByRole('heading', { name: /Who needs help|Wer braucht Hilfe/i }).first()).toBeVisible({ timeout: 15000 });
-    await expect(page.getByRole('heading', { name: /Manager tools|Manager-Werkzeuge|Kapazitäts-Werkzeuge|Capacity tools/i }).first()).toBeVisible();
+    await expect(page.locator('#crm-team-board-title')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('#crm-capacity-title')).toBeVisible();
     await expect(page.locator('[data-crm-persona-mount="team"] [role="alert"]')).toHaveCount(0);
     await expect(page.locator('[data-crm-persona-mount="team"]')).not.toContainText(/No team rows to show|Keine Team-Zeilen/i);
     await expect(page.locator('details.crm-team-capacity-shell#capacity, details.crm-team-capacity-shell').first()).toBeVisible();
@@ -117,6 +120,6 @@ test.describe('Persona Monday operating path', () => {
     const disclosure = page.locator('#crm-sales-inbox-disclosure');
     await expect(disclosure).toBeVisible({ timeout: 30000 });
     await expect(page.locator('#crm-sales-tab-unmatched')).toHaveAttribute('aria-selected', 'true');
-    await expect(page.getByText(/Unassigned|Nicht zugeordnet|company|Firma|Nothing unassigned|Nichts/i).first()).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('#crm-sales-inbox-empty, #crm-sales-inbox-list .crm-mail-thread-row, .crm-empty-state').first()).toBeVisible({ timeout: 15000 });
   });
 });

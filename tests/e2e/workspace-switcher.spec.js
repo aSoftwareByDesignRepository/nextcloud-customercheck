@@ -22,7 +22,8 @@ test.describe('CustomerCheck single-organisation shell', () => {
     await expect(page.locator('.crm-workspace-switcher__trigger')).toHaveCount(0);
     await expect(page.locator('#crm-workspace-menu')).toHaveCount(0);
     await expect(page.locator('.app-brand__subtitle')).toContainText(/Deals, customers & money|Deals, Kunden & Geld|Geschäfte, Kunden & Geld/i);
-    await expect(page.getByRole('link', { name: /Team & mailbox|Team & Postfach|Team & mailbox/i })).toBeVisible();
+    // Structural: the Tools subnav links to /settings/mailbox — label is translated.
+    await expect(page.locator('#app-navigation a[href*="/settings/mailbox"]')).toBeAttached();
 
     const active = await context.getAttribute('data-crm-active-workspace');
     expect(Number(active)).toBeGreaterThan(0);

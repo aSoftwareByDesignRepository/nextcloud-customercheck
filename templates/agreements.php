@@ -101,7 +101,7 @@ if (!$crmListFragment) {
 					<?php endif; ?>
 				</div>
 			<?php else: ?>
-			<div class="table-container crm-table--responsive">
+			<div class="table-container crm-table--responsive" role="region" tabindex="0" aria-label="<?php p($l->t('All agreements')); ?>">
 				<table class="table table--hover">
 					<thead><tr>
 						<th scope="col"><?php p($l->t('Label')); ?></th>
@@ -116,7 +116,7 @@ if (!$crmListFragment) {
 					<tbody>
 					<?php foreach ($_['agreements'] as $a): ?>
 						<tr>
-							<td data-label="<?php p($l->t('Label')); ?>"><?php if ($canWrite): ?><a href="<?php p($urlGenerator->linkToRoute('customercheck.page.agreementEdit', ['id' => $a['id']])); ?>"><?php p($a['label']); ?></a><?php else: ?><?php p($a['label']); ?><?php endif; ?></td>
+							<td data-label="<?php p($l->t('Label')); ?>"><?php if ($canWrite): ?><a class="crm-table-link" href="<?php p($urlGenerator->linkToRoute('customercheck.page.agreementEdit', ['id' => $a['id']])); ?>"><?php p($a['label']); ?></a><?php else: ?><?php p($a['label']); ?><?php endif; ?></td>
 							<td data-label="<?php p($l->t('Company')); ?>">
 								<?php
 								$crmCompanyLinkId = (int)($a['companyId'] ?? 0);

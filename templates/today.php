@@ -53,7 +53,7 @@ $resolveOpenHref = static function (array $item) use ($urlGenerator, $urls): str
 
 $renderTodayTable = static function (array $items, bool $allowDone) use ($l, $urlGenerator, $ctaLabel, $resolveOpenHref, $labels): void {
 	?>
-	<div class="table-container crm-table--responsive" role="region" aria-label="<?php p($l->t('Attention queue')); ?>">
+	<div class="table-container crm-table--responsive" role="region" tabindex="0" aria-label="<?php p($l->t('Attention queue')); ?>">
 		<table class="table table--hover">
 			<thead>
 				<tr>

@@ -93,8 +93,9 @@ test.describe('Mobile app license settings (CUC2)', () => {
     await search.fill('al');
     const suggest = page.locator('#crm-license-seat-suggest');
     await expect(suggest).toBeVisible({ timeout: 10000 });
-    await expect(suggest.getByRole('option', { name: /Alice Example/i })).toBeVisible();
-    await expect(suggest.getByText(/Bob Seated/i)).toHaveCount(0);
+    // Literal fixture display names from the mocked API above — data, not UI strings.
+    await expect(suggest.getByRole('option', { name: 'Alice Example' })).toBeVisible();
+    await expect(suggest.getByText('Bob Seated')).toHaveCount(0);
   });
 
   test('seat assign stays on the page without a full reload', async ({ page }) => {

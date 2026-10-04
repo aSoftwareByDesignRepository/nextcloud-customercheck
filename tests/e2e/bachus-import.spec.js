@@ -31,7 +31,8 @@ test.describe('Bachus Import effortless journey', () => {
     await expect(page.locator('#crm-import-file')).toBeAttached();
     await expect(page.locator('#crm-import-review')).toBeHidden();
     await expect(page.locator('nav.crm-breadcrumb')).not.toContainText(/Semmelbrösel/i);
-    await expect(page.getByText(/%s rows/i)).toHaveCount(0);
+    // Literal placeholder-leak check: the raw '%s rows' printf fragment must never render.
+    await expect(page.getByText('%s rows')).toHaveCount(0);
 
     const suffix = Date.now().toString(36);
     const company = `Bachus Import ${suffix}`;

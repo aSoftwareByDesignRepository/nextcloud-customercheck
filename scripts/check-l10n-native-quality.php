@@ -20,6 +20,7 @@ $en = json_decode((string) file_get_contents($base . '/en.json'), true, 512, JSO
 $allowExact = [
 	'CustomerCheck' => true,
 	'CustomerCheck Mobile' => true,
+	'Software by Design · Check apps' => true,
 	'ProjectCheck' => true,
 	'TicketCheck' => true,
 	'InvoiceCheck' => true,

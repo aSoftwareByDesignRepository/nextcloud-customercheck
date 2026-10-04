@@ -60,18 +60,24 @@ test.describe('Bachus extreme simplicity journeys', () => {
     }, null, { timeout: 30000 });
 
     await expect(page.locator('#crm-conflicts-lead')).toBeVisible();
-    await expect(page.getByText(/three-way compare|last-write-wins/i)).toHaveCount(0);
+    // Literal jargon bans — fixed technical terms, locale-independent.
+    for (const jargon of ['three-way compare', 'last-write-wins']) {
+      await expect(page.getByText(jargon)).toHaveCount(0);
+    }
 
     const empty = page.locator('.crm-empty-state');
     const card = page.locator('[data-crm-conflict-id]').first();
     if (await empty.count()) {
-      await expect(empty.getByRole('link', { name: /Today|Heute/i })).toBeVisible();
+      await expect(empty.locator('.crm-empty-state__actions a.crm-btn').first()).toBeVisible();
     } else {
       await expect(card).toBeVisible();
-      await expect(card.getByText(/Keep what’s saved|Behalte|Keep what/i).first()).toBeVisible();
+      // "Keep what's saved" radio is pre-selected by design; the manual choice
+      // reveals the free-text input (structural labels — see persona.js).
+      await expect(card.locator('label.crm-switch:has(input[value="keep_current"])').first()).toBeVisible();
+      await expect(card.locator('input[value="keep_current"]').first()).toBeChecked();
       const manual = card.locator('.crm-conflict-manual').first();
       await expect(manual).toBeHidden();
-      await card.getByText(/Type a different|Anderen Wert|different value/i).first().click();
+      await card.locator('label.crm-switch:has(input[value="manual"])').first().click();
       await expect(manual).toBeVisible();
     }
 

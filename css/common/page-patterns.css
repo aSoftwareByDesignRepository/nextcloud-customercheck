@@ -503,6 +503,11 @@
 	overflow-y: visible;
 	-webkit-overflow-scrolling: touch;
 	scroll-padding-inline-end: var(--crm-space-4, 1rem);
+	/* Layout containment: keeps the scrollable table's overflow inside this
+	 * box. Without it, Blink lets the wide table's scroll contribution escape
+	 * to the position:relative .crm-shell ancestor (intermittent ~550px
+	 * phantom scrollWidth on #app-content at ≤768px). */
+	contain: layout;
 }
 
 #app-content.crm-app .crm-card__body > .table-container,
@@ -679,6 +684,21 @@
 	#app-content.crm-app .table-container .table:not(.crm-table--matrix):not(.crm-table--responsive),
 	#app-content.crm-app .table-container .grid-table:not(.crm-table--matrix):not(.crm-table--responsive) {
 		min-width: 36rem;
+	}
+
+	/* WCAG 2.5.5 touch floor: bare text links inside dense table cells and
+	 * the breadcrumb were ~15–21px tall at tablet/phone widths. 44px in CSS
+	 * px (not rem — NC root font can be 15px). */
+	#app-content.crm-app .table a.crm-table-link,
+	#app-content-wrapper .table a.crm-table-link,
+	#app-content.crm-app .crm-table--strategy a.crm-strategy-company,
+	#app-content.crm-app .crm-breadcrumb__item a {
+		display: inline-flex;
+		align-items: center;
+		min-height: 44px;
+		/* Short codes ("AZC", "PC") stayed ~18–27px wide — both axes need
+		 * the floor, not just height (WCAG 2.5.5 target size). */
+		min-width: 44px;
 	}
 
 	#app-content.crm-app .table .crm-table-actions {

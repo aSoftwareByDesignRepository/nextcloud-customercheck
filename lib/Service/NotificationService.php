@@ -129,6 +129,9 @@ class NotificationService
 				->setObject($objectType, $objectId);
 			$this->notificationManager->markProcessed($notification);
 		} catch (\Throwable $e) {
+			// best-effort: NC-core notification dismiss is cosmetic — a stale
+			// notification badge may linger, but failure must not break the
+			// caller's flow.
 			$this->logger->warning('CustomerCheck notification withdrawal failed', [
 				'app' => Application::APP_ID,
 				'exception' => $e,

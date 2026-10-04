@@ -298,7 +298,7 @@ class ReviewApiController extends Controller
 				$workspaceId,
 				$id,
 				(string)($body['canonical'] ?? ''),
-				!empty($body['learn']),
+				$this->bodyBool($body, 'learn'),
 				$uid,
 				$this->valueMaps,
 			));
@@ -459,7 +459,7 @@ class ReviewApiController extends Controller
 				$fieldKey,
 				(string)($body['raw'] ?? ''),
 				(string)($body['canonical'] ?? ''),
-				!empty($body['learn']),
+				$this->bodyBool($body, 'learn'),
 				$uid,
 			);
 			$companyId = (int)($body['companyId'] ?? 0);
@@ -484,7 +484,7 @@ class ReviewApiController extends Controller
 			return $this->ok($result);
 		} catch (\Throwable $e) {
 			// Unmapped raw without a valid canonical → Assign import_anomaly when requested.
-			if ($uid !== '' && !empty($body['enqueueAnomaly'])) {
+			if ($uid !== '' && $this->bodyBool($body, 'enqueueAnomaly')) {
 				try {
 					return $this->ok($this->review->enqueueImportAnomaly(
 						$workspaceId,

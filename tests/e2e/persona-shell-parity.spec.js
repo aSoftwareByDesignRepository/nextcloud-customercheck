@@ -32,7 +32,8 @@ test.describe('Persona shell parity', () => {
     await expect(page.locator('.crm-quick-filters[aria-label="Jump to section"], .crm-quick-filters').first()).toBeVisible();
     await expect(page.locator('#crm-pulse-attention table.table, #crm-pulse-attention .crm-callout').first()).toBeVisible();
     await expect(page.locator('#crm-pulse-debt table.table, #crm-pulse-debt .crm-callout').first()).toBeVisible();
-    await expect(page.getByText(/honesty_blocked/i)).toHaveCount(0);
+    // Literal machine-key leak check — 'honesty_blocked' must never render.
+    await expect(page.getByText('honesty_blocked')).toHaveCount(0);
     await expect(page.locator('#crm-pulse-metrics')).not.toContainText('honesty_blocked');
 
     const results = await new AxeBuilder({ page })
@@ -57,7 +58,8 @@ test.describe('Persona shell parity', () => {
     await page.goto('/apps/customercheck/brief?workspaceId=1');
     await page.waitForSelector('#crm-main-content', { timeout: 30000 });
     await expect(page.locator('#app-content.crm-app.crm-app--brief')).toBeVisible();
-    await expect(page.getByRole('navigation').getByRole('link', { name: /This week|Diese Woche|Brief/i })).toBeVisible();
+    // Structural: nav labels are translated, the /brief route is not.
+    await expect(page.getByRole('navigation').locator('a[href*="/brief"]')).toBeVisible();
     await expect(page.locator('[data-crm-persona-mount="brief"] .crm-card, [data-crm-persona-mount="brief"] .crm-today-stat').first()).toBeVisible({ timeout: 20000 });
 
     await page.goto('/apps/customercheck/strategy?workspaceId=1');

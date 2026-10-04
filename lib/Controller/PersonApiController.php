@@ -115,7 +115,7 @@ class PersonApiController extends Controller
 			$companyId = (int)$person->getCompanyId();
 			$ctx = $this->requireCompanyCapability($companyId, 'write');
 			$body = $this->jsonBody();
-			$returnMail = !empty($body['returnMailToAssign']);
+			$returnMail = $this->bodyBool($body, 'returnMailToAssign');
 			$email = trim((string)($person->getEmail() ?? ''));
 			$workspaceId = (int)($ctx['workspaceId'] ?? 0);
 			if ($workspaceId <= 0) {

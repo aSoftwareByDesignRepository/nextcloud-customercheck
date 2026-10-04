@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OCA\CustomerCheck\Service;
 
 use OCA\CustomerCheck\Constants;
+use OCA\CustomerCheck\Support\StrictBool;
 use OCA\CustomerCheck\Db\Workspace;
 use OCA\CustomerCheck\Db\WorkspaceMapper;
 use OCA\CustomerCheck\Db\WorkspaceMember;
@@ -687,14 +688,14 @@ class WorkspaceService
 		$ret = isset($data['mailRetentionDays'])
 			? max(Constants::MAIL_RETENTION_DAYS_MIN, (int)$data['mailRetentionDays'])
 			: $current['mailRetentionDays'];
-		$digest = array_key_exists('digestEnabled', $data) ? (!empty($data['digestEnabled']) ? 1 : 0) : ($current['digestEnabled'] ? 1 : 0);
+		$digest = array_key_exists('digestEnabled', $data) ? (StrictBool::of($data['digestEnabled']) ? 1 : 0) : ($current['digestEnabled'] ? 1 : 0);
 
 		$personalEnabled = $current['personalMailEnabled'] ? 1 : 0;
 		$personalAt = $current['personalMailDsgvoAt'];
 		$personalBy = $current['personalMailDsgvoBy'];
 		if (array_key_exists('personalMailEnabled', $data)) {
-			$want = !empty($data['personalMailEnabled']);
-			if ($want && empty($data['personalMailDsgvoAck']) && empty($current['personalMailDsgvoAt'])) {
+			$want = StrictBool::of($data['personalMailEnabled']);
+			if ($want && !StrictBool::of($data['personalMailDsgvoAck'] ?? null) && empty($current['personalMailDsgvoAt'])) {
 				throw ValidationException::field(
 					Constants::ERR_VALIDATION,
 					'personalMailDsgvoAck',
@@ -702,10 +703,10 @@ class WorkspaceService
 				);
 			}
 			$personalEnabled = $want ? 1 : 0;
-			if ($want && ( !empty($data['personalMailDsgvoAck']) || !empty($current['personalMailDsgvoAt']))) {
+			if ($want && ( StrictBool::of($data['personalMailDsgvoAck'] ?? null) || !empty($current['personalMailDsgvoAt']))) {
 				$personalAt = $current['personalMailDsgvoAt'] ?? $this->timeFactory->getDateTime()->format('Y-m-d H:i:s');
 				$personalBy = $current['personalMailDsgvoBy'] ?? (string)($data['actor'] ?? 'system');
-				if (!empty($data['personalMailDsgvoAck'])) {
+				if (StrictBool::of($data['personalMailDsgvoAck'] ?? null)) {
 					$personalAt = $this->timeFactory->getDateTime()->format('Y-m-d H:i:s');
 					$personalBy = (string)($data['actor'] ?? 'system');
 				}

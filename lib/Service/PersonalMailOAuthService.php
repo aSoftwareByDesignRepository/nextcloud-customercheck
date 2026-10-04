@@ -7,6 +7,7 @@ namespace OCA\CustomerCheck\Service;
 use OCA\CustomerCheck\AppInfo\Application;
 use OCA\CustomerCheck\Constants;
 use OCA\CustomerCheck\Exception\ValidationException;
+use OCA\CustomerCheck\Support\StrictBool;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\IAppConfig;
 use OCP\ICacheFactory;
@@ -540,10 +541,10 @@ class PersonalMailOAuthService
 		if (trim($msSecret) !== '') {
 			$this->storeClientSecret('oauth_microsoft_client_secret', trim($msSecret));
 		}
-		if (array_key_exists('clearGoogleSecret', $data) && !empty($data['clearGoogleSecret'])) {
+		if (StrictBool::field($data, 'clearGoogleSecret')) {
 			$this->storeClientSecret('oauth_google_client_secret', '');
 		}
-		if (array_key_exists('clearMicrosoftSecret', $data) && !empty($data['clearMicrosoftSecret'])) {
+		if (StrictBool::field($data, 'clearMicrosoftSecret')) {
 			$this->storeClientSecret('oauth_microsoft_client_secret', '');
 		}
 

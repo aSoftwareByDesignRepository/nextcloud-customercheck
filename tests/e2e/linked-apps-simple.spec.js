@@ -37,8 +37,10 @@ test.describe('Linked apps bundle extreme simplicity', () => {
     await expect(bundle.locator('.crm-card--nested')).toHaveCount(0);
     await expect(bundle.locator('.crm-identity-row__app', { hasText: /ProjectCheck/i })).toHaveCount(1);
     await expect(bundle.locator('.crm-identity-row__app', { hasText: /TicketCheck/i })).toHaveCount(1);
-    // No duplicate “Not linked” prose under the badge.
-    await expect(bundle.getByText(/Nicht mit ProjectCheck verknüpft|Not linked to ProjectCheck/i)).toHaveCount(0);
+    // No duplicate “Not linked” prose under the badge — literal jargon bans.
+    for (const jargon of ['Nicht mit ProjectCheck verknüpft', 'Not linked to ProjectCheck']) {
+      await expect(bundle.getByText(jargon)).toHaveCount(0);
+    }
 
     const results = await new AxeBuilder({ page })
       .include('#crm-linked-bundle')

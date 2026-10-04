@@ -9,6 +9,7 @@ use OCA\CustomerCheck\Constants;
 use OCA\CustomerCheck\Exception\NotFoundException;
 use OCA\CustomerCheck\Exception\ValidationException;
 use OCA\CustomerCheck\Support\ImapConnection;
+use OCA\CustomerCheck\Support\StrictBool;
 use OCA\CustomerCheck\Support\SharedMailboxSmtpClient;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\IDBConnection;
@@ -154,7 +155,7 @@ class MailSendService
 				// FAC-13: keep a failed draft so compose is not lost when attach is rejected.
 				$draftMeta = [
 					'bodyHtml' => (string)($data['bodyHtml'] ?? ''),
-					'includeSignature' => !array_key_exists('includeSignature', $data) || !empty($data['includeSignature']) ? 1 : 0,
+					'includeSignature' => StrictBool::field($data, 'includeSignature', true) ? 1 : 0,
 					'attachmentFileIds' => array_values(array_map('intval', $attachmentIds)),
 					'quotedBody' => (string)($data['quotedBody'] ?? $data['quotedText'] ?? ''),
 				];
@@ -347,7 +348,7 @@ class MailSendService
 		$boxKind = strtolower(trim((string)($box['kind'] ?? MailAclLogic::KIND_TEAM)));
 		$disclosure = $this->mailboxes->disclosure((string)$box['label'], $workspaceName, $boxKind);
 
-		$includeSignature = !array_key_exists('includeSignature', $data) || !empty($data['includeSignature']);
+		$includeSignature = StrictBool::field($data, 'includeSignature', true);
 		$bodyHtml = $this->htmlSanitize->sanitize((string)($data['bodyHtml'] ?? ''));
 		if ($body === '' && $bodyHtml !== '') {
 			$body = $this->htmlSanitize->htmlToPlain($bodyHtml);
@@ -992,7 +993,10 @@ class MailSendService
 			];
 			$ins->insert('crm_mail_msg')->values($values)->executeStatement();
 		} catch (\Throwable $e) {
-			// Never fail the send after SMTP succeeded (unique race / unit mocks / schema lag).
+			// best-effort: the wire send already succeeded — the crm_mail_msg row
+			// is a secondary read-model the next mailbox sync rebuilds, so a
+			// failed insert must never fail the send (unique race / unit mocks /
+			// schema lag). The skip is recorded via the outbound_index_skip event.
 			$this->logger->warning('personal_mail.outbound_index_skip', [
 				'event' => 'personal_mail.outbound_index_skip',
 				'workspaceId' => $workspaceId,

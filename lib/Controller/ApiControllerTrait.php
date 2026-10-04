@@ -42,6 +42,17 @@ trait ApiControllerTrait
 		return null;
 	}
 
+	/**
+	 * Strict bool parse for request bodies — see StrictBool. The literal
+	 * string "false" must never land as truthy.
+	 *
+	 * @param array<string, mixed> $body
+	 */
+	protected function bodyBool(array $body, string $key, bool $default = false): bool
+	{
+		return \OCA\CustomerCheck\Support\StrictBool::field($body, $key, $default);
+	}
+
 	protected function fail(string $error, string $message, array $fields = [], int $status = Http::STATUS_BAD_REQUEST): JSONResponse
 	{
 		return new JSONResponse([

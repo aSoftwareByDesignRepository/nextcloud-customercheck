@@ -39,7 +39,7 @@ Also synced variants: `de_DE`←de, `en_GB`←en, `es_EC`/`es_MX`←es.
 | Share with workspace | Mit dem Workspace teilen | Partager avec l’espace de travail | Compartir con el espacio de trabajo | Del med arbejdsområdet | Delen met de werkruimte | Condividi con lo spazio di lavoro | Udostępnij przestrzeni roboczej | Dela med arbetsytan | Del med arbeidsområdet | Compartilhar com o espaço de trabalho |
 | Signature | Signatur | Signature | Firma | Signatur | Handtekening | Firma | Podpis | Signatur | Signatur | Assinatura |
 | DSGVO / GDPR | DSGVO | RGPD | RGPD | GDPR | AVG | GDPR | RODO | GDPR | GDPR | LGPD/GDPR |
-| Churned | Abgewandert | Parti | Perdido | Mistet | Afgehaakt | Perso | Utracony | Förlorad | Mistet | Perdido |
+| Churned | Abgewandert | Parti | Perdido | Mistet | Afgehaakt | Perso | Utracony | Bortfallen | Mistet | Perdido |
 | Manager override | Manager-Freigabe | Validation manager | Excepción del responsable | Lederoverstyring | Manager-vrijstelling | Approvazione manager | Nadpisanie przez managera | Chefsgodkännande | Lederoverstyring | Exceção do gestor |
 | workspace | Arbeitsbereich | espace de travail | espacio de trabajo | arbejdsområde | werkruimte | spazio di lavoro | przestrzeń robocza | arbetsyta | arbeidsområde | espaço de trabalho |
 | Open mail | Mail öffnen | Ouvrir le mail | Abrir correo | Åbn mail | Mail openen | Apri mail | Otwórz pocztę | Öppna e-post | Åpne e-post | Abrir e-mail |

@@ -65,7 +65,10 @@ test.describe('Granny-simple company 360', () => {
     await expect(page.locator('#crm-promises')).not.toHaveAttribute('open', '');
     await expect(page.locator('#crm-promises .crm-next-steps__hint')).toContainText(/What you told the customer|Was ihr dem Kunden zugesagt habt|Was du dem Kunden gesagt hast/);
     await expect(page.locator('#crm-promises .crm-next-steps__hint')).not.toContainText(/WIP/i);
-    await expect(page.getByText(/Evidence \(what was delivered|Nachweis \(was wurde geliefert/i)).toHaveCount(0);
+    // Literal jargon bans — fixed phrases, locale-independent.
+    for (const jargon of ['Evidence (what was delivered', 'Nachweis (was wurde geliefert']) {
+      await expect(page.getByText(jargon)).toHaveCount(0);
+    }
     await expect(page.locator('#crm-next-steps .crm-card__header details.crm-more-menu')).toHaveCount(0);
     await expect(page.locator('#crm-add-activity')).toBeVisible();
     await expect(page.locator('#crm-activities .crm-empty-state [data-crm-trigger="crm-add-activity"]')).toHaveCount(0);
@@ -168,8 +171,12 @@ test.describe('Granny-simple company 360', () => {
     await expect(page.locator('#crm-brief-wip-title, .crm-card__title').first()).toBeVisible();
     await expect(page.locator('.crm-card__lead').first()).toContainText(/This week|Diese Woche|promises|Zusagen|Promises left|Freie Zusagen|Slots left|Freie Plätze|Your week is full|Deine Woche|View only|Nur lesen/i);
     await expect(page.locator('.crm-card__lead').first()).not.toContainText(/\bWIP\b/);
-    await expect(page.getByText(/Money customers still owe|Geld, das Kunden noch schulden/i).first()).toBeVisible();
-    await expect(page.getByText(/Overdue AR|Überfällige AR/i)).toHaveCount(0);
+    // Structural: the cash card exposes the "still owe" stat tile regardless of locale.
+    await expect(page.locator('section[aria-labelledby="crm-brief-cash-title"] .crm-today-stat').first()).toBeVisible();
+    // Literal jargon ban — fixed abbreviation, locale-independent.
+    for (const jargon of ['Overdue AR', 'Überfällige AR']) {
+      await expect(page.getByText(jargon)).toHaveCount(0);
+    }
 
     if (await verify.count() === 0) {
       test.info().annotations.push({ type: 'note', description: 'No last-week commitments needing verify — chrome still loads' });

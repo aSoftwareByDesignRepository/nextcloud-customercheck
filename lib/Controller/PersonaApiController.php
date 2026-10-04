@@ -179,7 +179,7 @@ class PersonaApiController extends Controller
 				$workspaceId,
 				trim((string)($body['userId'] ?? '')),
 				(string)($body['role'] ?? 'member'),
-				!array_key_exists('canMailSend', $body) || !empty($body['canMailSend']),
+				$this->bodyBool($body, 'canMailSend', true),
 				$uid,
 			);
 
@@ -222,7 +222,7 @@ class PersonaApiController extends Controller
 				$workspaceId,
 				trim((string)($body['groupId'] ?? '')),
 				(string)($body['role'] ?? 'member'),
-				!array_key_exists('canMailSend', $body) || !empty($body['canMailSend']),
+				$this->bodyBool($body, 'canMailSend', true),
 				$uid,
 			));
 		} catch (\Throwable $e) {
@@ -245,7 +245,7 @@ class PersonaApiController extends Controller
 				$workspaceId,
 				trim((string)($body['circleId'] ?? '')),
 				(string)($body['role'] ?? 'member'),
-				!array_key_exists('canMailSend', $body) || !empty($body['canMailSend']),
+				$this->bodyBool($body, 'canMailSend', true),
 				$uid,
 			));
 		} catch (\Throwable $e) {

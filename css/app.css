@@ -1204,7 +1204,10 @@ dialog.crm-native-dialog .crm-form-actions--start {
 	position: sticky;
 	top: 0;
 	z-index: 4;
-	margin: 0 calc(-1 * var(--crm-space-4, 1rem));
+	/* No negative inline margins: they bled the sticky bar 16px past
+	 * .crm-page-stack/main (scrollWidth overflow on every viewport). The
+	 * chrome now spans the content column, aligned with the cards. */
+	margin: 0;
 	padding: var(--crm-space-2, 0.5rem) var(--crm-space-4, 1rem);
 	background: color-mix(in srgb, var(--crm-bg-page, var(--color-main-background)) 92%, transparent);
 	backdrop-filter: blur(6px);
@@ -3571,10 +3574,8 @@ dialog.crm-native-dialog .crm-advanced > .crm-form--stack {
 }
 #app-content.crm-app .crm-review-zone--read .crm-mail-preview__body {
 	max-height: min(28rem, 55vh);
-	order: 0;
-}
-#app-content.crm-app .crm-review-zone--read .crm-mail-preview__actions {
-	order: 1;
+	/* No flex `order` overrides — DOM order (body → actions) already matches the
+	 * intended paint/focus order (WCAG 2.4.3; atlas flex-form-order lesson). */
 }
 #app-content.crm-app .crm-review-zone--decide .crm-review-primary {
 	gap: var(--crm-space-3, 0.75rem);

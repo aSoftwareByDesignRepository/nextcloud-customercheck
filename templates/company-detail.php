@@ -508,7 +508,7 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 					<?php endif; ?>
 				</div>
 			<?php else: ?>
-			<div class="table-container crm-persons-table-wrap">
+			<div class="table-container crm-persons-table-wrap" role="region" tabindex="0" aria-labelledby="crm-persons-title">
 				<table class="table table--hover" id="crm-persons-table">
 					<thead><tr>
 						<th scope="col"><?php p($l->t('Name')); ?></th>
@@ -631,7 +631,7 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 					<?php endif; ?>
 				</div>
 			<?php else: ?>
-			<div class="table-container crm-table--responsive">
+			<div class="table-container crm-table--responsive" role="region" tabindex="0" aria-labelledby="crm-deals-title">
 				<table class="table table--hover" id="crm-deals-table">
 					<thead><tr>
 						<th scope="col"><?php p($l->t('Title')); ?></th>
@@ -715,7 +715,7 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 					<?php endif; ?>
 				</div>
 			<?php else: ?>
-			<div class="table-container crm-table--responsive">
+			<div class="table-container crm-table--responsive" role="region" tabindex="0" aria-labelledby="crm-contracts-title">
 				<table class="table table--hover">
 					<thead><tr>
 						<th scope="col"><?php p($l->t('Name')); ?></th>
@@ -1080,7 +1080,7 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 					<p class="crm-empty-state__text"><?php p($l->t('No invoices found for the linked customer.')); ?></p>
 				</div>
 			<?php else: ?>
-			<div class="table-container crm-table--responsive">
+			<div class="table-container crm-table--responsive" role="region" tabindex="0" aria-labelledby="crm-invoices-title">
 				<table class="table table--hover">
 					<thead><tr>
 						<th scope="col"><?php p($l->t('Number')); ?></th>
