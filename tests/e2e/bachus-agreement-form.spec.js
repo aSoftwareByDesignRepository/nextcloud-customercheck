@@ -2,12 +2,18 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { login, credsFromEnv } from './helpers/auth.js';
+import { deleteCompanyAt } from './helpers/cleanup.js';
 
 /**
  * Bachus — agreement create/edit is essentials-first, More collapsed, Cancel demoted.
  */
 test.describe('Bachus agreement form effortless flows', () => {
   test.skip(!process.env.NC_ADMIN_USER, 'Requires NC_ADMIN_USER / NC_ADMIN_PASS');
+
+  const createdCompanies = [];
+  test.afterEach(async ({ page }) => {
+    for (const url of createdCompanies.splice(0)) await deleteCompanyAt(page, url);
+  });
 
   test('create essentials visible, More closed, axe clean; edit keeps More closed and Cancel collapsed', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
@@ -21,6 +27,7 @@ test.describe('Bachus agreement form effortless flows', () => {
     await page.locator('#crm-company-form button[type="submit"]').click();
     await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
     const companyUrl = page.url();
+    createdCompanies.push(companyUrl);
     const companyId = companyUrl.match(/companies\/(\d+)/)?.[1];
     expect(companyId).toBeTruthy();
 

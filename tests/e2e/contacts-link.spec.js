@@ -2,8 +2,14 @@
  * AC-CC-21…23 — Contacts soft-link surfaces on company 360.
  */
 import { test, expect } from '@playwright/test';
+import { deleteCompanyAt } from './helpers/cleanup.js';
 
 test.describe('Contacts link (Command Center)', () => {
+  const createdCompanies = [];
+  test.afterEach(async ({ page }) => {
+    for (const url of createdCompanies.splice(0)) await deleteCompanyAt(page, url);
+  });
+
   test('people roster exposes last touch and address-book columns', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -15,6 +21,7 @@ test.describe('Contacts link (Command Center)', () => {
       if (form instanceof HTMLFormElement) form.requestSubmit();
     });
     await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
+    createdCompanies.push(page.url());
 
     await page.locator('[data-crm-focus-tab="people"]').click();
     await page.locator('#crm-persons').scrollIntoViewIfNeeded();

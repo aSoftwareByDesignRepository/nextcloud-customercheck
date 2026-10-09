@@ -98,18 +98,18 @@ body {
   --arbeitszeitcheck-color-gray-500: var(--color-text-maxcontrast);
   --arbeitszeitcheck-color-gray-900: var(--color-main-text);
 
-  /* Status */
-  --arbeitszeitcheck-color-status-online: var(--color-success);
+  /* Status — semantic accents use *-text (never the pale surface tints) */
+  --arbeitszeitcheck-color-status-online: var(--color-success-text, var(--color-success));
   --arbeitszeitcheck-color-status-offline: var(--color-text-maxcontrast);
-  --arbeitszeitcheck-color-status-busy: var(--color-warning);
+  --arbeitszeitcheck-color-status-busy: var(--color-warning-text, var(--color-warning));
   --arbeitszeitcheck-color-status-away: var(--color-primary-element);
 
   /* Time Entry */
-  --arbeitszeitcheck-color-time-entry-billable: var(--color-success);
+  --arbeitszeitcheck-color-time-entry-billable: var(--color-success-text, var(--color-success));
   --arbeitszeitcheck-color-time-entry-non-billable: var(--color-text-maxcontrast);
-  --arbeitszeitcheck-color-time-entry-overtime: var(--color-warning);
-  --arbeitszeitcheck-color-time-entry-compliant: var(--color-success);
-  --arbeitszeitcheck-color-time-entry-violation: var(--color-error);
+  --arbeitszeitcheck-color-time-entry-overtime: var(--color-warning-text, var(--color-warning));
+  --arbeitszeitcheck-color-time-entry-compliant: var(--color-success-text, var(--color-success));
+  --arbeitszeitcheck-color-time-entry-violation: var(--color-error-text, var(--color-error));
 
   /* Menu */
   --arbeitszeitcheck-color-menu-background: var(--color-main-background);
@@ -123,7 +123,7 @@ body {
 
   /* Form */
   --arbeitszeitcheck-color-form-background: var(--color-main-background);
-  --arbeitszeitcheck-color-form-border: var(--color-border);
+  --arbeitszeitcheck-color-form-border: var(--crm-form-border);
   --arbeitszeitcheck-color-form-border-focus: var(--color-primary-element);
   --arbeitszeitcheck-color-form-border-error: var(--color-error-text, var(--color-error));
   --arbeitszeitcheck-color-form-border-success: var(--color-success-text, var(--color-success));
@@ -147,12 +147,12 @@ body {
   --arbeitszeitcheck-color-modal-footer-background: var(--color-background-dark);
 
   /* Notification */
-  --arbeitszeitcheck-color-notification-success: var(--color-success);
-  --arbeitszeitcheck-color-notification-success-background: color-mix(in srgb, var(--color-success) 14%, var(--color-main-background));
-  --arbeitszeitcheck-color-notification-error: var(--color-error);
-  --arbeitszeitcheck-color-notification-error-background: color-mix(in srgb, var(--color-error) 14%, var(--color-main-background));
-  --arbeitszeitcheck-color-notification-warning: var(--color-warning);
-  --arbeitszeitcheck-color-notification-warning-background: color-mix(in srgb, var(--color-warning) 14%, var(--color-main-background));
+  --arbeitszeitcheck-color-notification-success: var(--color-success-text, var(--color-success));
+  --arbeitszeitcheck-color-notification-success-background: color-mix(in srgb, var(--color-success-text, var(--color-success)) 14%, var(--color-main-background));
+  --arbeitszeitcheck-color-notification-error: var(--color-error-text, var(--color-error));
+  --arbeitszeitcheck-color-notification-error-background: color-mix(in srgb, var(--color-error-text, var(--color-error)) 14%, var(--color-main-background));
+  --arbeitszeitcheck-color-notification-warning: var(--color-warning-text, var(--color-warning));
+  --arbeitszeitcheck-color-notification-warning-background: color-mix(in srgb, var(--color-warning-text, var(--color-warning)) 14%, var(--color-main-background));
   --arbeitszeitcheck-color-notification-info: var(--color-primary-element);
   --arbeitszeitcheck-color-notification-info-background: color-mix(in srgb, var(--color-primary-element) 14%, var(--color-main-background));
 

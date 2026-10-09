@@ -76,8 +76,16 @@
     slugInput.addEventListener('input', () => { slugInput.dataset.touched = '1'; });
   }
 
+  let submitting = false;
   form.addEventListener('submit', async (ev) => {
     ev.preventDefault();
+    if (submitting) return; // in-flight guard: double-submit must not mint a second row
+    submitting = true;
+    const submitBtn = form.querySelector('[type="submit"]');
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.setAttribute('aria-busy', 'true');
+    }
     errBox.hidden = true;
     let slug = document.getElementById('crm-company-slug').value.trim();
     const name = document.getElementById('crm-company-name').value.trim();
@@ -164,6 +172,11 @@
       }
       window.location.href = companyUrl;
     } catch (e) {
+      submitting = false;
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.setAttribute('aria-busy', 'false');
+      }
       errBox.hidden = false;
       errBox.textContent = (e.payload && e.payload.message) || e.message;
     }

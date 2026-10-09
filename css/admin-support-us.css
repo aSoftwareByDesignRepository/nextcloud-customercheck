@@ -535,7 +535,7 @@
 
 #app-content.crm-app--support-us a.crm-support-us__cta.crm-btn--secondary {
 	background-color: color-mix(in srgb, var(--color-main-background) 82%, var(--color-main-text) 18%) !important;
-	border-color: var(--color-border-dark, var(--crm-border-strong, var(--color-border))) !important;
+	border-color: var(--crm-form-border, var(--color-border-maxcontrast, var(--color-border-dark))) !important;
 	color: var(--crm-text, var(--color-main-text)) !important;
 	min-height: 44px !important;
 	min-width: 44px !important;

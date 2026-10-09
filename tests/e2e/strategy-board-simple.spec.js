@@ -2,6 +2,7 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { login, credsFromEnv, gotoCrm } from './helpers/auth.js';
+import { deleteCompanyAt } from './helpers/cleanup.js';
 
 /**
  * Strategy / Plans board — card shell, filters, open plan deep-link, axe clean.
@@ -21,7 +22,7 @@ test.describe('Strategy board extreme simplicity', () => {
     await page.locator('#crm-company-form button[type="submit"]').click();
     await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
     const companyUrl = page.url();
-
+    try {
     await page.locator('[data-crm-focus-tab="more"]').click();
     await expect(page.locator('#crm-account-plan-form')).toBeVisible({ timeout: 20000 });
     await page.locator('#crm-plan-goal').fill(`Win renewal for ${suffix}`);
@@ -50,10 +51,14 @@ test.describe('Strategy board extreme simplicity', () => {
     await expect(mount.locator('.crm-table--strategy tbody tr.crm-strategy-row').first()).toBeVisible();
     await expect(mount.locator('[data-crm-strategy-filter-btn="high"]')).toHaveAttribute('aria-pressed', 'true');
 
-    const edit = mount.locator('[data-edit-plan]').first();
+    // Every plan row ships its (collapsed) edit form in the DOM — scope to the
+    // row this test created so the strict locator stays singular.
+    const ownRow = mount.locator('tr.crm-strategy-row', { hasText: `Win renewal for ${suffix}` });
+    const edit = ownRow.locator('[data-edit-plan]');
     if (await edit.count()) {
+      const planId = await edit.getAttribute('data-edit-plan');
       await edit.click();
-      const form = mount.locator('form[data-plan-form]');
+      const form = mount.locator(`form[data-plan-form="${planId}"]`);
       await expect(form).toBeVisible();
       await expect(form.locator('label.form-label').first()).toBeVisible();
       await expect(form.locator('.crm-plan-more')).toBeVisible();
@@ -80,5 +85,8 @@ test.describe('Strategy board extreme simplicity', () => {
     // Deep link still lands on company plan section.
     await page.goto(companyUrl.split('#')[0] + '#crm-account-plan');
     await expect(page.locator('#crm-account-plan')).toBeVisible({ timeout: 20000 });
+    } finally {
+      await deleteCompanyAt(page, companyUrl);
+    }
   });
 });

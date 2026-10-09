@@ -3,12 +3,18 @@ import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { login, credsFromEnv, gotoCrm } from './helpers/auth.js';
 import { dismissNextStepNudge, fillNextStepDueDate, submitNewDealAndDismiss, waitForNewDealForm } from './helpers/new-deal-form.js';
+import { deleteCompanyAt } from './helpers/cleanup.js';
 
 /**
  * Shared new-deal form — pipeline + company 360 parity, post-create next step.
  */
 test.describe('New deal form (shared module)', () => {
   test.skip(!process.env.NC_ADMIN_USER, 'Requires NC_ADMIN_USER / NC_ADMIN_PASS');
+
+  const createdCompanies = [];
+  test.afterEach(async ({ page }) => {
+    for (const url of createdCompanies.splice(0)) await deleteCompanyAt(page, url);
+  });
 
   test('company 360 add deal uses full dialog with contact and lead source', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
@@ -19,6 +25,7 @@ test.describe('New deal form (shared module)', () => {
     await page.locator('#crm-company-name').fill(`Deal Form Co ${suffix}`);
     await page.locator('#crm-company-form button[type="submit"]').click();
     await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
+    createdCompanies.push(page.url());
 
     await page.locator('#crm-welcome-coach [data-crm-trigger="crm-add-person"]').click();
     let personForm = page.locator('#crm-person-form');
@@ -71,6 +78,7 @@ test.describe('New deal form (shared module)', () => {
     await page.locator('#crm-company-name').fill(`Next Step Co ${suffix}`);
     await page.locator('#crm-company-form button[type="submit"]').click();
     await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
+    createdCompanies.push(page.url());
 
     await page.locator('#crm-welcome-coach [data-crm-trigger="crm-add-deal"]').click();
     const form = await waitForNewDealForm(page);

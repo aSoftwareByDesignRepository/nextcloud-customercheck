@@ -2,7 +2,7 @@
 """DEPRECATED — do not re-run for production catalogs.
 
 This historically built da/es/fr/it/nb/nl/pl/sv via Argos machine translation.
-Those catalogs are now curated to mother-tongue quality (see l10n/NATIVE-STYLE.md
+Those catalogs are now curated to mother-tongue quality (see docs/l10n-native-style.md
 and scripts/check-l10n-native-quality.php). Re-running Argos will trash that work.
 
 Locales: da, es, fr, it, nb, nl, pl, sv (en/de already curated).
@@ -19,7 +19,7 @@ import sys
 if __name__ == "__main__" and "--force-argos" not in sys.argv:
 	sys.stderr.write(
 		"Refusing to run: Argos MT would overwrite mother-tongue catalogs.\n"
-		"See l10n/NATIVE-STYLE.md. Pass --force-argos only for experiments.\n"
+		"See docs/l10n-native-style.md. Pass --force-argos only for experiments.\n"
 	)
 	sys.exit(2)
 

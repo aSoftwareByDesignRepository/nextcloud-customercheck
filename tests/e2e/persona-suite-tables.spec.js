@@ -53,7 +53,7 @@ test.describe('Persona suite tables + human labels', () => {
     await page.waitForSelector('#crm-main-content', { timeout: 30000 });
     await expect(page).toHaveURL(/\/sales-inbox/);
     await expect(page).toHaveURL(/tab=unmatched/);
-    await expect(page.locator('#app-content.crm-app.crm-app--sales-inbox, #crm-sales-inbox-root')).toBeVisible();
+    await expect(page.locator('#app-content.crm-app.crm-app--sales-inbox, #crm-sales-inbox-root').first()).toBeVisible();
     await expect(page.locator('#crm-sales-inbox-panel')).toBeVisible({ timeout: 20000 });
     await expect(page.locator('#crm-sales-inbox-list, #crm-sales-inbox-empty').first()).toBeVisible({ timeout: 20000 });
     await expect(page.locator('[data-crm-persona-mount="review"]')).toHaveCount(0);

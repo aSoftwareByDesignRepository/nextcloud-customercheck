@@ -4,6 +4,9 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { fillIsoDate } from './helpers/dates.js';
+import { deleteCompanyAt } from './helpers/cleanup.js';
+
+const createdCompanies = [];
 
 async function createCompany(page, name) {
   await page.goto('/apps/customercheck/companies/new');
@@ -13,6 +16,7 @@ async function createCompany(page, name) {
     if (form instanceof HTMLFormElement) form.requestSubmit();
   });
   await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
+  createdCompanies.push(page.url());
 }
 
 /** Company id from /companies/{id} URL after createCompany / navigation. */
@@ -59,6 +63,10 @@ async function scheduleCallbackApi(page, companyId, { dueDate, reason }) {
 }
 
 test.describe('Command Center binary ACs', () => {
+  test.afterEach(async ({ page }) => {
+    for (const url of createdCompanies.splice(0)) await deleteCompanyAt(page, url);
+  });
+
   test('timed warm path companies → 360 glance ≤10s (AC-CC-11)', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto('/apps/customercheck/companies');

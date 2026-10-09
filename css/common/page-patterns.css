@@ -365,7 +365,7 @@
 
 #app-content.crm-app .crm-filter-field__control .form-input[aria-invalid='true'],
 #app-content.crm-app .crm-filter-field__control .form-select[aria-invalid='true'] {
-	border-color: var(--color-error);
+	border-color: var(--color-error-text, var(--color-error));
 	outline-color: var(--color-error-text, var(--color-error));
 }
 

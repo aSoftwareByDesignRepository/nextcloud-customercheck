@@ -186,6 +186,9 @@ class ImportService
 				// Reuse the company created earlier in this apply — never create a twin / SLUG_TAKEN.
 				if ($action === 'create' && $identityKey !== '' && isset($batchCompanyIds[$identityKey])) {
 					$companyId = $batchCompanyIds[$identityKey];
+					// The row links into the batch-created company — count it,
+					// or the proposal silently vanishes from the summary.
+					$summary['linked']++;
 				} elseif ($action === 'create') {
 					$createInput = [
 						'name' => (string)($row['companyName'] ?? $row['name'] ?? 'Imported'),

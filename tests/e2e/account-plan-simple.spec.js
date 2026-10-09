@@ -2,12 +2,18 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { login, credsFromEnv } from './helpers/auth.js';
+import { deleteCompanyAt } from './helpers/cleanup.js';
 
 /**
  * Bachus Account plan: goal + big move textarea, Done on moves, axe clean.
  */
 test.describe('Account plan extreme simplicity', () => {
   test.skip(!process.env.NC_ADMIN_USER, 'Requires NC_ADMIN_USER / NC_ADMIN_PASS');
+
+  const createdCompanies = [];
+  test.afterEach(async ({ page }) => {
+    for (const url of createdCompanies.splice(0)) await deleteCompanyAt(page, url);
+  });
 
   test('add move via textarea, mark done, axe clean', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
@@ -19,6 +25,7 @@ test.describe('Account plan extreme simplicity', () => {
     await page.locator('#crm-company-name').fill(`Plan Move ${suffix}`);
     await page.locator('#crm-company-form button[type="submit"]').click();
     await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
+    createdCompanies.push(page.url());
 
     const plan = page.locator('#crm-account-plan');
     await page.locator('[data-crm-focus-tab="more"]').click();
@@ -82,6 +89,7 @@ test.describe('Account plan extreme simplicity', () => {
     await page.locator('#crm-company-name').fill(`Plan Mobile ${suffix}`);
     await page.locator('#crm-company-form button[type="submit"]').click();
     await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
+    createdCompanies.push(page.url());
     await page.locator('[data-crm-focus-tab="more"]').click();
     await expect(page.locator('#crm-map-step-form')).toBeVisible({ timeout: 20000 });
     const steps = page.locator('#crm-account-plan .crm-account-plan__guide > .crm-welcome-coach__step');
@@ -105,6 +113,7 @@ test.describe('Account plan extreme simplicity', () => {
     await page.locator('#crm-company-name').fill(`Plan Save ${suffix}`);
     await page.locator('#crm-company-form button[type="submit"]').click();
     await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
+    createdCompanies.push(page.url());
 
     await page.locator('[data-crm-focus-tab="more"]').click();
     const form = page.locator('#crm-account-plan-form');

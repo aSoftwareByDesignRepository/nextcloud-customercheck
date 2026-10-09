@@ -8,6 +8,7 @@ use OCA\CustomerCheck\Db\AgreementMapper;
 use OCA\CustomerCheck\Db\CompanyMapper;
 use OCA\CustomerCheck\Db\PersonMapper;
 use OCA\CustomerCheck\Service\ImportService;
+use OCA\CustomerCheck\Tests\Support\DbCascade;
 use Test\TestCase;
 
 /**
@@ -15,6 +16,9 @@ use Test\TestCase;
  */
 class ImportWebsiteOrderIntegrationTest extends TestCase
 {
+	/** @var list<string> run suffixes of companies imported by this test */
+	private array $runSuffixes = [];
+
 	protected function setUp(): void
 	{
 		if (!class_exists(\OC::class) || !isset(\OC::$server)) {
@@ -23,9 +27,26 @@ class ImportWebsiteOrderIntegrationTest extends TestCase
 		\OC_App::loadApp('customercheck');
 	}
 
+	protected function tearDown(): void
+	{
+		// Imported companies land in ws1 — hard-delete them (and their persons/
+		// agreements via DbCascade) so suite runs do not leak live fixtures.
+		if (isset(\OC::$server)) {
+			foreach ($this->runSuffixes as $suffix) {
+				try {
+					DbCascade::companiesBySlugLike('%-' . $suffix);
+				} catch (\Throwable) {
+				}
+			}
+		}
+		$this->runSuffixes = [];
+		parent::tearDown();
+	}
+
 	public function testWebsiteOrderPasteCreatesOneCompanyAndTwoAgreements(): void
 	{
 		$suffix = bin2hex(random_bytes(4));
+		$this->runSuffixes[] = $suffix;
 		$companyName = 'Website Order Integ ' . $suffix;
 		$email = 'wo-' . $suffix . '@example.test';
 		$json = json_encode([
@@ -93,6 +114,15 @@ class ImportWebsiteOrderIntegrationTest extends TestCase
 		$this->assertSame(1, $apply['created']);
 		$this->assertSame(2, $apply['agreements']);
 
+		// Flow parity: every scanned proposal resolves to a terminal outcome
+		// (created/linked/updated/skipped or a per-row error). Nothing is
+		// silently dropped between preview and apply.
+		$this->assertSame(
+			$scan['meta']['total'],
+			$apply['created'] + $apply['linked'] + $apply['updated'] + $apply['skipped'] + count($apply['errors']),
+			'apply must account for every scanned proposal',
+		);
+
 		/** @var CompanyMapper $companies */
 		$companies = \OC::$server->get(CompanyMapper::class);
 		$matches = $companies->findByNameCaseInsensitive($companyName, 1);
@@ -123,6 +153,7 @@ class ImportWebsiteOrderIntegrationTest extends TestCase
 	public function testGdprMultiAgreementApplyDoesNotSlugTaken(): void
 	{
 		$suffix = bin2hex(random_bytes(4));
+		$this->runSuffixes[] = $suffix;
 		$slug = 'gdpr-multi-' . $suffix;
 		$json = json_encode([
 			'company' => [
@@ -170,5 +201,10 @@ class ImportWebsiteOrderIntegrationTest extends TestCase
 		$this->assertSame([], $apply['errors'], json_encode($apply));
 		$this->assertSame(1, $apply['created']);
 		$this->assertSame(2, $apply['agreements']);
+		$this->assertSame(
+			$scan['meta']['total'],
+			$apply['created'] + $apply['linked'] + $apply['updated'] + $apply['skipped'] + count($apply['errors']),
+			'apply must account for every scanned proposal',
+		);
 	}
 }

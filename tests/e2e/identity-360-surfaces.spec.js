@@ -2,6 +2,7 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { login, credsFromEnv } from './helpers/auth.js';
+import { deleteCompanyAt } from './helpers/cleanup.js';
 
 /**
  * SHARED-IDENTITY AC-C-04 — 360 primary create/link CTAs + keyboard + axe on identity section.
@@ -36,6 +37,11 @@ test.describe('CUC identity 360 surfaces', () => {
       }
     });
     await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 60000 });
+    const companyUrl = page.url();
+    try {
+    // Identity/link CTAs live on the Money focus panel — activate it first
+    // (company-360 shows one panel at a time; default is Today).
+    await page.locator('[data-crm-focus-tab="money"]').click();
 
     const identity = page.locator('#crm-identity-links');
     const bundle = page.locator('#crm-linked-bundle');
@@ -78,5 +84,8 @@ test.describe('CUC identity 360 surfaces', () => {
 
     await page.setViewportSize({ width: 320, height: 720 });
     await expect(identity).toBeVisible();
+    } finally {
+      await deleteCompanyAt(page, companyUrl);
+    }
   });
 });

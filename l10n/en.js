@@ -2987,6 +2987,5 @@ OC.L10N.register(
 		"this workspace": "this workspace",
 		"valid": "valid",
 		"Could not reach the server. Check your connection and try again.": "Could not reach the server. Check your connection and try again."
-	},
-	"nplurals=2; plural=(n != 1);"
+	}
 );

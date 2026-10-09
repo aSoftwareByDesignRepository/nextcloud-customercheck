@@ -342,7 +342,7 @@ dialog.crm-native-dialog .crm-btn--secondary,
 .crm-nc-admin-settings .crm-btn--secondary,
 .crm-nc-settings-panel .crm-btn--secondary {
 	background-color: color-mix(in srgb, var(--color-main-background) 82%, var(--color-main-text) 18%) !important;
-	border-color: var(--color-border-dark, var(--crm-border-strong, var(--color-border))) !important;
+	border-color: var(--crm-form-border, var(--color-border-maxcontrast, var(--color-border-dark))) !important;
 	color: var(--crm-text, var(--color-main-text)) !important;
 }
 
@@ -362,7 +362,7 @@ dialog.crm-native-dialog .crm-btn--danger,
 .crm-nc-admin-settings .crm-btn--danger,
 .crm-nc-settings-panel .crm-btn--danger {
 	background-color: var(--crm-danger-fill) !important;
-	border-color: var(--crm-danger-fill) !important;
+	border-color: var(--crm-danger-edge, var(--crm-danger-fill)) !important;
 	color: var(--crm-danger-on-fill) !important;
 }
 
@@ -754,7 +754,7 @@ dialog.crm-native-dialog .crm-callout__actions {
 .modal-backdrop .crm-callout__actions .crm-btn--secondary,
 dialog.crm-native-dialog .crm-callout__actions .crm-btn--secondary {
 	background: var(--color-main-background);
-	border-color: var(--color-border);
+	border-color: var(--crm-form-border, var(--color-border-maxcontrast, var(--color-border)));
 	color: var(--color-main-text);
 }
 #app-content.crm-app .crm-callout__actions .crm-btn--secondary:hover,
@@ -2293,7 +2293,7 @@ dialog.crm-native-dialog .crm-dl__row dd {
 }
 #app-content.crm-app .crm-card__subtitle {
 	margin: var(--crm-space-4) 0 var(--crm-space-2);
-	font-size: var(--crm-fs-base);
+	font-size: var(--crm-fs-md);
 	font-weight: 600;
 	color: var(--crm-text);
 }
@@ -3104,6 +3104,19 @@ dialog.crm-native-dialog .crm-advanced > .crm-form--stack {
 	outline-offset: 2px;
 }
 
+/* WCAG 2.5.8 (24px AA target) at every viewport: bare text links in dense
+ * table cells and the breadcrumb rendered ~15–21px tall. Cell padding keeps
+ * the row height unchanged; the <767px block below raises the floor to the
+ * 44px WCAG 2.5.5 target for touch. */
+#app-content-wrapper .table a.crm-table-link,
+#app-content.crm-app .table a.crm-table-link,
+#app-content.crm-app .crm-table--strategy a.crm-strategy-company,
+#app-content.crm-app .crm-breadcrumb__item a {
+	display: inline-flex;
+	align-items: center;
+	min-height: 24px;
+}
+
 #app-content.crm-app .crm-filter-field--actions .crm-btn {
 	min-height: 44px; /* WCAG 2.5.5 target size is defined in CSS px; rem shrinks under NC 15px root font */
 }
@@ -3390,7 +3403,7 @@ dialog.crm-native-dialog .crm-advanced > .crm-form--stack {
 	transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 #app-content.crm-app .crm-glance-density__summary:hover {
-	border-color: var(--crm-border, var(--color-border));
+	border-color: var(--crm-border, var(--crm-form-border));
 }
 #app-content.crm-app .crm-glance-density__summary:focus-visible {
 	outline: 3px solid color-mix(in srgb, var(--color-primary-element) 55%, transparent);
@@ -5675,10 +5688,10 @@ dialog.crm-native-dialog .crm-form--stack .crm-datepicker-host .datepicker-input
 	border-inline-start: 4px solid var(--color-primary-element);
 }
 #app-content.crm-app .crm-mailbox-list__item--just-saved {
-	border-inline-start-color: var(--color-success);
-	outline: 2px solid var(--color-success);
+	border-inline-start-color: var(--color-success-text, var(--color-success));
+	outline: 2px solid var(--color-success-text, var(--color-success));
 	outline-offset: 2px;
-	box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-success) 18%, transparent);
+	box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-success-text, var(--color-success)) 18%, transparent);
 }
 #app-content.crm-app .crm-mailbox-list__item:focus-visible {
 	outline: 2px solid var(--color-primary-element);
@@ -6344,10 +6357,10 @@ dialog.crm-native-dialog label.crm-check {
 	color: var(--crm-muted, var(--color-text-maxcontrast));
 }
 #app-content.crm-app .crm-import-stat--ready {
-	border-color: var(--color-success);
+	border-color: var(--color-element-success, var(--color-success-text, var(--color-success)));
 }
 #app-content.crm-app .crm-import-stat--choice {
-	border-color: var(--color-warning);
+	border-color: var(--color-element-warning, var(--color-warning-text, var(--color-warning)));
 }
 #app-content.crm-app .crm-import-actions {
 	display: flex;
@@ -7803,3 +7816,24 @@ dialog.crm-native-dialog label.crm-check {
 
 /* Inline field errors (.crm-field-error / [aria-invalid]) are synced to
    css/common/field-errors.css from apps/_shared/field-errors — do not fork. */
+
+/*
+ * Control-border baseline (WCAG 1.4.11 >= 3:1 vs background) — DESIGN-SYSTEM §3.6.0.
+ * NC core styles every button/input with the faint `--color-border-dark`, and its
+ * `button:disabled` rule (0,2,1) outranks page-level `.button.secondary` (0,2,0),
+ * so disabled controls silently lose their frame. This rule only re-colours
+ * borders that are already drawn — borderless icon buttons are unaffected —
+ * and state classes keep their semantic borders.
+ */
+#app-content input:not([type='range'], [type='hidden'], [type='color'], [type='file'], [type='image'], [type='submit'], [type='button'], [type='reset'], .form-input--error, .form-input--success, .form-input--warning, .has-error, [aria-invalid='true'], .has-error *),
+#app-content select:not(.form-input--error, .form-input--success, .form-input--warning, [aria-invalid='true'], .has-error *),
+#app-content textarea:not(.form-input--error, .form-input--success, .form-input--warning, [aria-invalid='true'], .has-error *),
+#app-content button:not(.primary, .error, .warning, .success, .danger, .button-vue),
+#app-content .button:not(.primary, .error, .warning, .success, .danger),
+.oc-dialog input:not([type='range'], [type='hidden'], [type='color'], [type='file']),
+.oc-dialog select,
+.oc-dialog textarea,
+.oc-dialog button:not(.primary, .error, .warning, .success, .danger, .button-vue),
+.oc-dialog .button:not(.primary, .error, .warning, .success, .danger) {
+	border-color: var(--crm-form-border, var(--color-border-maxcontrast, var(--color-border)));
+}

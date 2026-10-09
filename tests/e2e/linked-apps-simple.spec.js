@@ -2,6 +2,7 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { login, credsFromEnv } from './helpers/auth.js';
+import { deleteCompanyAt } from './helpers/cleanup.js';
 
 /**
  * Bachus Linked apps: one Link apps card with identity CTAs + status roster (no twin setup card).
@@ -19,6 +20,11 @@ test.describe('Linked apps bundle extreme simplicity', () => {
     await page.locator('#crm-company-name').fill(`Linked Bundle ${suffix}`);
     await page.locator('#crm-company-form button[type="submit"]').click();
     await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
+    const companyUrl = page.url();
+    try {
+    // The linked-apps bundle lives on the company-360 Money focus panel
+    // (one panel at a time; default is Today) — activate it first.
+    await page.locator('[data-crm-focus-tab="money"]').click();
 
     const bundle = page.locator('#crm-linked-bundle');
     await expect(bundle).toBeVisible();
@@ -48,6 +54,9 @@ test.describe('Linked apps bundle extreme simplicity', () => {
       .analyze();
     const serious = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
     expect(serious, JSON.stringify(serious, null, 2)).toEqual([]);
+    } finally {
+      await deleteCompanyAt(page, companyUrl);
+    }
   });
 
   test('mobile: primary create CTA stays tappable', async ({ page }) => {
@@ -59,11 +68,16 @@ test.describe('Linked apps bundle extreme simplicity', () => {
     await page.locator('#crm-company-name').fill(`Linked Mobile ${suffix}`);
     await page.locator('#crm-company-form button[type="submit"]').click();
     await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
-
+    const companyUrl = page.url();
+    try {
+    await page.locator('[data-crm-focus-tab="money"]').click();
     await page.locator('#crm-linked-bundle > summary').click();
     const cta = page.locator('#crm-identity-links [data-crm-identity-create="pc"], #crm-identity-links [data-crm-identity-link="pc"]').first();
     await expect(cta).toBeVisible();
     const box = await cta.boundingBox();
     expect(box?.height || 0).toBeGreaterThanOrEqual(44);
+    } finally {
+      await deleteCompanyAt(page, companyUrl);
+    }
   });
 });

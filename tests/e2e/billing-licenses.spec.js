@@ -2,12 +2,18 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { login, credsFromEnv } from './helpers/auth.js';
+import { deleteCompanyAt } from './helpers/cleanup.js';
 
 /**
  * Money card must track license invoice payment even when InvoiceCheck is off.
  */
 test.describe('Billing license payment status', () => {
   test.skip(!process.env.NC_ADMIN_USER, 'Requires NC_ADMIN_USER / NC_ADMIN_PASS');
+
+  const createdCompanies = [];
+  test.afterEach(async ({ page }) => {
+    for (const url of createdCompanies.splice(0)) await deleteCompanyAt(page, url);
+  });
 
   test('overdue license invoice shows critical Money tiles + honesty; axe clean', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
@@ -19,6 +25,7 @@ test.describe('Billing license payment status', () => {
     await page.locator('#crm-company-name').fill(`Billing Lic ${suffix}`);
     await page.locator('#crm-company-form button[type="submit"]').click();
     await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
+    createdCompanies.push(page.url());
     const companyId = page.url().match(/companies\/(\d+)/)?.[1];
     expect(companyId).toBeTruthy();
 

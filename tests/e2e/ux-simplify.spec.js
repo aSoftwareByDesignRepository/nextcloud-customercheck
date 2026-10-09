@@ -3,8 +3,14 @@ import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { login, credsFromEnv } from './helpers/auth.js';
 import { fillIsoDate } from './helpers/dates.js';
+import { deleteCompanyAt } from './helpers/cleanup.js';
 
 test.describe('Simplified core UX journeys', () => {
+  const createdCompanies = [];
+  test.afterEach(async ({ page }) => {
+    for (const url of createdCompanies.splice(0)) await deleteCompanyAt(page, url);
+  });
+
   test('today first-run, companies list, one-click done, simple log email', async ({ page }) => {
     test.skip(!process.env.NC_ADMIN_USER, 'Requires NC admin credentials');
     await page.setViewportSize({ width: 1280, height: 900 });
@@ -33,6 +39,7 @@ test.describe('Simplified core UX journeys', () => {
     await page.locator('#crm-company-slug').fill(`simple-co-${suffix}`);
     await page.locator('#crm-company-form button[type="submit"]').click();
     await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
+    createdCompanies.push(page.url());
 
     // Edit primary; Export visible; Erase tucked under More.
     await expect(page.locator('#crm-page-actions a.crm-btn--primary, .header-actions a.crm-btn--primary').first()).toContainText(/Edit|Bearbeiten/i);

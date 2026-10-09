@@ -23,8 +23,13 @@ const {
 	assertUniqueLandmarks,
 } = require('../../../_shared/e2e/focus-preservation-contract.js');
 
-const FOCUSABLE = 'button, summary, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
-const TARGET = `#crm-main-content ${FOCUSABLE}`;
+// Every selector-list arm needs the scope prefix — `#root a, input` matches
+// `input` document-wide (body-level skip links / hidden state inputs were
+// picked). a[href] not bare [href] (<link rel=icon>); input[type=hidden]
+// excluded (initial-state carriers are not focus targets).
+const FOCUSABLE = ['button', 'summary', 'a[href]', 'input:not([type="hidden"])', 'select', 'textarea', '[tabindex]:not([tabindex="-1"])']
+	.map((s) => `#crm-main-content ${s}`).join(', ');
+const TARGET = FOCUSABLE;
 
 // Inner list/group container holding the focused element — never the app
 // root itself (detaching #app-content exercises the stale-arm path, which

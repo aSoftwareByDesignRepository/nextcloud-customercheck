@@ -2987,6 +2987,5 @@ OC.L10N.register(
 		"this workspace": "este espacio de trabajo",
 		"valid": "válido",
 		"Could not reach the server. Check your connection and try again.": "No se pudo contactar con el servidor. Comprueba tu conexión e inténtalo de nuevo."
-	},
-	"nplurals=2; plural=(n != 1);"
+	}
 );

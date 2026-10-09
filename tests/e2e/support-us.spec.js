@@ -18,7 +18,9 @@ test.describe('CustomerCheck Support & us', () => {
     await expect(page.locator('#crm-support-us')).toBeVisible();
     await expect(page.locator('#crm-support-us')).toHaveAttribute('data-support-us', '1');
     await expect(page.locator('#crm-support-us')).toHaveAttribute('data-support-us-presentation', 'page');
-    await expect(page.locator('.crm-support-us__option-title')).toHaveCount(2);
+    // 2 core options + a conditional 3rd ("Mobile & terminal") when the lab
+    // ships a mobile companion — assert the floor, not the fixture-dependent max.
+    expect(await page.locator('.crm-support-us__option-title').count()).toBeGreaterThanOrEqual(2);
     await expect(page.locator('a.crm-support-us__cta--primary')).toBeVisible();
     await expect(page.locator('.crm-support-us-page__wordmark-by')).toHaveText(/BY DESIGN/);
     await expect(page.locator('.crm-support-us-page__mark')).toHaveAttribute('src', /vendor-logo-mark\.png/);

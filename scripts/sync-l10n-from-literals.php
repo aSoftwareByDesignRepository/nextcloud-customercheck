@@ -95,14 +95,12 @@ function writeL10n(string $root, string $lang, array $translations, ?string $plu
 	foreach ($translations as $k => $v) {
 		$entries[] = "\t\t\"" . jsEscape($k) . "\": \"" . jsEscape($v) . "\"";
 	}
+	// CSP / Nextcloud ≥26: OC.L10N.register takes (appId, translations) only —
+	// a third gettext pluralForm arg is eval'd via new Function() by legacy
+	// shims and violates strict script-src. pluralForm stays in .json only.
 	$lines = ["OC.L10N.register(", "\t\"customercheck\",", "\t{"];
 	$lines[] = implode(",\n", $entries);
-	if ($pluralForm !== null && $pluralForm !== '') {
-		$lines[] = "\t},";
-		$lines[] = "\t\"" . jsEscape($pluralForm) . "\"";
-	} else {
-		$lines[] = "\t}";
-	}
+	$lines[] = "\t}";
 	$lines[] = ");";
 	file_put_contents($root . '/l10n/' . $lang . '.js', implode("\n", $lines) . "\n");
 }

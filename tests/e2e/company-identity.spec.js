@@ -2,12 +2,18 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { login, credsFromEnv } from './helpers/auth.js';
+import { deleteCompanyAt } from './helpers/cleanup.js';
 
 /**
  * Company 360 identity — people, address, and company edit must be obvious.
  */
 test.describe('Company identity: people, address, change', () => {
   test.skip(!process.env.NC_ADMIN_USER, 'Requires NC_ADMIN_USER / NC_ADMIN_PASS');
+
+  const createdCompanies = [];
+  test.afterEach(async ({ page }) => {
+    for (const url of createdCompanies.splice(0)) await deleteCompanyAt(page, url);
+  });
 
   test('add address inline, add person, change person, axe + mobile targets', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
@@ -19,6 +25,7 @@ test.describe('Company identity: people, address, change', () => {
     await page.locator('#crm-company-name').fill(`Identity Co ${suffix}`);
     await page.locator('#crm-company-form button[type="submit"]').click();
     await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
+    createdCompanies.push(page.url());
 
     const identity = page.locator('#crm-identity');
     await expect(identity).toBeVisible();
@@ -154,6 +161,7 @@ test.describe('Company identity: people, address, change', () => {
     await page.locator('#crm-company-name').fill(`Edit Path ${suffix}`);
     await page.locator('#crm-company-form button[type="submit"]').click();
     await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
+    createdCompanies.push(page.url());
 
     await page.locator('#crm-change-company').click();
     await expect(page.locator('#crm-company-name-form')).toBeVisible();
@@ -183,6 +191,7 @@ test.describe('Company identity: people, address, change', () => {
     await page.locator('#crm-company-name').fill(`Bad Mail ${suffix}`);
     await page.locator('#crm-company-form button[type="submit"]').click();
     await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
+    createdCompanies.push(page.url());
 
     await page.locator('[data-crm-focus-tab="people"]').click();
     await page.locator('#crm-add-person').click();
@@ -205,6 +214,7 @@ test.describe('Company identity: people, address, change', () => {
     await page.locator('#crm-company-name').fill(`Focus Path ${suffix}`);
     await page.locator('#crm-company-form button[type="submit"]').click();
     await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
+    createdCompanies.push(page.url());
 
     await page.locator('#crm-change-company').click();
     await expect(page.locator('#crm-company-name-form')).toBeVisible();

@@ -2,6 +2,7 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { login, credsFromEnv } from './helpers/auth.js';
+import { deleteCompanyAt } from './helpers/cleanup.js';
 
 /**
  * Bachus deal-checklist journeys: one-click Done on Today, checklist panel on Company 360.
@@ -9,6 +10,11 @@ import { login, credsFromEnv } from './helpers/auth.js';
  */
 test.describe('Bachus deal checklist simplicity', () => {
   test.skip(!process.env.NC_ADMIN_USER, 'Requires NC_ADMIN_USER / NC_ADMIN_PASS');
+
+  const createdCompanies = [];
+  test.afterEach(async ({ page }) => {
+    for (const url of createdCompanies.splice(0)) await deleteCompanyAt(page, url);
+  });
 
   test('Today and settings/checklists pass axe serious/critical', async ({ page }) => {
     test.setTimeout(90000);
@@ -46,6 +52,7 @@ test.describe('Bachus deal checklist simplicity', () => {
       if (form instanceof HTMLFormElement) form.requestSubmit();
     });
     await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
+    createdCompanies.push(page.url());
 
     const addDeal = page.locator('[data-crm-add-deal], #crm-add-deal, button:has-text("Add deal")').first();
     if (await addDeal.count()) {

@@ -973,7 +973,7 @@ OC.L10N.register(
 		"Email & log hours": "E-mail e orari di registro",
 		"Email composed": "E-mail composta",
 		"Email follow-up": "Follow-up via e-mail",
-		"Email is best-effort — no reply SLA. Need booked help? Use Support & us.": "E-mail senza SLA di risposta. Serve assistenza prenotata? Usi Supporto e noi.",
+		"Email is best-effort — no reply SLA. Need booked help? Use Support & us.": "E-mail senza SLA di risposta. Serve assistenza prenotata? Usi Supporto & noi.",
 		"Email log": "Registro della posta elettronica",
 		"Email logged": "E-mail registrata",
 		"Email sent": "E-mail inviata",
@@ -1501,7 +1501,7 @@ OC.L10N.register(
 		"Missing coverage": "Copertura mancante",
 		"Missing links": "Collegamenti mancanti",
 		"Missing source reference.": "Riferimenti mancanti.",
-		"Mobile & terminal": "Mobile &amp; terminal",
+		"Mobile & terminal": "Mobile e terminali",
 		"Mobile app license": "Licenza app mobile",
 		"Mobile license seats and custom product codes are set here. Team members and mailbox stay on Team & mailbox.": "Qui si impostano posti licenza mobile e codici prodotto personalizzati. Membri del team e casella restano in Team e casella.",
 		"Mobile seats": "Sedili mobili",
@@ -2113,7 +2113,7 @@ OC.L10N.register(
 		"Read-only view. Open a company to inspect — editing is locked for viewers.": "Vista sola lettura. Aprire una società per ispezionare — la modifica è bloccata per gli spettatori.",
 		"Ready": "Pronti",
 		"Ready rows are safe. Only names with a choice need a quick pick.": "Le righe pronte sono sicure. Solo i nomi con una scelta richiedono una selezione rapida.",
-		"Ready rows can be imported in one tap.": "Le righe pronte possono essere importate in un solo rubinetto.",
+		"Ready rows can be imported in one tap.": "Le righe pronte possono essere importate con un tocco.",
 		"Ready.": "Pronto.",
 		"Reason": "Motivazione",
 		"Reason for manager override": "Motivo per override del manager",
@@ -2476,7 +2476,7 @@ OC.L10N.register(
 		"Suggested: %s": "Suggerito: %s",
 		"Sunday": "Domenica",
 		"Superseded": "Superato",
-		"Support & us": "Supporto &amp; noi",
+		"Support & us": "Supporto & noi",
 		"Sweden": "Svezia",
 		"Switzerland": "Svizzera",
 		"Sync": "Traduzione:",
@@ -2987,6 +2987,5 @@ OC.L10N.register(
 		"this workspace": "questo spazio di lavoro",
 		"valid": "valido",
 		"Could not reach the server. Check your connection and try again.": "Impossibile raggiungere il server. Controlla la connessione e riprova."
-	},
-	"nplurals=2; plural=(n != 1);"
+	}
 );

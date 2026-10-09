@@ -25,6 +25,7 @@ use OCA\CustomerCheck\Service\PersonService;
 use OCA\CustomerCheck\Service\WorkspaceAccessService;
 use OCA\CustomerCheck\Service\WorkspaceService;
 use OCA\CustomerCheck\Tests\Support\Cuc2TestSigning;
+use OCA\CustomerCheck\Tests\Support\DbCascade;
 use OCP\App\IAppManager;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\IConfig;
@@ -118,6 +119,9 @@ final class MobileGateHttpIntegrationTest extends TestCase
 		}
 		$um = \OC::$server->get(IUserManager::class);
 		foreach ($this->testUsers as $uid) {
+			// uid-keyed ledgers (mob_idem rows with no activity link, push tokens)
+			// are not reachable via workspace cascade — sweep them by uid.
+			$this->deleteUidRows($uid);
 			if ($um->userExists($uid)) {
 				$um->get($uid)?->delete();
 			}
@@ -972,22 +976,20 @@ final class MobileGateHttpIntegrationTest extends TestCase
 		}
 	}
 
+	/**
+	 * Hard-delete a workspace and every workspace-scoped row via the shared
+	 * cascade (tests/Support/DbCascade.php — leaf tables key off entity ids,
+	 * and the real settings table is 'crm_ws_set', not 'crm_ws_settings').
+	 */
 	private function deleteWorkspaceCascade(int $workspaceId): void
 	{
-		if ($workspaceId <= 0) {
-			return;
-		}
-		$db = \OC::$server->get(IDBConnection::class);
-		foreach (['crm_ws_member', 'crm_ws_settings', 'crm_mailbox', 'crm_workspace'] as $table) {
-			if (!$db->tableExists($table)) {
-				continue;
-			}
-			$col = $table === 'crm_workspace' ? 'id' : 'workspace_id';
-			$qb = $db->getQueryBuilder();
-			$qb->delete($table)
-				->where($qb->expr()->eq($col, $qb->createNamedParameter($workspaceId)))
-				->executeStatement();
-		}
+		DbCascade::workspace($workspaceId);
+	}
+
+	/** Drop uid-keyed leftovers (idempotency ledger, push tokens) for a test user. */
+	private function deleteUidRows(string $uid): void
+	{
+		DbCascade::uidRows($uid);
 	}
 
 	private function ensureMember(int $workspaceId, string $uid, string $role = 'member'): void

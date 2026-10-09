@@ -2987,6 +2987,5 @@ OC.L10N.register(
 		"this workspace": "den här arbetsytan",
 		"valid": "giltigt",
 		"Could not reach the server. Check your connection and try again.": "Kunde inte nå servern. Kontrollera din anslutning och försök igen."
-	},
-	"nplurals=2; plural=(n != 1);"
+	}
 );

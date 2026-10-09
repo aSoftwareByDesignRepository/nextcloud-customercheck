@@ -2,12 +2,18 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { login, credsFromEnv } from './helpers/auth.js';
+import { deleteCompanyAt } from './helpers/cleanup.js';
 
 /**
  * Extreme simplicity — name-only create, one Log email, collapsed expert chrome.
  */
 test.describe('Granny-simple company 360', () => {
   test.skip(!process.env.NC_ADMIN_USER, 'Requires NC_ADMIN_USER / NC_ADMIN_PASS');
+
+  const createdCompanies = [];
+  test.afterEach(async ({ page }) => {
+    for (const url of createdCompanies.splice(0)) await deleteCompanyAt(page, url);
+  });
 
   test('name-only create, single log email, people lean, account plan collapsed', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
@@ -27,6 +33,7 @@ test.describe('Granny-simple company 360', () => {
     await page.locator('#crm-company-country').selectOption('DE');
     await page.locator('#crm-company-form button[type="submit"]').click();
     await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
+    createdCompanies.push(page.url());
 
     await expect(page.locator('#crm-company-address-display')).toBeVisible();
     await expect(page.locator('#crm-company-address-display')).toContainText('Holtenauer Straße 267');
@@ -202,6 +209,7 @@ test.describe('Granny-simple company 360', () => {
     await page.locator('#crm-company-name').fill(`Edit Calm ${suffix}`);
     await page.locator('#crm-company-form button[type="submit"]').click();
     await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
+    createdCompanies.push(page.url());
     const companyId = page.url().match(/companies\/(\d+)/)?.[1];
     expect(companyId).toBeTruthy();
 

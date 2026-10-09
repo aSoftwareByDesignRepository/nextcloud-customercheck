@@ -21,6 +21,7 @@ use OCA\CustomerCheck\Service\SettingsService;
 use OCA\CustomerCheck\Service\StageSequenceService;
 use OCA\CustomerCheck\Service\WeeklyDigestService;
 use OCA\CustomerCheck\Support\OptimisticLock;
+use OCA\CustomerCheck\Tests\Support\DbCascade;
 use OCP\IConfig;
 use Test\TestCase;
 
@@ -37,6 +38,20 @@ class DomainWorkflowIntegrationTest extends TestCase
 			$this->markTestSkipped('Nextcloud is not bootstrapped.');
 		}
 		$this->suffix = substr(bin2hex(random_bytes(4)), 0, 8);
+	}
+
+	protected function tearDown(): void
+	{
+		// Every fixture slug ends with the per-test run suffix — hard-delete the
+		// whole company graph so ws1 does not accrete residue (DbCascade walks
+		// leaf tables keyed by entity ids, which have no FK constraints).
+		if (isset(\OC::$server) && $this->suffix !== '') {
+			try {
+				DbCascade::companiesBySlugLike('%-' . $this->suffix);
+			} catch (\Throwable) {
+			}
+		}
+		parent::tearDown();
 	}
 
 	public function testCompanySlugTakenAndPersonPrimaryInvariant(): void

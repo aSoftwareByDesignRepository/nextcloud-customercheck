@@ -25,7 +25,7 @@
 	min-width: 44px;
 	padding: 0.625rem var(--crm-space-3, 0.75rem);
 	margin: 0 0 var(--crm-space-3, 0.75rem);
-	border: 1px solid var(--color-border, var(--crm-border));
+	border: 1px solid var(--crm-form-border, var(--crm-border));
 	border-radius: var(--crm-radius-sm, 8px);
 	background-color: var(--color-main-background);
 	color: var(--color-main-text);

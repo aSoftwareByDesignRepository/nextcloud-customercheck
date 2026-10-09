@@ -1,8 +1,14 @@
 // @ts-check
 import { test, expect } from '@playwright/test';
 import { login, credsFromEnv } from './helpers/auth.js';
+import { deleteCompanyAt } from './helpers/cleanup.js';
 
 test.describe('Company detail focus tabs', () => {
+  const createdCompanies = [];
+  test.afterEach(async ({ page }) => {
+    for (const url of createdCompanies.splice(0)) await deleteCompanyAt(page, url);
+  });
+
   test('five tabs show one panel; hash opens the right tab', async ({ page }) => {
     test.skip(!process.env.NC_ADMIN_USER && !process.env.NC_EMPLOYEE_USER, 'Requires NC credentials');
     const creds = process.env.NC_ADMIN_USER ? credsFromEnv('ADMIN') : credsFromEnv('EMPLOYEE');
@@ -22,6 +28,7 @@ test.describe('Company detail focus tabs', () => {
       if (form instanceof HTMLFormElement) form.requestSubmit();
     });
     await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
+    createdCompanies.push(page.url());
     await page.waitForSelector('[data-crm-360-focus="1"]', { timeout: 30000 });
 
     const focus = page.locator('[data-crm-360-focus="1"]');

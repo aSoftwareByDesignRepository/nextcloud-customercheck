@@ -2,12 +2,18 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { login, credsFromEnv } from './helpers/auth.js';
+import { deleteCompanyAt } from './helpers/cleanup.js';
 
 /**
  * Bachus radical simplify — Review / Conflicts / Settings / agreement create journeys.
  */
 test.describe('Bachus extreme simplicity journeys', () => {
   test.skip(!process.env.NC_ADMIN_USER, 'Requires NC_ADMIN_USER / NC_ADMIN_PASS');
+
+  const createdCompanies = [];
+  test.afterEach(async ({ page }) => {
+    for (const url of createdCompanies.splice(0)) await deleteCompanyAt(page, url);
+  });
 
   test('Unassigned: unified Inbox chrome, search, list/reader decide zone', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
@@ -138,6 +144,7 @@ test.describe('Bachus extreme simplicity journeys', () => {
     await page.locator('#crm-company-name').fill(`Bachus Co ${suffix}`);
     await page.locator('#crm-company-form button[type="submit"]').click();
     await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
+    createdCompanies.push(page.url());
 
     await expect(page.locator('#crm-log-email')).toHaveCount(1);
     await expect(page.locator('#crm-log-email')).toContainText(/Log talk|Gespräch|Protokollieren|Gespräch protokollieren/i);

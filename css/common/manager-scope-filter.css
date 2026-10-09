@@ -181,7 +181,7 @@
 	font-variant-numeric: tabular-nums;
 	color: var(--color-main-text, var(--crm-text));
 	background-color: var(--color-main-background, var(--crm-bg));
-	border: 1px solid var(--color-border, var(--crm-border));
+	border: 1px solid var(--crm-form-border, var(--crm-border));
 }
 
 #app-content.crm-app--manager-time-entries .manager-scope-page__toolbar .crm-date-range__part .crm-datepicker-toggle,

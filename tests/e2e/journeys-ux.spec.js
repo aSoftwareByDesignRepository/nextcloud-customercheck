@@ -2,12 +2,18 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { login, credsFromEnv } from './helpers/auth.js';
+import { deleteCompanyAt } from './helpers/cleanup.js';
 
 /**
  * Extreme-simplicity user journeys — 1-click filters, progressive 360, forgiving create.
  */
 test.describe('CustomerCheck extreme simplicity journeys', () => {
   test.skip(!process.env.NC_ADMIN_USER, 'Requires NC_ADMIN_USER / NC_ADMIN_PASS');
+
+  const createdCompanies = [];
+  test.afterEach(async ({ page }) => {
+    for (const url of createdCompanies.splice(0)) await deleteCompanyAt(page, url);
+  });
 
   test('create company with name only (auto slug) and sees progressive 360', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
@@ -23,6 +29,7 @@ test.describe('CustomerCheck extreme simplicity journeys', () => {
       if (form instanceof HTMLFormElement) form.requestSubmit();
     });
     await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
+    createdCompanies.push(page.url());
 
     await expect(page.locator('#crm-identity')).toBeVisible();
     await expect(page.locator('#crm-identity-links')).toBeAttached();
@@ -124,6 +131,7 @@ test.describe('CustomerCheck extreme simplicity journeys', () => {
       if (form instanceof HTMLFormElement) form.requestSubmit();
     });
     await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
+    createdCompanies.push(page.url());
 
     results = await new AxeBuilder({ page })
       .include('#crm-main-content')

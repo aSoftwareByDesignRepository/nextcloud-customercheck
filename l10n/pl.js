@@ -880,7 +880,7 @@ OC.L10N.register(
 		"Deal created! Add a next step for your Today board?": "Deal utworzony! Dodać kolejny krok do Dzisiaj?",
 		"Deal details": "Szczegóły transakcji",
 		"Deal moved to %s.": "Umowa przeniesiona do %s.",
-		"Deal needs follow-up": "Deal needs follow- up",
+		"Deal needs follow-up": "Umowa wymaga dalszych działań",
 		"Deal not found.": "Nie znaleziono dealu.",
 		"Deal saved.": "Umowa zachowana.",
 		"Deal stage changed": "Etap rozdania zmieniony",
@@ -973,7 +973,7 @@ OC.L10N.register(
 		"Email & log hours": "Godziny e- maila i dziennika",
 		"Email composed": "Skomponowany e-mail",
 		"Email follow-up": "Email follow- up",
-		"Email is best-effort — no reply SLA. Need booked help? Use Support & us.": "E-mail bez SLA odpowiedzi. Potrzebujesz umówionej pomocy? Użyj Wsparcie i my.",
+		"Email is best-effort — no reply SLA. Need booked help? Use Support & us.": "E-mail bez SLA odpowiedzi. Potrzebujesz umówionej pomocy? Użyj Wsparcie & nas.",
 		"Email log": "Dziennik e-mail",
 		"Email logged": "Zalogowano e-mail",
 		"Email sent": "Wysłany e-mail",
@@ -2226,7 +2226,7 @@ OC.L10N.register(
 		"SMTP encryption": "Szyfrowanie SMTP",
 		"SMTP host": "Host SMTP",
 		"SMTP port": "Port SMTP",
-		"SMTP send failed — draft kept (id %s).": "SMTP send failed - draft kept (id %s).",
+		"SMTP send failed — draft kept (id %s).": "Wysyłanie SMTP nie powiodło się — wersja robocza zachowana (id %s).",
 		"SSL (port 465)": "SSL (port 465)",
 		"SSL (port 993)": "SSL (port 993)",
 		"STARTTLS (port 143)": "STARTTLS (port 143)",
@@ -2987,6 +2987,5 @@ OC.L10N.register(
 		"this workspace": "to miejsce pracy",
 		"valid": "ważne",
 		"Could not reach the server. Check your connection and try again.": "Nie można połączyć się z serwerem. Sprawdź połączenie i spróbuj ponownie."
-	},
-	"nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);"
+	}
 );

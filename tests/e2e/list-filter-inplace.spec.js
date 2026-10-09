@@ -1,12 +1,18 @@
 // @ts-check
 import { test, expect } from '@playwright/test';
 import { login, credsFromEnv, gotoCrm } from './helpers/auth.js';
+import { deleteCompanyAt } from './helpers/cleanup.js';
 
 /**
  * Activities / money / companies chips must fetch in place — never reload the shell.
  */
 test.describe('List filters stay in place', () => {
   test.skip(!process.env.NC_ADMIN_USER, 'Requires NC_ADMIN_USER / NC_ADMIN_PASS');
+
+  const createdCompanies = [];
+  test.afterEach(async ({ page }) => {
+    for (const url of createdCompanies.splice(0)) await deleteCompanyAt(page, url);
+  });
 
   async function markStay(page) {
     await page.evaluate(() => {
@@ -118,6 +124,7 @@ test.describe('List filters stay in place', () => {
       await page.locator('#crm-company-name').fill(`FragDone ${suffix}`);
       await page.locator('#crm-company-form button[type="submit"]').click();
       await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
+      createdCompanies.push(page.url());
       const companyMatch = page.url().match(/\/companies\/(\d+)/);
       expect(companyMatch).toBeTruthy();
       const companyId = parseInt(companyMatch[1], 10);
@@ -180,6 +187,7 @@ test.describe('List filters stay in place', () => {
     await page.locator('#crm-company-name').fill(`TodoPatch ${suffix}`);
     await page.locator('#crm-company-form button[type="submit"]').click();
     await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
+    createdCompanies.push(page.url());
 
     const created = await page.evaluate(async ({ title }) => {
       const token =

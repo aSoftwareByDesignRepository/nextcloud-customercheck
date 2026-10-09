@@ -2,6 +2,12 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { login, credsFromEnv, gotoCrm } from './helpers/auth.js';
+import { deleteCompanyAt } from './helpers/cleanup.js';
+
+const createdCompanies = [];
+test.afterEach(async ({ page }) => {
+  for (const url of createdCompanies.splice(0)) await deleteCompanyAt(page, url);
+});
 
 const pages = [
   '/apps/customercheck/companies',
@@ -58,6 +64,7 @@ test('CRM a11y: company 360 has no serious/critical violations', async ({ page }
     if (form instanceof HTMLFormElement) form.requestSubmit();
   });
   await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
+  createdCompanies.push(page.url());
   const results = await new AxeBuilder({ page })
     .include('#crm-main-content')
     .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])

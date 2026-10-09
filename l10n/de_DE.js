@@ -618,7 +618,7 @@ OC.L10N.register(
 		"Commitments": "Zusagen",
 		"Commitments are yours for this workspace. Expected cash uses overdue invoices and renewals with known € — never pipeline × hope.": "Zusagen gehören dir in diesem Arbeitsbereich. Erwartetes Cash nutzt überfällige Rechnungen und Verlängerungen mit bekannten € — nie Pipeline × Hoffnung.",
 		"Committed": "Zugesagt",
-		"Common defaults: IMAP 993 + SSL, SMTP 465 + SSL. Changing the port updates encryption automatically.": "Übliche Defaults: IMAP 993 + SSL, SMTP 465 + SSL. Port-Änderung setzt die Verschlüsselung automatisch.",
+		"Common defaults: IMAP 993 + SSL, SMTP 465 + SSL. Changing the port updates encryption automatically.": "Übliche Standardwerte: IMAP 993 + SSL, SMTP 465 + SSL. Eine Port-Änderung passt die Verschlüsselung automatisch an.",
 		"Communication summary": "Zusammenfassung der Kommunikation",
 		"Companies": "Firmen",
 		"Companies merged": "Unternehmen zusammengeführt",
@@ -2987,6 +2987,5 @@ OC.L10N.register(
 		"this workspace": "dieser Arbeitsbereich",
 		"valid": "gültig",
 		"Could not reach the server. Check your connection and try again.": "Der Server ist nicht erreichbar. Prüfe deine Verbindung und versuche es erneut."
-	},
-	"nplurals=2; plural=(n != 1);"
+	}
 );

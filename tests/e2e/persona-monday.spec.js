@@ -97,15 +97,17 @@ test.describe('Persona Monday operating path', () => {
     if (await icsLabel.count()) {
       await expect(icsLabel).toContainText(/Default|Standard/i);
     }
-    // §6 optional one-shot imports (managers only)
+    // §6 optional one-shot imports (managers only). Rendered inside the
+    // mailbox-configured region — hidden when the lab workspace has no
+    // mailbox bound, so gate on visibility like the ICS wrap above.
     const groupImport = page.locator('#crm-ws-member-import');
-    if (await groupImport.count()) {
+    if (await groupImport.isVisible()) {
       await groupImport.locator('summary').click();
       await expect(page.locator('#crm-ws-import-group')).toBeVisible();
       await expect(page.locator('#crm-ws-import-submit')).toBeVisible();
     }
     const circleImport = page.locator('#crm-ws-member-import-circle');
-    if (await circleImport.count()) {
+    if (await circleImport.isVisible()) {
       await circleImport.locator('summary').click();
       await expect(page.locator('#crm-ws-import-circle')).toBeVisible();
       await expect(page.locator('#crm-ws-import-circle-submit')).toBeVisible();

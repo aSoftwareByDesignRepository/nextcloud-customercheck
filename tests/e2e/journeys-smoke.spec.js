@@ -2,12 +2,18 @@
 import { test, expect } from '@playwright/test';
 import { login, credsFromEnv, gotoCrm, dismissOrFailOnUpdateNeeded } from './helpers/auth.js';
 import { openFilterPanel } from './helpers/new-deal-form.js';
+import { deleteCompanyAt } from './helpers/cleanup.js';
 
 /**
  * Keyboard-friendly smoke for core journeys (PSD §8 / S10).
  */
 test.describe('CustomerCheck journeys smoke', () => {
   test.skip(!process.env.NC_ADMIN_USER, 'Requires NC_ADMIN_USER / NC_ADMIN_PASS');
+
+  const createdCompanies = [];
+  test.afterEach(async ({ page }) => {
+    for (const url of createdCompanies.splice(0)) await deleteCompanyAt(page, url);
+  });
 
   test('create company form validates slug and lands on 360', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
@@ -31,6 +37,7 @@ test.describe('CustomerCheck journeys smoke', () => {
       }
     });
     await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
+    createdCompanies.push(page.url());
     await dismissOrFailOnUpdateNeeded(page);
     await page.waitForSelector('#crm-main-content', { timeout: 30000 });
     await expect(page.locator('#crm-main-content')).toBeVisible();
@@ -104,6 +111,7 @@ test.describe('CustomerCheck journeys smoke', () => {
       if (form instanceof HTMLFormElement) form.requestSubmit();
     });
     await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
+    createdCompanies.push(page.url());
     await dismissOrFailOnUpdateNeeded(page);
     await page.waitForSelector('#crm-main-content', { timeout: 30000 });
     await expect(page.locator('#crm-company-gdpr-export')).toBeAttached({ timeout: 10000 });

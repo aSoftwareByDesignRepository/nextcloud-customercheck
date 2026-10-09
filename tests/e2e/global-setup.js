@@ -13,7 +13,10 @@ import { spawnSync } from 'node:child_process';
 import { ensureUpgraded } from './helpers/ensure-upgraded.js';
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
-export const STORAGE_STATE_PATH = join(ROOT, '.auth', 'admin.json');
+// Concurrent farm lanes isolate their auth cache via E2E_STORAGE_STATE —
+// a shared .auth/admin.json gets clobbered mid-run by a parallel setup.
+export const STORAGE_STATE_PATH = process.env.E2E_STORAGE_STATE
+	|| join(ROOT, '.auth', 'admin.json');
 const NC_COMPOSE_ROOT = join(ROOT, '..', '..', '..', '..');
 
 function occGet(key) {

@@ -1,8 +1,14 @@
 // @ts-check
 import { test, expect } from '@playwright/test';
 import { login, credsFromEnv } from './helpers/auth.js';
+import { deleteCompanyAt } from './helpers/cleanup.js';
 
 test.describe('Who wrote what (emails overview)', () => {
+  const createdCompanies = [];
+  test.afterEach(async ({ page }) => {
+    for (const url of createdCompanies.splice(0)) await deleteCompanyAt(page, url);
+  });
+
   test('company 360 teaches the workflow and can log a message', async ({ page }) => {
     test.skip(!process.env.NC_ADMIN_USER, 'Requires NC admin credentials');
     await page.setViewportSize({ width: 1280, height: 900 });
@@ -20,6 +26,7 @@ test.describe('Who wrote what (emails overview)', () => {
       if (form instanceof HTMLFormElement) form.requestSubmit();
     });
     await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
+    createdCompanies.push(page.url());
 
     await page.locator('[data-crm-focus-tab="more"]').click();
     const emails = page.locator('#crm-emails');

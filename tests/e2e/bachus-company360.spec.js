@@ -3,12 +3,18 @@ import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { login, credsFromEnv } from './helpers/auth.js';
 import { dismissNextStepNudge, fillNextStepDueDate, submitNewDealAndDismiss, waitForNewDealForm } from './helpers/new-deal-form.js';
+import { deleteCompanyAt } from './helpers/cleanup.js';
 
 /**
  * Bachus company 360 — create → detail → person → deal with forgiving forms + a11y.
  */
 test.describe('Bachus company 360 effortless flows', () => {
   test.skip(!process.env.NC_ADMIN_USER, 'Requires NC_ADMIN_USER / NC_ADMIN_PASS');
+
+  const createdCompanies = [];
+  test.afterEach(async ({ page }) => {
+    for (const url of createdCompanies.splice(0)) await deleteCompanyAt(page, url);
+  });
 
   test('create company, coach, add person (name only), add deal (title only), date picker', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
@@ -23,6 +29,7 @@ test.describe('Bachus company 360 effortless flows', () => {
     await page.locator('#crm-company-name').fill(`Bachus Easy ${suffix}`);
     await page.locator('#crm-company-form button[type="submit"]').click();
     await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
+    createdCompanies.push(page.url());
 
     await expect(page.locator('#crm-welcome-coach')).toBeVisible();
     await expect(page.locator('#crm-welcome-coach')).toContainText(/Next steps|Nächste Schritte/i);

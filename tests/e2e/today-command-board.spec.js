@@ -3,12 +3,18 @@ import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { login, credsFromEnv, gotoCrm } from './helpers/auth.js';
 import { fillNextStepDueDate } from './helpers/new-deal-form.js';
+import { deleteCompanyAt } from './helpers/cleanup.js';
 
 /**
  * Today Command Board — suite tables, role dashboard, jump chips, a11y.
  */
 test.describe('Today command board UX', () => {
   test.skip(!process.env.NC_ADMIN_USER, 'Requires NC_ADMIN_USER / NC_ADMIN_PASS');
+
+  const createdCompanies = [];
+  test.afterEach(async ({ page }) => {
+    for (const url of createdCompanies.splice(0)) await deleteCompanyAt(page, url);
+  });
 
   test('renders role dashboard, jump chips, and suite tables', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
@@ -98,6 +104,7 @@ test.describe('Today command board UX', () => {
       if (form instanceof HTMLFormElement) form.requestSubmit();
     });
     await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
+    createdCompanies.push(page.url());
 
     await page.locator('#crm-add-activity').click();
     const form = page.locator('form[id^="crm-prompt-"]');

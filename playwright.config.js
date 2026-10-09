@@ -36,7 +36,8 @@ function loadE2eDotEnv() {
 
 loadE2eDotEnv();
 
-const authState = join(dirname(fileURLToPath(import.meta.url)), 'tests', 'e2e', '.auth', 'admin.json');
+const authState = process.env.E2E_STORAGE_STATE
+  || join(dirname(fileURLToPath(import.meta.url)), 'tests', 'e2e', '.auth', 'admin.json');
 
 export default defineConfig({
   testDir: './tests/e2e',

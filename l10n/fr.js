@@ -973,7 +973,7 @@ OC.L10N.register(
 		"Email & log hours": "Horaires des e-mails et des journaux",
 		"Email composed": "E-mail composé",
 		"Email follow-up": "Suivi par email",
-		"Email is best-effort — no reply SLA. Need booked help? Use Support & us.": "E-mail sans engagement de réponse. Pour une aide réservée, utilisez Support et nous.",
+		"Email is best-effort — no reply SLA. Need booked help? Use Support & us.": "E-mail sans engagement de réponse. Pour une aide réservée, utilisez Soutien et nous.",
 		"Email log": "Journal de courrier électronique",
 		"Email logged": "E-mail enregistré",
 		"Email sent": "E-mail envoyé",
@@ -2987,6 +2987,5 @@ OC.L10N.register(
 		"this workspace": "cet espace de travail",
 		"valid": "valide",
 		"Could not reach the server. Check your connection and try again.": "Impossible de joindre le serveur. Vérifie ta connexion et réessaie."
-	},
-	"nplurals=2; plural=(n > 1);"
+	}
 );

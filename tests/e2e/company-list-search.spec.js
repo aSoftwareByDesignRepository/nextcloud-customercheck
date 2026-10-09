@@ -1,12 +1,18 @@
 // @ts-check
 import { test, expect } from '@playwright/test';
 import { login, credsFromEnv } from './helpers/auth.js';
+import { deleteCompanyAt } from './helpers/cleanup.js';
 
 /**
  * Companies search must update the table in place — typing must not reload the page.
  */
 test.describe('Companies list live search', () => {
   test.skip(!process.env.NC_ADMIN_USER, 'Requires NC_ADMIN_USER / NC_ADMIN_PASS');
+
+  const createdCompanies = [];
+  test.afterEach(async ({ page }) => {
+    for (const url of createdCompanies.splice(0)) await deleteCompanyAt(page, url);
+  });
 
   test('typing does not reload; results and URL update; focus stays in the box', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
@@ -19,6 +25,7 @@ test.describe('Companies list live search', () => {
     await page.locator('#crm-company-name').fill(name);
     await page.locator('#crm-company-form button[type="submit"]').click();
     await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
+    createdCompanies.push(page.url());
 
     await page.goto('/apps/customercheck/companies?workspaceId=1');
     await page.waitForSelector('#crm-companies-q', { timeout: 30000 });

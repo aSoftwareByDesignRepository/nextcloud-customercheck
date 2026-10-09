@@ -13,7 +13,7 @@ dialog.crm-native-dialog .crm-form--new-deal .crm-form-section__legend {
   font-weight: 600;
   letter-spacing: 0.02em;
   text-transform: uppercase;
-  color: var(--crm-text-muted);
+  color: var(--crm-muted);
   margin: 0 0 0.65rem;
   padding: 0;
   width: 100%;

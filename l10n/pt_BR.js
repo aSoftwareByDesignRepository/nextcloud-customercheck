@@ -448,7 +448,7 @@ OC.L10N.register(
 		"Bookable help for your organisation — while the app stays free": "Ajuda reservável para sua organização — enquanto o app permanece gratuito",
 		"Both companies link to different ProjectCheck customers. Unlink one before merging.": "Ambas as empresas vinculam-se a diferentes clientes ProjectCheck. Desvincule um antes de mesclar.",
 		"Both companies link to different TicketCheck customers. Unlink one before merging.": "Ambas as empresas vinculam-se a diferentes clientes TicketCheck. Desvincule um antes de mesclar.",
-		"Breadcrumb": "Pão ralado",
+		"Breadcrumb": "Trilha de navegação",
 		"Bring back in": "Traga de volta",
 		"Bring customers in — drop a file, check the preview, tap import.": "Traga clientes: solte um arquivo, verifique a visualização e toque em importar.",
 		"Bring in customers from CSV, ProjectCheck, TicketCheck, or a license sales log when available.": "Traga clientes de CSV, ProjectCheck, TicketCheck ou um registro de vendas de licença, quando disponível.",
@@ -2987,6 +2987,5 @@ OC.L10N.register(
 		"this workspace": "este espaço de trabalho",
 		"valid": "válido",
 		"Could not reach the server. Check your connection and try again.": "Não foi possível acessar o servidor. Verifique sua conexão e tente novamente."
-	},
-	"nplurals=2; plural=(n > 1);"
+	}
 );

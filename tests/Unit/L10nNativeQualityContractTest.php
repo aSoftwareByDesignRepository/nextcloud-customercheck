@@ -22,11 +22,12 @@ final class L10nNativeQualityContractTest extends TestCase
 
 	public function testGlossaryPinsCrossLocaleMailTerms(): void
 	{
-		$glossary = dirname(__DIR__, 2) . '/l10n/GLOSSARY.md';
+		// Ships in docs/ — the l10n/ dir is catalog-only (hygiene gate bans docs there).
+		$glossary = dirname(__DIR__, 2) . '/docs/l10n-glossary.md';
 		self::assertFileExists($glossary);
 		$body = (string) file_get_contents($glossary);
 		foreach (['My email', 'Sales Inbox', 'Assign', 'Churned', 'Manager override', 'workspace'] as $term) {
-			self::assertStringContainsString($term, $body, "GLOSSARY.md must pin {$term}");
+			self::assertStringContainsString($term, $body, "l10n-glossary.md must pin {$term}");
 		}
 	}
 

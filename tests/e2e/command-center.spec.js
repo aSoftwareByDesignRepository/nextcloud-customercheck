@@ -3,6 +3,9 @@
  */
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { deleteCompanyAt } from './helpers/cleanup.js';
+
+const createdCompanies = [];
 
 async function openFirstCompany(page) {
   await page.goto('/apps/customercheck/companies');
@@ -22,6 +25,7 @@ async function openFirstCompany(page) {
     await page.locator('#crm-company-name, input[name="name"]').first().fill('Command Center Acme');
     await page.locator('#crm-company-form button[type="submit"], form button[type="submit"]').first().click();
     await page.waitForURL(/\/companies\/\d+/, { timeout: 30000 });
+    createdCompanies.push(page.url());
     return;
   }
   await page.goto(detailHref);
@@ -29,6 +33,10 @@ async function openFirstCompany(page) {
 }
 
 test.describe('Command Center', () => {
+  test.afterEach(async ({ page }) => {
+    for (const url of createdCompanies.splice(0)) await deleteCompanyAt(page, url);
+  });
+
   test('company 360 section order and glance (AC-CC-1, AC-CC-2)', async ({ page }) => {
     await openFirstCompany(page);
     const main = page.locator('#crm-main-content');
