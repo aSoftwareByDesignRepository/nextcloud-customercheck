@@ -20,3 +20,10 @@ infection-critical.html
 .idea/
 .DS_Store
 *.log
+
+# Release artifacts
+release/*.tar.gz
+release/*.tar.gz.asc
+release/APPSTORE-SIGNATURE*.txt
+release/SIGNATURE-*.txt
+release/*.b64

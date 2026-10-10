@@ -1,7 +1,7 @@
 # CustomerCheck ↔ Suite GDPR erase (AC-L7)
 
-Full operator runbook (G10):  
-`planning/check-productivity-suite/SUITE-GDPR-ERASE-RUNBOOK.md` in the monorepo.
+Operator note: GDPR erase is coordinated across the Check-app suite; this file
+covers only what this app must (not) do.
 
 ## Non-cascade rule (this app)
 
