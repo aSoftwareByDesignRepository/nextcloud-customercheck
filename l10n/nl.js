@@ -1106,7 +1106,7 @@ OC.L10N.register(
 		"Follow up on deals": "Opvolging van deals",
 		"Follow up quote": "Follow-up offerte",
 		"Follow up: %s": "Opvolgen: %s",
-		"Follow-up": "Follow-up",
+		"Follow-up": "Opvolging",
 		"Follow-up every (days)": "Elke (dagen)",
 		"Follow-up overdue": "Te late follow-up",
 		"Follow-ups on the go": "Opvolging onderweg",

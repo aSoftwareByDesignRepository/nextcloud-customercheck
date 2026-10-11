@@ -2689,7 +2689,7 @@ OC.L10N.register(
 		"To use a different email address, Disconnect first (that erases synced mail for this inbox).": "For en anden e-mailadresse: Afbryd først (det sletter synkroniseret mail for denne indbakke).",
 		"To-do": "At gøre",
 		"To-do assigned": "Til-do tildelt",
-		"To-dos": "To- dos",
+		"To-dos": "Opgaver",
 		"Today": "I dag",
 		"Today item": "Dagens vare",
 		"Token rotated": "Token roteret",

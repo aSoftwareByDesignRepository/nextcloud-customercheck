@@ -1262,7 +1262,7 @@ OC.L10N.register(
 		"Ireland": "Irland",
 		"Issue": "Problem",
 		"Issue licence key(s)": "Utstedelsesnøkkel(r)",
-		"Italic": "Italisk",
+		"Italic": "Kursiv",
 		"Italy": "Italia",
 		"Item assigned": "Tilordne element tildelt",
 		"Items": "Elementer",

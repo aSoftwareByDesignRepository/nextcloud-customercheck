@@ -2727,7 +2727,7 @@ OC.L10N.register(
 		"Unbilled hours": "Heures non facturées",
 		"Unbilled hours are not ready yet — we will not guess zero.": "Les heures non facturées ne sont pas encore prêtes – nous ne devinerons pas zéro.",
 		"Unbilled hours unknown.": "Heures non facturées inconnues.",
-		"Underline": "Sous-titre",
+		"Underline": "Souligné",
 		"Undo": "Défaire",
 		"Unique company domain match": "Correspondance de domaine d'entreprise unique",
 		"United Kingdom": "Royaume-Uni",
