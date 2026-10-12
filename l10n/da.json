@@ -2985,7 +2985,13 @@
     "record": "optage",
     "this workspace": "dette arbejdsområde",
     "valid": "gyldig",
-    "Could not reach the server. Check your connection and try again.": "Serveren kunne ikke nås. Tjek din forbindelse og prøv igen."
+    "Could not reach the server. Check your connection and try again.": "Serveren kunne ikke nås. Tjek din forbindelse og prøv igen.",
+    "Confirm": "Bekræft",
+    "Got it": "Forstået",
+    "I understand this action cannot be undone": "Jeg forstår, at denne handling ikke kan fortrydes",
+    "Reason (required)": "Årsag (påkrævet)",
+    "Tips hidden for this page.": "Tip skjult for denne side.",
+    "Type %s to confirm": "Skriv %s for at bekræfte"
   },
   "pluralForm": "nplurals=2; plural=(n != 1);"
 }

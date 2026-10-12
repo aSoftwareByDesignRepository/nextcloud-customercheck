@@ -2985,7 +2985,13 @@
     "record": "scheda",
     "this workspace": "questo spazio di lavoro",
     "valid": "valido",
-    "Could not reach the server. Check your connection and try again.": "Impossibile raggiungere il server. Controlla la connessione e riprova."
+    "Could not reach the server. Check your connection and try again.": "Impossibile raggiungere il server. Controlla la connessione e riprova.",
+    "Confirm": "Conferma",
+    "Got it": "Ho capito",
+    "I understand this action cannot be undone": "Capisco che questa azione non può essere annullata",
+    "Reason (required)": "Motivo (obbligatorio)",
+    "Tips hidden for this page.": "Suggerimenti nascosti per questa pagina.",
+    "Type %s to confirm": "Digita %s per confermare"
   },
   "pluralForm": "nplurals=2; plural=(n != 1);"
 }

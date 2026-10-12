@@ -2985,7 +2985,13 @@
     "record": "enregistrer",
     "this workspace": "cet espace de travail",
     "valid": "valide",
-    "Could not reach the server. Check your connection and try again.": "Impossible de joindre le serveur. Vérifie ta connexion et réessaie."
+    "Could not reach the server. Check your connection and try again.": "Impossible de joindre le serveur. Vérifie ta connexion et réessaie.",
+    "Confirm": "Confirmer",
+    "Got it": "Compris",
+    "I understand this action cannot be undone": "Je comprends que cette action est irréversible",
+    "Reason (required)": "Motif (obligatoire)",
+    "Tips hidden for this page.": "Astuces masquées pour cette page.",
+    "Type %s to confirm": "Saisissez %s pour confirmer"
   },
   "pluralForm": "nplurals=2; plural=(n > 1);"
 }

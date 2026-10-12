@@ -2985,7 +2985,13 @@
         "record": "record",
         "this workspace": "this workspace",
         "valid": "valid",
-        "Could not reach the server. Check your connection and try again.": "Could not reach the server. Check your connection and try again."
+        "Could not reach the server. Check your connection and try again.": "Could not reach the server. Check your connection and try again.",
+        "Confirm": "Confirm",
+        "Got it": "Got it",
+        "I understand this action cannot be undone": "I understand this action cannot be undone",
+        "Reason (required)": "Reason (required)",
+        "Tips hidden for this page.": "Tips hidden for this page.",
+        "Type %s to confirm": "Type %s to confirm"
     },
     "pluralForm": "nplurals=2; plural=(n != 1);"
 }

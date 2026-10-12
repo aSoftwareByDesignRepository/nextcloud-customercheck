@@ -2985,7 +2985,13 @@
     "record": "gegevensrecord",
     "this workspace": "deze werkruimte",
     "valid": "geldig",
-    "Could not reach the server. Check your connection and try again.": "De server is niet bereikbaar. Controleer je verbinding en probeer het opnieuw."
+    "Could not reach the server. Check your connection and try again.": "De server is niet bereikbaar. Controleer je verbinding en probeer het opnieuw.",
+    "Confirm": "Bevestigen",
+    "Got it": "Begrepen",
+    "I understand this action cannot be undone": "Ik begrijp dat deze actie niet ongedaan kan worden gemaakt",
+    "Reason (required)": "Reden (verplicht)",
+    "Tips hidden for this page.": "Tips verborgen voor deze pagina.",
+    "Type %s to confirm": "Typ %s om te bevestigen"
   },
   "pluralForm": "nplurals=2; plural=(n != 1);"
 }

@@ -2985,7 +2985,13 @@
         "record": "registro",
         "this workspace": "este espacio de trabajo",
         "valid": "válido",
-        "Could not reach the server. Check your connection and try again.": "No se pudo contactar con el servidor. Comprueba tu conexión e inténtalo de nuevo."
+        "Could not reach the server. Check your connection and try again.": "No se pudo contactar con el servidor. Comprueba tu conexión e inténtalo de nuevo.",
+        "Confirm": "Confirmar",
+        "Got it": "Entendido",
+        "I understand this action cannot be undone": "Entiendo que esta acción no se puede deshacer",
+        "Reason (required)": "Motivo (obligatorio)",
+        "Tips hidden for this page.": "Consejos ocultos para esta página.",
+        "Type %s to confirm": "Escriba %s para confirmar"
     },
     "pluralForm": "nplurals=2; plural=(n != 1);"
 }

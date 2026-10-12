@@ -2985,6 +2985,12 @@
         "record": "Datensatz",
         "this workspace": "dieser Arbeitsbereich",
         "valid": "gültig",
-        "Could not reach the server. Check your connection and try again.": "Der Server ist nicht erreichbar. Prüfe deine Verbindung und versuche es erneut."
+        "Could not reach the server. Check your connection and try again.": "Der Server ist nicht erreichbar. Prüfe deine Verbindung und versuche es erneut.",
+        "Confirm": "Bestätigen",
+        "Got it": "Verstanden",
+        "I understand this action cannot be undone": "Ich weiß, dass diese Aktion nicht rückgängig gemacht werden kann",
+        "Reason (required)": "Grund (erforderlich)",
+        "Tips hidden for this page.": "Tipps für diese Seite ausgeblendet.",
+        "Type %s to confirm": "Gib %s ein, um zu bestätigen"
     }
 }

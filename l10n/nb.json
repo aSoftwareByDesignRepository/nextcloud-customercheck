@@ -2985,7 +2985,13 @@
     "record": "rekord",
     "this workspace": "dette arbeidsområdet",
     "valid": "gyldig",
-    "Could not reach the server. Check your connection and try again.": "Kunne ikke nå serveren. Sjekk tilkoblingen din og prøv igjen."
+    "Could not reach the server. Check your connection and try again.": "Kunne ikke nå serveren. Sjekk tilkoblingen din og prøv igjen.",
+    "Confirm": "Bekreft",
+    "Got it": "Skjønner",
+    "I understand this action cannot be undone": "Jeg forstår at denne handlingen ikke kan angres",
+    "Reason (required)": "Årsak (påkrevd)",
+    "Tips hidden for this page.": "Tips skjult for denne siden.",
+    "Type %s to confirm": "Skriv %s for å bekrefte"
   },
   "pluralForm": "nplurals=2; plural=(n != 1);"
 }

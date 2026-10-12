@@ -2985,7 +2985,13 @@
     "record": "zapis",
     "this workspace": "to miejsce pracy",
     "valid": "ważne",
-    "Could not reach the server. Check your connection and try again.": "Nie można połączyć się z serwerem. Sprawdź połączenie i spróbuj ponownie."
+    "Could not reach the server. Check your connection and try again.": "Nie można połączyć się z serwerem. Sprawdź połączenie i spróbuj ponownie.",
+    "Confirm": "Potwierdź",
+    "Got it": "Rozumiem",
+    "I understand this action cannot be undone": "Rozumiem, że tej operacji nie można cofnąć",
+    "Reason (required)": "Powód (wymagany)",
+    "Tips hidden for this page.": "Porady ukryte dla tej strony.",
+    "Type %s to confirm": "Wpisz %s, aby potwierdzić"
   },
   "pluralForm": "nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);"
 }

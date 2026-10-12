@@ -2985,7 +2985,13 @@
 		"record": "post",
 		"this workspace": "den här arbetsytan",
 		"valid": "giltigt",
-		"Could not reach the server. Check your connection and try again.": "Kunde inte nå servern. Kontrollera din anslutning och försök igen."
+		"Could not reach the server. Check your connection and try again.": "Kunde inte nå servern. Kontrollera din anslutning och försök igen.",
+		"Confirm": "Bekräfta",
+		"Got it": "Förstått",
+		"I understand this action cannot be undone": "Jag förstår att den här åtgärden inte kan ångras",
+		"Reason (required)": "Anledning (obligatorisk)",
+		"Tips hidden for this page.": "Tips dolda för den här sidan.",
+		"Type %s to confirm": "Skriv %s för att bekräfta"
 	},
 	"pluralForm": "nplurals=2; plural=(n != 1);"
 }
