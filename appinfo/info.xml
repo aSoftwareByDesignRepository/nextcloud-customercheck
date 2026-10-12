@@ -6,17 +6,17 @@
 <info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
 	<id>customercheck</id>
 	<name>CustomerCheck</name>
-	<summary>Nextcloud-native command center for customer work — Today, Pulse, Brief, 360°, chase &amp; coaching</summary>
-	<summary lang="de">Nextcloud-natives Kommandozentrum für Kundenarbeit — Today, Pulse, Brief, 360°, Chase &amp; Coaching</summary>
+	<summary>CRM for Nextcloud — shared customer book, Today/Pulse/Brief, 360°, chase &amp; coaching</summary>
+	<summary lang="de">CRM für Nextcloud — gemeinsames Kundenbuch, Today/Pulse/Brief, 360°, Chase &amp; Coaching</summary>
 	<description><![CDATA[
 # CustomerCheck
 
-The Nextcloud-native command center for customer work: one place where a workspace
+The Nextcloud-native CRM for customer work: one place where a workspace
 shares a customer book, shared mailbox, account plans, and operating rituals —
 so the team can see what’s going on, decide what’s next, chase deals and renewals,
 coach the team, and measure the book by joining Check apps and Groupware.
 
-Not Salesforce. Ledgers stay in ProjectCheck, InvoiceCheck, TicketCheck, Files, Mail, Tasks.
+A focused CRM — not Salesforce. Ledgers stay in ProjectCheck, InvoiceCheck, TicketCheck, Files, Mail, Tasks.
 
 ## Highlights
 
@@ -47,7 +47,7 @@ We improve this app with real-world use. Bug reports, rough edges, and ideas hel
 	<description lang="de"><![CDATA[
 # CustomerCheck
 
-Das Nextcloud-native Kommandozentrum für Kundenarbeit: ein Arbeitsbereich teilt
+Das Nextcloud-native CRM für Kundenarbeit: ein Arbeitsbereich teilt
 Kundenbuch, gemeinsames Postfach, Account-Pläne und Betriebsrituale —
 damit das Team sieht, was läuft, entscheidet was als Nächstes dran ist,
 Deals und Verlängerungen chase’t, coacht und das Buch misst, indem Check-Apps
@@ -77,7 +77,7 @@ Wir verbessern diese App mit Rückmeldungen aus der Praxis. Fehlerberichte, Stol
 		<description lang="fr"><![CDATA[
 # CustomerCheck
 
-Le centre de commande natif de Nextcloud pour le travail client : un seul endroit où un espace de travail partage le carnet client, la boîte mail partagée, les plans de compte et les rituels de fonctionnement — pour que l’équipe sache ce qui se passe, décide de la prochaine étape, relance les opportunités et les renouvellements, encadre l’équipe et mesure le portefeuille en reliant les apps Check et Groupware.
+Le CRM natif de Nextcloud pour le travail client : un seul endroit où un espace de travail partage le carnet client, la boîte mail partagée, les plans de compte et les rituels de fonctionnement — pour que l’équipe sache ce qui se passe, décide de la prochaine étape, relance les opportunités et les renouvellements, encadre l’équipe et mesure le portefeuille en reliant les apps Check et Groupware.
 
 Ce n’est pas Salesforce. Les écritures restent dans ProjectCheck, InvoiceCheck, TicketCheck, Files, Mail, Tasks.
 
@@ -110,7 +110,7 @@ Nous améliorons cette app grâce à votre usage réel. Bugs, frottements et id�
 		<description lang="es"><![CDATA[
 # CustomerCheck
 
-El centro de mando nativo de Nextcloud para el trabajo con clientes: un solo lugar donde un espacio de trabajo comparte el libro de clientes, el buzón compartido, los planes de cuenta y los rituales operativos — para que el equipo vea lo que está pasando, decida qué sigue, persiga los acuerdos y renovaciones, asesore al equipo y mida el libro conectando las apps Check y Groupware.
+El CRM nativo de Nextcloud para el trabajo con clientes: un solo lugar donde un espacio de trabajo comparte el libro de clientes, el buzón compartido, los planes de cuenta y los rituales operativos — para que el equipo vea lo que está pasando, decida qué sigue, persiga los acuerdos y renovaciones, asesore al equipo y mida el libro conectando las apps Check y Groupware.
 
 No es Salesforce. Los libros contables permanecen en ProjectCheck, InvoiceCheck, TicketCheck, Files, Mail, Tasks.
 
@@ -143,7 +143,7 @@ Mejoramos esta app con el uso real. Informes de errores, fricciones e ideas ayud
 		<description lang="da"><![CDATA[
 # CustomerCheck
 
-Det Nextcloud-native kommandocenter til kundearbejde: ét sted, hvor et arbejdsområde deler kundebogen, den delte postkasse, kontoplaner og driftsritualer — så teamet kan se, hvad der sker, beslutte, hvad der er næste skridt, jagte aftaler og fornyelser, coache teamet og måle kundebogen ved at koble Check-apps og Groupware sammen.
+Det Nextcloud-native CRM til kundearbejde: ét sted, hvor et arbejdsområde deler kundebogen, den delte postkasse, kontoplaner og driftsritualer — så teamet kan se, hvad der sker, beslutte, hvad der er næste skridt, jagte aftaler og fornyelser, coache teamet og måle kundebogen ved at koble Check-apps og Groupware sammen.
 
 Det er ikke Salesforce. Bogføringerne bliver i ProjectCheck, InvoiceCheck, TicketCheck, Files, Mail, Tasks.
 
@@ -176,7 +176,7 @@ Vi forbedrer denne app med brug i praksis. Fejlrapporter, friktioner og idéer h
 		<description lang="nl"><![CDATA[
 # CustomerCheck
 
-Het Nextcloud-native commandocentrum voor klantwerk: één plek waar een werkomgeving zijn klantenboek, gedeelde mailbox, accountplannen en operationele rituelen deelt — zodat het team kan zien wat er gebeurt, beslist wat er hierna komt, deals en verlengingen achtervolgt, het team coacht en het boek meet door Check-apps en Groupware te verbinden.
+Het Nextcloud-native CRM voor klantwerk: één plek waar een werkomgeving zijn klantenboek, gedeelde mailbox, accountplannen en operationele rituelen deelt — zodat het team kan zien wat er gebeurt, beslist wat er hierna komt, deals en verlengingen achtervolgt, het team coacht en het boek meet door Check-apps en Groupware te verbinden.
 
 Geen Salesforce. Administraties blijven in ProjectCheck, InvoiceCheck, TicketCheck, Files, Mail, Tasks.
 
@@ -209,7 +209,7 @@ We verbeteren deze app met gebruik in de praktijk. Bugmeldingen, struikelblokken
 		<description lang="it"><![CDATA[
 # CustomerCheck
 
-Il centro di comando nativo di Nextcloud per il lavoro con i clienti: un unico luogo in cui uno spazio di lavoro condivide il registro clienti, la casella di posta condivisa, i piani di account e i rituali operativi — così il team può vedere cosa sta succedendo, decidere cosa c’è dopo, inseguire accordi e rinnovi, guidare il team e misurare il registro collegando le app Check e Groupware.
+Il CRM nativo di Nextcloud per il lavoro con i clienti: un unico luogo in cui uno spazio di lavoro condivide il registro clienti, la casella di posta condivisa, i piani di account e i rituali operativi — così il team può vedere cosa sta succedendo, decidere cosa c’è dopo, inseguire accordi e rinnovi, guidare il team e misurare il registro collegando le app Check e Groupware.
 
 Non è Salesforce. I registri restano in ProjectCheck, InvoiceCheck, TicketCheck, Files, Mail, Tasks.
 
@@ -242,7 +242,7 @@ Miglioriamo questa app con l’uso reale. Segnalazioni di bug, punti deboli e id
 		<description lang="pl"><![CDATA[
 # CustomerCheck
 
-Nextcloud-natywne centrum dowodzenia do pracy z klientami: jedno miejsce, w którym obszar roboczy udostępnia księgę klientów, wspólną skrzynkę pocztową, plany kont i rytuały operacyjne — aby zespół widział, co się dzieje, decydował, co będzie dalej, ścigał umowy i odnowienia, szkolił zespół i mierzył księgę, łącząc aplikacje Check oraz Groupware.
+Natywny CRM Nextcloud do pracy z klientami: jedno miejsce, w którym obszar roboczy udostępnia księgę klientów, wspólną skrzynkę pocztową, plany kont i rytuały operacyjne — aby zespół widział, co się dzieje, decydował, co będzie dalej, ścigał umowy i odnowienia, szkolił zespół i mierzył księgę, łącząc aplikacje Check oraz Groupware.
 
 To nie Salesforce. Rejestry pozostają w ProjectCheck, InvoiceCheck, TicketCheck, Files, Mail, Tasks.
 
@@ -275,7 +275,7 @@ Ulepszamy tę aplikację dzięki realnemu użyciu. Zgłoszenia błędów, tarcia
 		<description lang="sv"><![CDATA[
 # CustomerCheck
 
-Det Nextcloud-native kommandocentrumet för kundarbete: en plats där ett arbetsområde delar kundboken, den delade brevlådan, kontoplanerna och arbetsrutinerna — så att teamet ser vad som händer, bestämmer nästa steg, jagar affärer och förnyelser, coachar teamet och mäter kundboken genom att koppla samman Check-appar och Groupware.
+Det Nextcloud-native CRM:et för kundarbete: en plats där ett arbetsområde delar kundboken, den delade brevlådan, kontoplanerna och arbetsrutinerna — så att teamet ser vad som händer, bestämmer nästa steg, jagar affärer och förnyelser, coachar teamet och mäter kundboken genom att koppla samman Check-appar och Groupware.
 
 Inte Salesforce. Redovisningarna ligger kvar i ProjectCheck, InvoiceCheck, TicketCheck, Files, Mail, Tasks.
 
@@ -308,7 +308,7 @@ Vi förbättrar den här appen med verklig användning. Felrapporter, friktioner
 		<description lang="nb"><![CDATA[
 # CustomerCheck
 
-Det Nextcloud-native kommandosenteret for kundearbeid: ett sted der et arbeidsområde deler kundeboken, den delte postkassen, kontoplaner og driftens rutiner — slik at teamet kan se hva som skjer, bestemme hva som kommer neste, følge opp avtaler og fornyelser, coache teamet og måle kundeboken ved å koble Check-apper og Groupware.
+Det Nextcloud-native CRM-et for kundearbeid: ett sted der et arbeidsområde deler kundeboken, den delte postkassen, kontoplaner og driftens rutiner — slik at teamet kan se hva som skjer, bestemme hva som kommer neste, følge opp avtaler og fornyelser, coache teamet og måle kundeboken ved å koble Check-apper og Groupware.
 
 Ikke Salesforce. Føringene blir i ProjectCheck, InvoiceCheck, TicketCheck, Files, Mail, Tasks.
 

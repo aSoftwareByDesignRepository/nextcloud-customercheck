@@ -1,6 +1,6 @@
 # CustomerCheck
 
-Customer & revenue command center for Nextcloud: one place for a workspace’s
+Customer relationship management (CRM) for Nextcloud: one place for a workspace’s
 customer book, shared mailbox, renewals, chase, coverage, Pulse, Brief, and
 Team coaching — joining ProjectCheck / InvoiceCheck / TicketCheck instead of
 replacing them.
