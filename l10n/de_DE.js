@@ -618,7 +618,7 @@ OC.L10N.register(
 		"Commitments": "Zusagen",
 		"Commitments are yours for this workspace. Expected cash uses overdue invoices and renewals with known € — never pipeline × hope.": "Zusagen gehören dir in diesem Arbeitsbereich. Erwartetes Cash nutzt überfällige Rechnungen und Verlängerungen mit bekannten € — nie Pipeline × Hoffnung.",
 		"Committed": "Zugesagt",
-		"Common defaults: IMAP 993 + SSL, SMTP 465 + SSL. Changing the port updates encryption automatically.": "Übliche Standardwerte: IMAP 993 + SSL, SMTP 465 + SSL. Eine Port-Änderung passt die Verschlüsselung automatisch an.",
+		"Common defaults: IMAP 993 + SSL, SMTP 465 + SSL. Changing the port updates encryption automatically.": "Übliche Defaults: IMAP 993 + SSL, SMTP 465 + SSL. Port-Änderung setzt die Verschlüsselung automatisch.",
 		"Communication summary": "Zusammenfassung der Kommunikation",
 		"Companies": "Firmen",
 		"Companies merged": "Unternehmen zusammengeführt",
@@ -771,6 +771,7 @@ OC.L10N.register(
 		"Could not prepare the mail attachment folder.": "Anhang-Ordner für Mail konnte nicht vorbereitet werden.",
 		"Could not reach the IMAP server. Check host, port, and that this Nextcloud server may open outbound port 993\/143.": "IMAP-Server nicht erreichbar. Prüfe Host, Port und ob dieser Nextcloud-Server ausgehend Port 993\/143 öffnen darf.",
 		"Could not reach the mail provider. Try again.": "Mail-Anbieter nicht erreichbar. Erneut versuchen.",
+		"Could not reach the server. Check your connection and try again.": "Der Server ist nicht erreichbar. Prüfe deine Verbindung und versuche es erneut.",
 		"Could not read the attachment “%s”.": "Anhang „%s“ konnte nicht gelesen werden.",
 		"Could not read your email address from the provider.": "E-Mail-Adresse konnte vom Anbieter nicht gelesen werden.",
 		"Could not remove": "Entfernen fehlgeschlagen",
@@ -1111,7 +1112,7 @@ OC.L10N.register(
 		"Follow-up overdue": "Nächster Kontakt überfällig",
 		"Follow-ups on the go": "Folgeschritte unterwegs",
 		"Follow-ups, renewals, invoices, promises, mail, and tasks from this workspace are grouped. Start at the top — that is what needs you first.": "Nachfassen, Verlängerungen, Rechnungen, Zusagen, Mail und Aufgaben aus diesem Arbeitsbereich sind gruppiert. Oben anfangen — das braucht dich zuerst.",
-		"Forecast": "Forecast",
+		"Forecast": "Prognose",
 		"Formatting": "Formatierung",
 		"Found %s new folder(s). Turn on Sync for the ones you want — changes save automatically.": "%s neue(r) Ordner gefunden. Sync für die gewünschten einschalten — Änderungen speichern sich automatisch.",
 		"France": "Frankreich",
@@ -1131,7 +1132,7 @@ OC.L10N.register(
 		"Full customer registry": "Vollständiges Kundenregister",
 		"Full threads in Mail": "Vollständige Threads in Mail",
 		"Generate \/ attach license key": "Lizenzschlüssel generieren\/anhängen",
-		"Germany": "Germany",
+		"Germany": "Deutschland",
 		"Get it on Google Play": "Jetzt bei Google Play",
 		"Get the App": "App holen",
 		"GitHub Sponsors (voluntary, no invoice SLA)": "GitHub-Sponsoren (freiwillig, kein Rechnungs-SLA)",
@@ -1406,7 +1407,7 @@ OC.L10N.register(
 		"Loss reason": "Verlustgrund",
 		"Lost": "Verloren",
 		"Low": "Niedrig",
-		"Luxembourg": "Luxembourg",
+		"Luxembourg": "Luxemburg",
 		"Mail": "Mail",
 		"Mail OAuth": "Mail-OAuth",
 		"Mail app is not available here. Log important messages so you still know what you wrote with whom.": "Die Mail-App ist hier nicht verfügbar. Wichtige Nachrichten protokollieren, damit du noch weißt, was du mit wem geschrieben hast.",
@@ -2985,7 +2986,6 @@ OC.L10N.register(
 		"promises": "Zusagen",
 		"record": "Datensatz",
 		"this workspace": "dieser Arbeitsbereich",
-		"valid": "gültig",
-		"Could not reach the server. Check your connection and try again.": "Der Server ist nicht erreichbar. Prüfe deine Verbindung und versuche es erneut."
+		"valid": "gültig"
 	}
 );

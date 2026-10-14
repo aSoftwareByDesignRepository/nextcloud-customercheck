@@ -22,8 +22,8 @@ final class PublicPackagingContractTest extends TestCase
 		$this->assertStringNotContainsString('Internal distribution only', $xml);
 		$this->assertStringNotContainsString('internal only', strtolower($xml));
 		$this->assertStringContainsString('<id>customercheck</id>', $xml);
-		$this->assertStringContainsString('command center for customer work', $xml);
-		$this->assertStringContainsString('Kommandozentrum für Kundenarbeit', $xml);
+		$this->assertStringContainsString('CRM for Nextcloud', $xml);
+		$this->assertStringContainsString('CRM für Nextcloud', $xml);
 		$this->assertMatchesRegularExpression('/<licence>\s*agpl/i', $xml);
 	}
 }

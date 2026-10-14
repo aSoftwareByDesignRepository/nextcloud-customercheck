@@ -771,6 +771,7 @@ OC.L10N.register(
 		"Could not prepare the mail attachment folder.": "No se pudo preparar la carpeta de adjuntos.",
 		"Could not reach the IMAP server. Check host, port, and that this Nextcloud server may open outbound port 993\/143.": "No se pudo alcanzar el servidor IMAP. Comprueba host, puerto y que este servidor Nextcloud pueda abrir el puerto saliente 993\/143.",
 		"Could not reach the mail provider. Try again.": "No se pudo contactar con el proveedor de correo. Inténtalo de nuevo.",
+		"Could not reach the server. Check your connection and try again.": "No se pudo contactar con el servidor. Comprueba tu conexión e inténtalo de nuevo.",
 		"Could not read the attachment “%s”.": "No se pudo leer el archivo adjunto \"%s\".",
 		"Could not read your email address from the provider.": "No se pudo leer tu dirección de correo del proveedor.",
 		"Could not remove": "No se pudo eliminar",
@@ -1262,7 +1263,7 @@ OC.L10N.register(
 		"Ireland": "Irlanda",
 		"Issue": "Asunto",
 		"Issue licence key(s)": "Emitir claves de licencia",
-		"Italic": "Italic",
+		"Italic": "Cursiva",
 		"Italy": "Italia",
 		"Item assigned": "Revisar elemento asignado",
 		"Items": "Elementos",
@@ -2689,7 +2690,7 @@ OC.L10N.register(
 		"To use a different email address, Disconnect first (that erases synced mail for this inbox).": "Para otra dirección de correo, Desconecta primero (borra el correo sincronizado de esta bandeja).",
 		"To-do": "Hacer",
 		"To-do assigned": "Tarea asignada",
-		"To-dos": "To-dos",
+		"To-dos": "Tareas",
 		"Today": "Hoy",
 		"Today item": "Artículo de hoy",
 		"Token rotated": "Ficha rotada",
@@ -2727,7 +2728,7 @@ OC.L10N.register(
 		"Unbilled hours": "Horas no facturadas",
 		"Unbilled hours are not ready yet — we will not guess zero.": "Las horas no facturadas aún no están listas; no adivinaremos cero.",
 		"Unbilled hours unknown.": "Se desconocen las horas no facturadas.",
-		"Underline": "Subsidio",
+		"Underline": "Subrayado",
 		"Undo": "Deshacer",
 		"Unique company domain match": "Coincidencia única de dominio de empresa",
 		"United Kingdom": "Reino Unido",
@@ -2985,7 +2986,6 @@ OC.L10N.register(
 		"promises": "promesas",
 		"record": "registro",
 		"this workspace": "este espacio de trabajo",
-		"valid": "válido",
-		"Could not reach the server. Check your connection and try again.": "No se pudo contactar con el servidor. Comprueba tu conexión e inténtalo de nuevo."
+		"valid": "válido"
 	}
 );

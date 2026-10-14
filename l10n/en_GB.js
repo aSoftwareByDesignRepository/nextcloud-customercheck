@@ -771,6 +771,7 @@ OC.L10N.register(
 		"Could not prepare the mail attachment folder.": "Could not prepare the mail attachment folder.",
 		"Could not reach the IMAP server. Check host, port, and that this Nextcloud server may open outbound port 993\/143.": "Could not reach the IMAP server. Check host, port, and that this Nextcloud server may open outbound port 993\/143.",
 		"Could not reach the mail provider. Try again.": "Could not reach the mail provider. Try again.",
+		"Could not reach the server. Check your connection and try again.": "Could not reach the server. Check your connection and try again.",
 		"Could not read the attachment “%s”.": "Could not read the attachment “%s”.",
 		"Could not read your email address from the provider.": "Could not read your email address from the provider.",
 		"Could not remove": "Could not remove",
@@ -2985,7 +2986,6 @@ OC.L10N.register(
 		"promises": "promises",
 		"record": "record",
 		"this workspace": "this workspace",
-		"valid": "valid",
-		"Could not reach the server. Check your connection and try again.": "Could not reach the server. Check your connection and try again."
+		"valid": "valid"
 	}
 );

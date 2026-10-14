@@ -770,6 +770,7 @@
         "Could not prepare the mail attachment folder.": "No se pudo preparar la carpeta de adjuntos.",
         "Could not reach the IMAP server. Check host, port, and that this Nextcloud server may open outbound port 993/143.": "No se pudo alcanzar el servidor IMAP. Comprueba host, puerto y que este servidor Nextcloud pueda abrir el puerto saliente 993/143.",
         "Could not reach the mail provider. Try again.": "No se pudo contactar con el proveedor de correo. Inténtalo de nuevo.",
+        "Could not reach the server. Check your connection and try again.": "No se pudo contactar con el servidor. Comprueba tu conexión e inténtalo de nuevo.",
         "Could not read the attachment “%s”.": "No se pudo leer el archivo adjunto \"%s\".",
         "Could not read your email address from the provider.": "No se pudo leer tu dirección de correo del proveedor.",
         "Could not remove": "No se pudo eliminar",
@@ -2984,14 +2985,7 @@
         "promises": "promesas",
         "record": "registro",
         "this workspace": "este espacio de trabajo",
-        "valid": "válido",
-        "Could not reach the server. Check your connection and try again.": "No se pudo contactar con el servidor. Comprueba tu conexión e inténtalo de nuevo.",
-        "Confirm": "Confirmar",
-        "Got it": "Entendido",
-        "I understand this action cannot be undone": "Entiendo que esta acción no se puede deshacer",
-        "Reason (required)": "Motivo (obligatorio)",
-        "Tips hidden for this page.": "Consejos ocultos para esta página.",
-        "Type %s to confirm": "Escriba %s para confirmar"
+        "valid": "válido"
     },
     "pluralForm": "nplurals=2; plural=(n != 1);"
 }
