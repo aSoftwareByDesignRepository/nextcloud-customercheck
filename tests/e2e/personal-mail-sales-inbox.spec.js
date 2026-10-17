@@ -79,6 +79,53 @@ test.describe('Personal email sync / Sales Inbox', () => {
     expect(results.violations.filter((v) => v.impact === 'critical' || v.impact === 'serious')).toEqual([]);
   });
 
+  test('Sales Inbox failed load renders honest error chrome, not a fabricated empty state', async ({ page }) => {
+    test.skip(!process.env.NC_ADMIN_USER, 'Requires NC_ADMIN_USER / NC_ADMIN_PASS');
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await login(page, credsFromEnv('ADMIN'));
+
+    await page.route('**/apps/customercheck/api/**/mail/inbox**', async (route) => {
+      await route.fulfill({
+        status: 500,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: false, error: 'SERVER_ERROR', message: 'Unexpected error', fields: {} }),
+      });
+    });
+
+    await page.goto('/apps/customercheck/sales-inbox?tab=team');
+    await page.waitForSelector('#crm-sales-inbox-root[data-crm-bachus-mail="1"]', { timeout: 30000 });
+
+    const empty = page.locator('#crm-sales-inbox-empty');
+    await expect(empty).toBeVisible({ timeout: 20000 });
+    // Error chrome contract: alert role + error styling hook + no fake CTA.
+    await expect(empty).toHaveAttribute('role', 'alert');
+    await expect(empty).toHaveClass(/is-error/);
+    await expect(page.locator('#crm-sales-inbox-empty-cta-wrap')).toBeHidden();
+    // Honest copy: the panel must not claim "nothing here" — its title differs
+    // from the true-empty title rendered by a 200-with-zero-rows response.
+    const failedTitle = await page.locator('#crm-sales-inbox-empty-title').innerText();
+    expect(failedTitle.trim()).not.toBe('');
+
+    await page.unrouteAll({ behavior: 'ignoreErrors' });
+    await page.route('**/apps/customercheck/api/**/mail/inbox**', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          data: { items: [], nextCursor: null, hasMore: false, personalMailEnabled: true, sharedFolders: [], accounts: [], authAlerts: [] },
+        }),
+      });
+    });
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await page.waitForSelector('#crm-sales-inbox-root[data-crm-bachus-mail="1"]', { timeout: 30000 });
+    await expect(empty).toBeVisible({ timeout: 20000 });
+    await expect(empty).toHaveAttribute('role', 'status');
+    await expect(empty).not.toHaveClass(/is-error/);
+    const trueEmptyTitle = await page.locator('#crm-sales-inbox-empty-title').innerText();
+    expect(trueEmptyTitle).not.toBe(failedTitle);
+  });
+
   test('Sales Inbox Load older messages: cursor pages append without duplicates', async ({ page }) => {
     test.skip(!process.env.NC_ADMIN_USER, 'Requires NC_ADMIN_USER / NC_ADMIN_PASS');
     await page.setViewportSize({ width: 1280, height: 900 });

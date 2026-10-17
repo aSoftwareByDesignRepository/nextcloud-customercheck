@@ -181,6 +181,9 @@ class ImportService
 				$this->db->beginTransaction();
 				$companyId = null;
 				$countryAnomaly = null;
+				// Counters merge into $summary only after commit — a rolled-back
+				// row must not claim durable mutations it never committed.
+				$rowDelta = ['created' => 0, 'linked' => 0, 'skipped' => 0, 'agreements' => 0];
 				$identityKey = $this->batchIdentityKey($row);
 				// Multi-agreement JSON (GDPR / website-order) expands to one row per product.
 				// Reuse the company created earlier in this apply — never create a twin / SLUG_TAKEN.
@@ -188,7 +191,7 @@ class ImportService
 					$companyId = $batchCompanyIds[$identityKey];
 					// The row links into the batch-created company — count it,
 					// or the proposal silently vanishes from the summary.
-					$summary['linked']++;
+					$rowDelta['linked']++;
 				} elseif ($action === 'create') {
 					$createInput = [
 						'name' => (string)($row['companyName'] ?? $row['name'] ?? 'Imported'),
@@ -239,7 +242,7 @@ class ImportService
 						throw $linkConflict;
 					}
 					$companyId = (int)$company->getId();
-					$summary['created']++;
+					$rowDelta['created']++;
 					$this->maybeCreatePerson($companyId, $row, $actor, $now);
 					if ($identityKey !== '') {
 						$batchCompanyIds[$identityKey] = $companyId;
@@ -274,7 +277,7 @@ class ImportService
 							], $actor, null, false, true);
 						}
 					}
-					$summary['linked']++;
+					$rowDelta['linked']++;
 					if ($identityKey !== '') {
 						$batchCompanyIds[$identityKey] = $companyId;
 					}
@@ -283,7 +286,7 @@ class ImportService
 				$plans = $this->planAgreements($row, $scan['source'], $companyId);
 				foreach ($plans as $plan) {
 					if (($plan['skip'] ?? false) === true) {
-						$summary['skipped']++;
+						$rowDelta['skipped']++;
 						continue;
 					}
 					$input = $plan['input'];
@@ -303,7 +306,7 @@ class ImportService
 						$prev->setUpdatedAt($now);
 						$this->agreementMapper->update($prev);
 					}
-					$summary['agreements']++;
+					$rowDelta['agreements']++;
 				}
 
 				$this->timeline->append($companyId, 'import.linked', $actor, [
@@ -311,6 +314,9 @@ class ImportService
 					'index' => $index,
 				]);
 				$this->db->commit();
+				foreach ($rowDelta as $counter => $delta) {
+					$summary[$counter] += $delta;
+				}
 
 				if ($countryAnomaly !== null && $this->review !== null && $workspaceId > 0) {
 					try {
@@ -329,6 +335,7 @@ class ImportService
 					'index' => $index,
 					'reason' => $e instanceof ValidationException ? $e->getErrorCode() : 'IMPORT_FAILED',
 					'message' => $e->getMessage(),
+					'fields' => $e instanceof ValidationException ? $e->getFields() : [],
 				];
 			}
 		}
@@ -906,10 +913,17 @@ class ImportService
 		// rows are marked superseded after insert (draft→superseded is illegal).
 		$chainRole = (string)($row['_chainRole'] ?? 'active');
 
+		// Normalized rows always carry 'label' — often ''. Only a non-empty
+		// explicit label wins over the "<company> <product>" default.
+		$label = trim((string)($row['label'] ?? ''));
+		if ($label === '') {
+			$label = trim((string)($row['companyName'] ?? 'License')) . ' ' . $product;
+		}
+
 		$input = [
 			'kind' => $kind,
 			'productCode' => $product,
-			'label' => (string)($row['label'] ?? ($row['companyName'] ?? 'License') . ' ' . $product),
+			'label' => $label,
 			'limits' => $limits,
 			'startsAt' => $startsAt->format('Y-m-d'),
 			'validUntil' => $validUntil?->format('Y-m-d'),

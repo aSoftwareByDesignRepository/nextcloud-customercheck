@@ -74,7 +74,7 @@ final class L10nNativeQualityContractTest extends TestCase
 			512,
 			JSON_THROW_ON_ERROR
 		);
-		$key = 'Share this folder with your workspace? I understand these emails will be readable by teammates.';
+		$key = 'Everyone who can open a linked customer in this workspace can read these emails. Type SHARE to confirm Inbox or Sent sharing.';
 		$got = $data['translations'][$key] ?? null;
 		self::assertIsString($got);
 		self::assertStringContainsString('Arbeitsbereich', $got);

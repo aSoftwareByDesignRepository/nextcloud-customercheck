@@ -70,22 +70,35 @@ class AppAccessMiddleware extends Middleware
 			}
 			$l = $this->l10nFactory->get('customercheck');
 
-			return new TemplateResponse('customercheck', 'access-denied', [
+			return (new TemplateResponse('customercheck', 'access-denied', [
 				'message' => $l->t('Not found.'),
 				'hint' => '',
 				'homeUrl' => $this->urlGenerator->linkToDefaultPageUrl(),
 				'todayUrl' => $this->urlGenerator->linkToRoute('customercheck.page.today'),
 				'showAppLink' => true,
-			], 'guest');
+			], 'guest'))->setStatus(Http::STATUS_NOT_FOUND);
 		}
 
 		$isAppGate = $exception instanceof AppAccessDeniedException;
 		$isAdminGate = $exception instanceof AccessDeniedException;
-		if (!$isAppGate && !$isAdminGate) {
-			throw $exception;
-		}
 		$path = (string)($this->request->getPathInfo() ?? '');
 		$wantsJson = str_contains($path, '/api/') || $this->request->getMethod() !== 'GET';
+		if (!$isAppGate && !$isAdminGate) {
+			// Unexpected throwable on an API route must never escape to core's
+			// HTML 500 — API clients always get the JSON envelope.
+			if ($wantsJson) {
+				$this->logger->error('customercheck unhandled API exception', [
+					'exception' => $exception,
+				]);
+				return new JSONResponse([
+					'success' => false,
+					'error' => 'SERVER_ERROR',
+					'message' => 'Unexpected error',
+					'fields' => new \stdClass(),
+				], Http::STATUS_INTERNAL_SERVER_ERROR);
+			}
+			throw $exception;
+		}
 		$l = $this->l10nFactory->get('customercheck');
 		if ($isAdminGate) {
 			$message = $l->t('You need CustomerCheck administrator rights for this action.');
@@ -113,13 +126,15 @@ class AppAccessMiddleware extends Middleware
 				'fields' => new \stdClass(),
 			], Http::STATUS_FORBIDDEN);
 		}
-		return new TemplateResponse('customercheck', 'access-denied', [
+		// Denied HTML surfaces fail closed at HTTP level too — a 200 would make
+		// status scanners and CDN edges read the denial as success.
+		return (new TemplateResponse('customercheck', 'access-denied', [
 			'message' => $message,
 			'hint' => $hint,
 			'homeUrl' => $this->urlGenerator->linkToDefaultPageUrl(),
 			'todayUrl' => $this->urlGenerator->linkToRoute('customercheck.page.today'),
 			'showAppLink' => false,
-		], 'guest');
+		], 'guest'))->setStatus(Http::STATUS_FORBIDDEN);
 	}
 
 	private function isPublic(object $controller, string $methodName): bool

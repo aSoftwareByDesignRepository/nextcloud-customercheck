@@ -85,7 +85,7 @@ function boot() {
     CustomEvent: class { constructor(type, init) { this.type = type; this.detail = init && init.detail; } },
   };
   vm.createContext(sandbox);
-  vm.runInContext(`${SRC}; this.__C = CustomerCheckComponents;`, sandbox);
+  vm.runInContext(`${SRC}; this.__C = window.CustomerCheckComponents;`, sandbox);
   return { C: sandbox.__C, header, main, body: document.body };
 }
 

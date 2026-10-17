@@ -54,14 +54,22 @@ final class OpenAccessModeContractTest extends TestCase
 	{
 		$src = (string)file_get_contents($this->root . '/lib/AppInfo/Application.php');
 		self::assertStringContainsString('ensureTokensExist()', $src);
-		// Two separate try blocks: seeding must not wrap navigation.
+		// Seeding keeps its own try block; navigation error isolation lives
+		// inside NavGate (its own fail-closed catch). Verify both halves.
 		$bootStart = strpos($src, 'public function boot(IBootContext $context): void');
 		self::assertNotFalse($bootStart);
 		$boot = substr($src, $bootStart, 1200);
 		self::assertGreaterThanOrEqual(
-			2,
+			1,
 			substr_count($boot, 'try {'),
-			'Token seeding and navigation must use separate try blocks',
+			'Token seeding must keep its own try block',
+		);
+		self::assertStringContainsString('NavGate::register', $boot);
+		$navGate = (string)file_get_contents($this->root . '/lib/Support/NavGate.php');
+		self::assertStringContainsString(
+			'catch (\Throwable $e)',
+			$navGate,
+			'NavGate must fail closed on navigation errors',
 		);
 		$seedPos = strpos($boot, 'ensureTokensExist()');
 		$navPos = strpos($boot, 'canUseApp');

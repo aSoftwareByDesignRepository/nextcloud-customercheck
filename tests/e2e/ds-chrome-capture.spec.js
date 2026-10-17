@@ -327,14 +327,18 @@ test('ds-chrome: surfaces × themes + states + dialogs + computed styles', async
 });
 
 test('ds-chrome: denied surface as non-admin probe user', async ({ browser }) => {
-  const probeCtx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  // browser.newContext() inherits the project's storageState (admin session)
+  // under the config's `use` block — an explicit empty state is required to
+  // land on /login unauthenticated as the probe user.
+  const probeCtx = await browser.newContext({ viewport: { width: 1440, height: 900 }, storageState: { cookies: [], origins: [] } });
   const probePage = await probeCtx.newPage();
   await probePage.goto('/login', { waitUntil: 'domcontentloaded', timeout: 45000 });
   await probePage.locator('#user').fill(process.env.CUC_DSPROBE_USER || 'cuc_dsprobe');
   await probePage.locator('#password').fill(process.env.CUC_DSPROBE_PASS || 'CucDsPr0be!x');
   await probePage.locator('form[name="login"] button[type="submit"], button[data-login-form-submit]').first().click();
   await probePage.waitForURL((u) => !u.pathname.includes('/login'), { timeout: 45000 });
-  await probePage.goto('/apps/customercheck/app-settings/access', { waitUntil: 'domcontentloaded' });
+  const deniedResp = await probePage.goto('/apps/customercheck/app-settings/access', { waitUntil: 'domcontentloaded' });
+  expect(deniedResp && deniedResp.status()).toBe(403);
   await expect(probePage.locator('.crm-access-denied')).toBeVisible({ timeout: 15000 });
   await probePage.screenshot({ path: join(CRAFT, 'cuc-state-denied-appsettings-light.png') });
   await probePage.goto('/apps/customercheck/', { waitUntil: 'domcontentloaded' });

@@ -361,7 +361,8 @@
         let out = String(msg);
         const list = Array.isArray(args) ? args : [];
         let i = 0;
-        out = out.replace(/%s/g, function () {
+        out = out.replace(/%%|%s/g, function (m) {
+        if (m === '%%') { return '%'; }
           const v = list[i];
           i += 1;
           return v == null ? '' : String(v);

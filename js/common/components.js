@@ -6,6 +6,28 @@
  * @license AGPL-3.0-or-later
  */
 
+(function () {
+'use strict';
+
+/**
+ * Localized string helper — same convention as js/pages/*.
+ * Local t() (not window.t) so scripts/sync-l10n-from-literals.php sees literals.
+ */
+function t(msg, args) {
+  const list = Array.isArray(args) ? args : [];
+  let out = window.t ? window.t('customercheck', msg, list) : msg;
+  if (list.length && typeof out === 'string' && out.indexOf('%') !== -1) {
+    let i = 0;
+    out = out.replace(/%%|%(?:\d+\$)?s/g, function (m) {
+      if (m === '%%') { return '%'; }
+      const v = list[i];
+      i += 1;
+      return v == null ? '' : String(v);
+    });
+  }
+  return out;
+}
+
 const CustomerCheckComponents = {
   _modalLockDepth: 0,
   _modalEscHandlerBound: false,
@@ -66,9 +88,7 @@ const CustomerCheckComponents = {
       card.hidden = true;
       const live = document.getElementById('crm-live-region');
       if (live) {
-        live.textContent = (window.t
-          ? window.t('customercheck', 'Tips hidden for this page.')
-          : 'Tips hidden for this page.');
+        live.textContent = t('Tips hidden for this page.');
       }
     });
   },
@@ -548,9 +568,7 @@ const CustomerCheckComponents = {
       modal.dataset.azcModalDismiss = 'false';
     }
 
-    const closeLabel = (typeof window !== 'undefined' && window.t) 
-      ? window.t('customercheck', 'Close') 
-      : 'Close';
+    const closeLabel = t('Close');
     
     modal.innerHTML = `
       <div class="modal-header">
@@ -683,9 +701,7 @@ const CustomerCheckComponents = {
     toast.setAttribute('aria-atomic', 'true');
 
     const icon = this.getToastIcon(options.type || type);
-    const closeLabel = (typeof window !== 'undefined' && window.t) 
-      ? window.t('customercheck', 'Close') 
-      : 'Close';
+    const closeLabel = t('Close');
     
     const toastVariant = ['success', 'error', 'warning', 'info'].includes(type) ? type : 'info';
     const toastWellClass = type === 'error' ? 'danger' : toastVariant;
@@ -781,7 +797,7 @@ const CustomerCheckComponents = {
    * @returns {Promise<void>}
    */
   alertDialog(options = {}) {
-    const gotIt = window.t ? window.t('customercheck', 'Got it') : 'Got it';
+    const gotIt = t('Got it');
     return this.showConfirmDialog({
       ...options,
       alertOnly: true,
@@ -790,24 +806,57 @@ const CustomerCheckComponents = {
     }).then(() => {});
   },
 
+  /**
+   * Accessible single-line input dialog — styled replacement for
+   * window.prompt(). Resolves the trimmed input value, or null when the
+   * user cancels/dismisses. Confirm stays disabled while the input is empty.
+   *
+   * @param {Object} options
+   * @param {string} options.title       - Dialog heading
+   * @param {string} [options.message]   - Dialog body text (plain text)
+   * @param {string} options.label       - Visible input label
+   * @param {string} [options.value]     - Initial input value
+   * @param {string} [options.placeholder]
+   * @param {string} [options.confirmLabel] - Confirm button label (default: "OK")
+   * @param {string} [options.cancelLabel]  - Cancel button label (default: "Cancel")
+   * @returns {Promise<string|null>}
+   */
+  promptDialog(options = {}) {
+    return this.showConfirmDialog({
+      title: options.title || '',
+      message: options.message || '',
+      confirmLabel: options.confirmLabel || t('OK'),
+      cancelLabel: options.cancelLabel || t('Cancel'),
+      variant: 'info',
+      promptInput: {
+        label: options.label || '',
+        value: options.value || '',
+        placeholder: options.placeholder || '',
+      },
+    }).then((result) => (
+      result && typeof result === 'object' && result.confirmed ? result.inputValue : null
+    ));
+  },
+
   showConfirmDialog(options = {}) {
     const {
       title = '',
       message = '',
-      confirmLabel = (window.t ? window.t('customercheck', 'Confirm') : 'Confirm'),
-      cancelLabel  = (window.t ? window.t('customercheck', 'Cancel') : 'Cancel'),
+      confirmLabel = t('Confirm'),
+      cancelLabel  = t('Cancel'),
       variant = 'info',
       alertOnly = false,
       requireCheckbox = false,
-      checkboxLabel = (window.t ? window.t('customercheck', 'I understand this action cannot be undone') : 'I understand this action cannot be undone'),
+      checkboxLabel = t('I understand this action cannot be undone'),
       optionalCheckbox = false,
       optionalCheckboxLabel = '',
       optionalCheckboxChecked = false,
       requireReason = false,
-      reasonLabel = (window.t ? window.t('customercheck', 'Reason (required)') : 'Reason (required)'),
+      reasonLabel = t('Reason (required)'),
       requireTypedConfirm = false,
       typedConfirmPhrase = 'DELETE',
       typedConfirmLabel,
+      promptInput = null,
     } = options;
 
     // Resolve the typed-confirmation label with the *actual* phrase the caller
@@ -815,9 +864,7 @@ const CustomerCheckComponents = {
     // the substitution happens exactly once and reflects custom phrases too.
     let resolvedTypedConfirmLabel = typedConfirmLabel
       ? String(typedConfirmLabel)
-      : (window.t
-        ? window.t('customercheck', 'Type %s to confirm', [typedConfirmPhrase])
-        : `Type ${typedConfirmPhrase} to confirm`);
+      : t('Type %s to confirm', [typedConfirmPhrase]);
     if (resolvedTypedConfirmLabel.includes('%s')) {
       resolvedTypedConfirmLabel = resolvedTypedConfirmLabel.replace('%s', typedConfirmPhrase);
     }
@@ -869,6 +916,12 @@ const CustomerCheckComponents = {
         extraFields += `
           <label for="${dialogId}-typed" class="form-label">${this._escapeHtml(resolvedTypedConfirmLabel)}</label>
           <input type="text" id="${dialogId}-typed" class="form-input confirm-dialog__typed" autocomplete="off" spellcheck="false">`;
+      }
+      if (promptInput) {
+        const p = typeof promptInput === 'object' && promptInput !== null ? promptInput : {};
+        extraFields += `
+          <label for="${dialogId}-prompt" class="form-label">${this._escapeHtml(p.label || '')}</label>
+          <input type="text" id="${dialogId}-prompt" class="form-input confirm-dialog__prompt" value="${this._escapeHtml(p.value || '')}"${p.placeholder ? ` placeholder="${this._escapeHtml(p.placeholder)}"` : ''} autocomplete="off" spellcheck="false">`;
       }
 
       const describedBy = [`${dialogId}-message`];
@@ -922,6 +975,7 @@ const CustomerCheckComponents = {
       const optionalBox = dialog.querySelector('.confirm-dialog__optional');
       const reasonField = dialog.querySelector('.confirm-dialog__reason');
       const typedField = dialog.querySelector('.confirm-dialog__typed');
+      const promptField = dialog.querySelector('.confirm-dialog__prompt');
 
       const validateConfirmEnabled = () => {
         let ok = true;
@@ -931,17 +985,32 @@ const CustomerCheckComponents = {
           && typedField.value.trim().toUpperCase() !== String(typedConfirmPhrase).trim().toUpperCase()) {
           ok = false;
         }
+        if (promptField && promptField.value.trim() === '') ok = false;
         if (confirmBtn) confirmBtn.disabled = !ok;
       };
 
       ackBox?.addEventListener('change', validateConfirmEnabled);
       reasonField?.addEventListener('input', validateConfirmEnabled);
       typedField?.addEventListener('input', validateConfirmEnabled);
+      promptField?.addEventListener('input', validateConfirmEnabled);
+      // window.prompt() parity: Enter inside the input confirms (the dialog is
+      // not a <form>, so the key does nothing by itself).
+      promptField?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && confirmBtn && !confirmBtn.disabled) {
+          e.preventDefault();
+          confirmBtn.click();
+        }
+      });
       validateConfirmEnabled();
 
       setTimeout(() => {
-        const focusTarget = alertOnly ? confirmBtn : dialog.querySelector('.confirm-dialog__cancel');
-        if (focusTarget) focusTarget.focus();
+        const focusTarget = promptField || (alertOnly ? confirmBtn : dialog.querySelector('.confirm-dialog__cancel'));
+        if (focusTarget) {
+          focusTarget.focus();
+          if (focusTarget === promptField && typeof promptField.select === 'function') {
+            promptField.select();
+          }
+        }
       }, 50);
 
       let settled = false;
@@ -979,6 +1048,7 @@ const CustomerCheckComponents = {
           confirmed: true,
           reason: reasonField ? reasonField.value.trim() : '',
           optionalChecked: !!(optionalBox && optionalBox.checked),
+          inputValue: promptField ? promptField.value.trim() : '',
         });
       });
       const cancelBtn = dialog.querySelector('.confirm-dialog__cancel');
@@ -1112,6 +1182,7 @@ const CustomerCheckComponents = {
 // Methods delegate via `this`; bind once so detached references stay safe (audit-critical).
 CustomerCheckComponents.confirmDialog = CustomerCheckComponents.confirmDialog.bind(CustomerCheckComponents);
 CustomerCheckComponents.alertDialog = CustomerCheckComponents.alertDialog.bind(CustomerCheckComponents);
+CustomerCheckComponents.promptDialog = CustomerCheckComponents.promptDialog.bind(CustomerCheckComponents);
 CustomerCheckComponents.showConfirmDialog = CustomerCheckComponents.showConfirmDialog.bind(CustomerCheckComponents);
 
 // Export for use in other modules
@@ -1128,3 +1199,5 @@ if (document.readyState === 'loading') {
 } else {
   CustomerCheckComponents.init();
 }
+
+})();

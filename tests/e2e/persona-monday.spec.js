@@ -59,7 +59,17 @@ test.describe('Persona Monday operating path', () => {
     await expect(page.locator('[data-crm-persona-mount="team"] [role="alert"]')).toHaveCount(0);
     await expect(page.locator('[data-crm-persona-mount="team"]')).not.toContainText(/No team rows to show|Keine Team-Zeilen/i);
     await expect(page.locator('details.crm-team-capacity-shell#capacity, details.crm-team-capacity-shell').first()).toBeVisible();
-    await page.locator('details.crm-team-capacity-shell > summary').first().click();
+    // The board fetch can auto-open the shell when teammates are stuck
+    // (persona.js sets shell.open = true). Wait for the board to settle, then
+    // only click the summary when the shell is still closed — a blind click
+    // would toggle an already-open shell shut.
+    await expect(
+      page.locator('[data-crm-persona-mount="team"] .crm-table--team, [data-crm-persona-mount="team"] .crm-empty-state').first(),
+    ).toBeVisible({ timeout: 20000 });
+    const capacityShell = page.locator('details.crm-team-capacity-shell').first();
+    if (!(await capacityShell.evaluate((el) => el instanceof HTMLDetailsElement && el.open))) {
+      await capacityShell.locator('> summary').first().click();
+    }
     await expect(page.locator('[data-crm-team-capacity]')).toBeVisible();
     // Capacity tools mount after board fetch — cover / reassign / escalate cards for coaches.
     await expect(page.locator('[data-crm-team-capacity]')).toContainText(/Cover while away|Vertretung|Move work|Arbeit an|Escalate|eskalieren|viewing your own row|eigene Zeile/i, { timeout: 20000 });

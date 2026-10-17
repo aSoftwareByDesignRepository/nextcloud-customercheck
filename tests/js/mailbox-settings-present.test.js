@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildFolderPickerOptions,
   buildMailboxListRows,
+  mailboxEmptyVisible,
   mailboxStatusLabel,
   mailboxStatusTone,
   readCheckedFolderPaths,
@@ -95,5 +96,19 @@ describe('buildMailboxListRows', () => {
   it('survives null / non-array input', () => {
     expect(buildMailboxListRows(null, t)).toEqual([]);
     expect(buildMailboxListRows(undefined, t)).toEqual([]);
+  });
+});
+
+describe('mailboxEmptyVisible', () => {
+  it('shows the empty panel only after a successful load with zero rows', () => {
+    expect(mailboxEmptyVisible(0, false)).toBe(true);
+    expect(mailboxEmptyVisible(2, false)).toBe(false);
+    expect(mailboxEmptyVisible('3', false)).toBe(false);
+  });
+
+  it('never shows the fabricated empty panel after a failed load', () => {
+    expect(mailboxEmptyVisible(0, true)).toBe(false);
+    expect(mailboxEmptyVisible(5, true)).toBe(false);
+    expect(mailboxEmptyVisible(undefined, true)).toBe(false);
   });
 });

@@ -975,7 +975,7 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 			<?php elseif (($_['projects'] ?? []) === []): ?>
 				<div class="crm-empty-state" role="status">
 					<h3 class="crm-empty-state__title"><?php p($l->t('No projects')); ?></h3>
-					<p class="crm-empty-state__text"><?php p($l->t('No projects found for the linked customer.')); ?></p>
+					<p class="crm-empty-state__text"><?php p($l->t('Projects for the linked ProjectCheck customer show up here.')); ?></p>
 				</div>
 			<?php else: ?>
 				<ul class="crm-simple-list">
@@ -1025,7 +1025,7 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 			<?php elseif (($_['tickets'] ?? []) === []): ?>
 				<div class="crm-empty-state" role="status">
 					<h3 class="crm-empty-state__title"><?php p($l->t('No tickets')); ?></h3>
-					<p class="crm-empty-state__text"><?php p($l->t('No open tickets for this company.')); ?></p>
+					<p class="crm-empty-state__text"><?php p($l->t('Open TicketCheck tickets for this company show up here.')); ?></p>
 				</div>
 			<?php else: ?>
 				<ul class="crm-simple-list">
@@ -1077,7 +1077,7 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 			<?php elseif (($_['invoices'] ?? []) === []): ?>
 				<div class="crm-empty-state" role="status">
 					<h3 class="crm-empty-state__title"><?php p($l->t('No invoices')); ?></h3>
-					<p class="crm-empty-state__text"><?php p($l->t('No invoices found for the linked customer.')); ?></p>
+					<p class="crm-empty-state__text"><?php p($l->t('Invoices for the linked InvoiceCheck customer show up here.')); ?></p>
 				</div>
 			<?php else: ?>
 			<div class="table-container crm-table--responsive" role="region" tabindex="0" aria-labelledby="crm-invoices-title">

@@ -3,6 +3,7 @@ import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { login, credsFromEnv } from './helpers/auth.js';
 import { deleteCompanyAt } from './helpers/cleanup.js';
+import { fillIsoDate } from './helpers/dates.js';
 
 /**
  * Money card must track license invoice payment even when InvoiceCheck is off.
@@ -36,7 +37,8 @@ test.describe('Billing license payment status', () => {
     const until = new Date();
     until.setFullYear(until.getFullYear() + 1);
     const untilIso = `${until.getFullYear()}-${String(until.getMonth() + 1).padStart(2, '0')}-${String(until.getDate()).padStart(2, '0')}`;
-    await page.locator('#crm-ag-until').fill(untilIso);
+    // #crm-ag-until is a readonly datepicker display; write ISO on the hidden host input.
+    await fillIsoDate(page.locator('#crm-agreement-form'), 'validUntil', untilIso);
     await page.locator('#crm-ag-amount').fill('990.00');
     await page.locator('#crm-agreement-advanced > summary').click();
     await expect(page.locator('#crm-agreement-advanced')).toHaveAttribute('open', '');
@@ -44,6 +46,8 @@ test.describe('Billing license payment status', () => {
     await page.locator('#crm-agreement-form button[type="submit"]').click();
     await page.waitForURL(new RegExp(`/apps/customercheck/companies/${companyId}`), { timeout: 30000 });
 
+    // Billing lives inside the company-360 money focus panel — activate the tab first.
+    await page.locator('[data-crm-focus-tab="money"]').click();
     await page.locator('#crm-billing').scrollIntoViewIfNeeded();
     await expect(page.locator('#crm-billing-body .crm-billing-strip')).toBeVisible({ timeout: 15000 });
     await expect(page.locator('#crm-billing-body [data-crm-billing-tile="status"] .crm-stat-tile__value')).toContainText(

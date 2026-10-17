@@ -91,7 +91,7 @@ final class TalkAnswerSendContractTest extends TestCase
 		$this->assertMatchesRegularExpression('/\belevatingPrivate\b/', $js);
 		$this->assertStringContainsString('This reply quotes private personal mail', $js);
 		$this->assertStringContainsString("t('This sends as %s. Everyone on the team who can read mail can see it.', [label])", $js);
-		$this->assertStringContainsString('/%(?:\\d+\\$)?s/g', $js);
+		$this->assertStringContainsString('%(?:\\d+\\$)?s/g', $js);
 		$this->assertStringContainsString('C.closeModal(dialogRoot(dialogId))', $js);
 		$this->assertStringContainsString('sendInFlight', $js);
 		$this->assertStringContainsString('preferredInAccounts', $js);

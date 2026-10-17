@@ -70,7 +70,7 @@ final class PrepareMeetingRemovedContractTest extends TestCase
 		$page = (string)file_get_contents($this->root . '/lib/Controller/PageController.php');
 		$this->assertStringContainsString('function prepareMeeting(int $id): RedirectResponse', $page);
 		$this->assertStringContainsString("linkToRoute('customercheck.page.companyDetail'", $method);
-		$this->assertStringContainsString("'/apps/customercheck/companies/' . \$id", $method);
+		$this->assertStringContainsString("'/index.php/apps/customercheck/companies/' . \$id", $method);
 		$this->assertStringContainsString('getAbsoluteURL', $method);
 		$this->assertStringContainsString('Http::STATUS_MOVED_PERMANENTLY', $method);
 		$this->assertStringContainsString("str_contains(\$rel, '/companies/' . \$id)", $method);

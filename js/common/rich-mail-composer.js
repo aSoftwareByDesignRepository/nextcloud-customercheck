@@ -13,7 +13,8 @@
     let out = window.t ? window.t('customercheck', msg, list) : msg;
     if (list.length && typeof out === 'string' && out.indexOf('%') !== -1) {
       let i = 0;
-      out = out.replace(/%(?:\d+\$)?s/g, function () {
+      out = out.replace(/%%|%(?:\d+\$)?s/g, function (m) {
+        if (m === '%%') { return '%'; }
         const v = list[i];
         i += 1;
         return v == null ? '' : String(v);
@@ -445,13 +446,22 @@
           return;
         }
         if (cmd === 'createLink') {
-          const url = window.prompt(t('Link address (https://…)'), 'https://');
-          if (!url) return;
-          const trimmed = String(url).trim();
-          if (!/^https?:\/\//i.test(trimmed) && !/^mailto:/i.test(trimmed)) {
-            return;
-          }
-          document.execCommand('createLink', false, trimmed);
+          const C = window.CustomerCheckComponents;
+          if (!C || typeof C.promptDialog !== 'function') return;
+          const savedRange = saveEditorSelection(editor);
+          void C.promptDialog({
+            title: t('Insert link'),
+            label: t('Link address (https://…)'),
+            value: 'https://',
+          }).then(function (url) {
+            if (!url) return;
+            const trimmed = String(url).trim();
+            if (!/^https?:\/\/\S+/i.test(trimmed) && !/^mailto:\S+/i.test(trimmed)) {
+              return;
+            }
+            restoreEditorSelection(editor, savedRange);
+            document.execCommand('createLink', false, trimmed);
+          });
           return;
         }
         if (cmd === 'formatBlock' && arg) {

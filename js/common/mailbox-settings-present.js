@@ -264,8 +264,22 @@ function buildMailboxListRows(items, t) {
     });
   }
 
+  /**
+   * Empty-state visibility: only a successful load with zero rows may show the
+   * "No shared mailbox yet" panel — a failed load keeps error chrome only
+   * (showing the empty panel on failure would fabricate an empty state).
+   * @param {unknown} rowCount
+   * @param {unknown} loadFailed
+   * @returns {boolean}
+   */
+  function mailboxEmptyVisible(rowCount, loadFailed) {
+    if (loadFailed) return false;
+    return (parseInt(String(rowCount || 0), 10) || 0) <= 0;
+  }
+
   global.CustomerCheckMailboxSettingsPresent = {
     mailboxStatusTone: mailboxStatusTone,
+    mailboxEmptyVisible: mailboxEmptyVisible,
     mailboxStatusLabel: mailboxStatusLabel,
     buildMailboxListRows: buildMailboxListRows,
     renderMailboxList: renderMailboxList,

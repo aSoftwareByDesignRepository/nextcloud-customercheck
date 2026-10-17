@@ -24,7 +24,7 @@ final class L10nPlaceholderFillContractTest extends TestCase
 		$root = dirname(__DIR__, 2);
 		foreach ($files as $rel) {
 			$js = (string)file_get_contents($root . '/' . $rel);
-			$this->assertStringContainsString('/%(?:\d+\$)?s/g', $js, $rel . ' must fill %s locally');
+			$this->assertStringContainsString('%(?:\d+\$)?s/g', $js, $rel . ' must fill %s locally');
 			$this->assertStringContainsString("out.indexOf('%')", $js, $rel);
 		}
 		$persona = (string)file_get_contents($root . '/js/pages/persona.js');

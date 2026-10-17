@@ -8,7 +8,8 @@
     // Nextcloud t() sometimes leaves %s / %1$s — fill locally (same as settings.js).
     if (list.length && typeof out === 'string' && out.indexOf('%') !== -1) {
       let i = 0;
-      out = out.replace(/%(?:\d+\$)?s/g, function () {
+      out = out.replace(/%%|%(?:\d+\$)?s/g, function (m) {
+        if (m === '%%') { return '%'; }
         const v = list[i];
         i += 1;
         return v == null ? '' : String(v);
@@ -414,9 +415,15 @@
       const includeBtnClass = include
         ? 'crm-btn crm-btn--sm crm-btn--primary'
         : 'crm-btn crm-btn--sm crm-btn--secondary';
+      // Multi-product payloads expand to one row per agreement — the row's
+      // product label is the only thing telling identical company rows apart.
+      const rowDetail = String((p.row && (p.row.label || p.row.productCode)) || '').trim();
+      const detailHtml = rowDetail !== ''
+        ? '<div class="crm-import-row__detail crm-muted">' + escapeHtml(rowDetail) + '</div>'
+        : '';
       tr.innerHTML =
         '<td><strong class="crm-import-company">' + escapeHtml(company) + '</strong></td>' +
-        '<td>' + decisionHtml + '</td>' +
+        '<td>' + decisionHtml + detailHtml + '</td>' +
         '<td data-label="' + escapeHtml(t('Include')) + '" class="actions-cell crm-table-actions-col crm-import-include-cell">' +
         '<div class="crm-table-actions">' +
         '<label class="crm-import-include' + (includeDisabled ? ' crm-import-include--disabled' : '') + '">' +

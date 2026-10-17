@@ -23,7 +23,7 @@ final class AristotelesPersonalMailShareCancelKeepsFolderContractTest extends Te
 			$chunk,
 		);
 		$this->assertMatchesRegularExpression(
-			'/Type SHARE to share Inbox or Sent[\s\S]{0,250}folder\.shareWithWorkspace = false;[\s\S]{0,80}out\.push\(folder\);/',
+			'/requireTypedConfirm: !!inboxSent[\s\S]{0,200}typedConfirmPhrase: \'SHARE\'/',
 			$chunk,
 		);
 	}

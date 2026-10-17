@@ -9,7 +9,8 @@
     // Nextcloud t() sometimes leaves %s / %1$s — fill locally (same as settings.js).
     if (list.length && typeof out === 'string' && out.indexOf('%') !== -1) {
       let i = 0;
-      out = out.replace(/%(?:\d+\$)?s/g, function () {
+      out = out.replace(/%%|%(?:\d+\$)?s/g, function (m) {
+        if (m === '%%') { return '%'; }
         const v = list[i];
         i += 1;
         return v == null ? '' : String(v);
@@ -2329,7 +2330,7 @@
           const canWrite = shellCan('write');
           feedEl.innerHTML = '<div class="crm-empty-state" role="status">' +
             '<h3 class="crm-empty-state__title">' + escapeHtml(t('Nothing logged yet')) + '</h3>' +
-            '<p class="crm-empty-state__text">' + escapeHtml(t('Nothing logged yet. Log an email or add an activity.')) + '</p>' +
+            '<p class="crm-empty-state__text">' + escapeHtml(t('Log an email or add an activity.')) + '</p>' +
             (canWrite
               ? '<div class="crm-empty-state__actions">' +
                 '<button type="button" class="crm-btn crm-btn--primary crm-btn--lg" data-crm-trigger="crm-log-email">' + escapeHtml(t('Log talk')) + '</button> ' +

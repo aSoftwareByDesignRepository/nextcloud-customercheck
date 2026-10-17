@@ -8,7 +8,8 @@
     // Nextcloud t() sometimes leaves %s / %1$s when the locale catalog is stale — fill locally.
     if (list.length && typeof out === 'string' && out.indexOf('%') !== -1) {
       let i = 0;
-      out = out.replace(/%(?:\d+\$)?s/g, function () {
+      out = out.replace(/%%|%(?:\d+\$)?s/g, function (m) {
+        if (m === '%%') { return '%'; }
         const v = list[i];
         i += 1;
         return v == null ? '' : String(v);
@@ -1160,13 +1161,20 @@
         listHost.textContent = rows.length ? tr('%s mailbox(es) connected.', [String(rows.length)]) : '';
       }
       if (emptyHost) {
-        emptyHost.hidden = rows.length > 0;
+        const showEmpty = Present && typeof Present.mailboxEmptyVisible === 'function'
+          ? Present.mailboxEmptyVisible(rows.length, false)
+          : rows.length === 0;
+        emptyHost.hidden = !showEmpty;
       }
       syncMailboxComposeVisibility(false);
     } catch (e) {
       if (generation !== mailboxesGeneration) return;
       showWsError((e.payload && e.payload.message) || e.message || tr('Could not load mailboxes.'));
-      if (emptyHost) emptyHost.hidden = false;
+      const FailedPresent = window.CustomerCheckMailboxSettingsPresent;
+      const showEmptyOnFail = FailedPresent && typeof FailedPresent.mailboxEmptyVisible === 'function'
+        ? FailedPresent.mailboxEmptyVisible(0, true)
+        : false;
+      if (emptyHost) emptyHost.hidden = !showEmptyOnFail;
       syncMailboxComposeVisibility(true);
     }
   }
@@ -1838,7 +1846,11 @@
         variant: 'danger',
       })
       : null;
-    if (!ok || !ok.confirmed) return;
+    if (ok === null) {
+      showInlineError(mailboxErr, tr('Confirmation UI is unavailable. Reload the page and try again.'));
+      return;
+    }
+    if (!ok.confirmed) return;
     if (btn) btn.disabled = true;
     showInlineError(mailboxErr, '');
     try {
@@ -2541,8 +2553,13 @@
               requireCheckbox: true,
               checkboxLabel: tr('I understand these existing emails will be visible to teammates who can open the linked customer.'),
             })
-            : { confirmed: window.confirm(msg) };
-          if (!ack || !ack.confirmed) {
+            : null;
+          if (ack === null) {
+            showPersonalMailError(tr('Confirmation UI is unavailable. Reload the page and try again.'));
+            if (status) status.textContent = '';
+            return false;
+          }
+          if (!ack.confirmed) {
             showPersonalMailError(tr('Folders not saved — existing private messages stay private.'));
             if (status) status.textContent = '';
             await refreshPersonalMail();
@@ -2769,29 +2786,16 @@
               requireTypedConfirm: !!inboxSent,
               typedConfirmPhrase: 'SHARE',
             })
-            : {
-              confirmed: window.confirm(
-                inboxSent
-                  ? tr('Share Inbox/Sent with your workspace? Type SHARE in the next step.')
-                  : tr('Share this folder with your workspace? I understand these emails will be readable by teammates.'),
-              ),
-            };
+            : null;
+          if (ack === null) {
+            showPersonalMailError(tr('Confirmation UI is unavailable. Reload the page and try again.'));
+          }
           if (!ack || !ack.confirmed) {
             if (shareEl) shareEl.checked = false;
             // Keep the folder in the PUT payload — omit would delete it from sync (replacePersonalFolders).
             folder.shareWithWorkspace = false;
             out.push(folder);
             continue;
-          }
-          // Legacy confirm() path still needs an explicit SHARE prompt for Inbox/Sent.
-          if (inboxSent && !(C && C.confirmDialog)) {
-            const typed = window.prompt(tr('Type SHARE to share Inbox or Sent with your workspace.'), '');
-            if (String(typed || '').toUpperCase().trim() !== 'SHARE') {
-              if (shareEl) shareEl.checked = false;
-              folder.shareWithWorkspace = false;
-              out.push(folder);
-              continue;
-            }
           }
           folder.shareAck = true;
           if (inboxSent) {
@@ -3056,8 +3060,12 @@
           cancelLabel: tr('Cancel'),
           variant: 'danger',
         })
-        : { confirmed: window.confirm(tr('Disconnect personal email?')) };
-      if (!ok || !ok.confirmed) return;
+        : null;
+      if (ok === null) {
+        showPersonalMailError(tr('Confirmation UI is unavailable. Reload the page and try again.'));
+        return;
+      }
+      if (!ok.confirmed) return;
       try {
         await Api.del('/workspaces/' + currentWorkspaceId + '/personal-mailboxes/' + id);
         if (C && C.announce) C.announce(tr('Personal email disconnected.'));

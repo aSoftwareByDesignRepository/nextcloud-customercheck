@@ -79,6 +79,7 @@ final class AppAccessMiddlewareTest extends TestCase
 		);
 		$this->assertInstanceOf(TemplateResponse::class, $response);
 		$this->assertSame('guest', $response->getRenderAs());
+		$this->assertSame(Http::STATUS_FORBIDDEN, $response->getStatus());
 	}
 
 	public function testAppGateRestrictionRendersAllowlistHint(): void
@@ -94,9 +95,78 @@ final class AppAccessMiddlewareTest extends TestCase
 			new AppAccessDeniedException(AccessControlService::DENIAL_RESTRICTION),
 		);
 		$this->assertInstanceOf(TemplateResponse::class, $response);
+		$this->assertSame(Http::STATUS_FORBIDDEN, $response->getStatus());
 		$params = $response->getParams();
 		$this->assertStringContainsString('restricts CustomerCheck access', (string)($params['message'] ?? ''));
 		$this->assertStringContainsString('Access mode', (string)($params['hint'] ?? ''));
+	}
+
+	public function testNotFoundHtmlReturns404WithFriendlyPage(): void
+	{
+		$middleware = $this->middleware(
+			path: '/apps/customercheck/companies/99999',
+			method: 'GET',
+			canUseApp: true,
+		);
+		$response = $middleware->afterException(
+			$this->createMock(PageController::class),
+			'companyDetail',
+			new \OCA\CustomerCheck\Exception\NotFoundException('Company not found.'),
+		);
+		$this->assertInstanceOf(TemplateResponse::class, $response);
+		$this->assertSame(Http::STATUS_NOT_FOUND, $response->getStatus());
+		$this->assertSame('guest', $response->getRenderAs());
+	}
+
+	public function testUnhandledThrowableOnApiPathReturnsJson500(): void
+	{
+		$middleware = $this->middleware(
+			path: '/apps/customercheck/api/v1/companies',
+			method: 'GET',
+			canUseApp: true,
+		);
+		$response = $middleware->afterException(
+			$this->createMock(PageController::class),
+			'companies',
+			new \RuntimeException('db gone'),
+		);
+		$this->assertInstanceOf(JSONResponse::class, $response);
+		$this->assertSame(Http::STATUS_INTERNAL_SERVER_ERROR, $response->getStatus());
+		$body = $response->getData();
+		$this->assertFalse($body['success']);
+		$this->assertSame('SERVER_ERROR', $body['error']);
+		$this->assertStringNotContainsString('db gone', (string)($body['message'] ?? ''));
+	}
+
+	public function testUnhandledThrowableOnPageRouteRethrows(): void
+	{
+		$middleware = $this->middleware(
+			path: '/apps/customercheck/companies',
+			method: 'GET',
+			canUseApp: true,
+		);
+		$this->expectException(\RuntimeException::class);
+		$middleware->afterException(
+			$this->createMock(PageController::class),
+			'companies',
+			new \RuntimeException('db gone'),
+		);
+	}
+
+	public function testUnhandledThrowableOnApiWriteReturnsJson500(): void
+	{
+		$middleware = $this->middleware(
+			path: '/apps/customercheck/companies/5',
+			method: 'POST',
+			canUseApp: true,
+		);
+		$response = $middleware->afterException(
+			$this->createMock(PageController::class),
+			'updateCompany',
+			new \RuntimeException('db gone'),
+		);
+		$this->assertInstanceOf(JSONResponse::class, $response);
+		$this->assertSame(Http::STATUS_INTERNAL_SERVER_ERROR, $response->getStatus());
 	}
 
 	public function testBeforeControllerThrowsRestrictionReason(): void

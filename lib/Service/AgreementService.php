@@ -256,10 +256,13 @@ class AgreementService
 				$wsId = (int)($company->getWorkspaceId() ?? 0);
 				$classified = ConflictFieldLogic::classifyPatch($baseSnap, $currentSnap, $incoming);
 				if ($classified['conflicts'] !== []) {
-					DbTransaction::rollBack($this->db, $ownsTxn);
 					if (!$ownsTxn) {
+						// Outer txn owns the unit of work — a conflict recorded
+						// inside it would roll back with it.
 						throw $stale;
 					}
+					DbTransaction::rollBack($this->db, $ownsTxn);
+					$ownsTxn = false; // consumed — catch must not rollBack a closed txn
 					$conflictId = $this->editConflicts->recordOpenConflict(
 						$wsId,
 						'agreement',

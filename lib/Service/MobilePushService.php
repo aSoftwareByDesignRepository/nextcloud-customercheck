@@ -201,7 +201,12 @@ class MobilePushService
 		$what = $title !== '' ? $title : $l->t('Activity');
 		$where = $company !== '' ? $company : $l->t('a customer');
 		if ($daysLate > 0) {
-			return $l->t('%1$s for %2$s is overdue (%3$d days) — open Today.', [$what, $where, $daysLate]);
+			return $l->n(
+				'%1$s for %2$s is overdue (%3$d day) — open Today.',
+				'%1$s for %2$s is overdue (%3$d days) — open Today.',
+				$daysLate,
+				[$what, $where, $daysLate],
+			);
 		}
 
 		return $l->t('%1$s for %2$s is due today — open Today.', [$what, $where]);
@@ -261,7 +266,12 @@ class MobilePushService
 		$what = $dealTitle !== '' ? $dealTitle : $l->t('Deal');
 		$where = $company !== '' ? $company : $l->t('a customer');
 		if ($stageIdleDays > 0) {
-			return $l->t('%1$s (%2$s) — %3$d days in stage. Open Pipeline.', [$what, $where, $stageIdleDays]);
+			return $l->n(
+				'%1$s (%2$s) — %3$d day in stage. Open Pipeline.',
+				'%1$s (%2$s) — %3$d days in stage. Open Pipeline.',
+				$stageIdleDays,
+				[$what, $where, $stageIdleDays],
+			);
 		}
 
 		return $l->t('%1$s (%2$s) needs follow-up. Open Pipeline.', [$what, $where]);

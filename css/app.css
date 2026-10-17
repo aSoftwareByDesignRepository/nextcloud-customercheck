@@ -1965,6 +1965,20 @@ dialog.crm-native-dialog .crm-form-inline-error[hidden] {
 	color: var(--crm-muted);
 }
 
+/* Error chrome reuses the empty-state slot on failed loads — paint the danger
+   well so the state reads as an error, not a neutral "nothing here" panel. */
+#app-content.crm-app .crm-empty-state.is-error {
+	border: 1px solid var(--color-error-text, var(--color-error));
+	border-left-width: 5px;
+	border-left-color: var(--color-error-text, var(--color-error));
+	border-radius: var(--crm-radius-md);
+	background: var(--crm-tint-danger, var(--color-error-bg, var(--color-background-dark)));
+}
+
+#app-content.crm-app .crm-empty-state.is-error .crm-empty-state__title {
+	color: var(--color-error-text, var(--color-error));
+}
+
 /* ── Access denied ─────────────────────────────────────────── */
 .crm-denied {
 	display: flex;
@@ -2408,9 +2422,26 @@ dialog.crm-native-dialog .crm-dl__row dd {
 	text-decoration: none;
 	font-size: 0.9rem;
 	line-height: 1.3;
+	display: flex;
+	align-items: center;
+	min-height: 24px;
 }
 #app-content.crm-app .crm-kanban__card-company:hover,
 #app-content.crm-app .crm-kanban__card-company:focus-visible {
+	text-decoration: underline;
+	outline: 2px solid var(--color-primary-element);
+	outline-offset: 2px;
+}
+#app-content.crm-app .crm-kanban__card-files {
+	color: var(--color-primary-element);
+	font-size: 0.85rem;
+	line-height: 1.3;
+	display: flex;
+	align-items: center;
+	min-height: 24px;
+}
+#app-content.crm-app .crm-kanban__card-files:hover,
+#app-content.crm-app .crm-kanban__card-files:focus-visible {
 	text-decoration: underline;
 	outline: 2px solid var(--color-primary-element);
 	outline-offset: 2px;
@@ -3106,7 +3137,7 @@ dialog.crm-native-dialog .crm-advanced > .crm-form--stack {
 
 /* WCAG 2.5.8 (24px AA target) at every viewport: bare text links in dense
  * table cells and the breadcrumb rendered ~15–21px tall. Cell padding keeps
- * the row height unchanged; the <767px block below raises the floor to the
+ * the row height unchanged; the ≤768px block below raises the floor to the
  * 44px WCAG 2.5.5 target for touch. */
 #app-content-wrapper .table a.crm-table-link,
 #app-content.crm-app .table a.crm-table-link,
@@ -3115,6 +3146,22 @@ dialog.crm-native-dialog .crm-advanced > .crm-form--stack {
 	display: inline-flex;
 	align-items: center;
 	min-height: 24px;
+}
+
+/* WCAG 2.5.5 touch floor: same bare text links at tablet/phone widths.
+ * Boundary is 768px inclusive (mobile side owns 768; desktop starts at
+ * min-width:769px per the app convention). 44px in CSS px, not rem — NC
+ * root font can be 15px. */
+@media (max-width: 768px) {
+	#app-content.crm-app .table a.crm-table-link,
+	#app-content-wrapper .table a.crm-table-link,
+	#app-content.crm-app .crm-table--strategy a.crm-strategy-company,
+	#app-content.crm-app .crm-breadcrumb__item a {
+		min-height: 44px;
+		/* Short codes ("AZC", "PC") stayed ~18–27px wide — both axes need
+		 * the floor, not just height (WCAG 2.5.5 target size). */
+		min-width: 44px;
+	}
 }
 
 #app-content.crm-app .crm-filter-field--actions .crm-btn {
@@ -4360,7 +4407,7 @@ dialog.crm-native-dialog .crm-advanced > .crm-form--stack {
 }
 #app-content.crm-app .crm-glance-kpi--attention {
 	border-left-color: var(--color-warning-text, var(--color-warning));
-	background: color-mix(in srgb, var(--color-warning) 8%, var(--crm-bg-card, var(--color-main-background)));
+	background: var(--crm-tint-warning);
 }
 #app-content.crm-app .crm-glance-kpi--attention .crm-glance-kpi__value {
 	color: var(--color-warning-text, var(--color-warning));
@@ -6383,10 +6430,10 @@ dialog.crm-native-dialog label.crm-check {
 	font-weight: 700;
 }
 #app-content.crm-app .crm-import-row--ready td {
-	background: color-mix(in srgb, var(--color-success) 8%, var(--color-main-background));
+	background: var(--crm-tint-success);
 }
 #app-content.crm-app .crm-import-row--choice td {
-	background: color-mix(in srgb, var(--color-warning) 10%, var(--color-main-background));
+	background: var(--crm-tint-warning);
 }
 #app-content.crm-app .crm-import-include {
 	display: inline-flex;

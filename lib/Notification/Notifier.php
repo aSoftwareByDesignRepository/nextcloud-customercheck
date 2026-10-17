@@ -108,7 +108,12 @@ class Notifier implements INotifier
 		$who = $company !== '' ? $company : $l->t('a customer');
 		$what = $title !== '' ? $title : $l->t('Deal');
 		if ($stageIdleDays > 0) {
-			return $l->t('%1$s: %2$s needs follow-up (%3$d days in stage)', [$who, $what, $stageIdleDays]);
+			return $l->n(
+				'%1$s: %2$s needs follow-up (%3$d day in stage)',
+				'%1$s: %2$s needs follow-up (%3$d days in stage)',
+				$stageIdleDays,
+				[$who, $what, $stageIdleDays],
+			);
 		}
 
 		return $l->t('%1$s: %2$s needs follow-up', [$who, $what]);
@@ -119,7 +124,12 @@ class Notifier implements INotifier
 		$who = $company !== '' ? $company : $l->t('a customer');
 		$what = $title !== '' ? $title : $l->t('Activity');
 		if ($daysLate > 0) {
-			return $l->t('%1$s: %2$s is overdue (%3$d days)', [$who, $what, $daysLate]);
+			return $l->n(
+				'%1$s: %2$s is overdue (%3$d day)',
+				'%1$s: %2$s is overdue (%3$d days)',
+				$daysLate,
+				[$who, $what, $daysLate],
+			);
 		}
 
 		return $l->t('%1$s: %2$s is due today', [$who, $what]);

@@ -60,11 +60,11 @@ use OCA\CustomerCheck\Service\TodayService;
 use OCA\CustomerCheck\Service\VTodoService;
 use OCA\CustomerCheck\Service\WeeklyDigestService;
 use OCA\CustomerCheck\Service\WorkspaceAccessService;
+use OCA\CustomerCheck\Support\NavGate;
 use OCP\AppFramework\App;
 use OCP\AppFramework\Bootstrap\IBootContext;
 use OCP\AppFramework\Bootstrap\IBootstrap;
 use OCP\AppFramework\Bootstrap\IRegistrationContext;
-use OCP\INavigationManager;
 use OCP\IURLGenerator;
 use OCP\IUserSession;
 use OCP\L10N\IFactory;
@@ -435,30 +435,17 @@ class Application extends App implements IBootstrap
 		} catch (\Throwable) {
 		}
 
-		try {
-			$container = $this->getContainer();
-			$user = $container->get(IUserSession::class)->getUser();
-			if ($user === null) {
-				return;
-			}
-			if (!$container->get(AccessControlService::class)->canUseApp($user->getUID())) {
-				return;
-			}
-			$nav = $container->get(INavigationManager::class);
-			$url = $container->get(IURLGenerator::class);
-			$l10n = $container->get(IFactory::class);
-			$appIcons = $container->get(\OCA\CustomerCheck\Service\AppIconService::class);
-			$nav->add(function () use ($url, $l10n, $appIcons) {
-				return [
-					'id' => self::APP_ID,
-					'app' => self::APP_ID,
-					'order' => 45,
-					'href' => $url->linkToRoute('customercheck.page.today'),
-					'icon' => $appIcons->headerIconPath(),
-					'name' => $l10n->get(self::APP_ID)->t('CustomerCheck'),
-				];
-			});
-		} catch (\Throwable) {
-		}
+		// Menu entry only for users with app access — the predicate runs lazily
+		// inside NavigationManager::init(), i.e. after basic-auth login on OCS
+		// requests. An eager check here sees no user and strips the entry.
+		$app = $context->getAppContainer();
+		NavGate::register(
+			$app,
+			'customercheck.page.today',
+			'app.svg',
+			'CustomerCheck',
+			45,
+			static fn(string $uid): bool => $app->get(AccessControlService::class)->canUseApp($uid),
+		);
 	}
 }

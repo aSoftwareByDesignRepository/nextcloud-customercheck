@@ -146,6 +146,19 @@ export function buildFolderPickerOptions(remoteFolders, selectedFolders, max = 2
 }
 
 /**
+ * Empty-state visibility: only a successful load with zero rows may show the
+ * "No shared mailbox yet" panel — a failed load keeps error chrome only
+ * (showing the empty panel on failure would fabricate an empty state).
+ * @param {unknown} rowCount
+ * @param {unknown} loadFailed
+ * @returns {boolean}
+ */
+export function mailboxEmptyVisible(rowCount, loadFailed) {
+  if (loadFailed) return false;
+  return (parseInt(String(rowCount || 0), 10) || 0) <= 0;
+}
+
+/**
  * @param {ParentNode|null|undefined} root
  * @returns {string[]}
  */

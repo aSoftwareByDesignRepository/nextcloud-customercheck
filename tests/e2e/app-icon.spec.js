@@ -49,11 +49,13 @@ test.describe('CustomerCheck app icon', () => {
     expect(icons.dark.text).not.toContain('fill="#ffffff"');
     expect(icons.dashboard.text).not.toContain('fill="#ffffff"');
 
-    // Header app glyph must resolve via AppIconService cache-bust (?v=)
-    const headerIcon = await page.locator('#header img[src*="customercheck"][src*="app.svg"]').first();
-    await expect(headerIcon).toBeVisible({ timeout: 15000 });
-    const src = await headerIcon.getAttribute('src');
-    expect(src || '').toMatch(/customercheck\/img\/app\.svg\?v=/);
-    expect(src || '').not.toContain('a10 10');
+    // Header app glyph: core renders the current-app icon as a CSS-masked
+    // .app-menu__current-app-glyph (--app-icon-url), not an <img> — assert the
+    // resolved URL points at our building+check icon, not the AZC clock.
+    const glyph = page.locator('.app-menu__current-app-glyph').first();
+    await expect(glyph).toBeAttached({ timeout: 15000 });
+    const iconUrl = await glyph.evaluate((el) => getComputedStyle(el).getPropertyValue('--app-icon-url'));
+    expect(iconUrl || '').toContain('customercheck/img/app.svg');
+    expect(iconUrl || '').not.toContain('a10 10');
   });
 });

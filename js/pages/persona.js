@@ -11,7 +11,8 @@
     // Nextcloud t() sometimes leaves %s / %1$s — fill locally (same as settings.js).
     if (list.length && typeof out === 'string' && out.indexOf('%') !== -1) {
       let i = 0;
-      out = out.replace(/%(?:\d+\$)?s/g, function () {
+      out = out.replace(/%%|%(?:\d+\$)?s/g, function (m) {
+        if (m === '%%') { return '%'; }
         const v = list[i];
         i += 1;
         return v == null ? '' : String(v);

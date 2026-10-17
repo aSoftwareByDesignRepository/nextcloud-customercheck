@@ -96,15 +96,13 @@ final class BachusPersonalMailSimplifyContractTest extends TestCase
 		$this->assertStringContainsString('requireTypedConfirm: !!inboxSent', $js);
 		$this->assertStringContainsString("typedConfirmPhrase: 'SHARE'", $js);
 		$this->assertStringContainsString('requireCheckbox: true', $js);
-		// Typed SHARE lives in confirmDialog; window.prompt only as legacy fallback without C.confirmDialog.
+		// Typed SHARE lives in confirmDialog; without it the flow fails closed —
+		// no window.prompt/confirm fallback (native_browser_dialog defect class).
 		$this->assertMatchesRegularExpression(
 			'/requireTypedConfirm: !!inboxSent[\s\S]{0,500}typedConfirmPhrase: \'SHARE\'/',
 			$js,
 		);
-		$this->assertMatchesRegularExpression(
-			'/!\(C && C\.confirmDialog\)[\s\S]{0,200}window\.prompt\(/',
-			$js,
-		);
+		$this->assertDoesNotMatchRegularExpression('/window\.prompt\(|window\.confirm\(|window\.alert\(/', $js);
 	}
 
 	public function testSalesInboxReconnectDeepLinksMyEmail(): void

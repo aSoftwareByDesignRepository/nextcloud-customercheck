@@ -131,4 +131,30 @@ final class SettingsPagesContractTest extends TestCase
 		$route = self::routeByName('persona_api#promisesRollCall');
 		self::assertSame('/api/v1/promises-roll-call', $route['url']);
 	}
+
+	/**
+	 * deny_page_status_200: the in-template non-admin deny on app-settings must
+	 * fail closed at HTTP level (403) — a 200 reads as success to scanners/CDN.
+	 */
+	public function testAppSettingsDeniedSurfaceFailsClosedAtHttp(): void
+	{
+		$controller = self::read('lib/Controller/PageController.php');
+		$pos = strpos($controller, 'appSettingsSection(string $section)');
+		self::assertNotFalse($pos);
+		$body = substr($controller, (int)$pos, 6000);
+		self::assertMatchesRegularExpression(
+			'/if \(!\$canManage\) \{[\s\S]{0,300}\$response->setStatus\(Http::STATUS_FORBIDDEN\)/',
+			$body,
+		);
+
+		$middleware = self::read('lib/Middleware/AppAccessMiddleware.php');
+		self::assertMatchesRegularExpression(
+			'/\)\)->setStatus\(Http::STATUS_FORBIDDEN\)/',
+			$middleware,
+		);
+		self::assertMatchesRegularExpression(
+			'/\)\)->setStatus\(Http::STATUS_NOT_FOUND\)/',
+			$middleware,
+		);
+	}
 }

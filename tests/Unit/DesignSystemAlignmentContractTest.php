@@ -226,12 +226,18 @@ final class DesignSystemAlignmentContractTest extends TestCase
 		$this->assertStringContainsString('dialog.crm-native-dialog .crm-choice,', $app);
 		$this->assertStringContainsString('dialog.crm-native-dialog .crm-advanced {', $app);
 		$this->assertStringContainsString('dialog.crm-native-dialog .crm-form-inline-error[hidden]', $app);
+		// NC 30+ remaps --color-success/-warning/-error to pale tints — never
+		// paint them directly; surfaces use the *-text-ink tint tokens instead.
 		$this->assertStringContainsString(
-			'color-mix(in srgb, var(--color-success) 8%, var(--color-main-background))',
+			'background: var(--crm-tint-success);',
 			$app,
 		);
 		$this->assertStringNotContainsString(
 			'color-mix(in srgb, var(--color-success) 8%, transparent)',
+			$app,
+		);
+		$this->assertStringNotContainsString(
+			'color-mix(in srgb, var(--color-success) 8%, var(--color-main-background))',
 			$app,
 		);
 		$notify = (string)file_get_contents($this->root . '/css/common/notification-surfaces.css');

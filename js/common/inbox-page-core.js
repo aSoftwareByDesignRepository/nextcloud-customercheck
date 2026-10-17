@@ -72,6 +72,22 @@
   }
 
   /**
+   * Honest panel copy for a FAILED load: the surface must admit the load
+   * failed (error chrome), never claim "no messages here" (dishonest empty).
+   * @param {{ errorText?: unknown, t?: Function }} opts
+   */
+  function failedEmptyCopy(opts) {
+    const o = opts && typeof opts === 'object' ? opts : {};
+    const t = typeof o.t === 'function' ? o.t : function (m) { return m; };
+    const err = String(o.errorText || '').trim();
+    return {
+      title: t('Could not load inbox.'),
+      text: err !== '' ? err : t('Could not reach the server. Check your connection and try again.'),
+      cta: null,
+    };
+  }
+
+  /**
    * @param {string|null|undefined} cursor
    * @returns {boolean}
    */
@@ -92,6 +108,7 @@
     normalizePagingMeta: normalizePagingMeta,
     shouldShowLoadMore: shouldShowLoadMore,
     inboxStatusText: inboxStatusText,
+    failedEmptyCopy: failedEmptyCopy,
     looksLikeInboxCursor: looksLikeInboxCursor,
   };
 

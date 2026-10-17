@@ -301,7 +301,10 @@ class PageController extends Controller
 		}
 		$rel = $this->urlGenerator->linkToRoute('customercheck.page.companyDetail', $params);
 		if (!str_contains($rel, '/companies/' . $id)) {
-			$rel = '/apps/customercheck/companies/' . $id;
+			// /index.php/apps/... stays routable on pretty-URL installs and is the
+			// only valid shape where URL rewriting is off; getAbsoluteURL adds
+			// scheme+host+webroot.
+			$rel = '/index.php/apps/customercheck/companies/' . $id;
 			if ($ws > 0) {
 				$rel .= '?workspaceId=' . $ws;
 			}
@@ -1299,7 +1302,14 @@ class PageController extends Controller
 			true,
 		);
 
-		return new TemplateResponse('customercheck', 'app-settings', $shell);
+		$response = new TemplateResponse('customercheck', 'app-settings', $shell);
+		if (!$canManage) {
+			// The template paints the denied card; the wire status must say
+			// denied too — a 200 would make scanners read the deny as success.
+			$response->setStatus(Http::STATUS_FORBIDDEN);
+		}
+
+		return $response;
 	}
 
 	/**

@@ -69,6 +69,19 @@ describe('inbox-page-core', () => {
     expect(Page.inboxStatusText({ count: 1, hasMore: false, tab: 'mine', t })).toBe('1 message');
   });
 
+  it('failed load panel admits failure instead of claiming empty', () => {
+    const t = (m, args) => (args ? m.replace('%s', args[0]) : m);
+    const withErr = Page.failedEmptyCopy({ errorText: 'Server error (HTTP 500). Please try again.', t });
+    expect(withErr.title).toBe('Could not load inbox.');
+    expect(withErr.text).toBe('Server error (HTTP 500). Please try again.');
+    expect(withErr.cta).toBeNull();
+    const noErr = Page.failedEmptyCopy({ t });
+    expect(noErr.title).toBe('Could not load inbox.');
+    expect(noErr.text).toContain('try again');
+    expect(JSON.stringify(noErr)).not.toContain('No messages here');
+    expect(JSON.stringify(Page.failedEmptyCopy({ errorText: '  ', t }))).not.toContain('No messages here');
+  });
+
   it('validates inbox cursors strictly', () => {
     expect(Page.looksLikeInboxCursor('2026-08-01 12:00:00|9')).toBe(true);
     expect(Page.looksLikeInboxCursor('|9')).toBe(true);

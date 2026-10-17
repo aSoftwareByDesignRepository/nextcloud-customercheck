@@ -13,7 +13,8 @@
     // Nextcloud t() sometimes leaves %s / %1$s — fill locally (same as settings.js / import.js).
     if (list.length && typeof out === 'string' && out.indexOf('%') !== -1) {
       let i = 0;
-      out = out.replace(/%(?:\d+\$)?s/g, function () {
+      out = out.replace(/%%|%(?:\d+\$)?s/g, function (m) {
+        if (m === '%%') { return '%'; }
         const v = list[i];
         i += 1;
         return v == null ? '' : String(v);
@@ -44,6 +45,9 @@
   /** Raw rows before client search/sort (Personal/Team). */
   /** @type {Array<Record<string, mixed>>} */
   let itemsRaw = [];
+  /** Set when the active tab's load failed — empty panel then shows error copy, not a fabricated "nothing here". */
+  let loadFailed = false;
+  let loadErrorText = '';
   /** @type {Array<Record<string, mixed>>} */
   let personalBoxes = [];
   /** @type {Array<Record<string, mixed>>} */
@@ -1081,7 +1085,14 @@
       empty.hidden = false;
       setColsVisible(false);
       syncMoreButton();
-      const copy = emptyCopy(activeTab);
+      const P = pageCore();
+      const copy = loadFailed
+        ? ((P && typeof P.failedEmptyCopy === 'function')
+          ? P.failedEmptyCopy({ errorText: loadErrorText, t: t })
+          : { title: t('Could not load inbox.'), text: String(loadErrorText || ''), cta: null })
+        : emptyCopy(activeTab);
+      empty.setAttribute('role', loadFailed ? 'alert' : 'status');
+      empty.classList.toggle('is-error', loadFailed);
       const emptyTitle = document.getElementById('crm-sales-inbox-empty-title');
       if (emptyTitle) emptyTitle.textContent = copy.title;
       if (emptyText) emptyText.textContent = copy.text;
@@ -1618,6 +1629,8 @@
       itemsRaw = [];
       items = [];
       canWriteAssign = false;
+      loadFailed = false;
+      loadErrorText = '';
       resetInboxPaging();
       syncMoreButton();
       renderList();
@@ -1639,6 +1652,8 @@
       const res = await Api.get(url);
       if (gen !== loadGeneration || activeTab !== 'unmatched') return;
       const data = res.data || {};
+      loadFailed = false;
+      loadErrorText = '';
       const raw = Array.isArray(data.items) ? data.items : [];
       canWriteAssign = data.canWrite !== false && !!shellCan('write');
       resetInboxPaging();
@@ -1667,7 +1682,10 @@
       syncToolbarForTab();
     } catch (e) {
       if (gen !== loadGeneration || activeTab !== 'unmatched') return;
-      setStatus((e.payload && e.payload.message) || e.message || t('Could not load unassigned mail.'));
+      const msg = (e.payload && e.payload.message) || e.message || t('Could not load unassigned mail.');
+      setStatus(msg);
+      loadFailed = true;
+      loadErrorText = msg;
       itemsRaw = [];
       items = [];
       canWriteAssign = false;
@@ -1809,6 +1827,8 @@
     if (!(ws > 0)) {
       setStatus(t('No workspace selected.'));
       items = [];
+      loadFailed = false;
+      loadErrorText = '';
       resetInboxPaging();
       syncMoreButton();
       renderList();
@@ -1824,6 +1844,8 @@
       const res = await Api.get(url);
       if (gen !== loadGeneration || activeTab === 'unmatched') return;
       const data = res.data || {};
+      loadFailed = false;
+      loadErrorText = '';
       if (typeof data.personalMailEnabled === 'boolean') {
         personalMailEnabled = data.personalMailEnabled;
       }
@@ -1855,7 +1877,10 @@
       }
     } catch (e) {
       if (gen !== loadGeneration || activeTab === 'unmatched') return;
-      setStatus((e.payload && e.payload.message) || e.message || t('Could not load inbox.'));
+      const msg = (e.payload && e.payload.message) || e.message || t('Could not load inbox.');
+      setStatus(msg);
+      loadFailed = true;
+      loadErrorText = msg;
       items = [];
       itemsRaw = [];
       resetInboxPaging();

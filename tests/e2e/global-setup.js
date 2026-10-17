@@ -39,6 +39,28 @@ function occSet(key, value) {
 	);
 }
 
+function occUserSet(uid, key, value) {
+	return spawnSync(
+		'docker',
+		[
+			'compose', 'exec', '-u', 'www-data', '-T', 'nextcloud', 'php', 'occ',
+			'user:setting', uid, 'core', key, value,
+		],
+		{ cwd: NC_COMPOSE_ROOT, encoding: 'utf8', timeout: 60_000 },
+	);
+}
+
+// Shared-lab self-heal: sibling lanes' locale sweeps can leave the shared
+// e2e user's `core/lang` on an arbitrary locale (observed: da/sv leftovers
+// poisoning an entire run's EN|DE text assertions). The pin alone is not
+// proof — the served page lang is asserted here so a polluted run dies at
+// setup instead of after an hour of false failures.
+function assertServedLangEn(servedLang) {
+	if (!/^en/i.test(servedLang || '')) {
+		throw new Error(`[globalSetup] served html lang="${servedLang}" after core/lang=en pin — refusing to run a locale-polluted suite`);
+	}
+}
+
 function hostPortFromBase(baseURL) {
 	try {
 		return new URL(baseURL).host;
@@ -52,6 +74,8 @@ async function storageStillValid(baseURL) {
 		return false;
 	}
 	const browser = await chromium.launch({ headless: true });
+	let ok = false;
+	let servedLang = '';
 	try {
 		const context = await browser.newContext({
 			baseURL,
@@ -62,14 +86,20 @@ async function storageStillValid(baseURL) {
 			waitUntil: 'domcontentloaded',
 			timeout: 45_000,
 		});
-		const ok = !page.url().includes('/login');
+		ok = !page.url().includes('/login');
+		if (ok) {
+			servedLang = await page.evaluate(() => document.documentElement.lang);
+		}
 		await context.close();
-		return ok;
 	} catch {
 		return false;
 	} finally {
 		await browser.close().catch(() => {});
 	}
+	if (ok) {
+		assertServedLangEn(servedLang);
+	}
+	return ok;
 }
 
 async function loginOnce(page, { username, password, baseURL }) {
@@ -133,6 +163,11 @@ export default async function globalSetup(config) {
 		return;
 	}
 
+	const langPin = occUserSet(username, 'lang', 'en');
+	if (langPin.status !== 0) {
+		console.warn('[globalSetup] core/lang=en pin failed:', (langPin.stderr || langPin.stdout || '').trim());
+	}
+
 	mkdirSync(dirname(STORAGE_STATE_PATH), { recursive: true });
 	if (await storageStillValid(baseURL)) {
 		console.log('[globalSetup] reusing valid storage state');
@@ -167,6 +202,7 @@ export default async function globalSetup(config) {
 		const page = await context.newPage();
 		try {
 			await loginOnce(page, { username, password, baseURL });
+			assertServedLangEn(await page.evaluate(() => document.documentElement.lang));
 			await context.storageState({ path: STORAGE_STATE_PATH });
 			console.log('[globalSetup] storage state written');
 		} catch (err) {

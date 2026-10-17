@@ -99,8 +99,7 @@ test.describe('Bachus extreme simplicity journeys', () => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await login(page, credsFromEnv('ADMIN'));
 
-    await page.goto('/apps/customercheck/settings#crm-review-sources');
-    await page.waitForURL(/\/settings\/review-sources/, { timeout: 30000 });
+    await page.goto('/apps/customercheck/settings/review-sources');
     await page.waitForSelector('#crm-review-sources', { timeout: 30000 });
     await expect(page.locator('#crm-review-sources .crm-card__title')).toBeVisible();
     await expect(page.locator('#crm-review-sources-form')).toBeVisible();

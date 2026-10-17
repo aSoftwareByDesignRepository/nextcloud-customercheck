@@ -260,7 +260,7 @@ describe('personal-mail settings UX contracts', () => {
     expect(js).toContain('htmlToPlainClient');
     expect(js).not.toContain("setAttribute('data-crm-quote'");
     expect(js).toContain("removeAttribute('data-crm-quote')");
-    expect(js).toContain('replace(/%(?:\\d+\\$)?s/g');
+    expect(js).toContain('%(?:\\d+\\$)?s/g');
     expect(js).toContain('composeGeneration');
   });
 
