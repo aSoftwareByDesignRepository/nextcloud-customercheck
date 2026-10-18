@@ -38,7 +38,7 @@ Part of the Check app family by [Software by Design](https://nextcloud.software-
 
 ## Requirements
 
-- Nextcloud 32–34, PHP 8.2+, MySQL/MariaDB or PostgreSQL
+- Nextcloud 32–35, PHP 8.2+, MySQL/MariaDB or PostgreSQL
 
 ## Dev
 

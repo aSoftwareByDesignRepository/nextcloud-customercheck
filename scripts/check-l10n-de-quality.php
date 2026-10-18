@@ -76,6 +76,7 @@ $allowExact = [
 	'Continue' => true,
 	'Person' => true,
 	'Team' => true,
+	'Website' => true, // "die Website" is standard German; dependents use Website-* compounds
 	'System' => true,
 	'Tickets' => true,
 	'Timing' => true,
