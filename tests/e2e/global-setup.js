@@ -12,6 +12,8 @@ import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { ensureUpgraded } from './helpers/ensure-upgraded.js';
 
+import { acquireSharedInstanceLock } from './shared-instance-lock.mjs'
+
 const ROOT = dirname(fileURLToPath(import.meta.url));
 // Concurrent farm lanes isolate their auth cache via E2E_STORAGE_STATE —
 // a shared .auth/admin.json gets clobbered mid-run by a parallel setup.
@@ -149,6 +151,7 @@ async function loginOnce(page, { username, password, baseURL }) {
 }
 
 export default async function globalSetup(config) {
+	await acquireSharedInstanceLock('customercheck')
 	ensureUpgraded();
 
 	const baseURL = (

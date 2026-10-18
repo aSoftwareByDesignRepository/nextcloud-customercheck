@@ -41,6 +41,8 @@ const authState = process.env.E2E_STORAGE_STATE
 
 export default defineConfig({
   testDir: './tests/e2e',
+  globalTeardown: './tests/e2e/global-teardown.mjs',
+
   globalSetup: './tests/e2e/global-setup.js',
   timeout: 60000,
   retries: 1,

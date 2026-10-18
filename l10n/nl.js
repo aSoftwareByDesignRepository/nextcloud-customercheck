@@ -534,7 +534,7 @@ OC.L10N.register(
 		"Check my list": "Controleer mijn lijst",
 		"Check this promise": "Controleer deze belofte",
 		"Checking your list…": "Je lijst controleren...",
-		"Checklist": "Checklist",
+		"Checklist": "Controlelijst",
 		"Checklist for %s": "Checklist voor %s",
 		"Checklist item not found.": "Checklistitem niet gevonden.",
 		"Checklist task": "Checklisttaak",
