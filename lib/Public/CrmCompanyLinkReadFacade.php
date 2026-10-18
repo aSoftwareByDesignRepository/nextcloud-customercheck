@@ -21,6 +21,7 @@ class CrmCompanyLinkReadFacade
 		private readonly CompanyMapper $companyMapper,
 		private readonly AccessControlService $accessControl,
 		private readonly IURLGenerator $urlGenerator,
+		private readonly ?\OCA\CustomerCheck\Service\WorkspaceAccessService $workspaceAccess = null,
 	) {
 	}
 
@@ -66,6 +67,52 @@ class CrmCompanyLinkReadFacade
 		}
 
 		return $this->serializeCompany($company);
+	}
+
+	/**
+	 * Picker search for sibling apps (F14): name substring match scoped to
+	 * the actor's accessible workspaces — never scans foreign books.
+	 * Returns minimal link metadata; archived companies are excluded.
+	 *
+	 * @return list<array{crmCompanyId:int,name:string,deepLink:string}>
+	 */
+	public function searchForPicker(string $actorUid, string $query, int $limit = 10): array
+	{
+		$query = trim($query);
+		if ($actorUid === '' || $query === '' || !$this->accessControl->canUseApp($actorUid)) {
+			return [];
+		}
+		$workspaceIds = $this->workspaceAccess !== null
+			? $this->workspaceAccess->listAccessibleWorkspaceIds($actorUid)
+			: [];
+		if ($workspaceIds === []) {
+			return [];
+		}
+		$limit = max(1, min(25, $limit));
+		try {
+			$rows = $this->companyMapper->search([
+				'search' => $query,
+				'archived' => false,
+				'workspaceIds' => $workspaceIds,
+			], $limit);
+		} catch (\Throwable) {
+			return [];
+		}
+		$out = [];
+		foreach ($rows as $company) {
+			$id = (int)$company->getId();
+			$ws = (int)($company->getWorkspaceId() ?? 0);
+			$deepLink = $this->urlGenerator->linkToRoute('customercheck.page.companyDetail', ['id' => $id]);
+			if ($ws > 0) {
+				$deepLink .= (str_contains($deepLink, '?') ? '&' : '?') . 'workspaceId=' . $ws;
+			}
+			$out[] = [
+				'crmCompanyId' => $id,
+				'name' => (string)$company->getName(),
+				'deepLink' => $deepLink,
+			];
+		}
+		return $out;
 	}
 
 	/**
