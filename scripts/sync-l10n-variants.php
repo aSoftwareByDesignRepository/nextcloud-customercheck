@@ -47,6 +47,12 @@ foreach ($variants as $variant => $baseLang) {
 		fwrite(STDERR, "Failed to encode {$variant}.json\n");
 		exit(1);
 	}
+	// Catalog convention is tab indentation; json_encode pretty-prints with 4 spaces per level.
+	$encoded = preg_replace_callback(
+		'/^ +/m',
+		static fn (array $m): string => str_repeat("\t", intdiv(strlen($m[0]), 4)),
+		$encoded
+	);
 	$expected = $encoded . "\n";
 	$variantPath = $base . '/' . $variant . '.json';
 
