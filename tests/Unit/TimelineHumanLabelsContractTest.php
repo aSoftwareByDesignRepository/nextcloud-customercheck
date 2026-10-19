@@ -43,6 +43,6 @@ final class TimelineHumanLabelsContractTest extends TestCase
 		$css = (string)file_get_contents(dirname(__DIR__, 2) . '/css/app.css');
 		$this->assertStringContainsString('.crm-timeline__card', $css);
 		$this->assertStringContainsString('.crm-timeline__what', $css);
-		$this->assertStringContainsString('@media (max-width: 767px)', $css);
+		$this->assertStringContainsString('@media (max-width: 767.98px)', $css);
 	}
 }

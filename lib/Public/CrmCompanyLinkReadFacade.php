@@ -22,6 +22,7 @@ class CrmCompanyLinkReadFacade
 		private readonly AccessControlService $accessControl,
 		private readonly IURLGenerator $urlGenerator,
 		private readonly ?\OCA\CustomerCheck\Service\WorkspaceAccessService $workspaceAccess = null,
+		private readonly ?\Psr\Log\LoggerInterface $logger = null,
 	) {
 	}
 
@@ -39,8 +40,8 @@ class CrmCompanyLinkReadFacade
 		if (!$this->accessControl->canUseApp($actorUid)) {
 			return null;
 		}
-		$company = $this->companyMapper->findByPcCustomerId($pcCustomerId);
-		if ($company === null || $company->getArchivedAt() !== null) {
+		$company = $this->scopedCompanyOrNull($actorUid, fn () => $this->companyMapper->findByPcCustomerId($pcCustomerId));
+		if ($company === null) {
 			return null;
 		}
 
@@ -57,12 +58,8 @@ class CrmCompanyLinkReadFacade
 		if ($companyId <= 0 || $actorUid === '' || !$this->accessControl->canUseApp($actorUid)) {
 			return null;
 		}
-		try {
-			$company = $this->companyMapper->findById($companyId);
-		} catch (\Throwable) {
-			return null;
-		}
-		if ($company->getArchivedAt() !== null) {
+		$company = $this->scopedCompanyOrNull($actorUid, fn () => $this->companyMapper->findById($companyId));
+		if ($company === null) {
 			return null;
 		}
 
@@ -95,7 +92,8 @@ class CrmCompanyLinkReadFacade
 				'archived' => false,
 				'workspaceIds' => $workspaceIds,
 			], $limit);
-		} catch (\Throwable) {
+		} catch (\Throwable $e) {
+			$this->logger?->warning('searchForPicker failed for actor ' . $actorUid, ['exception' => $e]);
 			return [];
 		}
 		$out = [];
@@ -113,6 +111,39 @@ class CrmCompanyLinkReadFacade
 			];
 		}
 		return $out;
+	}
+
+	/**
+	 * Fetch a company and verify the actor can reach its workspace.
+	 *
+	 * Fails closed on every leg: no WorkspaceAccessService wired (scope cannot
+	 * be verified), no accessible workspaces, mapper error, archived company,
+	 * or a company whose workspace the actor cannot see. Without the
+	 * workspace leg an app-access-only actor could resolve names/slugs/deep
+	 * links of foreign-workspace companies by guessing pc_customer_id /
+	 * company ids — an oracle for workspace contents.
+	 *
+	 * @param \Closure():(?\OCA\CustomerCheck\Db\Company) $fetch
+	 */
+	private function scopedCompanyOrNull(string $actorUid, \Closure $fetch): ?\OCA\CustomerCheck\Db\Company
+	{
+		$workspaceIds = $this->workspaceAccess?->listAccessibleWorkspaceIds($actorUid);
+		if ($workspaceIds === null || $workspaceIds === []) {
+			return null;
+		}
+		try {
+			$company = $fetch();
+		} catch (\Throwable $e) {
+			$this->logger?->warning('CrmCompanyLinkReadFacade lookup failed for actor ' . $actorUid, ['exception' => $e]);
+			return null;
+		}
+		if ($company === null || $company->getArchivedAt() !== null) {
+			return null;
+		}
+		if (!in_array((int)($company->getWorkspaceId() ?? 0), $workspaceIds, true)) {
+			return null;
+		}
+		return $company;
 	}
 
 	/**

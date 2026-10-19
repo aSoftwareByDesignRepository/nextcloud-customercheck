@@ -83,4 +83,93 @@ class CrmCompanyLinkPickerTest extends TestCase
 		$this->mapper->method('search')->willThrowException(new \RuntimeException('schema drift'));
 		$this->assertSame([], $this->facade->searchForPicker('alice', 'acme'));
 	}
+
+	public function testMapperFailureIsLogged(): void
+	{
+		$logger = $this->createMock(\Psr\Log\LoggerInterface::class);
+		$facade = new CrmCompanyLinkReadFacade($this->mapper, $this->acl, $this->createMock(IURLGenerator::class), $this->ws, $logger);
+		$this->acl->method('canUseApp')->willReturn(true);
+		$this->ws->method('listAccessibleWorkspaceIds')->willReturn([3]);
+		$this->mapper->method('search')->willThrowException(new \RuntimeException('schema drift'));
+		$logger->expects($this->once())->method('warning');
+		$this->assertSame([], $facade->searchForPicker('alice', 'acme'));
+	}
+
+	private function linkedCompany(int $workspaceId): Company
+	{
+		$company = new Company();
+		$company->setId(9);
+		$company->setName('Acme Pflege');
+		$company->setSlug('acme-pflege');
+		$company->setWorkspaceId($workspaceId);
+		$company->setPcCustomerId(42);
+		return $company;
+	}
+
+	public function testFindByPcCustomerIdReturnsLinkInsideAccessibleWorkspace(): void
+	{
+		$this->acl->method('canUseApp')->with('alice')->willReturn(true);
+		$this->ws->method('listAccessibleWorkspaceIds')->with('alice')->willReturn([3, 7]);
+		$this->mapper->expects($this->once())
+			->method('findByPcCustomerId')
+			->with(42)
+			->willReturn($this->linkedCompany(3));
+		$out = $this->facade->findByPcCustomerId('alice', 42);
+		$this->assertNotNull($out);
+		$this->assertSame(9, $out['crmCompanyId']);
+		$this->assertSame(42, $out['pcCustomerId']);
+	}
+
+	public function testFindByPcCustomerIdHidesForeignWorkspaceCompany(): void
+	{
+		$this->acl->method('canUseApp')->willReturn(true);
+		$this->ws->method('listAccessibleWorkspaceIds')->with('alice')->willReturn([7]);
+		$this->mapper->method('findByPcCustomerId')->willReturn($this->linkedCompany(3));
+		$this->assertNull($this->facade->findByPcCustomerId('alice', 42));
+	}
+
+	public function testFindByPcCustomerIdFailsClosedWithoutWorkspaceScope(): void
+	{
+		$this->acl->method('canUseApp')->willReturn(true);
+		$this->ws->method('listAccessibleWorkspaceIds')->willReturn([]);
+		$this->mapper->expects($this->never())->method('findByPcCustomerId');
+		$this->assertNull($this->facade->findByPcCustomerId('alice', 42));
+	}
+
+	public function testFindByPcCustomerIdFailsClosedWhenWorkspaceAccessMissing(): void
+	{
+		$facade = new CrmCompanyLinkReadFacade($this->mapper, $this->acl, $this->createMock(IURLGenerator::class));
+		$this->acl->method('canUseApp')->willReturn(true);
+		$this->mapper->expects($this->never())->method('findByPcCustomerId');
+		$this->assertNull($facade->findByPcCustomerId('alice', 42));
+	}
+
+	public function testFindByPcCustomerIdHidesArchivedCompany(): void
+	{
+		$this->acl->method('canUseApp')->willReturn(true);
+		$this->ws->method('listAccessibleWorkspaceIds')->willReturn([3]);
+		$company = $this->linkedCompany(3);
+		$company->setArchivedAt('2026-01-01 00:00:00');
+		$this->mapper->method('findByPcCustomerId')->willReturn($company);
+		$this->assertNull($this->facade->findByPcCustomerId('alice', 42));
+	}
+
+	public function testFindByPcCustomerIdLogsMapperFailure(): void
+	{
+		$logger = $this->createMock(\Psr\Log\LoggerInterface::class);
+		$facade = new CrmCompanyLinkReadFacade($this->mapper, $this->acl, $this->createMock(IURLGenerator::class), $this->ws, $logger);
+		$this->acl->method('canUseApp')->willReturn(true);
+		$this->ws->method('listAccessibleWorkspaceIds')->willReturn([3]);
+		$this->mapper->method('findByPcCustomerId')->willThrowException(new \RuntimeException('db gone'));
+		$logger->expects($this->once())->method('warning');
+		$this->assertNull($facade->findByPcCustomerId('alice', 42));
+	}
+
+	public function testFindByCompanyIdHidesForeignWorkspaceCompany(): void
+	{
+		$this->acl->method('canUseApp')->willReturn(true);
+		$this->ws->method('listAccessibleWorkspaceIds')->with('alice')->willReturn([7]);
+		$this->mapper->method('findById')->willReturn($this->linkedCompany(3));
+		$this->assertNull($this->facade->findByCompanyId('alice', 9));
+	}
 }

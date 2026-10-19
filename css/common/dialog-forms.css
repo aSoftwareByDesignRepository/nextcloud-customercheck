@@ -30,7 +30,7 @@ dialog.crm-native-dialog.crm-dialog--content.modal--lg {
 	}
 }
 
-@media (max-width: 640px) {
+@media (max-width: 639.98px) {
 	dialog.crm-native-dialog.crm-dialog--content.modal--sm,
 	dialog.crm-native-dialog.crm-dialog--content.modal--md,
 	dialog.crm-native-dialog.crm-dialog--content.modal--lg {
@@ -138,7 +138,7 @@ dialog.crm-native-dialog.crm-dialog--content .crm-advanced__body {
 	padding: 0 var(--crm-space-4, 1rem) var(--crm-space-4, 1rem);
 }
 
-@media (max-width: 640px) {
+@media (max-width: 639.98px) {
 	dialog.crm-native-dialog.crm-dialog--content .crm-form--stack {
 		gap: var(--crm-space-3, 0.75rem);
 	}
@@ -178,7 +178,7 @@ dialog.crm-person-dialog .crm-form--stack .crm-form-actions .crm-btn {
 	justify-content: center;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 639.98px) {
 	dialog.crm-person-dialog .crm-form--stack .crm-form-actions .crm-btn {
 		flex: 1 1 100%;
 	}

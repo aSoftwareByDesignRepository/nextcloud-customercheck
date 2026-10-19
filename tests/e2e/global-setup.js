@@ -13,6 +13,7 @@ import { spawnSync } from 'node:child_process';
 import { ensureUpgraded } from './helpers/ensure-upgraded.js';
 
 import { acquireSharedInstanceLock } from './shared-instance-lock.mjs'
+import { resetE2eUserState } from '../../../_shared/e2e/reset-e2e-user-state.mjs'
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
 // Concurrent farm lanes isolate their auth cache via E2E_STORAGE_STATE —
@@ -42,11 +43,15 @@ function occSet(key, value) {
 }
 
 function occUserSet(uid, key, value) {
+	return occUserSetting(uid, 'core', key, value);
+}
+
+function occUserSetting(uid, app, key, value) {
 	return spawnSync(
 		'docker',
 		[
 			'compose', 'exec', '-u', 'www-data', '-T', 'nextcloud', 'php', 'occ',
-			'user:setting', uid, 'core', key, value,
+			'user:setting', uid, app, key, value,
 		],
 		{ cwd: NC_COMPOSE_ROOT, encoding: 'utf8', timeout: 60_000 },
 	);
@@ -170,6 +175,14 @@ export default async function globalSetup(config) {
 	if (langPin.status !== 0) {
 		console.warn('[globalSetup] core/lang=en pin failed:', (langPin.stderr || langPin.stdout || '').trim());
 	}
+
+	// Same self-heal for theming: theme sweeps (ds-chrome / theme-matrix /
+	// sales-inbox) enable dark/highcontrast per user and can die before their
+	// cleanup — a leftover `enabled-themes=["dark"]` then poisons computed-style
+	// and axe assertions in unrelated specs. Shared helper deletes the pref
+	// (default theme); `--delete` dodges NC 34's legacy-typed-pref
+	// TypeConflictException that a literal '[]' write can hit.
+	resetE2eUserState({ uids: [username] });
 
 	mkdirSync(dirname(STORAGE_STATE_PATH), { recursive: true });
 	if (await storageStillValid(baseURL)) {

@@ -138,19 +138,19 @@ final class BachusPersonalMailSimplifyContractTest extends TestCase
 		);
 		// Responsiveness: NC mobile ≤767px stacks My email actions; desktop base unchanged.
 		$this->assertMatchesRegularExpression(
-			'/@media \(max-width:\s*767px\) \{\s*\n\s*#app-content\.crm-app \.crm-personal-mail-connected-actions/',
+			'/@media \(max-width:\s*767\.98px\) \{\s*\n\s*#app-content\.crm-app \.crm-personal-mail-connected-actions/',
 			$css,
 		);
 		$this->assertMatchesRegularExpression(
-			'/@media \(max-width:\s*767px\) \{\s*\n\s*#app-content\.crm-app \.crm-personal-mail-folder \{[\s\S]*?\* 0\.85rem/',
+			'/@media \(max-width:\s*767\.98px\) \{\s*\n\s*#app-content\.crm-app \.crm-personal-mail-folder \{[\s\S]*?\* 0\.85rem/',
 			$css,
 		);
 		$this->assertMatchesRegularExpression(
-			'/@media \(max-width:\s*767px\) \{\s*\n\s*#app-content\.crm-app \.crm-sales-inbox__toolbar[\s\S]*?crm-sales-inbox__actions-bar/',
+			'/@media \(max-width:\s*767\.98px\) \{\s*\n\s*#app-content\.crm-app \.crm-sales-inbox__toolbar[\s\S]*?crm-sales-inbox__actions-bar/',
 			$css,
 		);
 		$this->assertMatchesRegularExpression(
-			'/@media \(max-width:\s*1023px\) \{\s*\n\s*#app-content\.crm-app \.crm-personal-mail-folders/',
+			'/@media \(max-width:\s*1023\.98px\) \{\s*\n\s*#app-content\.crm-app \.crm-personal-mail-folders/',
 			$css,
 		);
 		$this->assertStringContainsString('var(--crm-muted)', $css);
@@ -176,7 +176,7 @@ final class BachusPersonalMailSimplifyContractTest extends TestCase
 			$css,
 		);
 		$this->assertMatchesRegularExpression(
-			'/@media \(max-width:\s*767px\) \{[\s\S]*?\.crm-sales-inbox__toolbar \{\s*\n\s*flex-direction:\s*column;/',
+			'/@media \(max-width:\s*767\.98px\) \{[\s\S]*?\.crm-sales-inbox__toolbar \{\s*\n\s*flex-direction:\s*column;/',
 			$css,
 		);
 		// Connected actions: base never forces column; mobile MQ does.
@@ -189,7 +189,7 @@ final class BachusPersonalMailSimplifyContractTest extends TestCase
 			$css,
 		);
 		$this->assertMatchesRegularExpression(
-			'/@media \(max-width:\s*767px\) \{[\s\S]*?\.crm-personal-mail-connected-actions,[\s\S]*?flex-direction:\s*column;/',
+			'/@media \(max-width:\s*767\.98px\) \{[\s\S]*?\.crm-personal-mail-connected-actions,[\s\S]*?flex-direction:\s*column;/',
 			$css,
 		);
 		// Folder depth multiplier stays 1.75rem on desktop; 0.85rem only under ≤767.
@@ -198,7 +198,7 @@ final class BachusPersonalMailSimplifyContractTest extends TestCase
 			$css,
 		);
 		$this->assertMatchesRegularExpression(
-			'/@media \(max-width:\s*767px\) \{[\s\S]*?var\(--crm-folder-depth,\s*0\) \* 0\.85rem/',
+			'/@media \(max-width:\s*767\.98px\) \{[\s\S]*?var\(--crm-folder-depth,\s*0\) \* 0\.85rem/',
 			$css,
 		);
 	}

@@ -67,7 +67,7 @@
 }
 
 /* Mobile / tablet: stacked layout; NC core #app-navigation-toggle below 1024px. */
-@media (max-width: 1023px) {
+@media (max-width: 1023.98px) {
   #customercheck-app,
   #app,
   .customercheck-app {
@@ -123,7 +123,7 @@
 
 /* ===== PAGE-SPECIFIC RESPONSIVE ADJUSTMENTS ===== */
 
-@media (max-width: 768px) {
+@media (max-width: 768.98px) {
   /* Section adjustments - clear spacing even on small screens */
   .section {
     padding: var(--space-6);
@@ -250,14 +250,14 @@
 
 /* ===== TABLET / SMALL DESKTOP ADJUSTMENTS ===== */
 
-@media (min-width: 769px) and (max-width: 1023px) {
+@media (min-width: 769px) and (max-width: 1023.98px) {
   #app-content-wrapper,
   .customercheck-content {
     padding: var(--space-6) var(--space-4);
   }
 }
 
-@media (min-width: 1024px) and (max-width: 1280px) {
+@media (min-width: 1024px) and (max-width: 1279.98px) {
   #content.app-customercheck #app-navigation,
   .customercheck-navigation-wrapper {
     width: var(--crm-nav-width-compact, 240px);
@@ -274,7 +274,7 @@
 
 /* ===== LANDSCAPE MOBILE ADJUSTMENTS ===== */
 
-@media (max-width: 768px) and (orientation: landscape) {
+@media (max-width: 768.98px) and (orientation: landscape) {
   #app-content-wrapper,
   .customercheck-content {
     padding: var(--space-3);
@@ -288,7 +288,7 @@
 
 /* ===== PREVENT HORIZONTAL SCROLLING ===== */
 
-@media (max-width: 768px) {
+@media (max-width: 768.98px) {
   /* Scoped to app content only - avoid breaking flex/grid layouts globally */
   #app-content,
   #app-content-wrapper {
@@ -342,7 +342,7 @@
 
 /* ===== TOUCH TARGET ENHANCEMENTS ===== */
 
-@media (max-width: 768px) {
+@media (max-width: 768.98px) {
   /* Primary interactive elements: touch-friendly targets (WCAG 2.5.5 AA) */
   button,
   .crm-btn,

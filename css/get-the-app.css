@@ -31,7 +31,7 @@
 	align-items: center;
 	justify-content: center;
 	flex-shrink: 0;
-	color: var(--color-primary-element);
+	color: var(--crm-accent-ink, var(--color-primary-element));
 }
 
 .crm-get-app__icon-well svg,
@@ -47,7 +47,7 @@
 	font-weight: 650;
 	letter-spacing: 0.02em;
 	text-transform: uppercase;
-	color: var(--color-primary-element);
+	color: var(--crm-accent-ink, var(--color-primary-element));
 }
 
 .crm-get-app__title {
@@ -251,7 +251,7 @@
 	border: 2px solid var(--color-primary-element);
 	border-radius: var(--border-radius-element, 10px);
 	background: transparent;
-	color: var(--color-primary-element);
+	color: var(--crm-accent-ink, var(--color-primary-element));
 	font-weight: 700;
 	font-size: var(--crm-fs-md, 1rem);
 	line-height: 1.25;
@@ -291,7 +291,7 @@
 	}
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767.98px) {
 	.crm-get-app__play {
 		width: 100%;
 	}

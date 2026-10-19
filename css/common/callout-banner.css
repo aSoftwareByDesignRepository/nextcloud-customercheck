@@ -111,7 +111,7 @@ dialog.crm-native-dialog .crm-callout--banner .crm-callout__body:not(:has(.crm-c
 		'text';
 }
 
-@media (max-width: 720px) {
+@media (max-width: 719.98px) {
 	#app-content.crm-app .crm-callout--banner,
 	.modal-backdrop .crm-callout--banner,
 dialog.crm-native-dialog .crm-callout--banner {

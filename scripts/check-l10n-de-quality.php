@@ -105,6 +105,8 @@ $allowExact = [
 	'Client secret' => true,
 	'France' => true,
 	'Austria' => true,
+	'Malta' => true, // German name is identical
+	'Portugal' => true, // German name is identical
 ];
 
 /**

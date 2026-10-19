@@ -362,7 +362,7 @@
 	letter-spacing: 0.04em;
 	text-transform: uppercase;
 	line-height: var(--crm-line-tight, 1.25);
-	color: var(--color-primary-element, var(--crm-text));
+	color: var(--crm-accent-ink, var(--color-primary-element, var(--crm-text)));
 }
 
 .crm-support-us__offer-title {
@@ -606,7 +606,7 @@
 	text-underline-offset: 0.15em;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767.98px) {
 	.crm-support-us-page__hero {
 		padding: var(--crm-space-5, 1.25rem) var(--crm-space-4, 1rem);
 	}

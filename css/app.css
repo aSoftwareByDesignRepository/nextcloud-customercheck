@@ -166,7 +166,7 @@
 	user-select: none;
 }
 #app-content.crm-app .crm-breadcrumb__link {
-	color: var(--color-primary-element);
+	color: var(--crm-accent-ink, var(--color-primary-element));
 	font-weight: 600;
 	text-decoration: none;
 	border-radius: var(--crm-radius-sm);
@@ -209,7 +209,7 @@
 	height: 56px;
 	border-radius: var(--crm-radius-md);
 	background: var(--crm-tint-info);
-	color: var(--color-primary-element);
+	color: var(--crm-accent-ink, var(--color-primary-element));
 }
 .crm-page-header__icon-svg {
 	width: 28px;
@@ -829,7 +829,7 @@ dialog.crm-native-dialog .crm-callout__hint {
 	color: var(--crm-text);
 	font-weight: 700;
 }
-@media (max-width: 640px) {
+@media (max-width: 639.98px) {
 	#app-content.crm-app .crm-settings-nav {
 		flex-direction: column;
 	}
@@ -925,7 +925,7 @@ dialog.crm-native-dialog .crm-form-actions--start {
 	width: var(--crm-icon-sm, 1rem);
 	height: var(--crm-icon-sm, 1rem);
 	margin-top: var(--crm-space-1, 4px);
-	color: var(--color-primary-element);
+	color: var(--crm-accent-ink, var(--color-primary-element));
 	flex-shrink: 0;
 }
 #app-content.crm-app .crm-identity-strip__address--empty {
@@ -1001,7 +1001,7 @@ dialog.crm-native-dialog .crm-form-actions--start {
 #app-content.crm-app .crm-identity-row--spaced {
 	margin-top: var(--crm-space-5);
 }
-@media (max-width: 767px) {
+@media (max-width: 767.98px) {
 	#app-content.crm-app .crm-identity-actions,
 	#app-content.crm-app .crm-identity-form .crm-form-actions,
 	#app-content.crm-app #crm-persons > .crm-card__header {
@@ -1094,10 +1094,11 @@ dialog.crm-native-dialog .crm-form-actions--start {
 	align-items: center;
 	justify-content: center;
 	min-height: 44px; /* WCAG 2.5.5 target size is defined in CSS px; rem shrinks under NC 15px root font */
+	min-width: 44px;
 	padding: var(--crm-space-2) var(--crm-space-3);
 	border: 1px solid transparent;
 	border-radius: var(--crm-radius-sm);
-	color: var(--color-primary-element);
+	color: var(--crm-accent-ink, var(--color-primary-element));
 	font-size: var(--crm-fs-sm);
 	font-weight: 500;
 	line-height: 1.35;
@@ -1160,6 +1161,7 @@ dialog.crm-native-dialog .crm-form-actions--start {
 
 #app-content.crm-app--company-detail .crm-jump-nav--bar .crm-jump-nav__link {
 	min-height: 44px; /* WCAG 2.5.5: px, not rem — NC root font is 15px */
+	min-width: 44px;
 	padding: var(--crm-space-2) var(--crm-space-4);
 	border: 1px solid var(--crm-border);
 	border-radius: 999px;
@@ -1326,7 +1328,7 @@ dialog.crm-native-dialog .crm-form-actions--start {
 	content: '▸';
 	display: inline-block;
 	margin-inline-end: var(--crm-space-2);
-	color: var(--color-primary-element);
+	color: var(--crm-accent-ink, var(--color-primary-element));
 }
 
 #app-content.crm-app--company-detail .crm-howto[open] .crm-howto__summary::before {
@@ -1508,7 +1510,7 @@ dialog.crm-native-dialog .crm-form-actions--start {
 	cursor: pointer;
 	font-size: var(--crm-fs-sm);
 	font-weight: 600;
-	color: var(--color-primary-element);
+	color: var(--crm-accent-ink, var(--color-primary-element));
 	list-style: none;
 }
 
@@ -1653,7 +1655,7 @@ dialog.crm-native-dialog .crm-form-actions--start {
 	border-radius: 999px;
 	border: 2px solid var(--color-primary-element);
 	background: color-mix(in srgb, var(--color-primary-element) 12%, var(--color-main-background));
-	color: var(--color-primary-element);
+	color: var(--crm-accent-ink, var(--color-primary-element));
 	font-size: var(--crm-fs-sm);
 	font-weight: 700;
 	line-height: 1;
@@ -1708,7 +1710,7 @@ dialog.crm-native-dialog .crm-form-actions--start {
 	justify-content: center;
 }
 
-@media (max-width: 639px) {
+@media (max-width: 639.98px) {
 	#app-content.crm-app .crm-welcome-coach__step-actions {
 		width: 100%;
 	}
@@ -1857,7 +1859,7 @@ dialog.crm-native-dialog .crm-form-inline-error[hidden] {
 	box-sizing: border-box;
 }
 
-@media (max-width: 1023px) {
+@media (max-width: 1023.98px) {
 	#app-content.crm-app .crm-settings-layout,
 	#app-content.crm-app .admin-settings-layout,
 	.crm-nc-admin-settings .crm-settings-layout {
@@ -1879,6 +1881,7 @@ dialog.crm-native-dialog .crm-form-inline-error[hidden] {
 	#app-content.crm-app .crm-jump-nav__link,
 	.crm-nc-admin-settings .crm-jump-nav__link {
 		min-height: 44px; /* WCAG 2.5.5: px, not rem — NC root font is 15px */
+		min-width: 44px;
 	}
 
 	#app-content.crm-app--company-detail .crm-page-stack > .crm-card[id] {
@@ -1886,7 +1889,7 @@ dialog.crm-native-dialog .crm-form-inline-error[hidden] {
 	}
 }
 
-@media (max-width: 767px) {
+@media (max-width: 767.98px) {
 	#app-content.crm-app .crm-settings-form__footer,
 	#app-content.crm-app .admin-settings-form__footer,
 	#app-content.crm-app .crm-admin-settings-form__footer,
@@ -1996,7 +1999,7 @@ dialog.crm-native-dialog .crm-form-inline-error[hidden] {
 }
 
 /* ── Responsive page header (table card reflow: page-patterns.css) ── */
-@media (max-width: 767px) {
+@media (max-width: 767.98px) {
 	.crm-page-header__main {
 		grid-template-columns: 48px 1fr;
 	}
@@ -2246,7 +2249,7 @@ dialog.crm-native-dialog .crm-link-list {
 dialog.crm-native-dialog .crm-simple-list li {
 	margin: var(--crm-space-1) 0;
 }
-@media (max-width: 767px) {
+@media (max-width: 767.98px) {
 	#app-content.crm-app .crm-timeline__card {
 		padding: var(--crm-space-3);
 	}
@@ -2318,7 +2321,7 @@ dialog.crm-native-dialog .crm-dl__row dd {
 	resize: vertical;
 	min-height: 4.5rem;
 }
-@media (max-width: 600px) {
+@media (max-width: 599.98px) {
 	#app-content.crm-app .crm-dl__row,
 	dialog.crm-native-dialog .crm-dl__row {
 		grid-template-columns: 1fr;
@@ -2418,7 +2421,7 @@ dialog.crm-native-dialog .crm-dl__row dd {
 	gap: var(--crm-space-1);
 }
 #app-content.crm-app .crm-kanban__card-company {
-	color: var(--color-primary-element);
+	color: var(--crm-accent-ink, var(--color-primary-element));
 	text-decoration: none;
 	font-size: 0.9rem;
 	line-height: 1.3;
@@ -2433,7 +2436,7 @@ dialog.crm-native-dialog .crm-dl__row dd {
 	outline-offset: 2px;
 }
 #app-content.crm-app .crm-kanban__card-files {
-	color: var(--color-primary-element);
+	color: var(--crm-accent-ink, var(--color-primary-element));
 	font-size: 0.85rem;
 	line-height: 1.3;
 	display: flex;
@@ -2455,7 +2458,7 @@ dialog.crm-native-dialog .crm-dl__row dd {
 	min-width: 1.75rem;
 	border-radius: 50%;
 	background: var(--color-primary-element-light, var(--crm-tint-info));
-	color: var(--color-primary-element);
+	color: var(--crm-accent-ink, var(--color-primary-element));
 	font-size: 0.7rem;
 	font-weight: 700;
 	letter-spacing: 0.02em;
@@ -2616,7 +2619,7 @@ dialog.crm-native-dialog .crm-pre {
 	background: var(--crm-surface-muted, var(--color-background-dark));
 	border-radius: var(--crm-radius, 6px);
 }
-@media (max-width: 767px) {
+@media (max-width: 767.98px) {
 	#app-content.crm-app .crm-kanban {
 		grid-template-columns: 1fr;
 	}
@@ -2861,7 +2864,7 @@ dialog.crm-native-dialog .crm-advanced > .crm-form--stack {
 #app-content.crm-app .crm-ag-terminal-actions {
 	margin-top: var(--crm-space-3);
 }
-@media (max-width: 640px) {
+@media (max-width: 639.98px) {
 	#app-content.crm-app .crm-ag-money-row {
 		grid-template-columns: 1fr;
 	}
@@ -3071,7 +3074,7 @@ dialog.crm-native-dialog .crm-advanced > .crm-form--stack {
 #app-content.crm-app .crm-today-stat--alert .crm-today-stat__label {
 	color: var(--color-error-text, var(--crm-danger-ink, var(--crm-text)));
 }
-@media (max-width: 520px) {
+@media (max-width: 519.98px) {
 	#app-content.crm-app .crm-pulse-glance__stats {
 		grid-template-columns: repeat(2, minmax(0, 1fr));
 	}
@@ -3099,7 +3102,7 @@ dialog.crm-native-dialog .crm-advanced > .crm-form--stack {
 #app-content.crm-app .crm-quick-filter.is-active .crm-quick-filter__count,
 #app-content.crm-app .crm-quick-filter[aria-current="page"] .crm-quick-filter__count {
 	background: var(--color-primary-element-text);
-	color: var(--color-primary-element);
+	color: var(--crm-accent-ink, var(--color-primary-element));
 }
 #app-content.crm-app .crm-command-section .crm-card__title {
 	display: flex;
@@ -3146,13 +3149,15 @@ dialog.crm-native-dialog .crm-advanced > .crm-form--stack {
 	display: inline-flex;
 	align-items: center;
 	min-height: 24px;
+	/* Short texts ("518", "AZC") stay ~22px wide — WCAG 2.5.8 needs both axes. */
+	min-width: 24px;
 }
 
 /* WCAG 2.5.5 touch floor: same bare text links at tablet/phone widths.
  * Boundary is 768px inclusive (mobile side owns 768; desktop starts at
- * min-width:769px per the app convention). 44px in CSS px, not rem — NC
+ * min-width: 768px per the app convention). 44px in CSS px, not rem — NC
  * root font can be 15px. */
-@media (max-width: 768px) {
+@media (max-width: 767.98px) {
 	#app-content.crm-app .table a.crm-table-link,
 	#app-content-wrapper .table a.crm-table-link,
 	#app-content.crm-app .crm-table--strategy a.crm-strategy-company,
@@ -3168,7 +3173,7 @@ dialog.crm-native-dialog .crm-advanced > .crm-form--stack {
 	min-height: 44px; /* WCAG 2.5.5 target size is defined in CSS px; rem shrinks under NC 15px root font */
 }
 
-@media (max-width: 767px) {
+@media (max-width: 767.98px) {
 	#app-content.crm-app .crm-btn--sm,
 	#app-content-wrapper .crm-btn--sm,
 	dialog.crm-native-dialog .crm-btn--sm,
@@ -3769,7 +3774,7 @@ dialog.crm-native-dialog .crm-advanced > .crm-form--stack {
 	justify-content: center;
 	width: 100%;
 }
-@media (max-width: 640px) {
+@media (max-width: 639.98px) {
 	#app-content.crm-app .crm-review-assign-row {
 		grid-template-columns: 1fr;
 	}
@@ -3784,7 +3789,7 @@ dialog.crm-native-dialog .crm-advanced > .crm-form--stack {
 	opacity: 0.72;
 	cursor: wait;
 }
-@media (max-width: 640px) {
+@media (max-width: 639.98px) {
 	#app-content.crm-app .crm-mail-preview [data-crm-mail-preview-toggle],
 	#app-content.crm-app .crm-mail-preview [data-crm-mail-reply] {
 		width: 100%;
@@ -3843,7 +3848,7 @@ dialog.crm-native-dialog .crm-advanced > .crm-form--stack {
 	line-height: 1.35;
 	padding-top: 0.15rem;
 }
-@media (max-width: 640px) {
+@media (max-width: 639.98px) {
 	#app-content.crm-app .crm-review-search {
 		grid-template-columns: 1fr;
 		align-items: stretch;
@@ -3992,7 +3997,7 @@ dialog.crm-native-dialog .crm-advanced > .crm-form--stack {
 #app-content.crm-app .crm-mail-thread-row[aria-selected="true"] .crm-mail-thread-row__when {
 	color: var(--crm-text);
 }
-@media (max-width: 640px) {
+@media (max-width: 639.98px) {
 	#app-content.crm-app .crm-mail-thread-row__when {
 		min-width: 0;
 		white-space: normal;
@@ -4028,7 +4033,7 @@ dialog.crm-native-dialog .crm-advanced > .crm-form--stack {
 #app-content.crm-app .crm-mail-3pane__reader.crm-review-detail-row[hidden] {
 	display: none !important;
 }
-@media (max-width: 640px) {
+@media (max-width: 639.98px) {
 	#app-content.crm-app .crm-review-mail .crm-review-open {
 		display: none;
 	}
@@ -4135,7 +4140,7 @@ dialog.crm-native-dialog .crm-advanced > .crm-form--stack {
 #app-content.crm-app tr.crm-review-detail-row[hidden] {
 	display: none !important;
 }
-@media (max-width: 768px) {
+@media (max-width: 767.98px) {
 	#app-content.crm-app .crm-review-table tbody td.crm-table-actions-col {
 		flex-direction: column;
 		align-items: stretch;
@@ -4378,13 +4383,14 @@ dialog.crm-native-dialog .crm-advanced > .crm-form--stack {
 	align-self: flex-start;
 	margin-block-start: 0.35rem;
 	min-height: 44px;
+	min-width: 44px;
 	padding: 0.2rem 0;
 	font-size: var(--crm-fs-sm, 0.875rem);
 	font-weight: 700;
 	line-height: 1.2;
 	white-space: nowrap;
 	text-decoration: none !important;
-	color: var(--color-primary-element);
+	color: var(--crm-accent-ink, var(--color-primary-element));
 }
 #app-content.crm-app .crm-glance-kpi__cta::after {
 	content: "";
@@ -4413,7 +4419,7 @@ dialog.crm-native-dialog .crm-advanced > .crm-form--stack {
 	color: var(--color-warning-text, var(--color-warning));
 }
 #app-content.crm-app .crm-glance-kpi--attention .crm-glance-kpi__cta {
-	color: var(--color-primary-element);
+	color: var(--crm-accent-ink, var(--color-primary-element));
 }
 #app-content.crm-app .crm-glance-kpi--offline {
 	border-left-color: var(--crm-border-strong, var(--color-border-maxcontrast, var(--color-border)));
@@ -4518,7 +4524,7 @@ dialog.crm-native-dialog .crm-advanced > .crm-form--stack {
 		padding-block-end: 0;
 	}
 }
-@media (max-width: 767px) {
+@media (max-width: 767.98px) {
 	#app-content.crm-app #crm-glance .crm-glance-pin {
 		position: static;
 		box-shadow: none;
@@ -4723,7 +4729,7 @@ dialog.crm-native-dialog .crm-advanced > .crm-form--stack {
 	border: 1px solid color-mix(in srgb, var(--color-primary-element) 35%, var(--crm-border, var(--color-border)));
 	border-radius: var(--crm-radius-md, 12px);
 	background: var(--color-main-background);
-	color: var(--color-primary-element);
+	color: var(--crm-accent-ink, var(--color-primary-element));
 	font-size: var(--crm-fs-sm, 0.875rem);
 	font-weight: 600;
 	line-height: var(--crm-line-tight, 1.2);
@@ -4968,7 +4974,7 @@ dialog.crm-native-dialog .crm-advanced > .crm-form--stack {
 	min-height: var(--crm-touch, 2.75rem);
 	display: flex;
 	align-items: center;
-	color: var(--color-primary-element);
+	color: var(--crm-accent-ink, var(--color-primary-element));
 }
 #app-content.crm-app .crm-team-capacity__options > summary:focus-visible {
 	outline: 2px solid var(--color-primary-element);
@@ -4999,7 +5005,7 @@ dialog.crm-native-dialog .crm-advanced > .crm-form--stack {
 #app-content.crm-app details.crm-team-capacity-shell > .crm-card__body {
 	padding: var(--crm-space-4, 1rem) var(--crm-space-5, 1.25rem) var(--crm-space-5, 1.25rem);
 }
-@media (max-width: 720px) {
+@media (max-width: 719.98px) {
 	#app-content.crm-app .crm-team-capacity__actions .crm-btn--lg {
 		width: 100%;
 		min-width: 0;
@@ -5123,7 +5129,7 @@ dialog.crm-native-dialog .crm-prepared-mail__actions a.crm-btn {
 	min-height: 44px;
 	justify-content: center;
 }
-@media (max-width: 640px) {
+@media (max-width: 639.98px) {
 	dialog.crm-native-dialog .crm-prepared-mail__actions {
 		flex-direction: column;
 		align-items: stretch;
@@ -5197,7 +5203,7 @@ dialog.crm-native-dialog .crm-form--stack .crm-datepicker-host .datepicker-input
 	padding-top: var(--crm-space-4, 1rem);
 	border-top: 1px solid var(--crm-border, var(--color-border));
 }
-@media (max-width: 640px) {
+@media (max-width: 639.98px) {
 	#app-content.crm-app .crm-form-row-2 {
 		grid-template-columns: 1fr;
 	}
@@ -5288,7 +5294,7 @@ dialog.crm-native-dialog .crm-form--stack .crm-datepicker-host .datepicker-input
 	border-radius: 999px;
 	border: 2px solid var(--color-primary-element);
 	background: color-mix(in srgb, var(--color-primary-element) 12%, var(--color-main-background));
-	color: var(--color-primary-element);
+	color: var(--crm-accent-ink, var(--color-primary-element));
 	font-size: var(--crm-fs-sm, 0.875rem);
 	font-weight: 700;
 	line-height: 1;
@@ -5509,7 +5515,7 @@ dialog.crm-native-dialog .crm-form--stack .crm-datepicker-host .datepicker-input
 #app-content.crm-app #crm-strategy-board .crm-quick-filters {
 	margin-bottom: var(--crm-space-4, 1rem);
 }
-@media (max-width: 767px) {
+@media (max-width: 767.98px) {
 	#app-content.crm-app .crm-strategy-edit-row > td {
 		padding-inline: 0;
 	}
@@ -5519,7 +5525,7 @@ dialog.crm-native-dialog .crm-form--stack .crm-datepicker-host .datepicker-input
 	align-items: end;
 	max-width: none;
 }
-@media (max-width: 767px) {
+@media (max-width: 767.98px) {
 	#app-content.crm-app .crm-form--row {
 		grid-template-columns: 1fr;
 		align-items: stretch;
@@ -5768,7 +5774,7 @@ dialog.crm-native-dialog .crm-form--stack .crm-datepicker-host .datepicker-input
 	gap: var(--crm-space-2, 0.5rem);
 	margin: var(--crm-space-2, 0.5rem) 0;
 }
-@media (max-width: 600px) {
+@media (max-width: 599.98px) {
 	#app-content.crm-app .crm-mailbox-list__head {
 		flex-direction: column;
 		align-items: flex-start;
@@ -5869,7 +5875,7 @@ dialog.crm-native-dialog .crm-form--stack .crm-datepicker-host .datepicker-input
 		flex-wrap: nowrap;
 	}
 }
-@media (max-width: 640px) {
+@media (max-width: 639.98px) {
 	#app-content.crm-app .crm-review-mail-tools {
 		flex-direction: column;
 		align-items: stretch;
@@ -6052,7 +6058,7 @@ dialog.crm-native-dialog .crm-muted {
 #app-content.crm-app .crm-quickstart .crm-card__title::before {
 	content: "★";
 	margin-inline-end: 0.35em;
-	color: var(--color-primary-element);
+	color: var(--crm-accent-ink, var(--color-primary-element));
 	font-size: 0.85em;
 }
 #app-content.crm-app .crm-hint-dismiss {
@@ -6323,7 +6329,7 @@ dialog.crm-native-dialog label.crm-check {
 	border: 2px solid var(--color-primary-element);
 	border-radius: var(--crm-radius-md, 0.5rem);
 	background: var(--crm-surface, var(--color-main-background));
-	color: var(--color-primary-element);
+	color: var(--crm-accent-ink, var(--color-primary-element));
 	font-weight: 700;
 	font-size: 1rem;
 	pointer-events: none;
@@ -6332,7 +6338,7 @@ dialog.crm-native-dialog label.crm-check {
 	margin: 0.25rem 0 0;
 	font-weight: 600;
 	font-size: 1rem;
-	color: var(--color-primary-element);
+	color: var(--crm-accent-ink, var(--color-primary-element));
 }
 #app-content.crm-app .crm-import-or {
 	display: flex;
@@ -6462,7 +6468,7 @@ dialog.crm-native-dialog label.crm-check {
 	font-weight: 600;
 	margin: 0 0 1rem;
 }
-@media (max-width: 640px) {
+@media (max-width: 639.98px) {
 	#app-content.crm-app .crm-import-sources {
 		grid-template-columns: 1fr;
 	}
@@ -6733,7 +6739,7 @@ dialog.crm-native-dialog label.crm-check {
 	font-weight: 700;
 }
 #app-content.crm-app .crm-sales-inbox__col-head.crm-sales-inbox__sort.is-active {
-	color: var(--color-primary-element);
+	color: var(--crm-accent-ink, var(--color-primary-element));
 	background: color-mix(in srgb, var(--color-primary-element) 10%, transparent);
 	border-radius: var(--border-radius, var(--crm-radius-sm));
 }
@@ -6804,7 +6810,7 @@ dialog.crm-native-dialog label.crm-check {
 	min-width: 0;
 	justify-self: end;
 }
-@media (max-width: 720px) {
+@media (max-width: 719.98px) {
 	#app-content.crm-app .crm-sales-inbox__tab {
 		min-width: 0;
 		font-size: 1rem;
@@ -7074,7 +7080,7 @@ dialog.crm-native-dialog label.crm-check {
 	margin: 0;
 	font-size: var(--crm-fs-md);
 }
-@media (max-width: 720px) {
+@media (max-width: 719.98px) {
 	#app-content.crm-app .crm-sales-inbox__suggest-card #crm-sales-inbox-quick-assign,
 	#app-content.crm-app .crm-sales-inbox__assign-actions .crm-btn,
 	#app-content.crm-app .crm-sales-inbox__create-actions .crm-btn,
@@ -7223,13 +7229,13 @@ dialog.crm-native-dialog label.crm-check {
 	display: none !important;
 }
 /* ≤640px: Sync CTA full-bleed (legacy phone width). Desktop (≥641px) unchanged. */
-@media (max-width: 640px) {
+@media (max-width: 639.98px) {
 	#app-content.crm-app .crm-personal-mail-connected-actions .crm-btn--lg {
 		width: 100%;
 	}
 }
 /* ≤767px: NC mobile — stack all My email action rows; Sync already full-width above. */
-@media (max-width: 767px) {
+@media (max-width: 767.98px) {
 	#app-content.crm-app .crm-personal-mail-connected-actions,
 	#app-content.crm-app .crm-personal-mail-connect__actions,
 	#app-content.crm-app #crm-personal-mail-folders-wrap .crm-form-actions,
@@ -7660,7 +7666,7 @@ dialog.crm-native-dialog label.crm-check {
 	gap: 0.75rem;
 	flex-wrap: wrap;
 }
-@media (max-width: 719px) {
+@media (max-width: 719.98px) {
 	#app-content.crm-app .crm-sales-compose {
 		padding: var(--crm-space-3, 0.75rem);
 		gap: var(--crm-space-3, 0.75rem);
@@ -7677,7 +7683,7 @@ dialog.crm-native-dialog label.crm-check {
 	}
 }
 /* ≤767px: NC mobile — Sales Inbox chrome (tabs/actions/decide) without changing ≥768 desktop. */
-@media (max-width: 767px) {
+@media (max-width: 767.98px) {
 	#app-content.crm-app .crm-sales-inbox__toolbar {
 		flex-direction: column;
 		align-items: stretch;
@@ -7763,7 +7769,7 @@ dialog.crm-native-dialog label.crm-check {
 	display: inline-block;
 	margin-inline-end: 0.4rem;
 	font-weight: 700;
-	color: var(--color-primary-element);
+	color: var(--crm-accent-ink, var(--color-primary-element));
 }
 #app-content.crm-app .crm-personal-mail-folder__toggles {
 	display: flex;
@@ -7784,7 +7790,7 @@ dialog.crm-native-dialog label.crm-check {
 	min-height: var(--crm-touch);
 }
 /* ≤640px (40rem): stack Sync/Share under folder name (phones). Desktop grid unchanged. */
-@media (max-width: 40rem) {
+@media (max-width: 39.99875rem) {
 	#app-content.crm-app .crm-personal-mail-folder {
 		grid-template-columns: minmax(0, 1fr);
 		align-items: stretch;
@@ -7794,7 +7800,7 @@ dialog.crm-native-dialog label.crm-check {
 	}
 }
 /* ≤767px: NC mobile — cut nested folder indent so depth×1.75rem cannot overflow 320px. */
-@media (max-width: 767px) {
+@media (max-width: 767.98px) {
 	#app-content.crm-app .crm-personal-mail-folder {
 		padding-inline-start: calc(
 			var(--crm-space-3, 0.75rem)
@@ -7803,7 +7809,7 @@ dialog.crm-native-dialog label.crm-check {
 	}
 }
 /* ≤1023px: NC tablet+phone — deep folder trees scroll inside the picker; ≥1024 desktop unchanged. */
-@media (max-width: 1023px) {
+@media (max-width: 1023.98px) {
 	#app-content.crm-app .crm-personal-mail-folders,
 	#app-content.crm-app .crm-folder-picker {
 		max-width: 100%;

@@ -74,7 +74,7 @@
 }
 
 .crm-projectcheck-picker-empty a {
-	color: var(--color-primary-element, var(--color-primary));
+	color: var(--crm-accent-ink, var(--color-primary-element, var(--color-primary)));
 	font-weight: 600;
 }
 
@@ -91,7 +91,7 @@
 	margin-bottom: var(--space-3, 0.75rem);
 }
 
-@media (max-width: 47.9375rem) {
+@media (max-width: 47.99875rem) {
 	.crm-projectcheck-connection__actions {
 		flex-direction: column;
 	}

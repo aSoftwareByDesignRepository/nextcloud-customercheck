@@ -98,7 +98,7 @@ final class SupportUsSectionContractTest extends TestCase
 		self::assertStringContainsString('max-width: none', $css);
 		self::assertStringContainsString('a.crm-support-us__cta.crm-btn--primary', $css);
 		self::assertStringContainsString('minmax(min(100%, 16rem)', $css);
-		self::assertStringContainsString('@media (max-width: 768px)', $css);
+		self::assertStringContainsString('@media (max-width: 767.98px)', $css);
 		self::assertStringContainsString('min-width: 44px', $css);
 		self::assertStringContainsString('crm-support-us__new-tab', $css);
 	}

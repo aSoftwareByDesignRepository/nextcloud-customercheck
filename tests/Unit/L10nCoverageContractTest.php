@@ -25,6 +25,9 @@ final class L10nCoverageContractTest extends TestCase
 	/** Product/brand names that stay identical in German by convention. */
 	private const IDENTITY_DE_ALLOW = [
 		'Nextcloud Mail' => true,
+		// Brand/product names — kept verbatim in every sibling app catalog.
+		'CustomerCheck Mobile' => true,
+		'Check Partner' => true,
 	];
 
 	/** @return array{translations: array<string, string>, pluralForm?: string} */

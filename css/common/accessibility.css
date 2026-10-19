@@ -333,7 +333,7 @@ header {
  * Button-styled anchors must keep solid fills (not link underline chrome).
  * Prefer primary-element — brand --color-primary fails AA on dark surfaces. */
 #app-content-wrapper a:not(.btn):not(.crm-btn) {
-  color: var(--color-primary-element, var(--arbeitszeitcheck-color-primary-element));
+  color: var(--crm-accent-ink, var(--color-primary-element, var(--arbeitszeitcheck-color-primary-element)));
   text-decoration: underline;
 }
 
@@ -449,7 +449,7 @@ dialog.crm-native-dialog::backdrop {
 
 /* ===== RESPONSIVE ACCESSIBILITY ===== */
 
-@media (max-width: 768px) {
+@media (max-width: 767.98px) {
   /* Ensure touch targets remain accessible on mobile */
   .crm-btn,
   .nav-link,

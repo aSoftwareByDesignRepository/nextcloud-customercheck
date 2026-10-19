@@ -268,7 +268,7 @@ dialog.crm-native-dialog .crm-callout__hint {
 }
 
 /* ── Responsive: stack icon + body on narrow viewports ── */
-@media (max-width: 720px) {
+@media (max-width: 719.98px) {
 	#app-content.crm-app .crm-callout,
 	.modal-backdrop .crm-callout,
 dialog.crm-native-dialog .crm-callout,

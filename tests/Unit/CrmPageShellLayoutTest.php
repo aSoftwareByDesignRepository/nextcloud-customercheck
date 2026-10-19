@@ -160,9 +160,10 @@ final class CrmPageShellLayoutTest extends TestCase
 		$a11y = (string)file_get_contents(dirname(__DIR__, 2) . '/css/common/accessibility.css');
 		foreach ([$base, $a11y] as $css) {
 			$this->assertMatchesRegularExpression(
-				'/#app-content-wrapper a:not\(\.btn\):not\(\.crm-btn\)\s*\{[^}]*color:\s*var\(--color-primary-element/s',
+				'/#app-content-wrapper a:not\(\.btn\):not\(\.crm-btn\)\s*\{[^}]*color:\s*var\(--crm-accent-ink/s',
 				$css,
-				'Table/content links must use --color-primary-element (AA on dark themes)'
+				'Table/content links must use --crm-accent-ink (primary-element in light, '
+				. 'contrast-blended under dark — raw primary-element measured 4.31:1 < AA)'
 			);
 			$this->assertDoesNotMatchRegularExpression(
 				'/#app-content-wrapper a:not\(\.btn\):not\(\.crm-btn\)\s*\{[^}]*color:\s*var\(--arbeitszeitcheck-color-primary\)/s',

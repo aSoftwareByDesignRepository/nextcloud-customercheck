@@ -144,6 +144,7 @@ class Application extends App implements IBootstrap
 			$c->get(AccessControlService::class),
 			$c->get(IURLGenerator::class),
 			$c->get(WorkspaceAccessService::class),
+			$c->get(\Psr\Log\LoggerInterface::class),
 		));
 
 		$context->registerService(MobileIdempotencyService::class, fn ($c) => new MobileIdempotencyService(

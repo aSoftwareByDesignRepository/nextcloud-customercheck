@@ -234,6 +234,31 @@ describe('CSS design-token compliance (no hardcoded colors)', () => {
     expect(app).toMatch(/\.crm-sales-compose__cc-toggle\s*\{[^}]*min-height:\s*var\(--crm-touch/);
   });
 
+  it('px min-height floors on interactive surfaces come with a min-width floor (single-axis hit-target bug)', () => {
+    // FARM-RECURRING BUG guard (hit_target_floor_single_axis): `.crm-table-link`
+    // declared min-height:24px but no min-width — a 3-char company name ("518")
+    // rendered 22px wide at desktop (WCAG 2.5.8 fail, caught by a11y-dom).
+    // Any interactive selector pinning a literal px min-height must pin
+    // min-width too, otherwise text-short content shrinks the width axis.
+    const INTERACTIVE = /crm-table-link|crm-strategy-company|crm-breadcrumb__item|__link\b|__cta\b|quick-filter|review-sort/;
+    const offenders = [];
+    for (const file of files) {
+      const rel = relative(appRoot, file);
+      const css = stripComments(readFileSync(file, 'utf8'));
+      const ruleRe = /([^{}@]+)\{([^{}]*)\}/g;
+      let m;
+      while ((m = ruleRe.exec(css)) !== null) {
+        const selector = m[1].trim();
+        const bodyCss = m[2];
+        if (!INTERACTIVE.test(selector)) continue;
+        if (/min-height\s*:\s*\d+(\.\d+)?px/.test(bodyCss) && !/min-width\s*:/.test(bodyCss)) {
+          offenders.push(`${rel}: ${selector.replace(/\s+/g, ' ').slice(0, 90)}`);
+        }
+      }
+    }
+    expect(offenders, `px min-height without min-width on interactive selectors:\n${offenders.join('\n')}`).toEqual([]);
+  });
+
   it('legacy primary alias maps to --color-primary-element (accent + AA)', () => {
     const colors = stripComments(readFileSync(join(cssRoot, 'common', 'colors.css'), 'utf8'));
     expect(colors).toContain('--arbeitszeitcheck-color-primary: var(--color-primary-element)');

@@ -586,7 +586,7 @@ button:disabled {
  * Use --color-primary-element (not --color-primary): brand #00679e fails WCAG AA
  * on dark main backgrounds (~2.93:1); element is theme-adjusted for AA. */
 #app-content-wrapper a:not(.btn):not(.crm-btn) {
-  color: var(--color-primary-element, var(--arbeitszeitcheck-color-primary-element));
+  color: var(--crm-accent-ink, var(--color-primary-element, var(--arbeitszeitcheck-color-primary-element)));
   text-decoration: none;
   transition: color 0.15s ease-in-out;
 }

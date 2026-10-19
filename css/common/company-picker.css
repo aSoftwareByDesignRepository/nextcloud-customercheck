@@ -16,7 +16,7 @@ dialog.crm-native-dialog.crm-dialog--new-deal.modal--md {
 	}
 }
 
-@media (max-width: 640px) {
+@media (max-width: 639.98px) {
 	dialog.crm-native-dialog.crm-dialog--new-deal.modal--md {
 		width: calc(100vw - 1rem);
 		max-width: calc(100vw - 1rem);
@@ -30,7 +30,7 @@ dialog.crm-native-dialog.crm-dialog--new-deal .modal-body {
 	padding: var(--crm-space-5, 1.25rem) var(--crm-space-5, 1.25rem) var(--crm-space-4, 1rem);
 }
 
-@media (max-width: 640px) {
+@media (max-width: 639.98px) {
 	dialog.crm-native-dialog.crm-dialog--new-deal .modal-body {
 		padding: var(--crm-space-4, 1rem) var(--crm-space-3, 0.75rem);
 	}
@@ -252,7 +252,7 @@ dialog.crm-native-dialog .crm-company-picker .visually-hidden,
 	border: 0 !important;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 639.98px) {
 	#app-content-wrapper .crm-company-list,
 	dialog.crm-native-dialog .crm-company-list {
 		max-height: min(12.5rem, 36vh);

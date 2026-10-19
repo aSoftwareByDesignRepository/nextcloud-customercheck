@@ -133,7 +133,7 @@ dialog.crm-native-dialog .user-picker__picker-status {
 	margin: var(--space-1, 0.25rem) 0 0;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 639.98px) {
 	#app-content-wrapper .user-picker__list,
 	dialog.crm-native-dialog .user-picker__list {
 		max-height: min(12rem, 35vh);

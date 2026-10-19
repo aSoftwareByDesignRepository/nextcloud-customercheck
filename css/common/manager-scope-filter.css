@@ -324,7 +324,7 @@
 	}
 }
 
-@media (max-width: 900px) {
+@media (max-width: 899.98px) {
 	#app-content.crm-app--manager-time-entries .manager-scope-page__toolbar .crm-date-range,
 	#app-content.crm-app--manager-absences .manager-scope-page__toolbar .crm-date-range {
 		flex-wrap: wrap;
@@ -332,7 +332,7 @@
 	}
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767.98px) {
 	#app-content.crm-app--manager-time-entries .manager-scope-page__toolbar .manager-scope-filter {
 		grid-template-columns: 1fr;
 		grid-template-areas:

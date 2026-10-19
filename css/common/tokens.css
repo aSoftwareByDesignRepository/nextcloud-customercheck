@@ -133,6 +133,11 @@ body {
 	--crm-danger-ink: var(--color-error-text, var(--color-error));
 	/* Painted edge: solid fill already reads ≥3:1 on light surfaces. */
 	--crm-danger-edge: var(--crm-danger-fill);
+
+	/* Accent used as *text* (active sort heads, selected links). The raw
+	   primary-element fill colour drops under 4.5:1 on dark canvases — the
+	   dark override below mixes it toward main text. */
+	--crm-accent-ink: var(--color-primary-element);
 }
 
 /* Bright accent fills on dark themes fail AA with white/black ink — darken fill + use main-text. */
@@ -147,6 +152,7 @@ body[data-theme-dark-highcontrast] {
 	/* Darkened fill sits ~1.9:1 on the dark canvas — paint the control's
 	   edge with the strong error ink so the CTA boundary stays ≥3:1 (1.4.11). */
 	--crm-danger-edge: var(--color-error-text, var(--color-element-error, var(--color-error)));
+	--crm-accent-ink: color-mix(in srgb, var(--color-primary-element) 70%, var(--color-main-text));
 }
 
 /* Dual-token bridge: CRM aliases map to identical computed values (D11) */

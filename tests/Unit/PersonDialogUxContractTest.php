@@ -145,7 +145,7 @@ final class PersonDialogUxContractTest extends TestCase
 		$this->assertStringContainsString('dialog.crm-person-dialog .crm-form--stack .crm-form-actions .crm-btn', $css);
 		$this->assertStringContainsString('min-height: 48px', $css);
 		$this->assertStringContainsString('dialog.crm-native-dialog.crm-dialog--content .form-group:focus-within', $css);
-		$this->assertStringContainsString('@media (max-width: 640px)', $css);
+		$this->assertStringContainsString('@media (max-width: 639.98px)', $css);
 		$this->assertStringContainsString('prefers-reduced-motion', $css);
 	}
 }
