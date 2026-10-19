@@ -606,7 +606,7 @@
 	text-underline-offset: 0.15em;
 }
 
-@media (max-width: 767.98px) {
+@media (max-width: 768.98px) {
 	.crm-support-us-page__hero {
 		padding: var(--crm-space-5, 1.25rem) var(--crm-space-4, 1rem);
 	}

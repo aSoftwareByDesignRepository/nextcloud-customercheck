@@ -825,7 +825,7 @@ body[data-theme-dark-highcontrast] .form-input.form-select option {
 }
 
 /* Table Responsive */
-@media (max-width: 767.98px) {
+@media (max-width: 768.98px) {
   .table-responsive,
   .table-container,
   .crm-table-wrap {
@@ -939,7 +939,7 @@ dialog.crm-dialog[open] {
 }
 
 /* Modal Responsive */
-@media (max-width: 767.98px) {
+@media (max-width: 768.98px) {
   .modal {
     max-width: 95vw;
     max-height: 95vh;
@@ -1517,7 +1517,7 @@ dialog.crm-dialog[open] {
 }
 
 /* Responsive Components */
-@media (max-width: 767.98px) {
+@media (max-width: 768.98px) {
   .form--horizontal,
   .form--inline {
     flex-direction: column;

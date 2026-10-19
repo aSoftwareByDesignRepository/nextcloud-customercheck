@@ -332,7 +332,7 @@
 	}
 }
 
-@media (max-width: 767.98px) {
+@media (max-width: 768.98px) {
 	#app-content.crm-app--manager-time-entries .manager-scope-page__toolbar .manager-scope-filter {
 		grid-template-columns: 1fr;
 		grid-template-areas:
