@@ -3155,9 +3155,9 @@ dialog.crm-native-dialog .crm-advanced > .crm-form--stack {
 
 /* WCAG 2.5.5 touch floor: same bare text links at tablet/phone widths.
  * Boundary is 768px inclusive (mobile side owns 768; desktop starts at
- * min-width: 768px per the app convention). 44px in CSS px, not rem — NC
+ * min-width:769px per the app convention). 44px in CSS px, not rem — NC
  * root font can be 15px. */
-@media (max-width: 767.98px) {
+@media (max-width: 768.98px) {
 	#app-content.crm-app .table a.crm-table-link,
 	#app-content-wrapper .table a.crm-table-link,
 	#app-content.crm-app .crm-table--strategy a.crm-strategy-company,
@@ -4140,7 +4140,7 @@ dialog.crm-native-dialog .crm-advanced > .crm-form--stack {
 #app-content.crm-app tr.crm-review-detail-row[hidden] {
 	display: none !important;
 }
-@media (max-width: 767.98px) {
+@media (max-width: 768.98px) {
 	#app-content.crm-app .crm-review-table tbody td.crm-table-actions-col {
 		flex-direction: column;
 		align-items: stretch;
@@ -7790,7 +7790,7 @@ dialog.crm-native-dialog label.crm-check {
 	min-height: var(--crm-touch);
 }
 /* ≤640px (40rem): stack Sync/Share under folder name (phones). Desktop grid unchanged. */
-@media (max-width: 39.99875rem) {
+@media (max-width: 40rem) {
 	#app-content.crm-app .crm-personal-mail-folder {
 		grid-template-columns: minmax(0, 1fr);
 		align-items: stretch;
