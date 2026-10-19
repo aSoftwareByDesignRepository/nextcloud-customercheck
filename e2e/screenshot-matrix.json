@@ -1,0 +1,35 @@
+{
+	"prefix": "cuc",
+	"outDir": "craft/web",
+	"viewports": [
+		{ "name": "mobile", "width": 320, "height": 800 },
+		{ "name": "tablet", "width": 768, "height": 800 },
+		{ "name": "desktop", "width": 1280, "height": 800 }
+	],
+	"surfaces": [
+		{ "id": "today", "path": "/today", "states": ["populated"], "dark": true },
+		{ "id": "pulse", "path": "/pulse", "states": ["populated"] },
+		{ "id": "brief", "path": "/brief", "states": ["populated"] },
+		{ "id": "my-accounts", "path": "/my-accounts", "states": ["populated"] },
+		{ "id": "team", "path": "/team", "states": ["populated"] },
+		{ "id": "workload", "path": "/workload", "states": ["populated"] },
+		{ "id": "strategy", "path": "/strategy", "states": ["populated"] },
+		{ "id": "mail-triage", "path": "/mail-triage", "states": ["populated"] },
+		{ "id": "sales-inbox", "path": "/sales-inbox", "states": ["populated"] },
+		{ "id": "review", "path": "/review", "states": ["populated"], "dark": true },
+		{ "id": "conflicts", "path": "/conflicts", "states": ["populated"] },
+		{ "id": "companies", "path": "/companies", "states": ["populated", "empty"], "emptyQuery": "?q=zz-nomatch-9x7q", "dark": true },
+		{ "id": "company-detail", "path": "/companies/{companyId}", "states": ["populated"], "dark": true },
+		{ "id": "pipeline", "path": "/pipeline", "states": ["populated", "empty"], "emptyQuery": "?stage=zz-nomatch-9x7q", "dark": true },
+		{ "id": "agreements", "path": "/agreements", "states": ["populated", "empty"], "emptyQuery": "?kind=zz-nomatch-9x7q" },
+		{ "id": "money", "path": "/money", "states": ["populated", "empty"], "emptyQuery": "?state=zz-nomatch-9x7q" },
+		{ "id": "activities", "path": "/activities", "states": ["populated", "empty"], "emptyQuery": "?type=zz-nomatch-9x7q" },
+		{ "id": "companies-new", "path": "/companies/new", "states": ["current"] },
+		{ "id": "agreements-new", "path": "/agreements/new", "states": ["current"] },
+		{ "id": "import", "path": "/import", "states": ["current"] },
+		{ "id": "settings", "path": "/settings/mailbox", "states": ["current"] },
+		{ "id": "app-settings", "path": "/app-settings/access", "states": ["current"] },
+		{ "id": "support-us", "path": "/support-us", "states": ["current"] },
+		{ "id": "get-the-app", "path": "/get-the-app", "states": ["current"] }
+	]
+}

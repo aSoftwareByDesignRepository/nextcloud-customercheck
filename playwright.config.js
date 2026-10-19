@@ -40,7 +40,8 @@ const authState = process.env.E2E_STORAGE_STATE
   || join(dirname(fileURLToPath(import.meta.url)), 'tests', 'e2e', '.auth', 'admin.json');
 
 export default defineConfig({
-  testDir: './tests/e2e',
+  testDir: '.',
+  testMatch: ['e2e/**/*.spec.js', 'tests/e2e/**/*.spec.js'],
   globalTeardown: './tests/e2e/global-teardown.mjs',
 
   globalSetup: './tests/e2e/global-setup.js',
