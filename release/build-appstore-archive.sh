@@ -126,10 +126,10 @@ EXCLUDES_STANDALONE=(
 
 if [[ "${PACK_BASE}" == "${APP}" ]]; then
 	# Monorepo (…/apps/customercheck) or standalone clone checked out as …/customercheck
-	(cd "${PACK_PARENT}" && tar "${EXCLUDES_MONOREPO[@]}" -czf "${OUT}" "${APP}")
+	(cd "${PACK_PARENT}" && tar --mode='u+rwX,go+rX,go-w' --owner=0 --group=0 --numeric-owner "${EXCLUDES_MONOREPO[@]}" -czf "${OUT}" "${APP}")
 else
 	# Standalone clone with another directory name (e.g. nextcloud-customercheck): archive top folder must be customercheck/
-	(cd "${APP_DIR}" && tar --transform "s,^,${APP}/," "${EXCLUDES_STANDALONE[@]}" -czf "${OUT}" .)
+	(cd "${APP_DIR}" && tar --mode='u+rwX,go+rX,go-w' --owner=0 --group=0 --numeric-owner --transform "s,^,${APP}/," "${EXCLUDES_STANDALONE[@]}" -czf "${OUT}" .)
 fi
 
 echo "Done: ${OUT}"
