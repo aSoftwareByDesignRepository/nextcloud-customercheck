@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace OCA\CustomerCheck\Repair;
 
-use OCA\CustomerCheck\Constants;
 use OCP\IConfig;
 use OCP\IDBConnection;
 use OCP\Migration\IOutput;
@@ -14,10 +13,17 @@ use OCP\Migration\IRepairStep;
  * One-shot: create Default workspace, attach orphan companies, seed members.
  *
  * Product §6 — existing installs must not lose companies outside a workspace.
+ *
+ * Config keys and seeded defaults are inlined: repair steps run during the
+ * in-request app update while the previously installed `Constants` class may
+ * still be loaded, so referencing constants added in the same release can
+ * fatal with "Undefined constant" (arbeitszeitcheck 1.9.4 / GH #45 lesson).
  */
 final class BootstrapDefaultWorkspace implements IRepairStep
 {
 	public const APP_ID = 'customercheck';
+	private const CONFIG_ACCESS_ALLOWED_USER_IDS = 'access_allowed_user_ids';
+	private const CONFIG_APP_ADMIN_USER_IDS = 'app_admin_user_ids';
 
 	public function __construct(
 		private readonly IDBConnection $db,
@@ -122,8 +128,8 @@ final class BootstrapDefaultWorkspace implements IRepairStep
 	{
 		$rawUsers = $this->config->getAppValue(
 			self::APP_ID,
-			Constants::CONFIG_ACCESS_ALLOWED_USER_IDS,
-			Constants::CONFIG_DEFAULTS[Constants::CONFIG_ACCESS_ALLOWED_USER_IDS],
+			self::CONFIG_ACCESS_ALLOWED_USER_IDS,
+			'[]',
 		);
 		$users = json_decode($rawUsers, true);
 		if (!is_array($users)) {
@@ -133,8 +139,8 @@ final class BootstrapDefaultWorkspace implements IRepairStep
 		// Also include configured app admins who are system admins — membership helps switcher.
 		$rawAdmins = $this->config->getAppValue(
 			self::APP_ID,
-			Constants::CONFIG_APP_ADMIN_USER_IDS,
-			Constants::CONFIG_DEFAULTS[Constants::CONFIG_APP_ADMIN_USER_IDS],
+			self::CONFIG_APP_ADMIN_USER_IDS,
+			'[]',
 		);
 		$admins = json_decode($rawAdmins, true);
 		if (!is_array($admins)) {
@@ -197,8 +203,8 @@ final class BootstrapDefaultWorkspace implements IRepairStep
 		$ins->insert('crm_ws_set')
 			->values([
 				'workspace_id' => $ins->createNamedParameter($wsId),
-				'wip_limit' => $ins->createNamedParameter(Constants::WIP_LIMIT_DEFAULT),
-				'lead_sla_hours' => $ins->createNamedParameter(Constants::LEAD_SLA_HOURS_DEFAULT),
+				'wip_limit' => $ins->createNamedParameter(5),
+				'lead_sla_hours' => $ins->createNamedParameter(24),
 				'stuck_chase_days' => $ins->createNamedParameter(3),
 				'mail_retention_days' => $ins->createNamedParameter(365),
 				'digest_enabled' => $ins->createNamedParameter(1),
