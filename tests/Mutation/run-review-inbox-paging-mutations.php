@@ -93,6 +93,10 @@ function apply_mutation(array $mut): string
 		throw new RuntimeException('Mutation needle missing for ' . $mut['label']);
 	}
 	$backup = $src;
+	// Baseline-green guard (lesson mutation_runner_baseline_red_false_kill):
+	// a kill-test that is red unmutated turns nonzero exits into fake kills.
+	require_once __DIR__ . '/MutationBaseline.php';
+	mutationBaselineSelfCheck(__FILE__);
 	file_put_contents($mut['file'], str_replace($mut['from'], $mut['to'], $src));
 
 	return $backup;

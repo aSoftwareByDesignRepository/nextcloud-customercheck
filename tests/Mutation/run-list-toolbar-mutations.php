@@ -128,6 +128,10 @@ function list_toolbar_apply_mutation(array $mutation): void
 		fwrite(STDERR, "Expected exactly one replacement in {$file}: {$mutation['label']} (got {$count})\n");
 		exit(2);
 	}
+	// Baseline-green guard (lesson mutation_runner_baseline_red_false_kill):
+	// a kill-test that is red unmutated turns nonzero exits into fake kills.
+	require_once __DIR__ . '/MutationBaseline.php';
+	mutationBaselineSelfCheck(__FILE__);
 	file_put_contents($file, $patched);
 }
 

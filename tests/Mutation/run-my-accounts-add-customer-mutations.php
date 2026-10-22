@@ -63,6 +63,10 @@ function apply_mutation(array $m): string
 	if ($next === $src) {
 		throw new RuntimeException('Mutation did not change file for ' . $m['label']);
 	}
+	// Baseline-green guard (lesson mutation_runner_baseline_red_false_kill):
+	// a kill-test that is red unmutated turns nonzero exits into fake kills.
+	require_once __DIR__ . '/MutationBaseline.php';
+	mutationBaselineSelfCheck(__FILE__);
 	file_put_contents($m['file'], $next);
 	return $src;
 }

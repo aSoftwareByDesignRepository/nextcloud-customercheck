@@ -250,6 +250,34 @@ function company_address_mutations(string $appRoot): array
 			'filter' => 'CompanyNotesPresenterTest::testHumanNotesSurvive',
 		],
 		[
+			'file' => $appRoot . '/lib/Support/CountryDirectory.php',
+			'from' => "\t\t'BR' => 'Brazil',",
+			'to' => '',
+			'label' => 'drop_brazil_from_country_directory',
+			'filter' => 'CountryDirectoryTest::testBrazilAndCoreMarketsAreSelectable',
+		],
+		[
+			'file' => $appRoot . '/templates/common/crm-country-picker.php',
+			'from' => 'role="combobox"',
+			'to' => '',
+			'label' => 'drop_country_combobox_role',
+			'filter' => 'CompanyAddressUxContractTest::testCountryPickerRendersFullIsoCombobox',
+		],
+		[
+			'file' => $appRoot . '/lib/Service/FrontEndAssetService.php',
+			'from' => "Util::addScript(Application::APP_ID, 'common/country-picker');",
+			'to' => '',
+			'label' => 'drop_country_picker_script_registration',
+			'filter' => 'CompanyAddressUxContractTest::testCountryPickerJsIsRegisteredGlobally',
+		],
+		[
+			'file' => $appRoot . '/js/pages/persona.js',
+			'from' => "learnForm.querySelector('input[data-crm-country-value]') || learnForm.querySelector('input')",
+			'to' => "learnForm.querySelector('input')",
+			'label' => 'persona_learn_reads_search_not_value',
+			'filter' => 'CompanyAddressUxContractTest::testValueMapAndReviewPickersUseCountryCombobox',
+		],
+		[
 			'file' => $appRoot . '/js/pages/company-detail.js',
 			'from' => 'if (advanced) advanced.open = !!(role || phone);',
 			'to' => 'if (advanced) advanced.open = !!role;',
@@ -258,8 +286,8 @@ function company_address_mutations(string $appRoot): array
 		],
 		[
 			'file' => $appRoot . '/js/pages/company-detail.js',
-			'from' => "revealPeopleFocusTab();\n      const addBtn = document.getElementById('crm-add-person');\n      if (addBtn) addBtn.setAttribute('aria-expanded', 'true');\n      setFormOpen(document.getElementById('crm-person-form'), addBtn, true, 'crm-person-name');",
-			'to' => "const addBtn = document.getElementById('crm-add-person');\n      const identityAdd = document.querySelector('#crm-identity [data-crm-trigger=\"crm-add-person\"]');\n      if (addBtn) addBtn.setAttribute('aria-expanded', 'true');\n      if (identityAdd) identityAdd.setAttribute('aria-expanded', 'true');\n      setFormOpen(document.getElementById('crm-person-form'), null, true, 'crm-person-name');",
+			'from' => "} else if (which === 'person') {\n      revealPeopleFocusTab();",
+			'to' => "} else if (which === 'person') {\n      /* reveal skipped */",
 			'label' => 'identity_add_person_trigger_returns',
 			'filter' => 'ExtremeSimplicityUxContractTest::testCompanyIdentitySurfacesPeopleAddressAndEdit',
 		],
@@ -279,6 +307,10 @@ function apply_mutation(array $m): string
 	if ($next === $src) {
 		throw new RuntimeException('Mutation did not change file for ' . $m['label']);
 	}
+	// Baseline-green guard (lesson mutation_runner_baseline_red_false_kill):
+	// a kill-test that is red unmutated turns nonzero exits into fake kills.
+	require_once __DIR__ . '/MutationBaseline.php';
+	mutationBaselineSelfCheck(__FILE__);
 	file_put_contents($m['file'], $next);
 	return $src;
 }

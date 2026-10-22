@@ -176,6 +176,10 @@ foreach (finding_mutations($appRoot) as $m) {
 		fwrite(STDERR, "anchor missing for {$m['label']}\n");
 		exit(1);
 	}
+	// Baseline-green guard (lesson mutation_runner_baseline_red_false_kill):
+	// a kill-test that is red unmutated turns nonzero exits into fake kills.
+	require_once __DIR__ . '/MutationBaseline.php';
+	mutationBaselineSelfCheck(__FILE__);
 	file_put_contents($m['file'], str_replace($m['from'], $m['to'], $src));
 	$code = 0;
 	if (($m['tool'] ?? '') === 'vitest') {

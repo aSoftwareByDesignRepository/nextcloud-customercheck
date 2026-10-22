@@ -128,6 +128,10 @@ function apply_mutation(array $m): string
 	if ($count !== 1) {
 		throw new RuntimeException('Expected 1 replace for ' . $m['label'] . ', got ' . $count);
 	}
+	// Baseline-green guard (lesson mutation_runner_baseline_red_false_kill):
+	// a kill-test that is red unmutated turns nonzero exits into fake kills.
+	require_once __DIR__ . '/MutationBaseline.php';
+	mutationBaselineSelfCheck(__FILE__);
 	file_put_contents($m['file'], $mutated);
 
 	return $src;

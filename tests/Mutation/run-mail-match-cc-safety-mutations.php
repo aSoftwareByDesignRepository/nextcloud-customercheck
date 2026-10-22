@@ -86,6 +86,10 @@ function apply_mutation(array $mut): string
 	if ($once === null || $count < 1 || (empty($mut['replace_all']) && $count !== 1)) {
 		throw new RuntimeException('Mutation apply failed for ' . $mut['label'] . ' (count=' . $count . ')');
 	}
+	// Baseline-green guard (lesson mutation_runner_baseline_red_false_kill):
+	// a kill-test that is red unmutated turns nonzero exits into fake kills.
+	require_once __DIR__ . '/MutationBaseline.php';
+	mutationBaselineSelfCheck(__FILE__);
 	file_put_contents($mut['file'], $once);
 
 	return $src;

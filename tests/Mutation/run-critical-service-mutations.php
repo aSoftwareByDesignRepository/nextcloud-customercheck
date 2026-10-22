@@ -439,8 +439,8 @@ $cases = [
 	],
 	[
 		'file' => $root . '/lib/Service/MobileIdempotencyService.php',
-		'find' => "if (\$existingId !== null) {\n\t\t\treturn \$this->activities->get(\$existingId);\n\t\t}",
-		'replace' => "if (false && \$existingId !== null) {\n\t\t\treturn \$this->activities->get(\$existingId);\n\t\t}",
+		'find' => "if (\$existingId !== null) {\n\t\t\treturn \$load(\$existingId);\n\t\t}",
+		'replace' => "if (false && \$existingId !== null) {\n\t\t\treturn \$load(\$existingId);\n\t\t}",
 		'test' => 'MobileIdempotencyServiceTest',
 		'label' => 'idempotency skips existing replay',
 	],
@@ -677,8 +677,8 @@ $cases = [
 	],
 	[
 		'file' => $root . '/lib/Support/SharedMailboxSmtpClient.php',
-		'find' => "if (\$host === '' || \$from === '' || \$to === '' || \$user === '' || \$pass === '') {",
-		'replace' => "if (\$host === '' || \$from === '' || \$to === '') {",
+		'find' => "\t\tif (\$pass === '' && \$authMode !== 'xoauth2') {\n\t\t\tthrow ValidationException::field('VALIDATION', 'smtp', 'SMTP configuration incomplete.');\n\t\t}\n\t\tif (\$authMode === 'xoauth2' && \$pass === '') {\n\t\t\tthrow ValidationException::field('VALIDATION', 'smtp', 'SMTP configuration incomplete.');\n\t\t}",
+		'replace' => "\t\t// mutated: empty password accepted",
 		'test' => 'SharedMailboxSmtpClientTest',
 		'label' => 'SMTP accepts empty password',
 	],
@@ -802,9 +802,9 @@ $cases = [
 		'label' => 'Workspace switch allows external href bases',
 	],
 	[
-		'file' => $root . '/templates/common/navigation.php',
-		'find' => "\$switchable = count(\$workspaces) > 1;",
-		'replace' => "\$switchable = count(\$workspaces) >= 1;",
+		'file' => $root . '/lib/Controller/PageShellTrait.php',
+		'find' => "\$workspaces = \\OCA\\CustomerCheck\\Constants::MULTI_WORKSPACE_ENABLED\n\t\t\t\t\t? \$this->workspaceAccess->listVisibleSummaries(\$userId)\n\t\t\t\t\t: [];",
+		'replace' => "\$workspaces = \$this->workspaceAccess->listVisibleSummaries(\$userId);",
 		'test' => 'WorkspaceSwitcherContractTest',
 		'label' => 'Single workspace still renders disclosure trigger',
 	],
@@ -999,8 +999,8 @@ $cases = [
 	],
 	[
 		'file' => $root . '/lib/Service/MailSendService.php',
-		'find' => "\$existing = \$this->findByIdempotency(\$workspaceId, \$idem);\n\t\t\tif (\$existing !== null) {\n\t\t\t\treturn \$existing;\n\t\t\t}\n\t\t\t\$this->assertSendRateLimits(\$actor, \$workspaceId);",
-		'replace' => "\$existing = \$this->findByIdempotency(\$workspaceId, \$idem);\n\t\t\tif (\$existing !== null) {\n\t\t\t\treturn \$existing;\n\t\t\t}\n\t\t\t;",
+		'find' => "\$this->assertSendRateLimits(\$actor, \$workspaceId);\n\t\t\t\$data['cc'] = \$ccList;",
+		'replace' => "\$data['cc'] = \$ccList;",
 		'test' => 'MailSendServiceTest',
 		'label' => 'fresh idempotent send skips rate limit assert',
 	],
@@ -1083,14 +1083,14 @@ $cases = [
 	],
 	[
 		'file' => $root . '/lib/Service/MailSendService.php',
-		'find' => "if (\$kind === MailAclLogic::KIND_PERSONAL) {\n\t\t\t\$owner = trim((string)(\$box['owner_user_id'] ?? ''));\n\t\t\tif (\$owner === '' || !hash_equals(\$owner, \$actor)) {\n\t\t\t\tthrow ValidationException::field(\n\t\t\t\t\tConstants::ERR_MAIL_SEND_DENIED,\n\t\t\t\t\t'mailboxId',\n\t\t\t\t\t\$this->l10n->t('You can only send from your own personal mailbox.'),\n\t\t\t\t);\n\t\t\t}\n\n\t\t\treturn;\n\t\t}",
-		'replace' => "if (\$kind === MailAclLogic::KIND_PERSONAL) {\n\t\t\treturn;\n\t\t}",
+		'find' => "if (\$owner === '' || !hash_equals(\$owner, \$actor)) {",
+		'replace' => "if (false && (\$owner === '' || !hash_equals(\$owner, \$actor))) {",
 		'test' => 'MailSendServicePersonalAclTest',
 		'label' => 'personal send skips owner check',
 	],
 	[
 		'file' => $root . '/lib/Service/HtmlSanitizeService.php',
-		'find' => "if (\$href === '' || preg_match('#^\\s*(javascript|data|vbscript)\\s*:#i', \$href)) {\n\t\t\treturn null;\n\t\t}\n\t\tif (!preg_match('~^(https?:|mailto:|/|#)~i', \$href)) {\n\t\t\treturn null;\n\t\t}",
+		'find' => "if (\$href === '' || preg_match('#^\\s*(javascript|data|vbscript)\\s*:#i', \$href)) {\n\t\t\treturn null;\n\t\t}\n\t\t// Compose links: http(s)/mailto only (normative); relative /# kept for legacy inbound.\n\t\tif (!preg_match('~^(https?:|mailto:|/|#)~i', \$href)) {\n\t\t\treturn null;\n\t\t}",
 		'replace' => "if (\$href === '') {\n\t\t\treturn null;\n\t\t}",
 		'test' => 'HtmlSanitizeServiceTest',
 		'label' => 'sanitizer drops all URL scheme defenses',
@@ -1111,8 +1111,8 @@ $cases = [
 	],
 	[
 		'file' => $root . '/lib/Service/MailSendService.php',
-		'find' => "if (\$smtpHost !== '') {\n\t\t\tif (\$secret === '') {\n\t\t\t\tthrow ValidationException::field(\n\t\t\t\t\tConstants::ERR_VALIDATION,\n\t\t\t\t\t'smtp',",
-		'replace' => "if (false && \$smtpHost !== '') {\n\t\t\tif (\$secret === '') {\n\t\t\t\tthrow ValidationException::field(\n\t\t\t\t\tConstants::ERR_VALIDATION,\n\t\t\t\t\t'smtp',",
+		'find' => "if (\$smtpHost !== '') {\n\t\t\t\$smtpHost = ImapConnection::normalizeHost(\$smtpHost);",
+		'replace' => "if (false && \$smtpHost !== '') {\n\t\t\t\$smtpHost = ImapConnection::normalizeHost(\$smtpHost);",
 		'test' => 'MailSendServiceSmtpGuardTest',
 		'label' => 'configured SMTP falls through to IMailer spoof',
 	],
@@ -1153,14 +1153,14 @@ $cases = [
 	],
 	[
 		'file' => $root . '/lib/Support/SharedMailboxSmtpClient.php',
-		'find' => "if (\$attachments === []) {\n\t\t\t\$headers[] = 'Content-Type: text/plain; charset=UTF-8';\n\t\t\t\$headers[] = 'Content-Transfer-Encoding: 8bit';\n\t\t\t\$payload = implode(\"\\r\\n\", \$headers) . \"\\r\\n\\r\\n\"\n\t\t\t\t. self::dotStuff(\$body) . \"\\r\\n.\";\n\n\t\t\treturn \$payload;\n\t\t}",
-		'replace' => "if (false && \$attachments === []) {\n\t\t\t\$headers[] = 'Content-Type: text/plain; charset=UTF-8';\n\t\t\t\$headers[] = 'Content-Transfer-Encoding: 8bit';\n\t\t\t\$payload = implode(\"\\r\\n\", \$headers) . \"\\r\\n\\r\\n\"\n\t\t\t\t. self::dotStuff(\$body) . \"\\r\\n.\";\n\n\t\t\treturn \$payload;\n\t\t}",
+		'find' => "if (\$attachments === []) {\n\t\t\tif (\$bodyHtml === '') {",
+		'replace' => "if (false && \$attachments === []) {\n\t\t\tif (\$bodyHtml === '') {",
 		'test' => 'SharedMailboxSmtpClientTest',
 		'label' => 'SMTP always forces multipart even without attachments',
 	],
 	[
 		'file' => $root . '/lib/Service/MailSendService.php',
-		'find' => "\$attachments = \$attachmentIds !== []\n\t\t\t? \$this->filesAccess->loadMailAttachments(\$actor, \$attachmentIds)\n\t\t\t: [];",
+		'find' => "\$attachments = \$attachmentIds !== []\n\t\t\t\t\t? \$this->filesAccess->loadMailAttachments(\$actor, \$attachmentIds)\n\t\t\t\t\t: [];",
 		'replace' => "\$attachments = [];",
 		'test' => 'MailSendServiceAttachmentTest',
 		'label' => 'mail send drops attachmentFileIds',
@@ -1188,8 +1188,8 @@ $cases = [
 	],
 	[
 		'file' => $root . '/lib/Controller/PageController.php',
-		'find' => "\$overview = \$this->money->overview(\n\t\t\t200,\n\t\t\t\$state !== '' ? \$state : null,\n\t\t\t\$this->resolvedWorkspaceId(),\n\t\t);",
-		'replace' => "\$overview = \$this->money->overview(200, \$state !== '' ? \$state : null);",
+		'find' => "ListWorkspaceGuard::isListable(\$wsId) ? \$wsId : 0,",
+		'replace' => "null,",
 		'test' => 'MoneySsrWorkspaceAclContractTest',
 		'label' => 'Money SSR drops workspace scope',
 	],
@@ -1300,8 +1300,8 @@ $cases = [
 	],
 	[
 		'file' => $root . '/js/common/api.js',
-		'find' => "const response = await fetch(BASE + withWorkspace(path), opts);",
-		'replace' => "const response = await fetch(BASE + path, opts);",
+		'find' => "response = await fetch(BASE + withWorkspace(path), opts);",
+		'replace' => "response = await fetch(BASE + path, opts);",
 		'test' => 'WorkspaceAclSurfaceContractTest',
 		'label' => 'api.js drops workspace pin',
 	],
@@ -1328,7 +1328,7 @@ $cases = [
 	],
 	[
 		'file' => $root . '/lib/Service/CompanyService.php',
-		'find' => "if (\$planIds !== [] && \$this->db->tableExists('crm_plan_ms')) {\n\t\t\t\$qb = \$this->db->getQueryBuilder();\n\t\t\t\$params = [];\n\t\t\tforeach (\$planIds as \$i => \$pid) {\n\t\t\t\t\$params[] = \$qb->createNamedParameter(\$pid, null, 'pmid' . \$i);\n\t\t\t}\n\t\t\t\$qb->delete('crm_plan_ms')\n\t\t\t\t->where(\$qb->expr()->in('plan_id', \$params))\n\t\t\t\t->executeStatement();\n\t\t}",
+		'find' => "if (\$planIds !== [] && \$this->db->tableExists('crm_plan_ms')) {\n\t\t\t\$qb = \$this->db->getQueryBuilder();\n\t\t\t\$qb->delete('crm_plan_ms')\n\t\t\t\t->where(\$qb->expr()->in(\n\t\t\t\t\t'plan_id',\n\t\t\t\t\t\$qb->createNamedParameter(\$planIds, IQueryBuilder::PARAM_INT_ARRAY),\n\t\t\t\t))\n\t\t\t\t->executeStatement();\n\t\t}",
 		'replace' => "// mutated: skip plan milestone delete",
 		'test' => 'GdprMailScrubContractTest',
 		'label' => 'gdpr erase skips plan milestone delete',
@@ -1678,7 +1678,7 @@ $cases = [
 	],
 	[
 		'file' => $root . '/css/app.css',
-		'find' => "background-color: var(--crm-danger-fill) !important;\n\tborder-color: var(--crm-danger-fill) !important;\n\tcolor: var(--crm-danger-on-fill) !important;",
+		'find' => "background-color: var(--crm-danger-fill) !important;\n\tborder-color: var(--crm-danger-edge, var(--crm-danger-fill)) !important;\n\tcolor: var(--crm-danger-on-fill) !important;",
 		'replace' => "background-color: var(--color-error, #cc4646) !important;\n\tborder-color: var(--color-error, #cc4646) !important;\n\tcolor: var(--color-primary-text, #fff) !important;",
 		'test' => 'DesignSystemAlignmentContractTest',
 		'label' => 'danger CTA uses pale color-error fill',
@@ -1889,8 +1889,8 @@ $cases = [
 	],
 	[
 		'file' => $root . '/css/app.css',
-		'find' => "dialog.crm-native-dialog .crm-btn--danger,\n.crm-nc-admin-settings .crm-btn--danger,\n.crm-nc-settings-panel .crm-btn--danger {\n\tbackground-color: var(--crm-danger-fill) !important;\n\tborder-color: var(--crm-danger-fill) !important;\n\tcolor: var(--crm-danger-on-fill) !important;\n}",
-		'replace' => "dialog.crm-native-dialog .crm-btn--danger,\n.crm-nc-admin-settings .crm-btn--danger,\n.crm-nc-settings-panel .crm-btn--danger {\n\tbackground-color: var(--color-error) !important;\n\tborder-color: var(--color-error) !important;\n\tcolor: var(--color-primary-text) !important;\n}",
+		'find' => "#app-content.crm-app .crm-btn--danger,\n#app-content-wrapper .crm-btn--danger,\ndialog.crm-native-dialog .crm-btn--danger,\n.crm-nc-admin-settings .crm-btn--danger,\n.crm-nc-settings-panel .crm-btn--danger {\n\tbackground-color: var(--crm-danger-fill) !important;\n\tborder-color: var(--crm-danger-edge, var(--crm-danger-fill)) !important;\n\tcolor: var(--crm-danger-on-fill) !important;\n}",
+		'replace' => "#app-content.crm-app .crm-btn--danger,\n#app-content-wrapper .crm-btn--danger,\ndialog.crm-native-dialog .crm-btn--danger,\n.crm-nc-admin-settings .crm-btn--danger,\n.crm-nc-settings-panel .crm-btn--danger {\n\tbackground-color: var(--color-error) !important;\n\tborder-color: var(--color-error) !important;\n\tcolor: var(--color-primary-text) !important;\n}",
 		'test' => 'DesignSystemAlignmentContractTest',
 		'label' => 'crm-btn--danger uses pale color-error fill',
 	],
@@ -1924,8 +1924,8 @@ $cases = [
 	],
 	[
 		'file' => $root . '/css/app.css',
-		'find' => "background: color-mix(in srgb, var(--color-success, #2d7a3e) 8%, var(--color-main-background));",
-		'replace' => "background: color-mix(in srgb, var(--color-success, #2d7a3e) 8%, transparent);",
+		'find' => "#app-content.crm-app .crm-import-row--ready td {\n\tbackground: var(--crm-tint-success);\n}",
+		'replace' => "#app-content.crm-app .crm-import-row--ready td {\n\tbackground: transparent;\n}",
 		'test' => 'DesignSystemAlignmentContractTest',
 		'label' => 'import ready row mixes into transparent',
 	],
@@ -1945,8 +1945,8 @@ $cases = [
 	],
 	[
 		'file' => $root . '/js/pages/company-detail.js',
-		'find' => "html += '<details class=\"crm-advanced\"><summary class=\"crm-advanced__summary\">' + t('More options') + '</summary>';",
-		'replace' => "html += '<details class=\"crm-advanced\"><summary>' + t('More options') + '</summary>';",
+		'find' => "html += '<details class=\"crm-advanced\"><summary class=\"crm-advanced__summary\">' + escapeHtml(t('More options')) + '</summary>';",
+		'replace' => "html += '<details class=\"crm-advanced\"><summary>' + escapeHtml(t('More options')) + '</summary>';",
 		'test' => 'DesignSystemAlignmentContractTest',
 		'label' => 'dialog advanced summary drops touch class',
 	],
@@ -1973,8 +1973,8 @@ $cases = [
 	],
 	[
 		'file' => $root . '/css/app.css',
-		'find' => "dialog.crm-native-dialog .crm-simple-list,",
-		'replace' => "/* mutated */ .crm-mutated-drop-simple-list,",
+		'find' => "#app-content.crm-app .crm-simple-list li,\ndialog.crm-native-dialog .crm-simple-list li {",
+		'replace' => "#app-content.crm-app .crm-simple-list li {",
 		'test' => 'DesignSystemAlignmentContractTest',
 		'label' => 'native dialog loses crm-simple-list host',
 	],
@@ -2057,8 +2057,8 @@ $cases = [
 	],
 	[
 		'file' => $root . '/js/pages/company-detail.js',
-		'find' => "html += '<tr><td data-label=\"' + escapeHtml(t('Title')) + '\">' + escapeHtml(row.title || '') + (row.isCallback ? ' <span class=\"crm-badge\">' + escapeHtml(t('Callback')) + '</span>' : '') + '</td><td data-label=\"' + escapeHtml(t('Due')) + '\">' + escapeHtml(row.dueDate ? formatDisplayDate(row.dueDate) : '—') + '</td><td class=\"actions-cell crm-table-actions-col\" data-label=\"' + escapeHtml(t('Action')) + '\">' + tasksCell + '</td></tr>';",
-		'replace' => "html += '<tr><td>' + (row.title || '') + (row.isCallback ? ' <span class=\"crm-badge\">' + t('Callback') + '</span>' : '') + '</td><td>' + (row.dueDate ? formatDisplayDate(row.dueDate) : '—') + '</td><td class=\"actions-cell crm-table-actions-col\" data-label=\"' + t('Action') + '\">' + tasksCell + '</td></tr>';",
+		'find' => "html += '<p class=\"crm-todo-list__title\">' + escapeHtml(row.title || '') + '</p>';",
+		'replace' => "html += '<p class=\"crm-todo-list__title\">' + (row.title || '') + '</p>';",
 		'test' => 'Company360PageContractTest',
 		'label' => 'tasks table reintroduces unescaped title XSS',
 	],
@@ -2085,8 +2085,8 @@ $cases = [
 	],
 	[
 		'file' => $root . '/js/pages/company-detail.js',
-		'find' => "let commandCenterGeneration = 0;\n  let accountPlanGeneration = 0;\n  let promisesGeneration = 0;",
-		'replace' => "let commandCenterGeneration = 0;\n  let promisesGeneration = 0;",
+		'find' => "let accountPlanGeneration = 0;",
+		'replace' => "let accountPlanGeneration_MUT;",
 		'test' => 'Company360PageContractTest',
 		'label' => 'accountPlanGeneration init removed (TDZ hang)',
 	],
@@ -2218,7 +2218,7 @@ $cases = [
 	],
 	[
 		'file' => $root . '/css/common/colors.css',
-		'find' => '--arbeitszeitcheck-color-success-light: color-mix(in srgb, var(--color-success-text, var(--color-success, #22c55e)) 15%, var(--color-main-background));',
+		'find' => '--arbeitszeitcheck-color-success-light: color-mix(in srgb, var(--color-success-text, var(--color-success)) 15%, var(--color-main-background));',
 		'replace' => '--arbeitszeitcheck-color-success-light: color-mix(in srgb, var(--color-success, #22c55e) 15%, transparent);',
 		'test' => 'DesignSystemAlignmentContractTest',
 		'label' => 'success-light mixes into transparent again',
@@ -2291,7 +2291,7 @@ $cases = [
 		'find' => "registerFrontEndAssets('pages/settings', null, [], ['common/folder-picker', 'common/signature-logo-core', 'common/personal-mail-settings-core', 'common/rich-mail-composer', 'common/mailbox-settings-present']);",
 		'replace' => "registerFrontEndAssets('pages/settings', null, [], ['common/folder-picker', 'common/mailbox-settings-present']);",
 		'test' => 'MailboxSettingsUxContractTest',
-		'label' => 'settings page drops mailbox-settings-present',
+		'label' => 'settings page drops signature/personal-mail/composer assets',
 	],
 	[
 		'file' => $root . '/js/pages/settings.js',
@@ -2337,29 +2337,29 @@ $cases = [
 	],
 	[
 		'file' => $root . '/lib/Service/FrontEndAssetService.php',
-		'find' => "Util::addScript(Application::APP_ID, 'common/dialog-present');\n\t\tUtil::addScript(Application::APP_ID, 'common/company-picker');\n\t\tUtil::addScript(Application::APP_ID, 'common/components');",
-		'replace' => "Util::addScript(Application::APP_ID, 'common/components');",
+		'find' => "\t\tUtil::addScript(Application::APP_ID, 'common/dialog-present');\n",
+		'replace' => "",
 		'test' => 'DialogUxContractTest',
 		'label' => 'core assets drop dialog-present',
 	],
 	[
-		'file' => $root . '/js/pages/pipeline.js',
+		'file' => $root . '/js/common/new-deal-form.js',
 		'find' => 'crm-deal-company-picker',
 		'replace' => 'crm-deal-company-select-dump',
 		'test' => 'NewDealDialogUxContractTest',
 		'label' => 'new deal drops company picker class',
 	],
 	[
-		'file' => $root . '/js/pages/pipeline.js',
+		'file' => $root . '/js/common/new-deal-form.js',
 		'find' => 'crm-company-choice',
 		'replace' => 'crm-company-plain',
 		'test' => 'NewDealDialogUxContractTest',
 		'label' => 'new deal drops chosen-company card',
 	],
 	[
-		'file' => $root . '/js/pages/pipeline.js',
-		'find' => "title: t('New deal'),\n        content: html,\n        size: 'md',",
-		'replace' => "title: t('New deal'),\n        content: html,\n        size: 'sm',",
+		'file' => $root . '/js/common/new-deal-form.js',
+		'find' => "title: t('New deal'),\n      content: html,\n      size: 'md',",
+		'replace' => "title: t('New deal'),\n      content: html,\n      size: 'sm',",
 		'test' => 'NewDealDialogUxContractTest',
 		'label' => 'new deal shrinks back to modal--sm',
 	],
@@ -2437,7 +2437,28 @@ if (function_exists('pcntl_async_signals')) {
 	}
 }
 
+/** @var array<string, bool> $baselineGreen test-name => passes unmutated */
+$baselineGreen = [];
+$baselineFails = 0;
+
 foreach ($cases as $case) {
+	// A test that is red at baseline cannot kill anything — without this check
+	// every mutant assigned to it is counted KILLED, inflating MSI falsely.
+	if (!array_key_exists($case['test'], $baselineGreen)) {
+		$cmd = escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg($phpunit) . ' --filter ' . escapeshellarg($case['test']);
+		exec($cmd . ' 2>&1', $out, $code);
+		$out = [];
+		$baselineGreen[$case['test']] = ($code === 0);
+		if ($code !== 0) {
+			fwrite(STDERR, "BASELINE-FAIL {$case['test']}: test is red unmutated — kills by it are meaningless\n");
+			$baselineFails++;
+		}
+	}
+	if (!$baselineGreen[$case['test']]) {
+		fwrite(STDERR, "SKIP baseline-red test: {$case['label']}\n");
+		$failed++;
+		continue;
+	}
 	$original = file_get_contents($case['file']);
 	if (!str_contains($original, $case['find'])) {
 		fwrite(STDERR, "SKIP missing needle: {$case['label']}\n");
