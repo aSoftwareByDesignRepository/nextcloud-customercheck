@@ -39,6 +39,7 @@ final class FrontEndAssetService
 		Util::addScript(Application::APP_ID, 'common/folder-picker');
 		Util::addScript(Application::APP_ID, 'common/shared-mail-send');
 		Util::addScript(Application::APP_ID, 'common/user-picker-nav');
+		Util::addScript(Application::APP_ID, 'common/country-picker');
 		Util::addScript(Application::APP_ID, 'common/navigation');
 		Util::addScript(Application::APP_ID, 'common/mobile-nav');
 		Util::addScript(Application::APP_ID, 'common/navigation-icons');

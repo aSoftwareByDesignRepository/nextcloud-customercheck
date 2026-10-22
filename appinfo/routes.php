@@ -49,6 +49,9 @@ return [
 		['name' => 'page#supportUs', 'url' => '/support-us', 'verb' => 'GET'],
 		['name' => 'page#getTheApp', 'url' => '/get-the-app', 'verb' => 'GET'],
 
+		// ── Lookup/meta API ─────────────────────────────────────────────
+		['name' => 'meta_api#countries', 'url' => '/api/v1/countries', 'verb' => 'GET'],
+
 		// ── Companies API ───────────────────────────────────────────────
 		['name' => 'company_api#index', 'url' => '/api/v1/companies', 'verb' => 'GET'],
 		['name' => 'company_api#create', 'url' => '/api/v1/companies', 'verb' => 'POST'],
@@ -260,6 +263,7 @@ return [
 		// ── Companion mobile API v1 (Basic auth, COMPANION-APP §9) ──────
 		['name' => 'mobile#bootstrap', 'url' => '/api/mobile/v1/bootstrap', 'verb' => 'GET'],
 		['name' => 'mobile#workspaces', 'url' => '/api/mobile/v1/workspaces', 'verb' => 'GET'],
+		['name' => 'mobile#countries', 'url' => '/api/mobile/v1/countries', 'verb' => 'GET'],
 		['name' => 'mobile#today', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/today', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\d+']],
 		['name' => 'mobile#companies', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/companies', 'verb' => 'GET', 'requirements' => ['workspaceId' => '\d+']],
 		['name' => 'mobile#createCompany', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/companies', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\d+']],

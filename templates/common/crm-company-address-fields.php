@@ -17,40 +17,6 @@ $crmAddrCountry = strtoupper(trim((string)($crmAddrCompany ? $crmAddrCompany->ge
 if ($crmAddrCountry === '') {
 	$crmAddrCountry = 'DE';
 }
-$crmAddrCountryOptions = [
-	'DE' => $l->t('Germany'),
-	'AT' => $l->t('Austria'),
-	'CH' => $l->t('Switzerland'),
-	'LI' => $l->t('Liechtenstein'),
-	'LU' => $l->t('Luxembourg'),
-	'NL' => $l->t('Netherlands'),
-	'BE' => $l->t('Belgium'),
-	'FR' => $l->t('France'),
-	'IT' => $l->t('Italy'),
-	'ES' => $l->t('Spain'),
-	'PT' => $l->t('Portugal'),
-	'GR' => $l->t('Greece'),
-	'MT' => $l->t('Malta'),
-	'CY' => $l->t('Cyprus'),
-	'PL' => $l->t('Poland'),
-	'CZ' => $l->t('Czechia'),
-	'SK' => $l->t('Slovakia'),
-	'HU' => $l->t('Hungary'),
-	'SI' => $l->t('Slovenia'),
-	'HR' => $l->t('Croatia'),
-	'RO' => $l->t('Romania'),
-	'BG' => $l->t('Bulgaria'),
-	'EE' => $l->t('Estonia'),
-	'LV' => $l->t('Latvia'),
-	'LT' => $l->t('Lithuania'),
-	'DK' => $l->t('Denmark'),
-	'SE' => $l->t('Sweden'),
-	'NO' => $l->t('Norway'),
-	'FI' => $l->t('Finland'),
-	'GB' => $l->t('United Kingdom'),
-	'IE' => $l->t('Ireland'),
-	'US' => $l->t('United States'),
-];
 ?>
 <fieldset class="crm-company-address" id="<?php p($crmAddrPrefix); ?>-address">
 	<legend class="crm-company-address__legend"><?php p($l->t('Postal address')); ?></legend>
@@ -70,14 +36,13 @@ $crmAddrCountryOptions = [
 		</div>
 	</div>
 	<div class="form-group">
-		<label class="form-label" for="<?php p($crmAddrPrefix); ?>-country"><?php p($l->t('Country')); ?></label>
-		<select class="crm-input form-select crm-input--lg" id="<?php p($crmAddrPrefix); ?>-country" name="country" autocomplete="country">
-			<?php foreach ($crmAddrCountryOptions as $code => $label): ?>
-				<option value="<?php p($code); ?>" <?php if ($crmAddrCountry === $code): ?>selected<?php endif; ?>><?php p($label); ?> (<?php p($code); ?>)</option>
-			<?php endforeach; ?>
-			<?php if (!isset($crmAddrCountryOptions[$crmAddrCountry])): ?>
-				<option value="<?php p($crmAddrCountry); ?>" selected><?php p($crmAddrCountry); ?></option>
-			<?php endif; ?>
-		</select>
+		<label class="form-label" for="<?php p($crmAddrPrefix); ?>-country-search"><?php p($l->t('Country')); ?></label>
+		<?php
+		$countryPickerId = $crmAddrPrefix . '-country';
+		$countryPickerValue = $crmAddrCountry;
+		$countryPickerField = 'country';
+		$countryPickerName = 'country';
+		include __DIR__ . '/crm-country-picker.php';
+		?>
 	</div>
 </fieldset>

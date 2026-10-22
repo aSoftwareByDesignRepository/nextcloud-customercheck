@@ -901,6 +901,7 @@ final class MobileGateHttpIntegrationTest extends TestCase
 			\OC::$server->get(WorkspaceService::class),
 			\OC::$server->get(IUserManager::class),
 			\OC::$server->get(IAppManager::class),
+			\OC::$server->getL10N('customercheck'),
 			\OC::$server->get(DealChecklistService::class),
 		);
 	}

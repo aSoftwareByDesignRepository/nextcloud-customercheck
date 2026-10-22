@@ -16,6 +16,7 @@ final class MobileCompanionScopeContractTest extends TestCase
 	{
 		$routes = (string)file_get_contents(dirname(__DIR__, 2) . '/appinfo/routes.php');
 		$this->assertStringContainsString('mobile#today', $routes);
+		$this->assertStringContainsString('mobile#countries', $routes);
 		$this->assertStringContainsString('mobile#companies', $routes);
 		$this->assertStringContainsString('mobile#companyDetail', $routes);
 		$this->assertStringContainsString('mobile#createCompany', $routes);

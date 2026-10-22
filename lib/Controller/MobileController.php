@@ -30,12 +30,14 @@ use OCA\CustomerCheck\Service\PersonService;
 use OCA\CustomerCheck\Service\WorkspaceAccessService;
 use OCA\CustomerCheck\Service\WorkspaceCapability;
 use OCA\CustomerCheck\Service\WorkspaceService;
+use OCA\CustomerCheck\Support\CountryDirectory;
 use OCP\App\IAppManager;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\JSONResponse;
+use OCP\IL10N;
 use OCP\IRequest;
 use OCP\IUserManager;
 use OCP\IUserSession;
@@ -80,6 +82,7 @@ class MobileController extends Controller
 		private readonly WorkspaceService $workspaceService,
 		private readonly IUserManager $userManager,
 		private readonly IAppManager $appManager,
+		private readonly IL10N $l10n,
 		private readonly ?DealChecklistService $dealChecklists = null,
 	) {
 		parent::__construct($appName, $request);
@@ -110,6 +113,30 @@ class MobileController extends Controller
 			$uid = $this->requireGatedUid();
 
 			return $this->success($this->workspaceAccess->listForMobile($uid));
+		});
+	}
+
+	// ── Lookups ─────────────────────────────────────────────────────────
+
+	/**
+	 * Localized ISO 3166-1 (+XK) list for the companion's country picker —
+	 * same CountryDirectory SSOT as the web `/api/v1/countries` route.
+	 */
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function countries(): JSONResponse
+	{
+		return $this->guard(function (): JSONResponse {
+			$this->requireGatedUid();
+			$lang = method_exists($this->l10n, 'getLanguageCode')
+				? (string)$this->l10n->getLanguageCode()
+				: 'en';
+			$items = [];
+			foreach (CountryDirectory::options($lang) as $code => $label) {
+				$items[] = ['code' => $code, 'label' => $label];
+			}
+
+			return $this->success(['items' => $items]);
 		});
 	}
 

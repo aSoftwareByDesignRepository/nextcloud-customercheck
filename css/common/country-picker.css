@@ -1,0 +1,47 @@
+/* Country combobox — extends the shared .user-picker chrome (DESIGN-SYSTEM §3.6.7).
+   Scoped to .crm-country-picker; no literal colors (theme vars + fallbacks only). */
+
+#app-content-wrapper .crm-country-picker .user-picker__control,
+dialog.crm-native-dialog .crm-country-picker .user-picker__control {
+	/* Let an inline .crm-field-error wrap under the search input. */
+	flex-wrap: wrap;
+}
+
+#app-content-wrapper .crm-country-picker .user-picker__control > .crm-field-error,
+dialog.crm-native-dialog .crm-country-picker .user-picker__control > .crm-field-error {
+	flex: 1 1 100%;
+}
+
+/* The review "Fix country mapping" row reuses .crm-form--row, whose middle
+   column is sized for a 2-letter ISO input — let the picker breathe. */
+#app-content.crm-app .crm-form--row--wide-field,
+dialog.crm-native-dialog .crm-form--row--wide-field {
+	grid-template-columns: auto minmax(12rem, 1fr) auto;
+}
+/* Keep the shared row's single-column stack on mobile — the wide-field
+   grid above must not outlive 768px. */
+@media (max-width: 768.98px) {
+	#app-content.crm-app .crm-form--row--wide-field,
+	dialog.crm-native-dialog .crm-form--row--wide-field {
+		grid-template-columns: 1fr;
+	}
+}
+
+/* Option rows hold the 44px touch-target floor the shared item chrome lacks. */
+#app-content-wrapper .crm-country-picker .user-picker__item,
+dialog.crm-native-dialog .crm-country-picker .user-picker__item {
+	display: flex;
+	align-items: center;
+	gap: var(--crm-space-2, 0.5rem);
+	min-height: var(--crm-touch, 44px);
+	box-sizing: border-box;
+}
+
+/* Inline ISO code hint pushed to the end of each option row. */
+#app-content-wrapper .crm-country-picker__code,
+dialog.crm-native-dialog .crm-country-picker__code {
+	margin-inline-start: auto;
+	font-size: var(--crm-fs-sm, 0.875rem);
+	line-height: 1.35;
+	color: var(--color-text-maxcontrast, var(--color-text-lighter));
+}

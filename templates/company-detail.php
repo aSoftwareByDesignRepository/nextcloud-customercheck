@@ -95,7 +95,8 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 		$addrLines[] = $zipCity;
 	}
 	if ($addrCountry !== '' && $addrCountry !== 'DE') {
-		$addrLines[] = $addrCountry;
+		$addrLang = method_exists($l, 'getLanguageCode') ? (string)$l->getLanguageCode() : 'en';
+		$addrLines[] = \OCA\CustomerCheck\Support\CountryDirectory::label($addrCountry, $addrLang);
 	}
 	$companyEditHref = $urlGenerator->linkToRoute('customercheck.page.companyEdit', ['id' => $company->getId()]);
 	?>

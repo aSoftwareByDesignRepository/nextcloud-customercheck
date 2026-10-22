@@ -384,8 +384,14 @@ $canManageWorkspace = !empty($_['canManageWorkspace']);
 					<input type="text" id="crm-vm-raw" class="form-input crm-input" autocomplete="off" placeholder="<?php p($l->t('e.g. Deutschland')); ?>">
 				</div>
 				<div class="form-group">
-					<label class="form-label" for="crm-vm-canonical"><?php p($l->t('ISO country')); ?></label>
-					<input type="text" id="crm-vm-canonical" class="form-input crm-input" maxlength="2" autocomplete="off" placeholder="<?php p($l->t('DE')); ?>">
+					<label class="form-label" for="crm-vm-canonical-search"><?php p($l->t('ISO country')); ?></label>
+					<?php
+					$countryPickerId = 'crm-vm-canonical';
+					$countryPickerValue = '';
+					$countryPickerField = 'canonical';
+					$countryPickerName = 'canonical';
+					include __DIR__ . '/../common/crm-country-picker.php';
+					?>
 				</div>
 				<p id="crm-value-maps-status" class="form-help" role="status" aria-live="polite"></p>
 				<div class="crm-form-actions">

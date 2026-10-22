@@ -2825,10 +2825,9 @@
           if (fieldKey === 'country' && raw) {
             actions +=
               '<details class="crm-advanced"><summary class="crm-advanced__summary">' + escapeHtml(t('Fix country mapping')) + '</summary>' +
-              '<form class="crm-form crm-form--row" data-crm-review-learn="' + escapeHtml(String(item.id)) + '">' +
-              '<label class="form-label" for="crm-learn-' + escapeHtml(String(item.id)) + '">' + escapeHtml(t('ISO country')) + '</label>' +
-              '<input type="text" id="crm-learn-' + escapeHtml(String(item.id)) + '" class="form-input crm-input" maxlength="2" ' +
-              'placeholder="' + escapeHtml(t('DE')) + '" autocomplete="off" />' +
+              '<form class="crm-form crm-form--row crm-form--row--wide-field" data-crm-review-learn="' + escapeHtml(String(item.id)) + '">' +
+              '<label class="form-label" for="crm-learn-' + escapeHtml(String(item.id)) + '-search">' + escapeHtml(t('ISO country')) + '</label>' +
+              '<span data-crm-country-slot data-base="crm-learn-' + escapeHtml(String(item.id)) + '" data-field="canonical"></span>' +
               '<button type="button" class="crm-btn crm-btn--secondary" data-crm-review-apply-once>' +
               escapeHtml(t('Apply once')) + '</button>' +
               '<button type="submit" class="crm-btn crm-btn--primary">' + escapeHtml(t('Apply & learn')) + '</button>' +
@@ -3551,8 +3550,12 @@
     function wireAssignLearnForm(learnForm) {
       if (!learnForm || learnForm.getAttribute('data-crm-review-wired') === '1') return;
       learnForm.setAttribute('data-crm-review-wired', '1');
+      // Upgrade the country slot into the searchable picker (lazy /countries fetch).
+      if (window.CustomerCheckCountryPicker && typeof window.CustomerCheckCountryPicker.upgradeSlots === 'function') {
+        void window.CustomerCheckCountryPicker.upgradeSlots(learnForm);
+      }
       async function applyCountryMap(learn, closeNote) {
-        const input = learnForm.querySelector('input');
+        const input = learnForm.querySelector('input[data-crm-country-value]') || learnForm.querySelector('input');
         const canonical = input ? String(input.value || '').trim() : '';
         const itemId = learnForm.getAttribute('data-crm-review-learn');
         await apiPost('/api/v1/workspaces/' + ws + '/review/items/' + itemId + '/apply-country', {
