@@ -424,16 +424,16 @@ describe('personal-mail settings UX contracts', () => {
     expect(js).toContain('Intl.DateTimeFormat');
   });
 
-  it('My email + Sales Inbox CSS use NC mobile ≤767px stacking (desktop base untouched)', () => {
+  it('My email + Sales Inbox CSS use NC mobile ≤768px stacking (desktop base untouched)', () => {
     const css = readFileSync(join(root, 'css/app.css'), 'utf8');
     expect(css).toMatch(
-      /@media \(max-width:\s*767\.98px\) \{\s*\n\s*#app-content\.crm-app \.crm-personal-mail-connected-actions/,
+      /@media \(max-width:\s*768\.98px\) \{\s*\n\s*#app-content\.crm-app \.crm-personal-mail-connected-actions/,
     );
     expect(css).toMatch(
-      /@media \(max-width:\s*767\.98px\) \{\s*\n\s*#app-content\.crm-app \.crm-personal-mail-folder \{[\s\S]*?\* 0\.85rem/,
+      /@media \(max-width:\s*768\.98px\) \{\s*\n\s*#app-content\.crm-app \.crm-personal-mail-folder \{[\s\S]*?\* 0\.85rem/,
     );
     expect(css).toMatch(
-      /@media \(max-width:\s*767\.98px\) \{\s*\n\s*#app-content\.crm-app \.crm-sales-inbox__toolbar[\s\S]*?crm-sales-inbox__actions-bar[\s\S]*?crm-sales-compose__cc-toggle/,
+      /@media \(max-width:\s*768\.98px\) \{\s*\n\s*#app-content\.crm-app \.crm-sales-inbox__toolbar[\s\S]*?crm-sales-inbox__actions-bar[\s\S]*?crm-sales-compose__cc-toggle/,
     );
     expect(css).toMatch(
       /@media \(max-width:\s*1023\.98px\) \{\s*\n\s*#app-content\.crm-app \.crm-personal-mail-folders/,

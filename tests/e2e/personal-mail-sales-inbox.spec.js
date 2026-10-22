@@ -440,7 +440,7 @@ test.describe('Personal email sync / Sales Inbox', () => {
           expect(box.height, `tab ${i} height @ ${viewport.name}`).toBeGreaterThanOrEqual(44);
         }
       } else {
-        // Desktop/tablet sacred: row toolbar (≥768) — mobile MQ is max-width 767 only.
+        // Desktop/tablet sacred: row toolbar (≥768) — mobile MQ is max-width 768.98 only.
         expect(toolbarDir, `toolbar stays row @ ${viewport.name}`).toBe('row');
       }
 

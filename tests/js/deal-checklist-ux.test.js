@@ -26,6 +26,7 @@ const t = (msg, args = []) => {
 };
 
 const helpers = { t, escapeHtml };
+const rawHelpers = { t: (msg) => msg, escapeHtml };
 
 describe('deal-checklist extreme simplicity UX', () => {
   it('uses companion-parity default Done note and forbids typed REPLACE', () => {
@@ -44,6 +45,9 @@ describe('deal-checklist extreme simplicity UX', () => {
     expect(starters).toContain('data-cl-apply-tmpl="1"');
     expect(starters).toContain('crm-btn--lg');
     expect(starters).toContain('Use template: License order');
+    const rawStarters = buildTemplateStarterButtonsHtml([{ id: 3, name: 'Kickoff' }], rawHelpers);
+    expect(rawStarters).toContain('Use template: Kickoff');
+    expect(rawStarters).not.toContain('%s');
 
     const panel = buildChecklistPanelHtml(
       { dealId: 9, itemsHtml: '', startersHtml: starters, empty: true },

@@ -430,6 +430,13 @@
         if (!isJumpCurrent(jumpGeneration, generation)) {
           return;
         }
+        // A newer same-document navigation (#other) may already be queued
+        // while this jump's rAF was pending — never clobber it with the
+        // stale section's hash; the pending hashchange owns the jump.
+        const liveHashId = hashHrefToSectionId(window.location.hash);
+        if (liveHashId && liveHashId !== id) {
+          return;
+        }
         focusSectionHeading(section);
         setDocumentHash(id);
       }
@@ -556,12 +563,38 @@
         true,
       );
 
-      window.addEventListener('hashchange', function () {
+      window.addEventListener('hashchange', function (ev) {
         if (ignoreHashChange) {
           return;
         }
-        const id = hashHrefToSectionId(window.location.hash);
+        // Prefer the event's URLs over mutable location.hash: a stale
+        // in-flight jump may have rewritten the hash before this handler
+        // ran (queued rAF racing the queued hashchange task).
+        let newHash = window.location.hash;
+        let oldHash = null;
+        try {
+          if (ev && typeof ev.newURL === 'string' && ev.newURL !== '' && typeof URL === 'function') {
+            newHash = new URL(ev.newURL).hash;
+          }
+          if (ev && typeof ev.oldURL === 'string' && ev.oldURL !== '' && typeof URL === 'function') {
+            oldHash = new URL(ev.oldURL).hash;
+          }
+        } catch (e) {
+          /* fall back to location.hash */
+        }
+        const liveHash = window.location.hash;
+        // Superseded before dispatch: the hash already moved past both the
+        // old and new values of this event — a newer navigation owns it.
+        if (liveHash !== newHash && liveHash !== oldHash) {
+          return;
+        }
+        const id = hashHrefToSectionId(newHash);
         if (id && isFocusDeepLinkSectionId(id) && document.getElementById(id)) {
+          // Reverted-back case: live hash equals the event's OLD value —
+          // restore the navigation target synchronously (quiet: no loop).
+          if (liveHash !== '#' + id) {
+            setDocumentHash(id);
+          }
           jumpToSectionId(id);
         }
       });

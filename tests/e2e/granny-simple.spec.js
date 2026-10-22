@@ -30,7 +30,10 @@ test.describe('Granny-simple company 360', () => {
     await page.locator('#crm-company-street').fill('Holtenauer Straße 267');
     await page.locator('#crm-company-zip').fill('24106');
     await page.locator('#crm-company-city').fill('Kiel');
-    await page.locator('#crm-company-country').selectOption('DE');
+    // Country is a searchable combobox — typing the code commits on blur.
+    await page.locator('#crm-company-country-search').fill('DE');
+    await page.locator('#crm-company-city').click();
+    await expect(page.locator('#crm-company-country')).toHaveValue('DE');
     await page.locator('#crm-company-form button[type="submit"]').click();
     await page.waitForURL(/\/apps\/customercheck\/companies\/\d+/, { timeout: 30000 });
     createdCompanies.push(page.url());

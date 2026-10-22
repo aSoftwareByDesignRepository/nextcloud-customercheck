@@ -9,6 +9,7 @@ import {
 } from '../../js/utils/company360-present.js';
 
 const t = (msg, args) => (args && args.length ? msg.replace('%s', args[0]) : msg);
+const rawT = (msg) => msg;
 const billingStateLabel = (state) => {
   if (state === 'ok') return 'Paid up';
   if (state === 'critical') return 'Overdue';
@@ -116,5 +117,16 @@ describe('buildBillingHonesty', () => {
         t,
       ).text,
     ).toMatch(/InvoiceCheck/i);
+
+    expect(
+      buildBillingHonesty(
+        {
+          sourceMode: 'none',
+          sources: { invoiceCheckAvailable: true, invoiceCheckLinked: true },
+          licenses: { total: 2, unpaid: 2, none: 0 },
+        },
+        rawT,
+      ).text,
+    ).toBe('2 license invoice(s) still unpaid.');
   });
 });

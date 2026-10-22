@@ -10,6 +10,7 @@
 @import url('common/base.css');
 @import url('common/components.css');
 @import url('common/user-picker.css');
+@import url('common/country-picker.css');
 @import url('common/company-picker.css');
 @import url('common/new-deal-form.css');
 @import url('common/dialog-forms.css');
@@ -1001,7 +1002,7 @@ dialog.crm-native-dialog .crm-form-actions--start {
 #app-content.crm-app .crm-identity-row--spaced {
 	margin-top: var(--crm-space-5);
 }
-@media (max-width: 767.98px) {
+@media (max-width: 768.98px) {
 	#app-content.crm-app .crm-identity-actions,
 	#app-content.crm-app .crm-identity-form .crm-form-actions,
 	#app-content.crm-app #crm-persons > .crm-card__header {
@@ -1889,7 +1890,7 @@ dialog.crm-native-dialog .crm-form-inline-error[hidden] {
 	}
 }
 
-@media (max-width: 767.98px) {
+@media (max-width: 768.98px) {
 	#app-content.crm-app .crm-settings-form__footer,
 	#app-content.crm-app .admin-settings-form__footer,
 	#app-content.crm-app .crm-admin-settings-form__footer,
@@ -1999,7 +2000,7 @@ dialog.crm-native-dialog .crm-form-inline-error[hidden] {
 }
 
 /* ── Responsive page header (table card reflow: page-patterns.css) ── */
-@media (max-width: 767.98px) {
+@media (max-width: 768.98px) {
 	.crm-page-header__main {
 		grid-template-columns: 48px 1fr;
 	}
@@ -2249,7 +2250,7 @@ dialog.crm-native-dialog .crm-link-list {
 dialog.crm-native-dialog .crm-simple-list li {
 	margin: var(--crm-space-1) 0;
 }
-@media (max-width: 767.98px) {
+@media (max-width: 768.98px) {
 	#app-content.crm-app .crm-timeline__card {
 		padding: var(--crm-space-3);
 	}
@@ -2619,7 +2620,7 @@ dialog.crm-native-dialog .crm-pre {
 	background: var(--crm-surface-muted, var(--color-background-dark));
 	border-radius: var(--crm-radius, 6px);
 }
-@media (max-width: 767.98px) {
+@media (max-width: 768.98px) {
 	#app-content.crm-app .crm-kanban {
 		grid-template-columns: 1fr;
 	}
@@ -3173,7 +3174,7 @@ dialog.crm-native-dialog .crm-advanced > .crm-form--stack {
 	min-height: 44px; /* WCAG 2.5.5 target size is defined in CSS px; rem shrinks under NC 15px root font */
 }
 
-@media (max-width: 767.98px) {
+@media (max-width: 768.98px) {
 	#app-content.crm-app .crm-btn--sm,
 	#app-content-wrapper .crm-btn--sm,
 	dialog.crm-native-dialog .crm-btn--sm,
@@ -4524,7 +4525,7 @@ dialog.crm-native-dialog .crm-advanced > .crm-form--stack {
 		padding-block-end: 0;
 	}
 }
-@media (max-width: 767.98px) {
+@media (max-width: 768.98px) {
 	#app-content.crm-app #crm-glance .crm-glance-pin {
 		position: static;
 		box-shadow: none;
@@ -5515,7 +5516,7 @@ dialog.crm-native-dialog .crm-form--stack .crm-datepicker-host .datepicker-input
 #app-content.crm-app #crm-strategy-board .crm-quick-filters {
 	margin-bottom: var(--crm-space-4, 1rem);
 }
-@media (max-width: 767.98px) {
+@media (max-width: 768.98px) {
 	#app-content.crm-app .crm-strategy-edit-row > td {
 		padding-inline: 0;
 	}
@@ -5525,7 +5526,7 @@ dialog.crm-native-dialog .crm-form--stack .crm-datepicker-host .datepicker-input
 	align-items: end;
 	max-width: none;
 }
-@media (max-width: 767.98px) {
+@media (max-width: 768.98px) {
 	#app-content.crm-app .crm-form--row {
 		grid-template-columns: 1fr;
 		align-items: stretch;
@@ -7235,7 +7236,7 @@ dialog.crm-native-dialog label.crm-check {
 	}
 }
 /* ≤767px: NC mobile — stack all My email action rows; Sync already full-width above. */
-@media (max-width: 767.98px) {
+@media (max-width: 768.98px) {
 	#app-content.crm-app .crm-personal-mail-connected-actions,
 	#app-content.crm-app .crm-personal-mail-connect__actions,
 	#app-content.crm-app #crm-personal-mail-folders-wrap .crm-form-actions,
@@ -7683,7 +7684,7 @@ dialog.crm-native-dialog label.crm-check {
 	}
 }
 /* ≤767px: NC mobile — Sales Inbox chrome (tabs/actions/decide) without changing ≥768 desktop. */
-@media (max-width: 767.98px) {
+@media (max-width: 768.98px) {
 	#app-content.crm-app .crm-sales-inbox__toolbar {
 		flex-direction: column;
 		align-items: stretch;
@@ -7800,7 +7801,7 @@ dialog.crm-native-dialog label.crm-check {
 	}
 }
 /* ≤767px: NC mobile — cut nested folder indent so depth×1.75rem cannot overflow 320px. */
-@media (max-width: 767.98px) {
+@media (max-width: 768.98px) {
 	#app-content.crm-app .crm-personal-mail-folder {
 		padding-inline-start: calc(
 			var(--crm-space-3, 0.75rem)

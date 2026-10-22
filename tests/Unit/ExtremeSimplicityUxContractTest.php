@@ -648,7 +648,7 @@ final class ExtremeSimplicityUxContractTest extends TestCase
 	{
 		$css = (string)file_get_contents(dirname(__DIR__, 2) . '/css/app.css');
 		$this->assertStringContainsString('crm-quick-filter', $css);
-		$this->assertStringContainsString('@media (max-width: 767.98px)', $css);
+		$this->assertStringContainsString('@media (max-width: 768.98px)', $css);
 		$this->assertStringContainsString('min-height: 44px', $css);
 		// Suite UX6: desktop interactive .crm-btn--sm must also meet 44px (px units —
 		// rem-based sizing under-delivers with Nextcloud's 15px root font).

@@ -6,6 +6,31 @@
  */
 
 /**
+ * window.t / OC.L10N.translate fills {name} tokens only — %s/%d pass
+ * through raw. Wrap an injected translator so leftover sprintf
+ * placeholders are always filled (idempotent when already filled).
+ * @param {unknown} base
+ * @returns {(msg: string, args?: string[]) => string}
+ */
+export function sprintfT(base) {
+  const baseT = typeof base === 'function' ? base : function (m) { return m; };
+  return function (msg, args) {
+    let out = baseT(msg, args);
+    const list = Array.isArray(args) ? args : [];
+    if (list.length && typeof out === 'string' && out.indexOf('%') !== -1) {
+      let i = 0;
+      out = out.replace(/%%|%(?:\d+\$)?[sd]/g, function (m) {
+        if (m === '%%') { return '%'; }
+        const v = list[i];
+        i += 1;
+        return v == null ? '' : String(v);
+      });
+    }
+    return out;
+  };
+}
+
+/**
  * Allow only same-origin absolute paths (no protocol-relative, no javascript:).
  * @param {unknown} href
  * @param {string} [fallback='/']
@@ -44,6 +69,7 @@ export function safeInternalHref(href, fallback = '/') {
  * @returns {{ tone: 'info'|'warning'|'neutral', text: string }}
  */
 export function buildBillingHonesty(billing, t) {
+  t = sprintfT(t);
   const b = billing && typeof billing === 'object' ? billing : {};
   const sources = b.sources && typeof b.sources === 'object' ? b.sources : {};
   const licenses = b.licenses && typeof b.licenses === 'object' ? b.licenses : {};
@@ -121,7 +147,7 @@ export function buildBillingHonesty(billing, t) {
  * @returns {Array<{ key: string, label: string, value: string, meta: string, tone: string }>}
  */
 export function buildBillingSummaryTiles(billing, helpers) {
-  const t = helpers.t;
+  const t = sprintfT(helpers.t);
   const b = billing && typeof billing === 'object' ? billing : {};
   const state = b.state ? String(b.state) : 'unknown';
   const overdue = Math.max(0, Number(b.overdueCount || 0) || 0);

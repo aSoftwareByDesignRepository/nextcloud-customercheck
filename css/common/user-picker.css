@@ -69,6 +69,9 @@ dialog.crm-native-dialog .user-picker__item {
 	padding: var(--space-2, 0.5rem) var(--space-3, 0.75rem);
 	cursor: pointer;
 	line-height: 1.35;
+	/* 44px touch-target floor — single-line rows were ~36px. */
+	min-height: 44px;
+	box-sizing: border-box;
 }
 
 #app-content-wrapper .user-picker__item:hover,

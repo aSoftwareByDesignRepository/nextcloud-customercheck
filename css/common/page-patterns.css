@@ -686,6 +686,18 @@
 		min-width: 36rem;
 	}
 
+	/* ≤769px: legacy table families may wrap — a frozen nowrap cell can
+	 * push row actions behind the horizontal scroll wrap
+	 * (gate: check-table-actions-fit). */
+	#app-content.crm-app .grid-table td,
+	#app-content.crm-app .grid-table th,
+	#app-content.crm-app .arbeitszeitcheck-table td,
+	#app-content.crm-app .arbeitszeitcheck-table th,
+	#app-content.crm-app .report-table td,
+	#app-content.crm-app .report-table th {
+		white-space: normal;
+	}
+
 	/* WCAG 2.5.5 touch floor: bare text links inside dense table cells and
 	 * the breadcrumb were ~15–21px tall at tablet/phone widths. 44px in CSS
 	 * px (not rem — NC root font can be 15px). */

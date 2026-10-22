@@ -201,6 +201,17 @@ final class PersonaOsLogicTest extends TestCase
 		$this->assertNull($r['companyId']);
 	}
 
+	public function testSharedMailboxOnFreemailDoesNotClaimTeamDomain(): void
+	{
+		// A shared mailbox hosted on a freemail domain must not turn gmail.com
+		// into a "team domain" — otherwise every customer From on gmail is
+		// swallowed by the team-domain gate before the exact-person match.
+		$persons = [['companyId' => 9, 'email' => 'ada@gmail.com']];
+		$r = MailMatchLogic::match(null, 'ada@gmail.com', $persons, ['shared@gmail.com']);
+		$this->assertSame('person_email', $r['how']);
+		$this->assertSame(9, $r['companyId']);
+	}
+
 	public function testMailMatchExactPersonWins(): void
 	{
 		$persons = [['companyId' => 9, 'email' => 'ada@acme.test']];

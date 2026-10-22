@@ -36,4 +36,26 @@ describe('CustomerCheckNewDealForm', () => {
     expect(html).not.toContain('This month likely');
     expect(html).not.toContain('won');
   });
+
+  it('fills %s in the next-step title when base t never sprintfs (window.t semantics)', async () => {
+    const mod = loadNewDealForm();
+    let captured = '';
+    const C = {
+      openDialog: (o) => { captured = String(o && o.content || ''); },
+      closeModal: () => {},
+    };
+    const rawT = (m) => m;
+    try {
+      await mod.offerNextStep({
+        components: C,
+        api: {},
+        t: rawT,
+        escapeHtml: (s) => String(s),
+        deal: { id: 5, title: 'Acme rollout' },
+        companyId: 7,
+      });
+    } catch (e) { /* stub document has no real form — content already captured */ }
+    expect(captured).toContain('Follow up: Acme rollout');
+    expect(captured).not.toContain('%s');
+  });
 });

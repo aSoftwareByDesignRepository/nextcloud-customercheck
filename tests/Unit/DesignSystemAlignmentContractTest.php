@@ -225,7 +225,10 @@ final class DesignSystemAlignmentContractTest extends TestCase
 		$this->assertStringContainsString('dialog.crm-native-dialog .crm-btn--danger,', $app);
 		$this->assertStringContainsString('dialog.crm-native-dialog .crm-choice,', $app);
 		$this->assertStringContainsString('dialog.crm-native-dialog .crm-advanced {', $app);
-		$this->assertStringContainsString('dialog.crm-native-dialog .crm-form-inline-error[hidden]', $app);
+		$this->assertMatchesRegularExpression(
+			'/dialog\.crm-native-dialog \.crm-form-inline-error\[hidden\]\s*\{\s*display:\s*none\s*!important/s',
+			$app,
+		);
 		// NC 30+ remaps --color-success/-warning/-error to pale tints — never
 		// paint them directly; surfaces use the *-text-ink tint tokens instead.
 		$this->assertStringContainsString(
@@ -261,6 +264,10 @@ final class DesignSystemAlignmentContractTest extends TestCase
 		$this->assertStringNotContainsString('form-checkbox confirm-dialog__checkbox-row', $components);
 		$companyDetail = (string)file_get_contents($this->root . '/js/pages/company-detail.js');
 		$this->assertStringContainsString('crm-advanced__summary', $companyDetail);
+		$this->assertStringContainsString(
+			'<details class="crm-advanced"><summary class="crm-advanced__summary">',
+			$companyDetail,
+		);
 		$this->assertStringContainsString('label class="crm-choice"', $companyDetail);
 		$pipeline = (string)file_get_contents($this->root . '/js/pages/pipeline.js');
 		$this->assertStringContainsString('crm-advanced__summary', $pipeline);

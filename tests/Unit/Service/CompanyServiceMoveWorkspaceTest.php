@@ -79,6 +79,25 @@ final class CompanyServiceMoveWorkspaceTest extends TestCase
 		}
 	}
 
+	public function testDormantMovePathStillUnmatchesSharedMail(): void
+	{
+		// moveToWorkspace is dormant under single-org (ERR_WS_LIMIT short-circuit)
+		// but must stay intact for multi-workspace mode: the old book's mailbox
+		// cannot keep matches to a company that left. Source-scan contract —
+		// the path is unreachable at runtime today, so only a scan can guard it.
+		$src = (string)file_get_contents(dirname(__DIR__, 3) . '/lib/Service/CompanyService.php');
+		$start = strpos($src, 'public function moveToWorkspace(');
+		$this->assertNotFalse($start);
+		$end = strpos($src, "\n\t}", $start);
+		$this->assertNotFalse($end);
+		$body = substr($src, $start, $end - $start);
+		$this->assertStringContainsString("Constants::MULTI_WORKSPACE_ENABLED", $body);
+		$this->assertStringContainsString("->update('crm_mail_msg')", $body);
+		$this->assertStringContainsString("->set('matched_how'", $body);
+		$this->assertStringContainsString("createNamedParameter('open')", $body);
+		$this->assertStringContainsString("->update('crm_mail_dft')", $body);
+	}
+
 	private function service(CompanyMapper $mapper, ?IDBConnection $db = null): CompanyService
 	{
 		$l10n = $this->createMock(IL10N::class);

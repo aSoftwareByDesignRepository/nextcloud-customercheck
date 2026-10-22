@@ -96,7 +96,14 @@ describe('renewalTileParts', () => {
     const hot = renewalTileParts({ validUntil: '2026-08-20', daysLeft: 11 }, formatDisplayDate, t);
     expect(hot.value).toBe('D:2026-08-20');
     expect(hot.meta).toBe('11 days left');
+
     expect(hot.tone).toBe('warning');
+  });
+
+  it('fills %s via sprintfT when base t never sprintfs (window.t semantics)', () => {
+    const rawT = (msg) => msg;
+    const mid = renewalTileParts({ validUntil: '2026-09-01', daysLeft: 40 }, formatDisplayDate, rawT);
+    expect(mid.meta).toBe('40 days left');
   });
 
   it('stays calm when runway is long', () => {

@@ -42,7 +42,11 @@ final class CompanyArchiveApiContractTest extends TestCase
 		$src = (string)file_get_contents(dirname(__DIR__, 2) . '/lib/Service/MailSendService.php');
 		$this->assertStringContainsString('ILockingProvider', $src);
 		$this->assertStringContainsString('workspaceName(', $src);
-		$this->assertStringNotContainsString("disclosure((string)\$box['label'], 'workspace')", $src);
+		$this->assertStringContainsString("disclosure((string)\$box['label'], \$workspaceName, \$boxKind)", $src);
+		$this->assertDoesNotMatchRegularExpression(
+			"/disclosure\\(\\(string\\)\\\$box\\['label'\\],\\s*'[^']*'/",
+			$src,
+		);
 	}
 
 	public function testSequenceDismissIncludesAllSequenceOrigins(): void

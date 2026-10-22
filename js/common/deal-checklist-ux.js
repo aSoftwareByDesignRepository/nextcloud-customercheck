@@ -8,6 +8,31 @@
 (function (global) {
   'use strict';
 
+  /**
+   * window.t / OC.L10N.translate fills {name} tokens only — %s/%d pass
+   * through raw. Wrap an injected translator so leftover sprintf
+   * placeholders are always filled (idempotent when already filled).
+   * @param {unknown} base
+   * @returns {(msg: string, args?: string[]) => string}
+   */
+  function sprintfT(base) {
+    const baseT = typeof base === 'function' ? base : function (m) { return m; };
+    return function (msg, args) {
+      let out = baseT(msg, args);
+      const list = Array.isArray(args) ? args : [];
+      if (list.length && typeof out === 'string' && out.indexOf('%') !== -1) {
+        let i = 0;
+        out = out.replace(/%%|%(?:\d+\$)?[sd]/g, function (m) {
+          if (m === '%%') { return '%'; }
+          const v = list[i];
+          i += 1;
+          return v == null ? '' : String(v);
+        });
+      }
+      return out;
+    };
+  }
+
   var DEFAULT_CHECKLIST_DONE_NOTE = 'Done';
 
   function requireTypedReplaceConfirm() {
@@ -15,7 +40,7 @@
   }
 
   function buildTemplateStarterButtonsHtml(templates, helpers) {
-    var t = helpers.t;
+    var t = sprintfT(helpers.t);
     var escapeHtml = helpers.escapeHtml;
     var list = Array.isArray(templates) ? templates : [];
     if (list.length === 0) {
@@ -43,7 +68,7 @@
   }
 
   function buildChecklistItemRowHtml(item, helpers) {
-    var t = helpers.t;
+    var t = sprintfT(helpers.t);
     var escapeHtml = helpers.escapeHtml;
     var open = String(item.status || '') === 'open';
     var files = Array.isArray(item.files) ? item.files : [];
@@ -113,7 +138,7 @@
   }
 
   function buildChecklistPanelHtml(opts, helpers) {
-    var t = helpers.t;
+    var t = sprintfT(helpers.t);
     var escapeHtml = helpers.escapeHtml;
     var emptyHint = opts.empty
       ? '<div class="crm-empty-state" role="status">' +

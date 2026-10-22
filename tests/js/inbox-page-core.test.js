@@ -69,6 +69,11 @@ describe('inbox-page-core', () => {
     expect(Page.inboxStatusText({ count: 1, hasMore: false, tab: 'mine', t })).toBe('1 message');
   });
 
+  it('status text fills %s when base t never sprintfs (window.t semantics)', () => {
+    const rawT = (msg) => msg;
+    expect(Page.inboxStatusText({ count: 12, hasMore: false, tab: 'mine', t: rawT })).toBe('12 messages');
+  });
+
   it('failed load panel admits failure instead of claiming empty', () => {
     const t = (m, args) => (args ? m.replace('%s', args[0]) : m);
     const withErr = Page.failedEmptyCopy({ errorText: 'Server error (HTTP 500). Please try again.', t });

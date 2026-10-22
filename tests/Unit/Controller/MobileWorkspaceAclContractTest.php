@@ -110,7 +110,7 @@ final class MobileWorkspaceAclContractTest extends TestCase
 		$this->request->method('getParams')->willReturnCallback(fn (): array => $this->requestParams);
 	}
 
-	private function controller(): MobileController
+	private function controller(?\OCP\IL10N $l10n = null): MobileController
 	{
 		return new MobileController(
 			Application::APP_ID,
@@ -131,6 +131,7 @@ final class MobileWorkspaceAclContractTest extends TestCase
 			$this->createMock(WorkspaceService::class),
 			$this->createMock(IUserManager::class),
 			$this->appManager,
+			$l10n ?? $this->createMock(\OCP\IL10N::class),
 		);
 	}
 
@@ -358,6 +359,37 @@ final class MobileWorkspaceAclContractTest extends TestCase
 		$body = $response->getData();
 		$this->assertTrue($body['success']);
 		$this->assertSame($payload, $body['data']);
+	}
+
+	/**
+	 * The companion picker reads `data.items[] = {code,label}` — ISO codes
+	 * only on the wire, localized labels, gated like every data route but
+	 * never workspace-scoped (no workspaceId in the URL).
+	 */
+	public function testCountriesReturnsIsoItemsInMobileEnvelope(): void
+	{
+		$l10n = $this->createMock(\OCP\IL10N::class);
+		$l10n->method('getLanguageCode')->willReturn('de');
+		$this->workspaceAccess->expects($this->never())->method('assertCapability');
+		$this->workspaceAccess->expects($this->never())->method('resolveForUser');
+
+		$response = $this->controller($l10n)->countries();
+
+		$this->assertSame(Http::STATUS_OK, $response->getStatus());
+		$body = $response->getData();
+		$this->assertTrue($body['success']);
+		$items = $body['data']['items'] ?? null;
+		$this->assertIsArray($items);
+		$this->assertGreaterThanOrEqual(249, count($items));
+		$seen = [];
+		foreach ($items as $item) {
+			$this->assertMatchesRegularExpression('/^[A-Z]{2}$/', $item['code']);
+			$this->assertNotSame('', (string)$item['label']);
+			$seen[$item['code']] = $item['label'];
+		}
+		$this->assertArrayHasKey('BR', $seen);
+		$this->assertArrayHasKey('XK', $seen);
+		$this->assertArrayNotHasKey('AC', $seen);
 	}
 
 	public function testWorkspaceIdZeroReturns404WithoutTouchingServices(): void

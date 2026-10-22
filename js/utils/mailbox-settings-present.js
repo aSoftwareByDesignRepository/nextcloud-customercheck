@@ -6,6 +6,31 @@
  */
 
 /**
+ * window.t / OC.L10N.translate fills {name} tokens only — %s/%d pass
+ * through raw. Wrap an injected translator so leftover sprintf
+ * placeholders are always filled (idempotent when already filled).
+ * @param {unknown} base
+ * @returns {(msg: string, args?: string[]) => string}
+ */
+export function sprintfT(base) {
+  const baseT = typeof base === 'function' ? base : function (m) { return m; };
+  return function (msg, args) {
+    let out = baseT(msg, args);
+    const list = Array.isArray(args) ? args : [];
+    if (list.length && typeof out === 'string' && out.indexOf('%') !== -1) {
+      let i = 0;
+      out = out.replace(/%%|%(?:\d+\$)?[sd]/g, function (m) {
+        if (m === '%%') { return '%'; }
+        const v = list[i];
+        i += 1;
+        return v == null ? '' : String(v);
+      });
+    }
+    return out;
+  };
+}
+
+/**
  * @param {unknown} status
  * @returns {'success'|'warning'|'danger'|'neutral'}
  */
@@ -29,6 +54,7 @@ export function mailboxStatusTone(status) {
  * @returns {string}
  */
 export function mailboxStatusLabel(status, t) {
+  t = sprintfT(t);
   switch (String(status || '')) {
     case 'ok':
       return t('Connected');
@@ -82,6 +108,7 @@ function formatMailboxSyncAt(raw) {
  * }>}
  */
 export function buildMailboxListRows(items, t) {
+  t = sprintfT(t);
   const list = Array.isArray(items) ? items : [];
   return list.map((raw) => {
     const m = raw && typeof raw === 'object' ? raw : {};

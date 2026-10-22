@@ -110,6 +110,10 @@ final class MailboxSettingsUxContractTest extends TestCase
 	{
 		$controller = (string)file_get_contents(dirname(__DIR__, 2) . '/lib/Controller/PageController.php');
 		$this->assertStringContainsString("'common/mailbox-settings-present'", $controller);
+		$this->assertStringContainsString(
+			"registerFrontEndAssets('pages/settings', null, [], ['common/folder-picker', 'common/signature-logo-core', 'common/personal-mail-settings-core', 'common/rich-mail-composer', 'common/mailbox-settings-present'])",
+			$controller,
+		);
 		$boot = (string)file_get_contents(dirname(__DIR__, 2) . '/js/common/mailbox-settings-present.js');
 		$this->assertStringContainsString('buildMailboxListRows', $boot);
 		$this->assertStringContainsString('renderMailboxList', $boot);

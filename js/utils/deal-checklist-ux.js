@@ -5,6 +5,31 @@
  * @license AGPL-3.0-or-later
  */
 
+/**
+ * window.t / OC.L10N.translate fills {name} tokens only — %s/%d pass
+ * through raw. Wrap an injected translator so leftover sprintf
+ * placeholders are always filled (idempotent when already filled).
+ * @param {unknown} base
+ * @returns {(msg: string, args?: string[]) => string}
+ */
+export function sprintfT(base) {
+  const baseT = typeof base === 'function' ? base : function (m) { return m; };
+  return function (msg, args) {
+    let out = baseT(msg, args);
+    const list = Array.isArray(args) ? args : [];
+    if (list.length && typeof out === 'string' && out.indexOf('%') !== -1) {
+      let i = 0;
+      out = out.replace(/%%|%(?:\d+\$)?[sd]/g, function (m) {
+        if (m === '%%') { return '%'; }
+        const v = list[i];
+        i += 1;
+        return v == null ? '' : String(v);
+      });
+    }
+    return out;
+  };
+}
+
 /** Matches companion mobile default evidence note. */
 export const DEFAULT_CHECKLIST_DONE_NOTE = 'Done';
 
@@ -22,7 +47,7 @@ export function requireTypedReplaceConfirm() {
  * @returns {string}
  */
 export function buildTemplateStarterButtonsHtml(templates, helpers) {
-  const t = helpers.t;
+  const t = sprintfT(helpers.t);
   const escapeHtml = helpers.escapeHtml;
   const list = Array.isArray(templates) ? templates : [];
   if (list.length === 0) {
@@ -69,7 +94,7 @@ export function buildTemplateStarterButtonsHtml(templates, helpers) {
  * @returns {string}
  */
 export function buildChecklistItemRowHtml(item, helpers) {
-  const t = helpers.t;
+  const t = sprintfT(helpers.t);
   const escapeHtml = helpers.escapeHtml;
   const readOnly = !!helpers.readOnly;
   const dealTitle = String(helpers.dealTitle || '');
@@ -162,7 +187,7 @@ export function buildChecklistItemRowHtml(item, helpers) {
  * @returns {string}
  */
 export function buildChecklistPanelHtml(opts, helpers) {
-  const t = helpers.t;
+  const t = sprintfT(helpers.t);
   const escapeHtml = helpers.escapeHtml;
   const readOnly = !!opts.readOnly;
   const emptyHint = opts.empty

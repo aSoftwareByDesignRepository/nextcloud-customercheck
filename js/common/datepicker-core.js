@@ -16,6 +16,31 @@
 (function (global) {
   'use strict';
 
+  /**
+   * window.t / OC.L10N.translate fills {name} tokens only — %s/%d pass
+   * through raw. Wrap an injected translator so leftover sprintf
+   * placeholders are always filled (idempotent when already filled).
+   * @param {unknown} base
+   * @returns {(msg: string, args?: string[]) => string}
+   */
+  function sprintfT(base) {
+    const baseT = typeof base === 'function' ? base : function (m) { return m; };
+    return function (msg, args) {
+      let out = baseT(msg, args);
+      const list = Array.isArray(args) ? args : [];
+      if (list.length && typeof out === 'string' && out.indexOf('%') !== -1) {
+        let i = 0;
+        out = out.replace(/%%|%(?:\d+\$)?[sd]/g, function (m) {
+          if (m === '%%') { return '%'; }
+          const v = list[i];
+          i += 1;
+          return v == null ? '' : String(v);
+        });
+      }
+      return out;
+    };
+  }
+
   const ISO_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
   const EU_RE = /^(\d{2})\.(\d{2})\.(\d{4})$/;
   const MIN_YEAR = 1900;
@@ -355,20 +380,7 @@
    * @returns {string}
    */
   function formatDurationLabel(minutes, translate) {
-    const t = typeof translate === 'function'
-      ? translate
-      : function (msg, args) {
-        let out = String(msg);
-        const list = Array.isArray(args) ? args : [];
-        let i = 0;
-        out = out.replace(/%%|%s/g, function (m) {
-        if (m === '%%') { return '%'; }
-          const v = list[i];
-          i += 1;
-          return v == null ? '' : String(v);
-        });
-        return out;
-      };
+    const t = sprintfT(translate);
     const n = snapDurationMinutes(minutes);
     const h = Math.floor(n / 60);
     const m = n % 60;

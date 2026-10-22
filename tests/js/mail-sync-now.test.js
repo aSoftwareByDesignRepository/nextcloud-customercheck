@@ -96,6 +96,15 @@ describe('mail-sync-now.js', () => {
     expect(line).toContain('2 shared mailboxes connected.');
   });
 
+  it('fills %s even when base t never sprintfs (window.t semantics)', () => {
+    const api = loadMailSync();
+    const rawT = (msg) => msg;
+    const line = api.statusLine(rawT, { mailboxCount: 2, lastSyncAt: null, backgroundIntervalMinutes: 15 });
+    expect(line).toContain('2 shared mailboxes connected.');
+    expect(line).toContain('every 15 minutes');
+    expect(line).not.toContain('%s');
+  });
+
   it('omits multi-count for a single mailbox', () => {
     const api = loadMailSync();
     const line = api.statusLine(t, { mailboxCount: 1, lastSyncAt: null, backgroundIntervalMinutes: 15 });

@@ -1,6 +1,31 @@
 (function () {
   'use strict';
 
+  /**
+   * window.t / OC.L10N.translate fills {name} tokens only — %s/%d pass
+   * through raw. Wrap an injected translator so leftover sprintf
+   * placeholders are always filled (idempotent when already filled).
+   * @param {unknown} base
+   * @returns {(msg: string, args?: string[]) => string}
+   */
+  function sprintfT(base) {
+    const baseT = typeof base === 'function' ? base : function (m) { return m; };
+    return function (msg, args) {
+      let out = baseT(msg, args);
+      const list = Array.isArray(args) ? args : [];
+      if (list.length && typeof out === 'string' && out.indexOf('%') !== -1) {
+        let i = 0;
+        out = out.replace(/%%|%(?:\d+\$)?[sd]/g, function (m) {
+          if (m === '%%') { return '%'; }
+          const v = list[i];
+          i += 1;
+          return v == null ? '' : String(v);
+        });
+      }
+      return out;
+    };
+  }
+
   const OPEN_STAGES = ['lead', 'contacted', 'quoted', 'negotiation'];
 
   const WIN_CHANCE = [
@@ -11,6 +36,7 @@
   ];
 
   function winChanceOptionsHtml(t, escapeHtml, selectedValue) {
+    t = sprintfT(t);
     const selected = String(selectedValue || '');
     const parts = ['<option value="">' + escapeHtml(t('Not set')) + '</option>'];
     WIN_CHANCE.forEach(function (o) {
@@ -166,7 +192,7 @@
   async function openNewDealForm(opts) {
     const C = opts.components;
     const Api = opts.api;
-    const t = opts.t;
+    const t = sprintfT(opts.t);
     const escapeHtml = opts.escapeHtml;
     const mountOwnerPicker = opts.mountOwnerPicker;
     const activeWorkspaceId = opts.activeWorkspaceId;
@@ -520,7 +546,7 @@
   async function offerNextStep(ctx) {
     const C = ctx.components;
     const Api = ctx.api;
-    const t = ctx.t;
+    const t = sprintfT(ctx.t);
     const escapeHtml = ctx.escapeHtml;
     const deal = ctx.deal || {};
     const dealId = parseInt(String(deal.id || '0'), 10) || 0;

@@ -7,11 +7,37 @@
  */
 
 /**
+ * window.t / OC.L10N.translate fills {name} tokens only — %s/%d pass
+ * through raw. Wrap an injected translator so leftover sprintf
+ * placeholders are always filled (idempotent when already filled).
+ * @param {unknown} base
+ * @returns {(msg: string, args?: string[]) => string}
+ */
+export function sprintfT(base) {
+  const baseT = typeof base === 'function' ? base : function (m) { return m; };
+  return function (msg, args) {
+    let out = baseT(msg, args);
+    const list = Array.isArray(args) ? args : [];
+    if (list.length && typeof out === 'string' && out.indexOf('%') !== -1) {
+      let i = 0;
+      out = out.replace(/%%|%(?:\d+\$)?[sd]/g, function (m) {
+        if (m === '%%') { return '%'; }
+        const v = list[i];
+        i += 1;
+        return v == null ? '' : String(v);
+      });
+    }
+    return out;
+  };
+}
+
+/**
  * @param {string|null|undefined} slot
  * @param {(msg: string, args?: string[]) => string} t
  * @returns {string}
  */
 export function coverageMissingLabel(slot, t) {
+  t = sprintfT(t);
   switch (slot) {
     case 'economic_buyer':
       return t('Budget decision-maker');
@@ -30,6 +56,7 @@ export function coverageMissingLabel(slot, t) {
  * @returns {string}
  */
 export function billingStateLabel(state, t) {
+  t = sprintfT(t);
   switch (state) {
     case 'ok':
       return t('Paid up');
@@ -81,6 +108,7 @@ export function moneyGlanceTone(billingState, coverageGap) {
  * @returns {{ label: string, meta: string, tone: 'success'|'warning'|'neutral' }}
  */
 export function coverageTileParts(cov, t) {
+  t = sprintfT(t);
   const c = cov && typeof cov === 'object' ? cov : {};
   const label = c.gap ? t('Needs links') : (c.covered ? t('Covered') : t('Coverage'));
   const tone = c.gap ? 'warning' : (c.covered ? 'success' : 'neutral');
@@ -100,6 +128,7 @@ export function coverageTileParts(cov, t) {
  * @returns {{ value: string, meta: string, tone: 'warning'|'neutral'|'success' }}
  */
 export function renewalTileParts(runway, formatDisplayDate, t) {
+  t = sprintfT(t);
   const r = runway && typeof runway === 'object' ? runway : {};
   if (!r.validUntil) {
     return { value: '—', meta: '', tone: 'neutral' };
@@ -137,7 +166,7 @@ export function renewalTileParts(runway, formatDisplayDate, t) {
  * }>}
  */
 export function buildGlanceSummaryTiles(dto, helpers) {
-  const t = helpers.t;
+  const t = sprintfT(helpers.t);
   const formatDisplayDate = helpers.formatDisplayDate;
   const d = dto && typeof dto === 'object' ? dto : {};
   const next = (d.nextAction && typeof d.nextAction === 'object') ? d.nextAction : {};

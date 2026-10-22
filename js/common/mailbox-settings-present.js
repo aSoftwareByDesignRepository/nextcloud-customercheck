@@ -8,6 +8,31 @@
 (function (global) {
   'use strict';
 
+  /**
+   * window.t / OC.L10N.translate fills {name} tokens only — %s/%d pass
+   * through raw. Wrap an injected translator so leftover sprintf
+   * placeholders are always filled (idempotent when already filled).
+   * @param {unknown} base
+   * @returns {(msg: string, args?: string[]) => string}
+   */
+  function sprintfT(base) {
+    const baseT = typeof base === 'function' ? base : function (m) { return m; };
+    return function (msg, args) {
+      let out = baseT(msg, args);
+      const list = Array.isArray(args) ? args : [];
+      if (list.length && typeof out === 'string' && out.indexOf('%') !== -1) {
+        let i = 0;
+        out = out.replace(/%%|%(?:\d+\$)?[sd]/g, function (m) {
+          if (m === '%%') { return '%'; }
+          const v = list[i];
+          i += 1;
+          return v == null ? '' : String(v);
+        });
+      }
+      return out;
+    };
+  }
+
   function mailboxStatusTone(status) {
     switch (String(status || '')) {
       case 'ok':
@@ -23,6 +48,7 @@
   }
 
   function mailboxStatusLabel(status, t) {
+    t = sprintfT(t);
     switch (String(status || '')) {
       case 'ok':
         return t('Connected');
@@ -56,6 +82,7 @@ function formatMailboxSyncAt(raw) {
 }
 
 function buildMailboxListRows(items, t) {
+    t = sprintfT(t);
   const list = Array.isArray(items) ? items : [];
   return list.map(function (raw) {
     const m = raw && typeof raw === 'object' ? raw : {};
@@ -100,6 +127,7 @@ function buildMailboxListRows(items, t) {
    * @param {(id: number, label: string, btn: HTMLButtonElement) => void} [onDelete]
    */
   function renderMailboxList(host, rows, t, onEdit, onSync, onDelete) {
+    t = sprintfT(t);
     if (!host) {
       return;
     }

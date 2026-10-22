@@ -12,6 +12,7 @@ import {
 } from '../../js/utils/mailbox-settings-present.js';
 
 const t = (msg, args) => (args && args.length ? msg.replace('%s', args[0]) : msg);
+const rawT = (msg) => msg;
 
 describe('mailboxStatusTone / mailboxStatusLabel', () => {
   it('maps API statuses to granny tones and labels', () => {
@@ -91,6 +92,22 @@ describe('buildMailboxListRows', () => {
     expect(rows[1].tone).toBe('danger');
     expect(rows[1].meta).toContain('3 failed logins');
     expect(rows[1].lastError).toBe('IMAP auth failed ×3');
+  });
+
+  it('fills %s via sprintfT when base t never sprintfs (window.t semantics)', () => {
+    const rows = buildMailboxListRows([
+      {
+        id: 4,
+        label: 'Sales',
+        emailAddress: 'sales@example.com',
+        status: 'ok',
+        lastSyncAt: '2026-08-09T10:00:00+00:00',
+        authFailCount: 3,
+      },
+    ], rawT);
+    expect(rows[0].meta).toContain('Last sync:');
+    expect(rows[0].meta).toContain('3 failed logins');
+    expect(rows[0].meta).not.toContain('%s');
   });
 
   it('survives null / non-array input', () => {

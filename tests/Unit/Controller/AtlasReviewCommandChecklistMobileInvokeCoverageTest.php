@@ -613,6 +613,7 @@ final class AtlasReviewCommandChecklistMobileInvokeCoverageTest extends TestCase
 			$workspaceService,
 			$userManager,
 			$appManager,
+			$this->createMock(\OCP\IL10N::class),
 			$checklists,
 		);
 
@@ -672,6 +673,7 @@ final class AtlasReviewCommandChecklistMobileInvokeCoverageTest extends TestCase
 			$workspaceService,
 			$userManager,
 			$appManager,
+			$this->createMock(\OCP\IL10N::class),
 			$checklists,
 		);
 		foreach ([

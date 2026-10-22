@@ -115,6 +115,38 @@ final class AgreementServiceApplyConflictTest extends TestCase
 		$svc->update(9, ['label' => 'Nope'], 'ae', '2026-01-01T00:00:00+00:00');
 	}
 
+	public function testUpdateFailsClosedWhenLockRowMisses(): void
+	{
+		// A row that vanished between read and lock (or a lock loss) must 404 —
+		// never proceed to stamp fields onto a phantom agreement.
+		$mapper = $this->createMock(AgreementMapper::class);
+		$mapper->expects($this->once())->method('lockRow')->with(9)->willReturn(false);
+		$mapper->expects($this->never())->method('findById');
+		$mapper->expects($this->never())->method('update');
+
+		$db = $this->createMock(IDBConnection::class);
+		$db->method('beginTransaction');
+		$db->method('inTransaction')->willReturn(false);
+		$db->expects($this->once())->method('rollBack');
+
+		$l10n = $this->createMock(IL10N::class);
+		$l10n->method('t')->willReturnCallback(static fn (string $s): string => $s);
+
+		$svc = new AgreementService(
+			$mapper,
+			$this->createMock(CompanyService::class),
+			$this->createMock(AgreementStatusService::class),
+			$this->createMock(TimelineService::class),
+			$this->createMock(ProductCodeRegistry::class),
+			$db,
+			$this->createMock(ITimeFactory::class),
+			$l10n,
+		);
+
+		$this->expectException(\OCA\CustomerCheck\Exception\NotFoundException::class);
+		$svc->update(9, ['label' => 'Nope'], 'ae', '2026-07-20T10:00:00+00:00');
+	}
+
 	public function testUpdateWithoutUpdatedAtPreconditionIsRejected(): void
 	{
 		$agreement = new Agreement();

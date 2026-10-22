@@ -91,7 +91,7 @@
 	margin-bottom: var(--space-3, 0.75rem);
 }
 
-@media (max-width: 47.99875rem) {
+@media (max-width: 48.06125rem) {
 	.crm-projectcheck-connection__actions {
 		flex-direction: column;
 	}

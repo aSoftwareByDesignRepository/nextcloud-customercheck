@@ -6,6 +6,31 @@
   'use strict';
 
   /**
+   * window.t / OC.L10N.translate fills {name} tokens only — %s/%d pass
+   * through raw. Wrap an injected translator so leftover sprintf
+   * placeholders are always filled (idempotent when already filled).
+   * @param {unknown} base
+   * @returns {(msg: string, args?: string[]) => string}
+   */
+  function sprintfT(base) {
+    const baseT = typeof base === 'function' ? base : function (m) { return m; };
+    return function (msg, args) {
+      let out = baseT(msg, args);
+      const list = Array.isArray(args) ? args : [];
+      if (list.length && typeof out === 'string' && out.indexOf('%') !== -1) {
+        let i = 0;
+        out = out.replace(/%%|%(?:\d+\$)?[sd]/g, function (m) {
+          if (m === '%%') { return '%'; }
+          const v = list[i];
+          i += 1;
+          return v == null ? '' : String(v);
+        });
+      }
+      return out;
+    };
+  }
+
+  /**
    * @param {unknown} existing
    * @param {unknown} incoming
    * @returns {Array<Record<string, mixed>>}
@@ -56,7 +81,7 @@
    */
   function inboxStatusText(opts) {
     const o = opts && typeof opts === 'object' ? opts : {};
-    const t = typeof o.t === 'function' ? o.t : function (m) { return m; };
+    const t = sprintfT(o.t);
     const n = parseInt(String(o.count || 0), 10) || 0;
     if (n === 0) {
       if (o.filteredEmpty && o.hasMore && String(o.tab || '') !== 'unmatched') {
@@ -78,7 +103,7 @@
    */
   function failedEmptyCopy(opts) {
     const o = opts && typeof opts === 'object' ? opts : {};
-    const t = typeof o.t === 'function' ? o.t : function (m) { return m; };
+    const t = sprintfT(o.t);
     const err = String(o.errorText || '').trim();
     return {
       title: t('Could not load inbox.'),

@@ -234,6 +234,12 @@
         activateForId(initialId);
         spyLockUntil = Date.now() + SPY_LOCK_MS;
         window.requestAnimationFrame(() => {
+          // User may have navigated to another #section before this rAF ran —
+          // never clobber the newer hash with the stale initial one.
+          const liveId = hashHrefToId(window.location.hash);
+          if (liveId && liveId !== initial.id) {
+            return;
+          }
           jumpToSection(initial.section, initial.id);
         });
       }
@@ -241,8 +247,18 @@
       setActiveLink(links, entries[0].link);
     }
 
-    window.addEventListener('hashchange', () => {
-      const id = hashHrefToId(window.location.hash);
+    window.addEventListener('hashchange', (ev) => {
+      // Prefer the event's target URL: another handler's deferred write may
+      // already have rewritten location.hash before this listener ran.
+      let href = window.location.hash;
+      try {
+        if (ev && typeof ev.newURL === 'string' && ev.newURL !== '' && typeof URL === 'function') {
+          href = new URL(ev.newURL).hash;
+        }
+      } catch (e) {
+        /* fall back to location.hash */
+      }
+      const id = hashHrefToId(href);
       if (id) {
         const match = entries.find((e) => e.id === id);
         if (match) {

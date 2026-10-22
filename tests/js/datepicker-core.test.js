@@ -147,6 +147,13 @@ describe('CustomerCheckDatepickerCore duration and hour selectors', () => {
     expect(Core.formatDurationLabel(135, t)).toBe('2 hours 15 minutes');
   });
 
+  it('fills %s when translate is OC.L10N-style (never sprintfs)', () => {
+    const rawT = (msg) => msg;
+    expect(Core.formatDurationLabel(75, rawT)).toBe('1 hour 15 minutes');
+    expect(Core.formatDurationLabel(45)).toBe('45 minutes');
+    expect(Core.formatDurationLabel(45, undefined)).not.toContain('%s');
+  });
+
   it('clamps clock hours to 00:00–23:00 for <select> values', () => {
     expect(Core.clampHour(-1)).toBe(0);
     expect(Core.clampHour(24)).toBe(23);
