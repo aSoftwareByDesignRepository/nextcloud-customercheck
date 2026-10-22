@@ -1,7 +1,7 @@
 # CustomerCheck — cross-locale glossary (binding)
 
 Source of voice: `docs/l10n-native-style.md` (informal address — overrides generic “Sie/vous” guidance for this app).  
-Cross-app terms: see `../../../../planning/l10n-glossary.md` (repo planning/).
+Cross-app terms: see `../../../../planning/l10n/l10n-glossary.md` (repo planning/).
 
 ## Language set (website footer + parity script)
 
