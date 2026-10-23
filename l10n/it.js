@@ -891,7 +891,7 @@ OC.L10N.register(
 		"Deal stages board": "Tabellone delle fasi dell'affare",
 		"Deals": "Offerte",
 		"Deals & money": "Offerte e denaro",
-		"Deals as a table or board — pick a company, give the deal a title, move the stage.": "Accordi come un tavolo o un tabellone: ​​scegli un'azienda, dai un titolo all'accordo, sposta la scena.",
+		"Deals as a table or board — pick a company, give the deal a title, move the stage.": "Accordi come un tavolo o un tabellone: scegli un'azienda, dai un titolo all'accordo, sposta la scena.",
 		"Deals could not be loaded — you can still assign without a deal.": "Impossibile caricare le offerte: puoi comunque assegnare senza un accordo.",
 		"Deals live in CustomerCheck for this workspace. Use the view that helps you move them.": "Le offerte sono disponibili in CustomerCheck per questa area di lavoro. Usa la vista che ti aiuta a spostarli.",
 		"Deals that already used this list keep their checklist. Only the reusable template is removed.": "Le opportunità che hanno già usato questo elenco tengono la checklist. Si rimuove solo il modello riutilizzabile.",

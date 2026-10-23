@@ -270,7 +270,7 @@ OC.L10N.register(
 		"Add move": "Schritt hinzufügen",
 		"Add or edit mailbox": "Postfach hinzufügen oder bearbeiten",
 		"Add people to this workspace in Settings, then come back to help them.": "Füge Personen in den Einstellungen zu diesem Arbeitsbereich hinzu und komm dann zurück, um zu helfen.",
-		"Add people with their email under People. That is how CRM knows “who”.": "Füge unter Personen Personen mit ihrer E-Mail-Adresse hinzu. So weiß CRM, „wer“.",
+		"Add people with their email under People. That is how CRM knows “who”.": "Füge Personen unter Personen mit ihrer E-Mail-Adresse hinzu. So weiß CRM, „wer“.",
 		"Add person": "Person hinzufügen",
 		"Add postal address": "Postadresse hinzufügen",
 		"Add someone under People with an email — then you can log what you wrote with them in one step.": "Füge unter Personen jemanden mit E-Mail hinzu — dann kannst du in einem Schritt protokollieren, was du mit der Person geschrieben hast.",
