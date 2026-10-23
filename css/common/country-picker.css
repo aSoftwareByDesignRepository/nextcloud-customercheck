@@ -7,9 +7,20 @@ dialog.crm-native-dialog .crm-country-picker .user-picker__control {
 	flex-wrap: wrap;
 }
 
+/* The shared search carries width:100%, which becomes its flex base and fills
+   row 1 alone — the clear button would wrap onto an orphan row. A zero base
+   keeps search + clear on one line; the search still grows to fill. */
+#app-content-wrapper .crm-country-picker .user-picker__control > .user-picker__search,
+dialog.crm-native-dialog .crm-country-picker .user-picker__control > .user-picker__search {
+	flex-basis: 0;
+}
+
 #app-content-wrapper .crm-country-picker .user-picker__control > .crm-field-error,
 dialog.crm-native-dialog .crm-country-picker .user-picker__control > .crm-field-error {
 	flex: 1 1 100%;
+	/* Injected between search and clear in DOM order — park it on the last
+	   row so the clear button never lands after it on an orphan row. */
+	order: 2;
 }
 
 /* The review "Fix country mapping" row reuses .crm-form--row, whose middle

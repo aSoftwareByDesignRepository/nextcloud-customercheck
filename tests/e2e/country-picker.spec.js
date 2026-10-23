@@ -124,6 +124,50 @@ test.describe('Country picker: search, commit, round-trip', () => {
     expect(after).toBeLessThanOrEqual(376);
   });
 
+  test('clear button shares the search row — never an orphan row (field error parks below)', async ({ page }) => {
+    await login(page, credsFromEnv('ADMIN'));
+    const search = page.locator('#crm-company-country-search');
+    const clear = page.locator('#crm-company-country-clear');
+
+    // Same flex row: the clear button's vertical center sits inside the
+    // search's y-range and to its right — an orphan row puts it below.
+    const assertClearOnSearchRow = async (width) => {
+      const s = await search.boundingBox();
+      const c = await clear.boundingBox();
+      const clearMid = c.y + c.height / 2;
+      expect(clearMid, `clear button orphaned below the search at ${width}px`).toBeGreaterThan(s.y);
+      expect(clearMid).toBeLessThan(s.y + s.height);
+      expect(c.x, `clear button left of/overlapping the search at ${width}px`).toBeGreaterThan(s.x);
+    };
+
+    for (const width of [1280, 375]) {
+      await page.setViewportSize({ width, height: 900 });
+      await gotoCrm(page, '/apps/customercheck/companies/new');
+      await page.waitForSelector('#crm-company-country-search', { timeout: 30000 });
+      await expect(clear).toBeVisible();
+      await assertClearOnSearchRow(width);
+
+      // Inject the field error exactly like CheckFieldErrors does (as a
+      // sibling right after the search input): it must wrap to its own
+      // full-width row below — and the clear must stay on row 1 with it.
+      await page.evaluate(() => {
+        const input = document.getElementById('crm-company-country-search');
+        const err = document.createElement('p');
+        err.className = 'crm-field-error';
+        err.id = 'crm-field-error-country';
+        err.textContent = 'Country is required.';
+        input.insertAdjacentElement('afterend', err);
+      });
+      const s = await search.boundingBox();
+      const c = await clear.boundingBox();
+      const e = await page.locator('#crm-field-error-country').boundingBox();
+      const row1Bottom = Math.max(s.y + s.height, c.y + c.height);
+      expect(e.y, `field error did not wrap below the search row at ${width}px`).toBeGreaterThanOrEqual(row1Bottom - 1);
+      await assertClearOnSearchRow(width);
+      await page.locator('#crm-field-error-country').evaluate((el) => el.remove());
+    }
+  });
+
   test('viewport sweep 320–1280: no horizontal overflow on the picker page', async ({ page }) => {
     await login(page, credsFromEnv('ADMIN'));
     for (const width of [320, 375, 414, 768, 1024, 1280]) {
