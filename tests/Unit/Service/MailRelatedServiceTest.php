@@ -52,7 +52,8 @@ final class MailRelatedServiceTest extends TestCase
 		);
 
 		$url = $this->createMock(IURLGenerator::class);
-		$url->method('linkToRoute')->willReturn('/apps/mail/');
+		// mail registers 'page#index' — there is no 'home' controller (drift GH-class dead_platform_deeplink)
+		$url->method('linkToRoute')->with('mail.page.index')->willReturn('/apps/mail/');
 
 		$l10n = $this->createMock(IL10N::class);
 		$l10n->method('t')->willReturnCallback(static function (string $text, array $params = []): string {

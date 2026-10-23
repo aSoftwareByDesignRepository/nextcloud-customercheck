@@ -171,7 +171,7 @@ class MailRelatedService
 			$deepLinks[] = [
 				'email' => $email,
 				'personName' => $name !== $email ? $name : '',
-				'url' => $this->urlGenerator->linkToRoute('mail.home.index') . '#search=' . rawurlencode('from:' . $email . ' OR to:' . $email),
+				'url' => $this->urlGenerator->linkToRoute('mail.page.index') . '#search=' . rawurlencode('from:' . $email . ' OR to:' . $email),
 				'label' => $name !== '' && $name !== $email
 					? $this->l10n->t('Open in Mail: %1$s (%2$s)', [$name, $email])
 					: $this->l10n->t('Open in Mail: %s', [$email]),

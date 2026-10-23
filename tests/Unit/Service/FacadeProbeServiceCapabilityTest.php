@@ -48,4 +48,46 @@ final class FacadeProbeServiceCapabilityTest extends TestCase
 		$this->assertFalse($matrix['projectcheckWrite']);
 		$this->assertFalse($matrix['ticketcheckWrite']);
 	}
+
+	public function testMailComposeUrlUsesPageIndexRoute(): void
+	{
+		$apps = $this->createMock(IAppManager::class);
+		$apps->method('isEnabledForUser')->with('mail')->willReturn(true);
+
+		// mail registers 'page#index'; 'mail.home.index' never existed —
+		// linkToRoute would throw RouteNotFoundException (drift class
+		// dead_platform_deeplink, sweep-20261023)
+		$url = $this->createMock(IURLGenerator::class);
+		$url->expects($this->once())
+			->method('linkToRouteAbsolute')
+			->with('mail.page.index')
+			->willReturn('https://cloud.example.org/apps/mail/');
+
+		$service = new FacadeProbeService(
+			$apps,
+			$this->createMock(LoggerInterface::class),
+			$url,
+		);
+
+		$out = $service->mailComposeUrl('a@b.c', 'Sub ject', 'Body text');
+
+		$this->assertIsString($out);
+		$this->assertStringStartsWith('https://cloud.example.org/apps/mail/#compose?', $out);
+		$this->assertStringContainsString('to=a%40b.c', $out);
+		$this->assertStringContainsString('subject=Sub%20ject', $out);
+	}
+
+	public function testMailComposeUrlReturnsNullWhenMailDisabled(): void
+	{
+		$apps = $this->createMock(IAppManager::class);
+		$apps->method('isEnabledForUser')->with('mail')->willReturn(false);
+
+		$service = new FacadeProbeService(
+			$apps,
+			$this->createMock(LoggerInterface::class),
+			$this->createMock(IURLGenerator::class),
+		);
+
+		$this->assertNull($service->mailComposeUrl('a@b.c', 's', 'b'));
+	}
 }

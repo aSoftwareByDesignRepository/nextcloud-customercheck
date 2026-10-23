@@ -445,7 +445,7 @@ class FacadeProbeService
 			return null;
 		}
 		try {
-			$base = $this->urlGenerator->linkToRouteAbsolute('mail.home.index');
+			$base = $this->urlGenerator->linkToRouteAbsolute('mail.page.index');
 			$query = http_build_query([
 				'to' => $to,
 				'subject' => $subject,
