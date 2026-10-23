@@ -84,14 +84,21 @@ class PlatformLinksService
 	private function appHomeUrl(string $id, string $appId, ?int $filesFolderId): string
 	{
 		$path = match ($id) {
-			'files' => '/apps/files/' . (
-				$filesFolderId !== null && $filesFolderId > 0
-					? ('?fileid=' . $filesFolderId)
-					: ''
-			),
+			'files' => $filesFolderId !== null && $filesFolderId > 0
+				? sprintf('/apps/files/?fileid=%d', $filesFolderId)
+				: '/apps/files/',
 			'talk' => '/apps/spreed/',
-			default => '/apps/' . $appId . '/',
+			'contacts' => '/apps/contacts/',
+			'mail' => '/apps/mail/',
+			'calendar' => '/apps/calendar/',
+			'tasks' => '/apps/tasks/',
+			'deck' => '/apps/deck/',
+			'notes' => '/apps/notes/',
+			default => '',
 		};
+		if ($path === '') {
+			return '';
+		}
 		$absolute = $this->urlGenerator->getAbsoluteURL($path);
 		if (!is_string($absolute) || $absolute === '') {
 			return '';

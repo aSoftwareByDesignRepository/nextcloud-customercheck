@@ -1,0 +1,6 @@
+# Reviewed Swedish exceptions — legit sv vocabulary that also exists in a
+# donor dictionary (da_DK/nb_NO). One token per line, lowercase.
+uri # abbrev — URI is standard Swedish technical vocabulary (URI:er)
+standardvy # shared — legit sv compound (standard+vy); also valid in da
+play # proper — Google Play brand listing
+teamcoaching # shared — legit sv compound (team+coaching)

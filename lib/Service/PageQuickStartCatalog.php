@@ -65,9 +65,6 @@ final class PageQuickStartCatalog
 	{
 		$l = $this->l10n;
 		$u = $this->url;
-		$link = static function (string $route, array $params = []) use ($u): string {
-			return $u->linkToRoute('customercheck.page.' . $route, $params);
-		};
 
 		return [
 			'today' => [
@@ -84,7 +81,7 @@ final class PageQuickStartCatalog
 					[
 						'title' => $l->t('3. Jump when stuck'),
 						'text' => $l->t('Use Jump to queue to skip to a section. Managers also see team stuck items here.'),
-						'href' => $link('team'),
+						'href' => $u->linkToRoute('customercheck.page.team'),
 						'linkLabel' => $l->t('Open Team'),
 					],
 				],
@@ -99,13 +96,13 @@ final class PageQuickStartCatalog
 					[
 						'title' => $l->t('2. Follow the red flags'),
 						'text' => $l->t('Open anything that looks stuck — then fix it on Today, Team, or Companies.'),
-						'href' => $link('today'),
+						'href' => $u->linkToRoute('customercheck.page.today'),
 						'linkLabel' => $l->t('Open Today'),
 					],
 					[
 						'title' => $l->t('3. Use Money for amounts'),
 						'text' => $l->t('Overview shows health. Open Money when you need overdue and unpaid details.'),
-						'href' => $link('money'),
+						'href' => $u->linkToRoute('customercheck.page.money'),
 						'linkLabel' => $l->t('Open Money'),
 					],
 				],
@@ -137,13 +134,13 @@ final class PageQuickStartCatalog
 					[
 						'title' => $l->t('2. Fix coverage gaps'),
 						'text' => $l->t('Missing a budget decision-maker, main contact, or day-to-day contact? Open the company and add people.'),
-						'href' => $link('companies'),
+						'href' => $u->linkToRoute('customercheck.page.companies'),
 						'linkLabel' => $l->t('Open Companies'),
 					],
 					[
 						'title' => $l->t('3. Keep plans alive'),
 						'text' => $l->t('Stalled plans need a next step. Use Strategy for the full plan list.'),
-						'href' => $link('strategy'),
+						'href' => $u->linkToRoute('customercheck.page.strategy'),
 						'linkLabel' => $l->t('Open Plans'),
 					],
 				],
@@ -179,7 +176,7 @@ final class PageQuickStartCatalog
 					[
 						'title' => $l->t('3. Align with owners'),
 						'text' => $l->t('Each plan has an owner. Use My Accounts or Team when someone is behind.'),
-						'href' => $link('myAccounts'),
+						'href' => $u->linkToRoute('customercheck.page.myAccounts'),
 						'linkLabel' => $l->t('Open My customers'),
 					],
 				],
@@ -198,7 +195,7 @@ final class PageQuickStartCatalog
 					[
 						'title' => $l->t('3. Need more sources?'),
 						'text' => $l->t('Contacts, Files, Calendar, Tasks, and import anomalies live under Inbox → Unassigned (filter chips).'),
-						'href' => $link('salesInbox'),
+						'href' => $u->linkToRoute('customercheck.page.salesInbox'),
 						'linkLabel' => $l->t('Open Inbox'),
 					],
 				],
@@ -217,7 +214,7 @@ final class PageQuickStartCatalog
 					[
 						'title' => $l->t('3. Connect your email'),
 						'text' => $l->t('Managers enable personal sync under Team & mailbox. Then open My email and pick folders.'),
-						'href' => $link('settingsSection', ['section' => 'my-email']),
+						'href' => $u->linkToRoute('customercheck.page.settingsSection', ['section' => 'my-email']),
 						'linkLabel' => $l->t('Open My email'),
 					],
 				],
@@ -236,7 +233,7 @@ final class PageQuickStartCatalog
 					[
 						'title' => $l->t('3. Turn sources on'),
 						'text' => $l->t('Managers enable Contacts, Files, Calendar, Tasks, or import anomalies under Team & mailbox.'),
-						'href' => $link('settingsSection', ['section' => 'review-sources']),
+						'href' => $u->linkToRoute('customercheck.page.settingsSection', ['section' => 'review-sources']),
 						'linkLabel' => $l->t('Assign source settings'),
 					],
 				],
@@ -255,7 +252,7 @@ final class PageQuickStartCatalog
 					[
 						'title' => $l->t('3. Back to work'),
 						'text' => $l->t('When the queue is empty, jump back to Today.'),
-						'href' => $link('today'),
+						'href' => $u->linkToRoute('customercheck.page.today'),
 						'linkLabel' => $l->t('Open Today'),
 					],
 				],
@@ -274,7 +271,7 @@ final class PageQuickStartCatalog
 					[
 						'title' => $l->t('3. Add when missing'),
 						'text' => $l->t('Create a company before you log deals or agreements. Import can bring many at once.'),
-						'href' => $link('companyNew'),
+						'href' => $u->linkToRoute('customercheck.page.companyNew'),
 						'linkLabel' => $l->t('New company'),
 					],
 				],
@@ -294,7 +291,7 @@ final class PageQuickStartCatalog
 					[
 						'title' => $l->t('3. Save and open 360'),
 						'text' => $l->t('After saving you land on the customer page — add a person next.'),
-						'href' => $link('companies'),
+						'href' => $u->linkToRoute('customercheck.page.companies'),
 						'linkLabel' => $l->t('Back to Companies'),
 					],
 				],
@@ -313,7 +310,7 @@ final class PageQuickStartCatalog
 					[
 						'title' => $l->t('3. Follow up on old quotes'),
 						'text' => $l->t('Quotes sitting too long show up on Today. Open the deal and follow up or close it.'),
-						'href' => $link('today'),
+						'href' => $u->linkToRoute('customercheck.page.today'),
 						'linkLabel' => $l->t('Open Today'),
 					],
 				],
@@ -328,7 +325,7 @@ final class PageQuickStartCatalog
 					[
 						'title' => $l->t('2. Open or create'),
 						'text' => $l->t('Each agreement belongs to one company. Create from here or from the company page.'),
-						'href' => $link('agreementNew'),
+						'href' => $u->linkToRoute('customercheck.page.agreementNew'),
 						'linkLabel' => $l->t('New agreement'),
 					],
 					[
@@ -368,7 +365,7 @@ final class PageQuickStartCatalog
 					[
 						'title' => $l->t('3. Unknown needs a link'),
 						'text' => $l->t('If InvoiceCheck is not linked, states may show as unknown until you connect the apps.'),
-						'href' => $link('settings'),
+						'href' => $u->linkToRoute('customercheck.page.settings'),
 						'linkLabel' => $l->t('Open Settings'),
 					],
 				],
@@ -387,7 +384,7 @@ final class PageQuickStartCatalog
 					[
 						'title' => $l->t('3. Log from the company'),
 						'text' => $l->t('New activities are best created on the company 360 page so history stays together.'),
-						'href' => $link('companies'),
+						'href' => $u->linkToRoute('customercheck.page.companies'),
 						'linkLabel' => $l->t('Open Companies'),
 					],
 				],
@@ -406,7 +403,7 @@ final class PageQuickStartCatalog
 					[
 						'title' => $l->t('3. Tap import'),
 						'text' => $l->t('One green button adds the ready companies. Then open them to add people.'),
-						'href' => $link('companies'),
+						'href' => $u->linkToRoute('customercheck.page.companies'),
 						'linkLabel' => $l->t('Open Companies'),
 					],
 				],
@@ -417,19 +414,19 @@ final class PageQuickStartCatalog
 					[
 						'title' => $l->t('1. Team mailbox (managers)'),
 						'text' => $l->t('Add members and set up the shared inbox under Team mailbox. That powers Assign mail.'),
-						'href' => $link('settingsSection', ['section' => 'mailbox']),
+						'href' => $u->linkToRoute('customercheck.page.settingsSection', ['section' => 'mailbox']),
 						'linkLabel' => $l->t('Open Team mailbox'),
 					],
 					[
 						'title' => $l->t('2. My email'),
 						'text' => $l->t('When managers allow personal sync, connect your inbox and pick folders here.'),
-						'href' => $link('settingsSection', ['section' => 'my-email']),
+						'href' => $u->linkToRoute('customercheck.page.settingsSection', ['section' => 'my-email']),
 						'linkLabel' => $l->t('Open My email'),
 					],
 					[
 						'title' => $l->t('3. Preferences'),
 						'text' => $l->t('Pick table or board as your default deals view. Access policy and seats live under App settings.'),
-						'href' => $link('appSettings'),
+						'href' => $u->linkToRoute('customercheck.page.appSettings'),
 						'linkLabel' => $l->t('Open App settings'),
 					],
 				],
@@ -448,7 +445,7 @@ final class PageQuickStartCatalog
 					[
 						'title' => $l->t('3. Seats and catalogue'),
 						'text' => $l->t('Mobile license seats and custom product codes are set here. Team members and mailbox stay on Team & mailbox.'),
-						'href' => $link('settings'),
+						'href' => $u->linkToRoute('customercheck.page.settings'),
 						'linkLabel' => $l->t('Open Team & mailbox'),
 					],
 				],

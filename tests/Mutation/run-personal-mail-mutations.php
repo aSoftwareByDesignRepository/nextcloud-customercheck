@@ -474,15 +474,15 @@ $cases = [
 	],
 	[
 		'file' => $root . '/css/app.css',
-		'find' => "/* ≤767px: NC mobile — stack all My email action rows; Sync already full-width above. */\n@media (max-width: 767.98px) {\n\t#app-content.crm-app .crm-personal-mail-connected-actions,",
+		'find' => "/* ≤767px: NC mobile — stack all My email action rows; Sync already full-width above. */\n@media (max-width: 768.98px) {\n\t#app-content.crm-app .crm-personal-mail-connected-actions,",
 		'replace' => "/* mutant: drop My email mobile stack */\n@media (max-width: 1px) {\n\t#app-content.crm-app .crm-personal-mail-connected-actions,",
 		'test' => 'BachusPersonalMailSimplifyContractTest::testCssGiantPersonalMailTargets',
 		'label' => 'my_email_mobile_stack_mq_removed',
 	],
 	[
 		'file' => $root . '/css/app.css',
-		'find' => "/* ≤767px: NC mobile — Sales Inbox chrome (tabs/actions/decide) without changing ≥768 desktop. */\n@media (max-width: 767.98px) {\n\t#app-content.crm-app .crm-sales-inbox__toolbar {\n\t\tflex-direction: column;",
-		'replace' => "/* mutant: Sales Inbox always row */\n@media (max-width: 767.98px) {\n\t#app-content.crm-app .crm-sales-inbox__toolbar {\n\t\tflex-direction: row;",
+		'find' => "/* ≤767px: NC mobile — Sales Inbox chrome (tabs/actions/decide) without changing ≥768 desktop. */\n@media (max-width: 768.98px) {\n\t#app-content.crm-app .crm-sales-inbox__toolbar {\n\t\tflex-direction: column;",
+		'replace' => "/* mutant: Sales Inbox always row */\n@media (max-width: 768.98px) {\n\t#app-content.crm-app .crm-sales-inbox__toolbar {\n\t\tflex-direction: row;",
 		'test' => 'BachusPersonalMailSimplifyContractTest::testResponsiveDesktopSacredDoesNotStackInBaseRules',
 		'label' => 'sales_inbox_mobile_toolbar_not_column',
 	],

@@ -1,0 +1,4 @@
+# Reviewed Norwegian exceptions — legit nb loanwords that also exist in a
+# donor dictionary (da_DK/sv_SE). One token per line, lowercase.
+kalenderfeed # loanword — feed is standard nb UI vocabulary (kalenderfeed)
+kalenderfeeden # loanword — definite of kalenderfeed

@@ -407,7 +407,7 @@ include __DIR__ . '/common/page-start.php';
 							$quoteFileId = (int)($d['quoteFileId'] ?? 0);
 							$fileLinkId = $quoteFileId > 0 ? $quoteFileId : $filesFolderId;
 							if ($fileLinkId > 0):
-								$filesUrl = $urlGenerator->linkToRouteAbsolute('files.viewcontroller.showFile', ['fileid' => $fileLinkId]);
+								$filesUrl = $urlGenerator->linkToRouteAbsolute('files.view.showFile', ['fileid' => $fileLinkId]);
 								?>
 								<a class="crm-kanban__card-files" href="<?php p($filesUrl); ?>"><?php p($quoteFileId > 0 ? $l->t('Quote file') : $l->t('Files')); ?></a>
 							<?php endif; ?>

@@ -393,7 +393,7 @@ class CompanyDocumentsService
 
 	public function filesUrl(int $fileId): string
 	{
-		return $this->urlGenerator->linkToRouteAbsolute('files.viewcontroller.showFile', ['fileid' => $fileId])
+		return $this->urlGenerator->linkToRouteAbsolute('files.view.showFile', ['fileid' => $fileId])
 			?: $this->urlGenerator->getAbsoluteURL('/apps/files/?dir=/&fileid=' . $fileId);
 	}
 

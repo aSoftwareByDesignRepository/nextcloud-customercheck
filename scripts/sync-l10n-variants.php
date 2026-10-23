@@ -25,7 +25,9 @@ $check = in_array('--check', $argv ?? [], true);
 
 /** @var array<string,string> variant code => base catalog code */
 $variants = [
-	'en_GB' => 'en',
+	// en_GB is NOT generated: it is a maintained catalog with real British
+	// forms (licence, recognise, …). L10nCoverageContractTest keeps its key
+	// set in parity with en.json.
 	'de_DE' => 'de',
 	'es_EC' => 'es',
 	'es_MX' => 'es',
