@@ -27,7 +27,7 @@ include __DIR__ . '/common/page-start.php';
 	<nav class="crm-settings-switch" aria-label="<?php p($l->t('Settings areas')); ?>">
 		<a class="crm-btn crm-btn--primary" href="<?php p($wsUrl); ?>" aria-current="page"><?php p($l->t('Team & mailbox')); ?></a>
 		<?php if ($canManage && $appSettingsUrl !== ''): ?>
-			<a class="crm-btn" href="<?php p($appSettingsUrl); ?>"><?php p($l->t('App')); ?></a>
+			<a class="crm-btn crm-btn--secondary" href="<?php p($appSettingsUrl); ?>"><?php p($l->t('App')); ?></a>
 		<?php endif; ?>
 	</nav>
 
