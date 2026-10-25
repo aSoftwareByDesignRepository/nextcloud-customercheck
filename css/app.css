@@ -198,7 +198,9 @@
 }
 .crm-page-header__main {
 	display: grid;
-	grid-template-columns: 56px 1fr auto;
+	/* minmax(0,…) — the title column must be able to shrink below its
+	   min-content (long compounds), else it shoves actions off the card. */
+	grid-template-columns: 56px minmax(0, 1fr) auto;
 	gap: var(--crm-space-4);
 	align-items: start;
 }
@@ -225,6 +227,9 @@
 	margin: 0 0 var(--crm-space-1);
 	font-size: var(--crm-fs-2xl);
 	line-height: var(--crm-line-tight);
+	/* Long compounds must wrap or hyphenate — never clip at the edge. */
+	overflow-wrap: anywhere;
+	hyphens: auto;
 }
 .crm-page-header__lead {
 	margin: 0;
@@ -2002,7 +2007,7 @@ dialog.crm-native-dialog .crm-form-inline-error[hidden] {
 /* ── Responsive page header (table card reflow: page-patterns.css) ── */
 @media (max-width: 768.98px) {
 	.crm-page-header__main {
-		grid-template-columns: 48px 1fr;
+		grid-template-columns: 48px minmax(0, 1fr);
 	}
 	.crm-page-header__actions {
 		grid-column: 1 / -1;
@@ -2484,7 +2489,7 @@ dialog.crm-native-dialog .crm-dl__row dd {
 }
 #app-content.crm-app .access-groups-item {
 	display: grid;
-	grid-template-columns: auto 1fr;
+	grid-template-columns: auto minmax(0, 1fr);
 	grid-template-areas:
 		"checkbox label"
 		"checkbox meta";
