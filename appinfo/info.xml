@@ -344,7 +344,7 @@ Vi forbedrer denne appen med bruk i praksis. Feilrapporter, friksjon og idéer h
 	<screenshot small-thumbnail="https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-customercheck/refs/heads/main/screenshots/customercheck-screenshot-04.png">https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-customercheck/refs/heads/main/screenshots/customercheck-screenshot-04.png</screenshot>
 	<screenshot small-thumbnail="https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-customercheck/refs/heads/main/screenshots/customercheck-screenshot-05.png">https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-customercheck/refs/heads/main/screenshots/customercheck-screenshot-05.png</screenshot>
 	<screenshot small-thumbnail="https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-customercheck/refs/heads/main/screenshots/customercheck-screenshot-06.png">https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-customercheck/refs/heads/main/screenshots/customercheck-screenshot-06.png</screenshot>
-		<version>1.6.190</version>
+		<version>1.6.191</version>
 	<licence>AGPL-3.0-or-later</licence>
 	<author mail="info@software-by-design.de" homepage="https://nextcloud.software-by-design.de">Software by Design GbR</author>
 	<namespace>CustomerCheck</namespace>

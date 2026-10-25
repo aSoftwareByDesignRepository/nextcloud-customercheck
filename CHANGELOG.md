@@ -5,6 +5,61 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.6.191 - 2026-10-25
+
+### Fixed
+
+- settings area-switch chrome + token action SR context
+- collapse doubled tokens, strip zero-width spaces in catalogs
+- country-picker clear button no longer orphans to its own row
+- post-seal class-gate repairs — deep links, l10n lexicon, dead CSS
+- deep links target mail.page.index, not dead mail.home.index
+- media-boundary migration + sprintfT fills + lane batch
+- migrate media boundaries to 769px/768.98px family convention
+- drop Constants refs from BootstrapDefaultWorkspace
+- restore mobile-side 768px coverage across remaining sheets
+- restore mobile-side media boundary coverage at 768/640 integers
+- sweep label-in-name consistency across all catalogs (WCAG 2.5.3)
+- label-in-name consistency for renamed checklist label (WCAG 2.5.3)
+- Fix stale Nextcloud version range in store descriptions (32–34 → 32–35)
+- Fix nav focus-ring strength and duplicate report links on app-owned toasts
+- Fix App Store screenshot URLs: point at main branch
+- Fix PL/DA l10n plural placeholders that broke localized CustomerCheck pages.
+
+### Added
+
+- country picker — ISO 3166-1 (+XK) directory SSOT, web+companion API, combobox UI
+- complete EU country set + workspace-scoped link facade + a11y/theme hardening
+- CrmCompanyLinkReadFacade for carecheck CRM link
+
+### Changed
+
+- translation sync — regenerated catalogs (de/fr/sv/nb/nl/pl/pt/pt_BR/it/es/da/en)
+- baseline-green guard — codify mutation_runner_baseline_red_false_kill
+- l10n(en_GB): proper British English forms (licence, recognise, authorised…)
+- l10n: catalog corrections + format normalization
+- l10n(pt): translate Checklist notification strings (Lista de verificação)
+- normalize tarball modes + host-side signature audit (GH #47)
+- add ATLAS screenshot-matrix manifest + capture spec
+- nl locale sync + shared e2e instance-lock harness
+- drop consumed one-off l10n write script (repo hygiene)
+- Atlas v3.5.15 fixer delta: import post-commit counters, uniform-404/500 middleware, CAS double-rollback fix, dialog/filter e2e coverage
+- add UpgradeBackupStateGuard test support; sync contract tests + l10n catalogs
+- refresh l10n + comment cleanup for 1.6.190 store release
+- reposition as CRM in store copy + fleet sync
+- l10n: escape literal % as %% in .json values (PHP vsprintf safety); fix untranslated/case-only values
+- Prepare repository for App Store release
+- Atlas farm v3.5.15: DS contrast suite + cascade-cleanup harness + spec hygiene
+- Atlas v3.5.14 verification delta: API hardening (form-false bool coercion), sweep fixes (touch floors, overflow), l10n, contract coverage
+- Post-Atlas deliverables: refreshed store screenshots and listings, l10n sync, and pipeline fixes.
+- Extract focus preservation and field errors to shared modules; API contract tests.
+- sync workspace updates
+- Ship l10n, mobile-nav, and Atlas contract updates.
+- Refresh l10n catalogs after the multi-locale Play/store pass.
+- Seal Atlas 3.5.11 product fixes for CustomerCheck (sticky-footer sysnav and chrome).
+- Seal Atlas 3.5.9 farm UX, offline, and dialog-proof hardening.
+- Close Atlas residual should_fix with durable AVD proofs and related hardening.
+
 ## 1.6.190 - 2026-08-25
 
 ### Fixed (Dashboard — Today desklet theming)
