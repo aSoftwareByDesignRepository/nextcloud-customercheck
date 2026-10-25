@@ -70,7 +70,7 @@ class LinkIdempotencyMapper
 				'sibling' => $qb->createNamedParameter($sibling),
 				'company_id' => $qb->createNamedParameter($companyId, IQueryBuilder::PARAM_INT),
 				'sibling_id' => $qb->createNamedParameter($siblingId, IQueryBuilder::PARAM_INT),
-				'created' => $qb->createNamedParameter($created ? 1 : 0, IQueryBuilder::PARAM_INT),
+				'created' => $qb->createNamedParameter($created, IQueryBuilder::PARAM_BOOL),
 				'created_at' => $qb->createNamedParameter($createdAt, IQueryBuilder::PARAM_INT),
 			]);
 		$qb->executeStatement();

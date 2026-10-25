@@ -15,50 +15,10 @@ use OCP\Migration\IRepairStep;
  */
 final class EnsureCustomerCheckSchema implements IRepairStep
 {
-	/** @var list<string> Tables that must exist once migrations ran. */
-	private const REQUIRED_TABLES = [
-		'crm_company',
-		'crm_person',
-		'crm_agreement',
-		'crm_deal',
-		'crm_activity',
-		'crm_hours',
-		'crm_event',
-		'crm_remlog',
-		'crm_actdue',
-		'crm_email_touch',
-		'crm_digest_log',
-		'crm_seq_log',
-		'crm_pay_watch',
-		'crm_import_job',
-		'crm_license_state',
-		'crm_mobile_seat',
-		'crm_mob_idem',
-		'crm_push_tok',
-		'crm_workspace',
-		'crm_ws_member',
-		'crm_ws_set',
-		'crm_mailbox',
-		'crm_mail_fld',
-		'crm_mail_msg',
-		'crm_mail_dft',
-		'crm_acct_plan',
-		'crm_plan_ms',
-		'crm_map_step',
-		'crm_cust_prm',
-		'crm_commit',
-		'crm_escal',
-		'crm_ooo',
-		'crm_1on1',
-		'crm_review_item',
-		'crm_edit_conflict',
-		'crm_entity_rev',
-		'crm_value_map',
-		'crm_cl_tmpl',
-		'crm_cl_tmpl_item',
-		'crm_deal_cl_item',
-		'crm_deal_cl_file',
-	];
+	// The table set this step verifies lives on {@see SchemaTableCatalog} —
+	// a dedicated new class, because upgrade-path code must never reference a
+	// member added to a pre-existing class mid-release (the old version may
+	// already be loaded → `Undefined constant` stalls `occ upgrade`).
 
 	public function __construct(
 		private readonly IDBConnection $db,
@@ -76,7 +36,7 @@ final class EnsureCustomerCheckSchema implements IRepairStep
 		$this->config->deleteAppValue(UninstallDropTables::APP_ID, UninstallDropTables::REPAIR_PASS_KEY);
 
 		$missing = [];
-		foreach (self::REQUIRED_TABLES as $table) {
+		foreach (SchemaTableCatalog::EXPECTED_TABLES as $table) {
 			if (!$this->db->tableExists($table)) {
 				$missing[] = $table;
 			}

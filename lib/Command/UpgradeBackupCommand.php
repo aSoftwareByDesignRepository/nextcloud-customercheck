@@ -38,9 +38,10 @@ class UpgradeBackupCommand extends Command
 			->setName('customercheck:upgrade-backup')
 			->setDescription('Manage CustomerCheck snapshots taken before app updates.')
 			->setHelp(
-				<<<'HELP'
+				sprintf(
+					<<<'HELP'
 The <info>list</info> action shows snapshots stored under
-<comment>appdata_&lt;instance&gt;/projectcheck/upgrade-backups/</comment>.
+<comment>appdata_&lt;instance&gt;/%s/%s/</comment>.
 
 <info>create</info> — manual snapshot before risky changes:
   <comment>occ customercheck:upgrade-backup create --reason="before manual fix"</comment>
@@ -50,7 +51,10 @@ The <info>list</info> action shows snapshots stored under
   <comment>occ customercheck:upgrade-backup restore --id=YYYYMMDDTHHMMSSZ-hex --force</comment>
 
 Automatic snapshots run before every app update via the pre-migration repair step.
-HELP
+HELP,
+					UpgradeBackupCatalog::APP_ID,
+					UpgradeBackupCatalog::APPDATA_ROOT,
+				)
 			)
 			->addArgument(
 				'action',
