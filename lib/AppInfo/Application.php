@@ -266,6 +266,8 @@ class Application extends App implements IBootstrap
 			$c->get(ReminderScheduler::class),
 			$c->get(\OCA\CustomerCheck\Service\ActivityDueReminderService::class),
 			$c->get(\OCA\CustomerCheck\Service\DealRottingReminderService::class),
+			$c->get(\OCP\Lock\ILockingProvider::class),
+			$c->get(\Psr\Log\LoggerInterface::class),
 		));
 		$context->registerService(\OCA\CustomerCheck\Service\ActivityDueReminderService::class, fn ($c) => new \OCA\CustomerCheck\Service\ActivityDueReminderService(
 			$c->get(\OCA\CustomerCheck\Db\ActivityMapper::class),
@@ -300,29 +302,49 @@ class Application extends App implements IBootstrap
 				$c->get(\OCP\IUserManager::class),
 			);
 		});
-		$context->registerService(WeeklyDigestJob::class, fn ($c) => new WeeklyDigestJob($c->get(\OCP\AppFramework\Utility\ITimeFactory::class), $c->get(WeeklyDigestService::class)));
+		$context->registerService(WeeklyDigestJob::class, fn ($c) => new WeeklyDigestJob(
+			$c->get(\OCP\AppFramework\Utility\ITimeFactory::class),
+			$c->get(WeeklyDigestService::class),
+			$c->get(\OCP\Lock\ILockingProvider::class),
+			$c->get(\Psr\Log\LoggerInterface::class),
+		));
 		$context->registerService(\OCA\CustomerCheck\BackgroundJob\MailboxSyncJob::class, fn ($c) => new \OCA\CustomerCheck\BackgroundJob\MailboxSyncJob(
 			$c->get(\OCP\AppFramework\Utility\ITimeFactory::class),
 			$c->get(\OCA\CustomerCheck\Service\MailboxSyncService::class),
+			$c->get(\OCP\Lock\ILockingProvider::class),
+			$c->get(\Psr\Log\LoggerInterface::class),
 		));
 		$context->registerService(\OCA\CustomerCheck\BackgroundJob\MailRetentionPurgeJob::class, fn ($c) => new \OCA\CustomerCheck\BackgroundJob\MailRetentionPurgeJob(
 			$c->get(\OCP\AppFramework\Utility\ITimeFactory::class),
 			$c->get(\OCA\CustomerCheck\Service\MailboxSyncService::class),
 			$c->get(\OCA\CustomerCheck\Service\MailDraftService::class),
+			$c->get(\OCP\Lock\ILockingProvider::class),
+			$c->get(\Psr\Log\LoggerInterface::class),
 		));
 		$context->registerService(\OCA\CustomerCheck\BackgroundJob\PersonaMaintenanceJob::class, fn ($c) => new \OCA\CustomerCheck\BackgroundJob\PersonaMaintenanceJob(
 			$c->get(\OCP\AppFramework\Utility\ITimeFactory::class),
 			$c->get(\OCA\CustomerCheck\Service\PersonaMaintenanceService::class),
+			$c->get(\OCP\Lock\ILockingProvider::class),
+			$c->get(\Psr\Log\LoggerInterface::class),
 		));
 		$context->registerService(\OCA\CustomerCheck\BackgroundJob\ReviewIngressJob::class, fn ($c) => new \OCA\CustomerCheck\BackgroundJob\ReviewIngressJob(
 			$c->get(\OCP\AppFramework\Utility\ITimeFactory::class),
 			$c->get(\OCA\CustomerCheck\Service\ReviewIngressService::class),
+			$c->get(\OCP\Lock\ILockingProvider::class),
+			$c->get(\Psr\Log\LoggerInterface::class),
 		));
 		$context->registerService(\OCA\CustomerCheck\BackgroundJob\EntityRevisionPurgeJob::class, fn ($c) => new \OCA\CustomerCheck\BackgroundJob\EntityRevisionPurgeJob(
 			$c->get(\OCP\AppFramework\Utility\ITimeFactory::class),
 			$c->get(\OCA\CustomerCheck\Service\EntityRevisionService::class),
+			$c->get(\OCP\Lock\ILockingProvider::class),
+			$c->get(\Psr\Log\LoggerInterface::class),
 		));
-		$context->registerService(AgreementStatusRecomputeJob::class, fn ($c) => new AgreementStatusRecomputeJob($c->get(\OCP\AppFramework\Utility\ITimeFactory::class), $c->get(ReminderScheduler::class)));
+		$context->registerService(AgreementStatusRecomputeJob::class, fn ($c) => new AgreementStatusRecomputeJob(
+			$c->get(\OCP\AppFramework\Utility\ITimeFactory::class),
+			$c->get(ReminderScheduler::class),
+			$c->get(\OCP\Lock\ILockingProvider::class),
+			$c->get(\Psr\Log\LoggerInterface::class),
+		));
 		$context->registerService(\OCA\CustomerCheck\Service\ImportMatcher::class, fn ($c) => new \OCA\CustomerCheck\Service\ImportMatcher(
 			$c->get(\OCA\CustomerCheck\Db\CompanyMapper::class),
 			$c->get(\OCA\CustomerCheck\Db\PersonMapper::class),
@@ -367,6 +389,8 @@ class Application extends App implements IBootstrap
 		$context->registerService(InvoicePaidPollJob::class, fn ($c) => new InvoicePaidPollJob(
 			$c->get(\OCP\AppFramework\Utility\ITimeFactory::class),
 			$c->get(\OCA\CustomerCheck\Service\InvoicePaidSyncService::class),
+			$c->get(\OCP\Lock\ILockingProvider::class),
+			$c->get(\Psr\Log\LoggerInterface::class),
 		));
 		$context->registerService(UpgradeBackupService::class, function ($c): UpgradeBackupService {
 			return new UpgradeBackupService(
