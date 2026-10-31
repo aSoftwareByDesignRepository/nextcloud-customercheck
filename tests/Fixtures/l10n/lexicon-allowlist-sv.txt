@@ -4,3 +4,44 @@ uri # abbrev — URI is standard Swedish technical vocabulary (URI:er)
 standardvy # shared — legit sv compound (standard+vy); also valid in da
 play # proper — Google Play brand listing
 teamcoaching # shared — legit sv compound (team+coaching)
+# --- 2026-10-31 r21 OOV adjudication (each token reviewed; gate warns only) ---
+# proper nouns
+acme # proper — Acme fixture company name
+acmes # proper — Acme genitive
+nextclouds # proper — Nextcloud brand genitive
+# abbreviations / accepted loanwords
+gdpr # abbrev — GDPR legal acronym
+sync # loanword — accepted sv UI loanword (Sync feature name)
+triagera # loanword — accepted loanword verb (to triage)
+åååå # reviewed — localized date-format pattern (sv år for yyyy)
+# legit compounds (headword+suffix splits the flat wordlist cannot spell)
+kundvy # reviewed — compound kund+vy (customer view)
+dealvy # reviewed — compound deal+vy
+kundid # reviewed — compound kund+id
+inskick # reviewed — intake/submission noun
+inskicksadresser # reviewed — compound inskick+s+adresser
+inskickslänkar # reviewed — compound inskick+s+länkar
+uppmärksamhetskö # reviewed — compound uppmärksamhet+s+kö (attention queue)
+kallprospecting # reviewed — compound kall+prospecting (cold outreach)
+postsync # reviewed — compound post+sync
+brevlådesynk # reviewed — compound brevlåde+synk (mailbox sync)
+mappbläddrare # reviewed — compound mapp+bläddrare (folder browser)
+mapsökvägen # reviewed — compound mapp+sök+väg+en
+idempotensnyckel # reviewed — compound idempotens+nyckel
+idempotensnyckeln # reviewed — definite of idempotensnyckel
+adminbehörighet # reviewed — compound admin+behörighet
+coachingtavla # reviewed — compound coaching+tavla
+onboardingmejl # reviewed — compound onboarding+mejl
+gatewayfel # reviewed — compound gateway+fel
+arbetsytegräns # reviewed — compound arbetsyta+gräns (workspace limit)
+# legit inflections/words missing from the flat sv_SE wordlist
+brevlådets # reviewed — brevlåda genitive
+ostödda # reviewed — unsupported
+mappad # reviewed — mapped
+offerterade # reviewed — quoted (deals)
+förberedt # reviewed — prepared
+sparning # reviewed — saving
+köen # reviewed — the queue (definite)
+engångs # reviewed — one-time prefix (engångs-)
+otilldelat # reviewed — unassigned (neuter)
+otilldelad # reviewed — unassigned

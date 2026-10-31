@@ -5,3 +5,25 @@ kalenderfeeden # loanword — definite of kalenderfeed
 deal # loanword — canonical nb CRM deal term (avtale reserved for agreements)
 dealen # loanword — definite of deal
 deals # loanword — plural of deal
+# --- 2026-10-31 r21 OOV adjudication (each token reviewed; gate warns only) ---
+# proper nouns / abbreviations / accepted loanwords
+customerchecks # proper — CustomerCheck brand genitive
+gdpr # abbrev — GDPR legal acronym
+sync # loanword — accepted nb UI loanword (Sync feature name)
+slugget # loanword — the slug (definite)
+urier # abbrev — URI-er (plural of URI)
+åååå # reviewed — localized date-format pattern (nb år for yyyy)
+# legit compounds
+appadmin # reviewed — compound app+admin
+appadmins # reviewed — plural of appadmin
+dealtittel # reviewed — compound deal+tittel
+hjelpedok # reviewed — compound hjelpe+dok (help doc)
+ordretoken # reviewed — compound ordre+token
+råverdi # reviewed — compound rå+verdi (raw value)
+# legit inflections/words missing from the flat nb_NO wordlist
+umatchede # reviewed — unmatched
+utildelt # reviewed — unassigned
+deaktivert # reviewed — deactivated
+ufakturerte # reviewed — unbilled
+ukartlagt # reviewed — unmapped
+vunnede # reviewed — won (deals)

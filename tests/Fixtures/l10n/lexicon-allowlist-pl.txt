@@ -1,1 +1,7 @@
 acme # proper noun — Acme fixture company name, not Dutch lexicon
+# --- 2026-10-31 r21 OOV adjudication (each token reviewed; gate warns only) ---
+url # abbrev — URL technical acronym
+rrrr # reviewed — localized date-format pattern (pl rok for yyyy)
+leada # loanword — lead genitive (CRM term)
+pipeline’u # loanword — pipeline genitive (CRM term)
+zastarzenia # reviewed — staleness (zastarzenie, genitive)
