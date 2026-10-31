@@ -1203,7 +1203,7 @@ OC.L10N.register(
 	"ISO country" : "ISO-land",
 	"Idempotency key is too long (max %d characters)." : "Idempotensnøglen er for lang (maks. %d-tegn).",
 	"Idempotency key uses unsupported characters." : "Idempotensnøgle bruger ikke-understøttede tegn.",
-	"Idempotency-Key header (or idempotencyKey) is required for create-or-link." : "Idempotency-Key header (eller idempotencyKey) er påkrævet for at oprette-eller-link.",
+	"Idempotency-Key header (or idempotencyKey) is required for create-or-link." : "Idempotency-Key-header (eller idempotencyKey) er påkrævet for at oprette eller linke.",
 	"If InvoiceCheck is not linked, states may show as unknown until you connect the apps." : "Hvis InvoiceCheck ikke er forbundet, kan tilstande blive vist som ukendte, indtil du tilslutter apps.",
 	"If this deal already has tasks" : "Hvis dette deal allerede har opgaver",
 	"Import" : "Importér",

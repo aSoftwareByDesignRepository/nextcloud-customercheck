@@ -1202,7 +1202,7 @@
 		"ISO country": "País ISO",
 		"Idempotency key is too long (max %d characters).": "A chave de idempotência é demasiado longa (máx. %d caracteres).",
 		"Idempotency key uses unsupported characters.": "A chave de idempotência usa caracteres não suportados.",
-		"Idempotency-Key header (or idempotencyKey) is required for create-or-link.": "O cabeçalho Idempotency-Key (ou idempotencyKey) é obrigatório para criar-ou-associar.",
+		"Idempotency-Key header (or idempotencyKey) is required for create-or-link.": "O cabeçalho Idempotency-Key (ou idempotencyKey) é obrigatório para criar ou associar.",
 		"If InvoiceCheck is not linked, states may show as unknown until you connect the apps.": "Se o InvoiceCheck não estiver associado, os estados podem aparecer como desconhecidos até ligar as aplicações.",
 		"If this deal already has tasks": "Se este negócio já tem tarefas",
 		"Import": "Importar",

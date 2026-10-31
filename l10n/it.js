@@ -1201,7 +1201,7 @@ OC.L10N.register(
 	"IMAP login failed. Use the full email address as username (not the account id in parentheses) and the mailbox password." : "Login IMAP non riuscito. Usa l’indirizzo e-mail completo come nome utente (non l’id account tra parentesi) e la password della casella.",
 	"IMAP port" : "Porta IMAP",
 	"ISO country" : "Paese ISO",
-	"Idempotency key is too long (max %d characters)." : "La chiave di idempotenza è troppo lunga (massimo caratteri %d).",
+	"Idempotency key is too long (max %d characters)." : "La chiave di idempotenza è troppo lunga (massimo %d caratteri).",
 	"Idempotency key uses unsupported characters." : "La chiave di idempotenza utilizza caratteri non supportati.",
 	"Idempotency-Key header (or idempotencyKey) is required for create-or-link." : "L'intestazione Idempotency-Key (o idempotencyKey) è necessaria per creare o collegare.",
 	"If InvoiceCheck is not linked, states may show as unknown until you connect the apps." : "Se InvoiceCheck non è collegato, gli stati potrebbero essere visualizzati come sconosciuti finché non colleghi le app.",

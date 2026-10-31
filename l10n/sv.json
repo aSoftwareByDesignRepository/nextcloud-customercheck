@@ -1203,7 +1203,7 @@
         "ISO country": "ISO-land",
         "Idempotency key is too long (max %d characters).": "Idempotensnyckeln är för lång (max %d tecken).",
         "Idempotency key uses unsupported characters.": "Idempotensnyckeln använder ostödda tecken.",
-        "Idempotency-Key header (or idempotencyKey) is required for create-or-link.": "Idempotency-Key header (eller idempotencyKey) krävs för skapa-eller-länk.",
+        "Idempotency-Key header (or idempotencyKey) is required for create-or-link.": "Idempotency-Key-header (eller idempotencyKey) krävs för att skapa eller länka.",
         "If InvoiceCheck is not linked, states may show as unknown until you connect the apps.": "Om InvoiceCheck inte är länkad kan statusar visas som okända tills du ansluter apparna.",
         "If this deal already has tasks": "Om den här dealen redan har uppgifter",
         "Import": "Importera",
