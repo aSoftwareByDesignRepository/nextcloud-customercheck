@@ -10,7 +10,7 @@ OC.L10N.register(
 		"%1$s for %2$s is overdue (%3$d day) — open Today.": "%1$s för %2$s är försenad (%3$d dag) – öppna Idag.",
 		"%1$s for %2$s is overdue (%3$d days) — open Today.": "%1$s för %2$s är försenad (%3$d dagar) – öppna Idag.",
 		"%1$s on %2$s — open Today.": "%1$s den %2$s — öppna Idag.",
-		"%1$s · %2$s · promises %3$d\/%4$d · expected cash €%5$s (deals not counted as cash). Open This week.": "%1$s · %2$s · lovar %3$d\/%4$d · förväntade inbetalningar €%5$s (deals räknas inte som inbetalningar). Öppna Denna vecka.",
+		"%1$s · %2$s · promises %3$d\/%4$d · expected cash €%5$s (deals not counted as cash). Open This week.": "%1$s · %2$s · löften %3$d\/%4$d · förväntade inbetalningar €%5$s (deals räknas inte som inbetalningar). Öppna Denna vecka.",
 		"%1$s — %2$s": "%1$s — %2$s",
 		"%1$s — open CustomerCheck for details.": "%1$s – öppna CustomerCheck för detaljer.",
 		"%1$s, %2$s deals, %3$s": "%1$s, %2$s deal, %3$s",
