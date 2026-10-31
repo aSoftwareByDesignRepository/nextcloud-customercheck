@@ -2,3 +2,6 @@
 # donor dictionary (da_DK/sv_SE). One token per line, lowercase.
 kalenderfeed # loanword — feed is standard nb UI vocabulary (kalenderfeed)
 kalenderfeeden # loanword — definite of kalenderfeed
+deal # loanword — canonical nb CRM deal term (avtale reserved for agreements)
+dealen # loanword — definite of deal
+deals # loanword — plural of deal
