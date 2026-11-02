@@ -2862,7 +2862,7 @@ OC.L10N.register(
 		"When shared mail needs a company, it shows up here. Tap a message to read it, reply, or assign.": "Cuando el correo compartido necesita una empresa, aparece aquí. Toca un mensaje para leer, responder o asignar.",
 		"When the queue is empty, jump back to Today.": "Cuando la cola esté vacía, regrese a Hoy.",
 		"When two people edit the same field at once, the choice shows up here.": "Cuando dos personas editan el mismo campo a la vez, la elección aparece aquí.",
-		"When you write or receive something important, tap Log talk — or use CRM compose helpers (renewal, delivery, Partner). Those appear here automatically.": "Cuando escribas o recibas algo importante, toca Registrar conversación — o usa las ayudas de redacción del CRM (renovación, entrega, Partner). Aparecen aquí automáticamente.",
+		"When you write or receive something important, tap Log talk — or use CRM compose helpers (renewal, delivery, Partner). Those appear here automatically.": "Cuando escribas o recibas algo importante, toca Registrar conversación — o usa las ayudas de redacción del CRM (renovación, entrega, Pareja). Aparecen aquí automáticamente.",
 		"Where should this customer be in a year?": "¿Dónde debería estar este cliente dentro de un año?",
 		"Where this customer should go — write the goal, then the next moves.": "Adónde debe ir este cliente — escribe el objetivo y luego los próximos pasos.",
 		"Which inboxes and folders feed Assign.": "Qué bandejas y carpetas alimentan Asignar.",
