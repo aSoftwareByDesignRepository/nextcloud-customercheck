@@ -83,6 +83,7 @@ final class BootstrapDefaultWorkspace implements IRepairStep
 			return $id;
 		}
 
+		// unique-conflict:ok slug + any-row existence selects precede this insert (single-shot repair step)
 		$now = (new \DateTimeImmutable('now'))->format('Y-m-d H:i:s');
 		$ins = $this->db->getQueryBuilder();
 		$ins->insert('crm_workspace')
@@ -167,6 +168,7 @@ final class BootstrapDefaultWorkspace implements IRepairStep
 				continue;
 			}
 			$role = in_array($uid, $admins, true) ? 'manager' : 'member';
+			// unique-conflict:ok membership count pre-check precedes insert
 			$ins = $this->db->getQueryBuilder();
 			$ins->insert('crm_ws_member')
 				->values([
@@ -198,6 +200,7 @@ final class BootstrapDefaultWorkspace implements IRepairStep
 		if ($n > 0) {
 			return;
 		}
+		// unique-conflict:ok settings count pre-check precedes insert
 		$now = (new \DateTimeImmutable('now'))->format('Y-m-d H:i:s');
 		$ins = $this->db->getQueryBuilder();
 		$ins->insert('crm_ws_set')

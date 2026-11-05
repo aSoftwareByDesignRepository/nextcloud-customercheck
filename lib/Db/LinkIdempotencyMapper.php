@@ -12,6 +12,7 @@ use OCP\IDBConnection;
  *
  * @phpstan-type LinkIdemRow array{companyId:int,siblingId:int,created:bool}
  */
+// unique-conflict:ok LinkIdempotencyService wraps insert() in try/catch UniqueConstraintViolation -> re-read winner
 class LinkIdempotencyMapper
 {
 	public const TTL_SECONDS = 86400;

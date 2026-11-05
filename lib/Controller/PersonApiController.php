@@ -128,6 +128,7 @@ class PersonApiController extends Controller
 			$this->persons->delete($id, $ctx['uid'], $this->updatedAtPrecondition($body));
 
 			if ($returnMail) {
+				// unique-conflict:ok EmailTouchMapper carries findBy*/DoesNotExist handling for crm_email_touch
 				$this->emailTouches->clearPersonId($id);
 				if ($email !== '' && $workspaceId > 0) {
 					$mailIds = $this->mailbox->unmatchByCompanyAndFrom($workspaceId, $companyId, $email);

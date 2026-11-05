@@ -185,6 +185,21 @@ class MailboxService
 			$id = (int)$data['id'];
 			$this->clearSyncDialFailure($id);
 		} else {
+			$dup = $this->db->getQueryBuilder();
+			$dup->select($dup->func()->count('*', 'cnt'))
+				->from('crm_mailbox')
+				->where($dup->expr()->eq('workspace_id', $dup->createNamedParameter($workspaceId)))
+				->andWhere($dup->expr()->eq('email_address', $dup->createNamedParameter($emailAddress)));
+			$dupResult = $dup->executeQuery();
+			$dupCount = (int)$dupResult->fetchOne();
+			$dupResult->closeCursor();
+			if ($dupCount > 0) {
+				throw ValidationException::field(
+					Constants::ERR_VALIDATION,
+					'emailAddress',
+					$this->l10n->t('This email address is already connected in this workspace as a personal or team mailbox.'),
+				);
+			}
 			$ins = $this->db->getQueryBuilder();
 			$ins->insert('crm_mailbox')->values([
 				'workspace_id' => $ins->createNamedParameter($workspaceId),
@@ -483,6 +498,7 @@ class MailboxService
 			if ($path === '' || !ImapConnection::isSafeImapFolder($path)) {
 				continue;
 			}
+			// unique-conflict:ok replaceFolders deletes the mailbox's folder rows before re-inserting (mailbox_id, folder_path)
 			$ins = $this->db->getQueryBuilder();
 			$ins->insert('crm_mail_fld')->values([
 				'mailbox_id' => $ins->createNamedParameter($mailboxId),
@@ -853,6 +869,7 @@ class MailboxService
 			}
 			$ins->insert('crm_mail_msg')->values($values)->executeStatement();
 		} catch (\Throwable) {
+			// unique-conflict:ok (mailbox, folder, uid) collision falls into refreshOpenIndexedMessage — the idempotent dedupe path
 			// Unique (mailbox, folder, uid) — already indexed. Older rows often lack
 			// To/CC (pre-recipient matching). Refresh open rows so Sync now can
 			// file CC’d / team-sent copies onto customers and into Assign.

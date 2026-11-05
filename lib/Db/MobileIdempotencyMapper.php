@@ -10,6 +10,7 @@ use OCP\IDBConnection;
 /**
  * Companion P2 — (uid, idempotency_key) → activity_id ledger.
  */
+// unique-conflict:ok MobileIdempotencyService wraps insert() in try/catch UniqueConstraintViolation -> re-read winner
 class MobileIdempotencyMapper
 {
 	public function __construct(

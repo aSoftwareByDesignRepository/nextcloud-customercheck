@@ -79,6 +79,7 @@ class ValueMapService
 			->andWhere($del->expr()->eq('field_key', $del->createNamedParameter($fieldKey)))
 			->andWhere($del->expr()->eq('raw_value_norm', $del->createNamedParameter($norm)))
 			->executeStatement();
+		// unique-conflict:ok delete-then-insert upsert on the natural key (workspace_id, field_key, raw_value_norm) above
 		$ins = $this->db->getQueryBuilder();
 		$ins->insert('crm_value_map')->values([
 			'workspace_id' => $ins->createNamedParameter($workspaceId, IQueryBuilder::PARAM_INT),

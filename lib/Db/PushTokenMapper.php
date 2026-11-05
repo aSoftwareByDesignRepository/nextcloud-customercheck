@@ -80,6 +80,7 @@ class PushTokenMapper
 			$qb->executeStatement();
 			return;
 		}
+		// unique-conflict:ok findId(uid,tokenHash) existence check precedes insert (update path taken when present)
 		$qb->insert('crm_push_tok')
 			->values([
 				'uid' => $qb->createNamedParameter($uid),
