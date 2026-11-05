@@ -245,7 +245,7 @@ include __DIR__ . '/common/page-start.php';
 								<?php else: ?>
 									<?php
 									$crmRowOpenHref = $urlGenerator->linkToRoute('customercheck.page.companyDetail', ['id' => (int)($d['companyId'] ?? 0)]);
-									$crmRowOpenLabel = $l->t('Open');
+									$crmRowOpenLabel = $l->t('View');
 									include __DIR__ . '/common/crm-row-open.php';
 									?>
 								<?php endif; ?>

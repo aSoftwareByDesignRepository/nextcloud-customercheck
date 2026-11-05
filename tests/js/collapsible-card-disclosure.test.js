@@ -16,11 +16,11 @@ const partial = readFileSync(
 const detail = readFileSync(join(appRoot, 'templates', 'company-detail.php'), 'utf8');
 
 describe('collapsible card disclosure', () => {
-  it('partial exposes Open and Close labels with icon', () => {
+  it('partial exposes View and Close labels with icon', () => {
     expect(partial).toContain('crm-card__disclosure');
     expect(partial).toContain('crm-card__disclosure-label--closed');
     expect(partial).toContain('crm-card__disclosure-label--open');
-    expect(partial).toContain("t('Open')");
+    expect(partial).toContain("t('View')");
     expect(partial).toContain("t('Close')");
   });
 

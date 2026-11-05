@@ -70,7 +70,7 @@ final class GlanceDensityPresenter
 					: $l->t('App not installed — link under Identity'),
 				!$pc ? self::TONE_OFFLINE : ($openProjects > 0 ? self::TONE_ATTENTION : self::TONE_CALM),
 				$pc,
-				$pc ? $l->t('Open') : $l->t('Link'),
+				$pc ? $l->t('View') : $l->t('Link'),
 				$l
 			),
 			self::tile(
@@ -85,7 +85,7 @@ final class GlanceDensityPresenter
 					: $l->t('App not installed — link under Identity'),
 				!$ic ? self::TONE_OFFLINE : ($unpaid > 0 ? self::TONE_ATTENTION : self::TONE_CALM),
 				$ic,
-				$ic ? $l->t('Open') : $l->t('Link'),
+				$ic ? $l->t('View') : $l->t('Link'),
 				$l
 			),
 			self::tile(
@@ -102,7 +102,7 @@ final class GlanceDensityPresenter
 					: $l->t('App not installed — link under Identity'),
 				!$tc ? self::TONE_OFFLINE : (($waiting > 0 || $openTickets > 0) ? self::TONE_ATTENTION : self::TONE_CALM),
 				$tc,
-				$tc ? $l->t('Open') : $l->t('Link'),
+				$tc ? $l->t('View') : $l->t('Link'),
 				$l
 			),
 		];

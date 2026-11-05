@@ -443,7 +443,7 @@
       const title = decodeMimeHeader(it.title || it.name || it.why || '');
       const meta = it.meta || '';
       const href = it.href || '';
-      const cta = it.cta || t('Open');
+      const cta = it.cta || t('View');
       let action;
       if (it.actionHtml) {
         action = it.actionHtml;

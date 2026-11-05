@@ -31,7 +31,7 @@ $ctaLabel = static function (string $cta) use ($l): string {
 		'claim' => $l->t('I\'ll take it'),
 		'triage' => $l->t('Assign mail'),
 		'coach' => $l->t('Help teammate'),
-		default => $l->t('Open'),
+		default => $l->t('View'),
 	};
 };
 

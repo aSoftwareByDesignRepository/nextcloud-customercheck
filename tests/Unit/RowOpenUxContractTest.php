@@ -27,9 +27,9 @@ final class RowOpenUxContractTest extends TestCase
 	public function listTemplatesProvider(): array
 	{
 		return [
-			['companies.php', ['crm-row-open.php', "t('Open')", 'crm-table-actions']],
+			['companies.php', ['crm-row-open.php', "t('View')", 'crm-table-actions']],
 			['agreements.php', ['crm-row-open.php', 'crm-table-actions']],
-			['money.php', ['crm-row-open.php', "t('Open')", 'crm-table-actions']],
+			['money.php', ['crm-row-open.php', "t('View')", 'crm-table-actions']],
 			['activities.php', ['crm-row-open.php', "t('Open')", 'crm-table-actions']],
 			['pipeline.php', ["t('Edit deal')", 'crm-btn--primary', 'crm-table-actions']],
 			['today.php', ['crm-table-actions', 'crm-btn--primary']],

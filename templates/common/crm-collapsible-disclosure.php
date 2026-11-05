@@ -14,7 +14,7 @@ declare(strict_types=1);
 /** @var \OCP\IL10N $l */
 ?>
 <span class="crm-card__disclosure" aria-hidden="true">
-	<span class="crm-card__disclosure-label crm-card__disclosure-label--closed"><?php p($l->t('Open')); ?></span>
+	<span class="crm-card__disclosure-label crm-card__disclosure-label--closed"><?php p($l->t('View')); ?></span>
 	<span class="crm-card__disclosure-label crm-card__disclosure-label--open"><?php p($l->t('Close')); ?></span>
 	<span class="crm-card__disclosure-icon" aria-hidden="true"></span>
 </span>

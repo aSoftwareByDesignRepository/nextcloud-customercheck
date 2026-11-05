@@ -18,7 +18,7 @@ final class CollapsibleCardUxContractTest extends TestCase
 		$this->assertStringContainsString('crm-card__disclosure-label--closed', $partial);
 		$this->assertStringContainsString('crm-card__disclosure-label--open', $partial);
 		$this->assertStringContainsString('crm-card__disclosure-icon', $partial);
-		$this->assertStringContainsString("\$l->t('Open')", $partial);
+		$this->assertStringContainsString("\$l->t('View')", $partial);
 		$this->assertStringContainsString("\$l->t('Close')", $partial);
 		$this->assertStringContainsString('aria-hidden="true"', $partial);
 	}

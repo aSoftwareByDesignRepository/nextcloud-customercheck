@@ -132,7 +132,7 @@ if (!$crmListFragment) {
 								<div class="crm-table-actions">
 									<?php
 									$crmRowOpenHref = $urlGenerator->linkToRoute('customercheck.page.companyDetail', ['id' => (int)($row['companyId'] ?? 0)]);
-									$crmRowOpenLabel = $l->t('Open');
+									$crmRowOpenLabel = $l->t('View');
 									include __DIR__ . '/common/crm-row-open.php';
 									?>
 									<?php if ($key !== 'paid30d' && $canWrite && !empty($row['agreementId'])): ?>

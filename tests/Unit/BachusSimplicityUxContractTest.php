@@ -38,7 +38,7 @@ final class BachusSimplicityUxContractTest extends TestCase
 		$this->assertStringContainsString('crm-review-table', $js);
 		$this->assertStringContainsString('data-crm-review-open', $js);
 		$this->assertStringContainsString('data-crm-review-sort', $js);
-		$this->assertStringContainsString("t('Open')", $js);
+		$this->assertStringContainsString("t('View')", $js);
 		$this->assertStringContainsString("t('Details')", $js);
 		$this->assertStringContainsString('selectReviewItem', $js);
 		$this->assertStringContainsString('Stay collapsed until the user opens a row', $js);

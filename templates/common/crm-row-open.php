@@ -11,7 +11,7 @@
 $__href = trim((string)($crmRowOpenHref ?? ''));
 $__label = trim((string)($crmRowOpenLabel ?? ''));
 if ($__label === '') {
-	$__label = $l->t('Open');
+	$__label = $l->t('View');
 }
 $__secondary = !empty($crmRowOpenSecondary);
 $__external = !empty($crmRowOpenExternal);

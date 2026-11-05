@@ -1129,7 +1129,7 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 									<?php if ($icDetailHref !== ''): ?>
 										<?php
 										$crmRowOpenHref = $icDetailHref;
-										$crmRowOpenLabel = $l->t('Open');
+										$crmRowOpenLabel = $l->t('View');
 										include __DIR__ . '/common/crm-row-open.php';
 										?>
 									<?php else: ?>

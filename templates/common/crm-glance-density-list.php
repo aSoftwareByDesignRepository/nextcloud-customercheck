@@ -34,7 +34,7 @@ if (!isset($glanceTiles) || !is_array($glanceTiles) || $glanceTiles === []) {
 				<span class="crm-glance-kpi__label"><?php p((string)($tile['label'] ?? '')); ?></span>
 				<span class="crm-glance-kpi__value" aria-hidden="true"><?php p((string)(int)($tile['value'] ?? 0)); ?></span>
 				<span class="crm-glance-kpi__hint"><?php p((string)($tile['hint'] ?? '')); ?></span>
-				<span class="crm-glance-kpi__cta" aria-hidden="true"><?php p((string)($tile['cta'] ?? $l->t('Open'))); ?></span>
+				<span class="crm-glance-kpi__cta" aria-hidden="true"><?php p((string)($tile['cta'] ?? $l->t('View'))); ?></span>
 			</a>
 		</li>
 	<?php endforeach; ?>

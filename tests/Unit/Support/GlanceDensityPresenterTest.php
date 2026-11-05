@@ -50,7 +50,7 @@ final class GlanceDensityPresenterTest extends TestCase
 		$this->assertSame(GlanceDensityPresenter::TONE_CALM, $byKey['invoices']['tone']);
 		$this->assertSame(0, $byKey['invoices']['value']);
 		$this->assertStringContainsString('All clear', $byKey['invoices']['hint']);
-		$this->assertSame('Open', $byKey['invoices']['cta']);
+		$this->assertSame('View', $byKey['invoices']['cta']);
 	}
 
 	public function testUnpaidUsesAttentionAndKeepsDeepHref(): void
