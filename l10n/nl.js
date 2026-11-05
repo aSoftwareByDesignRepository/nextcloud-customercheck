@@ -2806,6 +2806,7 @@ OC.L10N.register(
 		"Value": "Waarde",
 		"Value (EUR, optional)": "Waarde (in EUR, facultatief)",
 		"Value maps are not available.": "Waardekaarten zijn niet beschikbaar.",
+		"View": "Bekijken",
 		"View only": "Alleen weergeven",
 		"View only — ask a member to assign this.": "Alleen bekijken — vraag een lid om dit toe te wijzen.",
 		"View only — ask a member to manage this mail.": "Alleen bekijken — vraag een lid om deze mail te beheren.",

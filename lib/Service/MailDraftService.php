@@ -10,6 +10,7 @@ use OCA\CustomerCheck\Exception\ValidationException;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\IDBConnection;
 use OCP\IL10N;
+use Psr\Log\LoggerInterface;
 
 /**
  * Shared-mailbox failed drafts inbox — product §14.4.
@@ -27,6 +28,7 @@ class MailDraftService
 		private readonly MailboxService $mailboxes,
 		private readonly ITimeFactory $timeFactory,
 		private readonly IL10N $l10n,
+		private readonly ?LoggerInterface $logger = null,
 	) {
 	}
 
@@ -300,8 +302,12 @@ class MailDraftService
 					->executeStatement();
 				$hollow++;
 			}
-		} catch (\Throwable) {
-			// smtp_acked absent mid-upgrade — skip hollow claim purge (do not delete success ledger).
+		} catch (\Throwable $e) {
+			// best-effort: smtp_acked absent mid-upgrade — skip hollow claim purge
+			// (do not delete the success ledger on a schema probe failure).
+			$this->logger?->warning('CustomerCheck: hollow-claim draft purge skipped', [
+				'exception' => $e,
+			]);
 		}
 
 		return ['failedDrafts' => $failed, 'hollowClaims' => $hollow];

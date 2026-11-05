@@ -2806,6 +2806,7 @@ OC.L10N.register(
 		"Value": "Valore",
 		"Value (EUR, optional)": "Valore (EUR, opzionale)",
 		"Value maps are not available.": "Le mappe di valore non sono disponibili.",
+		"View": "Visualizza",
 		"View only": "Vedi solo",
 		"View only — ask a member to assign this.": "Solo lettura — chiedi a un membro di assegnarlo.",
 		"View only — ask a member to manage this mail.": "Solo lettura — chiedi a un membro di gestire questa mail.",

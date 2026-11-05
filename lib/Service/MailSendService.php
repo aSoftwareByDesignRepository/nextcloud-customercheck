@@ -700,8 +700,13 @@ class MailSendService
 				->set('updated_at', $qb->createNamedParameter($now))
 				->where($qb->expr()->eq('id', $qb->createNamedParameter($draftId)))
 				->executeStatement();
-		} catch (\Throwable) {
-			// Column may be absent mid-upgrade — outbound CRM row remains the legacy proof.
+		} catch (\Throwable $e) {
+			// best-effort: column may be absent mid-upgrade — outbound CRM row
+			// remains the legacy proof; never fail the send path over the ack flag.
+			$this->logger->warning('CustomerCheck: could not mark draft smtp_acked', [
+				'draftId' => $draftId,
+				'exception' => $e,
+			]);
 		}
 	}
 

@@ -18,6 +18,7 @@ use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\IL10N;
 use OCP\Lock\ILockingProvider;
 use OCP\Lock\LockedException;
+use Psr\Log\LoggerInterface;
 
 /**
  * Public website order intake (§14.4 order path).
@@ -53,6 +54,7 @@ class WebsiteOrderWebhookService
 		private readonly ITimeFactory $timeFactory,
 		private readonly IL10N $l10n,
 		private readonly ILockingProvider $locking,
+		private readonly ?LoggerInterface $logger = null,
 	) {
 	}
 
@@ -288,8 +290,12 @@ class WebsiteOrderWebhookService
 		}
 		try {
 			$this->companyService->update((int)$company->getId(), $patch, 'webhook', null, false, true);
-		} catch (\Throwable) {
-			// Best-effort enrichment on idempotent order retries — never fail the order.
+		} catch (\Throwable $e) {
+			// best-effort: enrichment on idempotent order retries — never fail the order.
+			$this->logger?->warning('CustomerCheck: webhook address enrichment failed', [
+				'companyId' => (int)$company->getId(),
+				'exception' => $e,
+			]);
 		}
 	}
 

@@ -412,7 +412,7 @@
         '<p class="crm-empty-state__text">' + escapeHtml(emptyMsg) + '</p>' +
         '<div class="crm-empty-state__actions">' +
         '<a class="crm-btn crm-btn--primary crm-btn--lg" href="' + escapeHtml(emptyCta.href) + '">' +
-        escapeHtml(emptyCta.label || t('Open')) + '</a></div></div>';
+        escapeHtml(emptyCta.label || t('View')) + '</a></div></div>';
       return;
     }
     renderSuiteTable(mount, items, emptyMsg, t('Items'));
@@ -565,7 +565,7 @@
         // Screen-reader / keyboard affordance only — row click already opens (no visible Open chrome).
         '<button type="button" class="crm-sr-only crm-review-open" data-crm-review-open="' +
         escapeHtml(rowId) + '" tabindex="-1" aria-label="' + escapeHtml(t('Open details: %s', [title])) + '">' +
-        escapeHtml(t('Open')) + '</button>' +
+        escapeHtml(t('View')) + '</button>' +
         '</li>';
     });
     const selectToolbar = selectable

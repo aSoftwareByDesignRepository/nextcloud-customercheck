@@ -14,6 +14,7 @@ use OCP\DB\Exception as DbException;
 use OCP\IConfig;
 use OCP\IL10N;
 use OCP\IURLGenerator;
+use Psr\Log\LoggerInterface;
 
 /**
  * Weekly digest v2 — product §10.5.
@@ -38,6 +39,7 @@ class WeeklyDigestService
 		private readonly ITimeFactory $timeFactory,
 		private readonly IURLGenerator $url,
 		private readonly IL10N $l10n,
+		private readonly ?LoggerInterface $logger = null,
 	) {
 	}
 
@@ -258,8 +260,13 @@ class WeeklyDigestService
 	{
 		try {
 			$this->digestLogMapper->delete($row);
-		} catch (\Throwable) {
-			// Best-effort — next unique insert may still block; log not available here.
+		} catch (\Throwable $e) {
+			// best-effort — a lingering claim row only delays the next weekly send;
+			// the next unique insert still serializes on (week_key, workspace).
+			$this->logger?->warning('CustomerCheck: could not release digest claim row', [
+				'digestLogId' => $row->getId(),
+				'exception' => $e,
+			]);
 		}
 	}
 }

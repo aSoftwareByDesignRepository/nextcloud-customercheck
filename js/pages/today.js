@@ -103,7 +103,7 @@
           if (actions) {
             if (openHref) {
               actions.innerHTML = '<a class="crm-btn crm-btn--sm crm-btn--primary" href="'
-                + openHref.replace(/"/g, '&quot;') + '">' + t('Open') + '</a>';
+                + openHref.replace(/"/g, '&quot;') + '">' + t('View') + '</a>';
             } else {
               actions.innerHTML = '<span class="crm-badge crm-badge--success">' + t('Claimed') + '</span>';
             }

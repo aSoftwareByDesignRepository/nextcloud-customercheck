@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OCA\CustomerCheck\Migration;
 
 use Closure;
+use OCP\DB\Exception as DbException;
 use OCP\DB\ISchemaWrapper;
 use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\DB\Types;
@@ -71,7 +72,10 @@ class Version1008Date20260801190000 extends SimpleMigrationStep
 					])
 					->executeStatement();
 				$n++;
-			} catch (\Throwable) {
+			} catch (DbException $e) {
+				if ($e->getReason() !== DbException::REASON_UNIQUE_CONSTRAINT_VIOLATION) {
+					throw $e;
+				}
 				// Unique fingerprint — already migrated.
 			}
 		}

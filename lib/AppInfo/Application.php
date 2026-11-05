@@ -190,6 +190,7 @@ class Application extends App implements IBootstrap
 			$c->get(\OCP\AppFramework\Utility\ITimeFactory::class),
 			$c->get(\OCP\IL10N::class),
 			$c->get(ILockingProvider::class),
+			$c->get(\Psr\Log\LoggerInterface::class),
 		));
 		$context->registerService(DirectoryOptionsService::class, fn ($c) => new DirectoryOptionsService(
 			$c->get(\OCP\IGroupManager::class),

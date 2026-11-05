@@ -16,6 +16,7 @@ use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\IDBConnection;
 use OCP\IL10N;
 use OCP\Security\ICrypto;
+use Psr\Log\LoggerInterface;
 
 /**
  * Shared mailbox config — product §14.
@@ -30,6 +31,7 @@ class MailboxService
 		private readonly IL10N $l10n,
 		private readonly HtmlSanitizeService $htmlSanitize,
 		private readonly ?NotificationService $notifications = null,
+		private readonly ?LoggerInterface $logger = null,
 	) {
 	}
 
@@ -1215,8 +1217,13 @@ class MailboxService
 				->set('last_error', $qb->createNamedParameter(mb_substr($reason !== '' ? $reason : 'sync failed', 0, 512)))
 				->where($qb->expr()->eq('id', $qb->createNamedParameter($mailboxId)))
 				->executeStatement();
-		} catch (\Throwable) {
-			// Columns absent mid-upgrade — skip backoff until migration lands.
+		} catch (\Throwable $e) {
+			// best-effort: columns absent mid-upgrade — skip backoff until migration lands.
+			$this->logger?->warning('CustomerCheck: could not record mailbox sync backoff', [
+				'mailboxId' => $mailboxId,
+				'streak' => $streak,
+				'exception' => $e,
+			]);
 		}
 	}
 
@@ -1233,8 +1240,12 @@ class MailboxService
 				->set('sync_cooldown_until', $qb->createNamedParameter(null))
 				->where($qb->expr()->eq('id', $qb->createNamedParameter($mailboxId)))
 				->executeStatement();
-		} catch (\Throwable) {
-			// Mid-upgrade: ignore.
+		} catch (\Throwable $e) {
+			// best-effort: mid-upgrade — a stale cooldown clears on the next sync tick.
+			$this->logger?->warning('CustomerCheck: could not clear mailbox sync backoff', [
+				'mailboxId' => $mailboxId,
+				'exception' => $e,
+			]);
 		}
 	}
 

@@ -15,6 +15,7 @@ use OCP\Files\NotFoundException as FilesNotFoundException;
 use OCP\Files\NotPermittedException;
 use OCP\IL10N;
 use OCP\IURLGenerator;
+use Psr\Log\LoggerInterface;
 
 /**
  * Customer Documents — link/create/browse Nextcloud Files folders (CC §8).
@@ -29,6 +30,7 @@ class CompanyDocumentsService
 		private readonly IURLGenerator $urlGenerator,
 		private readonly IL10N $l10n,
 		private readonly TimelineService $timeline,
+		private readonly ?LoggerInterface $logger = null,
 	) {
 	}
 
@@ -315,8 +317,14 @@ class CompanyDocumentsService
 			if ($node !== null && !($node instanceof Folder)) {
 				$node->delete();
 			}
-		} catch (\Throwable) {
-			// Orphan may linger in company folder — preferred over failing the client replay.
+		} catch (\Throwable $e) {
+			// best-effort: an orphan may linger in the company folder — preferred
+			// over failing the client replay.
+			$this->logger?->warning('CustomerCheck: could not delete uploaded file', [
+				'userId' => $userId,
+				'fileId' => $fileId,
+				'exception' => $e,
+			]);
 		}
 	}
 
@@ -345,8 +353,12 @@ class CompanyDocumentsService
 						'filesFolderId' => null,
 						'filesFolderPath' => null,
 					], $userId, OptimisticLock::format($company->getUpdatedAt()));
-				} catch (\Throwable) {
-					// Stale lock — still report broken.
+				} catch (\Throwable $e) {
+					// best-effort: stale lock — still report the link as broken.
+					$this->logger?->warning('CustomerCheck: could not clear broken files-folder link', [
+						'companyId' => $companyId,
+						'exception' => $e,
+					]);
 				}
 			}
 
