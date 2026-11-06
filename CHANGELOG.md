@@ -1699,3 +1699,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Notes
 
 - Product bible capabilities marked complete for the native command-center spine (workspaces, Pulse/Brief/Chase/Coverage/Team, shared mail sync+send, Company 360, renewal engine, Check sibling joins). See README product-bible status and `CUSTOMERCHECK-PRODUCT.md`.
+
+## [1.6.192] — 2026-11-05
+
+### Added
+
+- + hardened test-state guard
+
+### Fixed
+
+- sweep)
+- 'Open' -> 'View' (r26 residual)
+- logging, l10n dual-role split, footer SSOT sync
+- runs
+- — es mistranslations, idempotency corruption sweep
+- break-word)
+- contract
+- copy
+
+### Changed
+
+- Refresh App Store screenshots from clean marketing captures
+- l10n: agreement locatives + label-in-name stale refs + adjudication (r23)
+- l10n: fix fused doubled tokens + nb da_DK bleed + OOV adjudication (r21)
+- l10n: wrong-sense sweep wave 3 — feed/digest/match/record/current/shared/subject/order/grace/intake/drop/session families (r20)
+- l10n: rule-driven wrong-sense vocabulary sweep (r19 — act/runway/rotate/account-plan/callback/claim/won-lost/churn/touch/due/own/call/grace 
+- l10n: wrong-sense sweep wave 2 — minutes/log/overdue/follow-up/promise families
+- l10n: lexicon allowlist — nb deal/delen/deals loan, pl Acme proper noun
+- l10n: consistency canonicalization — single term per family per catalog
+- l10n: concept-level wrong-sense sweep (deal/seat/quote/stage/board/cover/slug)
+- — atlas-farm artifacts, docs and l10n batch 2026-10-25
+
