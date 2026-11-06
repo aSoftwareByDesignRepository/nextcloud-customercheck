@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.6.192 - 2026-11-05
+
+### Added
+
+- Upgrade-backup family schema catalog with a hardened test-state guard
+
+### Fixed
+
+- Footer help/feedback icons render again — the icon-fallback guard never matched
+- Navigation menu labels keep word breaks on narrow widths
+- Required-field marks and error copy use the error-text ink (WCAG contrast)
+- Spanish native review pass — mistranslation corrections
+- Write endpoints surface handled responses on rare duplicate-key conflicts
+- 'Open' vs 'View' captions split verb/noun senses correctly per locale
+
+### Changed
+
+- Translation consistency across all shipped catalogs — one canonical term per concept plus wrong-sense corrections for CRM vocabulary (deal, stage, seat, quote, runway, claim, callback, minutes, log)
+- Background jobs honour the shared upgrade-backup lock contract
+- App Store screenshots refreshed from clean marketing captures
+
 ## 1.6.191 - 2026-10-25
 
 ### Fixed
@@ -1699,34 +1720,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Notes
 
 - Product bible capabilities marked complete for the native command-center spine (workspaces, Pulse/Brief/Chase/Coverage/Team, shared mail sync+send, Company 360, renewal engine, Check sibling joins). See README product-bible status and `CUSTOMERCHECK-PRODUCT.md`.
-
-## [1.6.192] — 2026-11-05
-
-### Added
-
-- + hardened test-state guard
-
-### Fixed
-
-- sweep)
-- 'Open' -> 'View' (r26 residual)
-- logging, l10n dual-role split, footer SSOT sync
-- runs
-- — es mistranslations, idempotency corruption sweep
-- break-word)
-- contract
-- copy
-
-### Changed
-
-- Refresh App Store screenshots from clean marketing captures
-- l10n: agreement locatives + label-in-name stale refs + adjudication (r23)
-- l10n: fix fused doubled tokens + nb da_DK bleed + OOV adjudication (r21)
-- l10n: wrong-sense sweep wave 3 — feed/digest/match/record/current/shared/subject/order/grace/intake/drop/session families (r20)
-- l10n: rule-driven wrong-sense vocabulary sweep (r19 — act/runway/rotate/account-plan/callback/claim/won-lost/churn/touch/due/own/call/grace 
-- l10n: wrong-sense sweep wave 2 — minutes/log/overdue/follow-up/promise families
-- l10n: lexicon allowlist — nb deal/delen/deals loan, pl Acme proper noun
-- l10n: consistency canonicalization — single term per family per catalog
-- l10n: concept-level wrong-sense sweep (deal/seat/quote/stage/board/cover/slug)
-- — atlas-farm artifacts, docs and l10n batch 2026-10-25
-
