@@ -313,4 +313,5 @@ return [
 		['name' => 'lead_webhook#receive', 'url' => '/hooks/lead/{token}', 'verb' => 'POST'],
 		['name' => 'website_order_webhook#receive', 'url' => '/hooks/order/{token}', 'verb' => 'POST'],
 	],
+		['name' => 'today_api#widgetSnapshot', 'url' => '/api/widget-snapshot', 'verb' => 'GET'],
 ];
