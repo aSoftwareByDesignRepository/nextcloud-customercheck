@@ -183,6 +183,7 @@ OC.L10N.register(
 		"A Microsoft client secret is saved. Leave blank to keep it.": "Hay un secreto de cliente de Microsoft guardado. Déjalo en blanco para conservarlo.",
 		"A ProjectCheck customer with this name already exists. Link the existing customer instead.": "Ya existe un cliente de ProjectCheck con este nombre. En su lugar, vincule al cliente existente.",
 		"A TicketCheck customer with this name already exists. Link the existing customer instead.": "Ya existe un cliente de TicketCheck con este nombre. En su lugar, vincule al cliente existente.",
+		"A checklist template with this name already exists.": "Ya existe una plantilla de lista de verificación con este nombre.",
 		"A clear label, when it ends, and the euro amount. That is enough for Money and renewals.": "Una etiqueta clara, cuándo finaliza y el importe en euros. Eso es suficiente para dinero y renovaciones.",
 		"A company cannot be merged into itself.": "Una empresa no puede fusionarse consigo misma.",
 		"A company name is enough. Extra columns are fine.": "Basta un nombre de empresa. Las columnas extra están bien.",

@@ -37,6 +37,7 @@ use Psr\Log\LoggerInterface;
  *  3. **Re-arming is free.** The ledger key includes the `valid_until` snapshot,
  *     so correcting or renewing a date starts a fresh cadence automatically.
  */
+// unique-conflict:ok — the only unique-table write is claimLedgerSlot()'s reminderLogMapper->insert, guarded by a REASON_UNIQUE catch returning null on claim loss; the flagged sites update non-unique crm_agreement.
 class ReminderScheduler
 {
 	private const CHUNK_SIZE = 500;

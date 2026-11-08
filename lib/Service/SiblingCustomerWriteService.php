@@ -22,6 +22,7 @@ use Psr\Log\LoggerInterface;
  * Never opens a DB transaction that spans apps. CRM optimistic lock runs first;
  * sibling facade is called outside CRM TX; then CRM stores the link id.
  */
+// unique-conflict:ok — every company write delegates to CompanyService::update(), whose catch maps unique violations via rethrowMappedUniqueViolation.
 class SiblingCustomerWriteService
 {
 	/** @var callable():object|null */

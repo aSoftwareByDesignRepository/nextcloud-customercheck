@@ -20,6 +20,7 @@ use OCP\IL10N;
  *
  * Health is deterministic (no AI): stalled / at_risk / on_track / unknown.
  */
+// unique-conflict:ok — insertPlanRow() executes inside the caller's lockRow-serialised transaction whose catch falls back to update on REASON_UNIQUE (inter-procedural protection the per-site scan cannot see).
 class AccountPlanService
 {
 	public function __construct(

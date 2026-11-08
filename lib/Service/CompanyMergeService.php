@@ -31,6 +31,7 @@ use OCP\IL10N;
  * Lock order: lower company id first (deadlock avoidance), then child tables
  * by the documented company → deal → agreement → activity/hours → event order.
  */
+// unique-conflict:ok — flagged updates set archive/workspace/updatedAt columns only; unique columns (crm_company slug/pc/tc ids, crm_acct_plan company_id, crm_email_touch mail_message_id) are never written here.
 class CompanyMergeService
 {
 	public function __construct(

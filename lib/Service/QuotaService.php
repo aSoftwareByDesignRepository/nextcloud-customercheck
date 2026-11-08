@@ -34,6 +34,7 @@ use OCP\IL10N;
  *     with the `80080` sentinel offset, so the DB unique index — not
  *     application bookkeeping — is what guarantees exactly-once (§6.3).
  */
+// unique-conflict:ok — the flagged writes run through hoursMapper on a non-unique-indexed table; company/remlog mapper references are reads.
 class QuotaService
 {
 	public function __construct(

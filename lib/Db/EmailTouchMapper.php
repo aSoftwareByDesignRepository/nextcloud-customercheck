@@ -12,6 +12,7 @@ use OCP\IDBConnection;
 /**
  * @extends QBMapper<EmailTouch>
  */
+// unique-conflict:ok — writes update person_id/company_id only; mail_message_id (the sole unique column on crm_email_touch) is never written.
 class EmailTouchMapper extends QBMapper
 {
 	public function __construct(IDBConnection $db)

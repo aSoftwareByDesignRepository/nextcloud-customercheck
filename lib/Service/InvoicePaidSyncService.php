@@ -10,6 +10,7 @@ use OCA\CustomerCheck\Db\CompanyMapper;
 use OCA\CustomerCheck\Db\PayWatch;
 use OCA\CustomerCheck\Db\PayWatchMapper;
 use OCP\AppFramework\Utility\ITimeFactory;
+use OCP\DB\Exception as DbException;
 use OCP\IDBConnection;
 use OCP\IL10N;
 
@@ -19,6 +20,7 @@ use OCP\IL10N;
  * Watermark in crm_pay_watch ensures exactly-once effects. Ambiguous invoice_ref
  * (>1 agreement) never mass-updates; it writes timeline invoice.paid.ambiguous.
  */
+// unique-conflict:ok — upsertWatch() falls back to an update of the peer-written row on REASON_UNIQUE; the flagged site updates non-unique crm_agreement.
 class InvoicePaidSyncService
 {
 	public function __construct(
@@ -242,8 +244,19 @@ class InvoicePaidSyncService
 			$row->setLastStatus($status);
 			$row->setLastPaidTotalCents($paidTotal);
 			$row->setUpdatedAt($now);
-			$this->payWatch->insert($row);
-			return;
+			try {
+				$this->payWatch->insert($row);
+				return;
+			} catch (DbException $e) {
+				if ($e->getReason() !== DbException::REASON_UNIQUE_CONSTRAINT_VIOLATION) {
+					throw $e;
+				}
+				// Peer wrote the watch row first — fold this sync into an update.
+				$existing = $this->payWatch->findByAgreement($agreementId);
+				if ($existing === null) {
+					throw $e;
+				}
+			}
 		}
 		$existing->setLastStatus($status);
 		$existing->setLastPaidTotalCents($paidTotal);

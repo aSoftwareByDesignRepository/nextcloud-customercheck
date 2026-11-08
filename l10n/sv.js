@@ -183,6 +183,7 @@ OC.L10N.register(
 		"A Microsoft client secret is saved. Leave blank to keep it.": "En Microsoft-klienthemlighet är sparad. Lämna fältet tomt för att behålla den.",
 		"A ProjectCheck customer with this name already exists. Link the existing customer instead.": "En ProjectCheck-kund med detta namn finns redan. Länka den befintliga kunden istället.",
 		"A TicketCheck customer with this name already exists. Link the existing customer instead.": "En TicketCheck-kund med detta namn finns redan. Länka den befintliga kunden istället.",
+		"A checklist template with this name already exists.": "En checklistmall med det här namnet finns redan.",
 		"A clear label, when it ends, and the euro amount. That is enough for Money and renewals.": "En tydlig etikett, när den tar slut och eurobeloppet. Det räcker för Pengar och förnyelser.",
 		"A company cannot be merged into itself.": "Ett företag kan inte slås ihop med sig självt.",
 		"A company name is enough. Extra columns are fine.": "Ett företagsnamn räcker. Extra kolumner är ok.",

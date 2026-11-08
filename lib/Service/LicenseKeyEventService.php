@@ -19,6 +19,7 @@ use Psr\Log\LoggerInterface;
  * Matching company by slug → draft license agreement (idempotent on sales_log_id).
  * Unknown slug → import-inbox row (no auto-create company).
  */
+// unique-conflict:ok — the flagged insert targets crm_import_job via importJobMapper (not unique-indexed); the CompanyMapper reference is a lookup.
 class LicenseKeyEventService
 {
 	public function __construct(

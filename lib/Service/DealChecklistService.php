@@ -19,6 +19,7 @@ use OCA\CustomerCheck\Support\DbTransaction;
 use OCA\CustomerCheck\Support\OptimisticLock;
 use OCP\AppFramework\Db\DoesNotExistException;
 use OCP\AppFramework\Utility\ITimeFactory;
+use OCP\DB\Exception as DbException;
 use OCP\IDBConnection;
 use OCP\IL10N;
 use OCP\IUserManager;
@@ -28,6 +29,7 @@ use OCP\IUserManager;
  *
  * One item-set per deal; templates copy titles onto the deal (no BPM graph).
  */
+// unique-conflict:ok — files->insert catch rematches via findByItem on (item_id,file_id) collision; createTemplate maps a unique violation to a field-level name error; item/templateItem writes and member references target non-unique tables or are reads.
 class DealChecklistService
 {
 	public const APPLY_APPEND = 'append';
@@ -127,6 +129,10 @@ class DealChecklistService
 			DbTransaction::commit($this->db, $ownsTxn);
 		} catch (\Throwable $e) {
 			DbTransaction::rollBack($this->db, $ownsTxn);
+			if ($e instanceof DbException && $e->getReason() === DbException::REASON_UNIQUE_CONSTRAINT_VIOLATION) {
+				// Peer created a template under the allocated key first.
+				throw ValidationException::field(Constants::ERR_VALIDATION, 'name', $this->l10n->t('A checklist template with this name already exists.'));
+			}
 			throw $e;
 		}
 

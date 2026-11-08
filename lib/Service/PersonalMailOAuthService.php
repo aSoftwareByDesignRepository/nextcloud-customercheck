@@ -23,6 +23,7 @@ use Psr\Log\LoggerInterface;
  *
  * Client id/secret live in app config (admin). Tokens encrypted at rest on crm_mailbox.
  */
+// unique-conflict:ok — the crm_mail_fld INBOX seed runs on a just-created mailbox row so no prior folder row can exist; crm_mailbox email_address updates are preceded by assertEmailAddressAvailable() and the connect insert maps conflicts to ERR_MAIL_ACCOUNT_CONFLICT.
 class PersonalMailOAuthService
 {
 	public const PROVIDER_GOOGLE = 'google';

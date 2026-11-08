@@ -14,6 +14,7 @@ use OCA\CustomerCheck\Support\OptimisticLock;
 use OCA\CustomerCheck\Support\MimeHeader;
 use OCA\CustomerCheck\Support\ReviewSharedMailTriage;
 use OCP\AppFramework\Utility\ITimeFactory;
+use OCP\DB\Exception as DbException;
 use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\IDBConnection;
 use OCP\IL10N;
@@ -21,6 +22,7 @@ use OCP\IL10N;
 /**
  * Universal Assign Inbox — GNQ §5.
  */
+// unique-conflict:ok — insertItem() returns false on REASON_UNIQUE so both enqueue paths treat a raced fingerprint as already-present; the remaining flagged site delegates to CompanyService::update()'s mapped catch.
 class ReviewService
 {
 	public const STATUSES = ['open', 'follow_up', 'assigned', 'no_relation', 'snoozed'];
@@ -368,7 +370,7 @@ class ReviewService
 					$exclude,
 				));
 				$suggestions = ReviewMatchLogic::suggest($email !== '' ? $email : null, null, $this->suggestionCatalog($workspaceId));
-				$this->insertItem([
+				if ($this->insertItem([
 					'workspace_id' => $workspaceId,
 					'source_kind' => $sourceKind,
 					'source_fingerprint' => $fp,
@@ -377,8 +379,9 @@ class ReviewService
 					'snippet' => $email !== '' ? $email : (string)($msg['from'] ?? ''),
 					'status' => 'open',
 					'suggestion_json' => $suggestions,
-				]);
-				$added++;
+				])) {
+					$added++;
+				}
 			}
 		} while (count($batch) === $pageSize);
 
@@ -1296,7 +1299,7 @@ class ReviewService
 			return ['added' => false, 'item' => null];
 		}
 		$suggestions = ReviewMatchLogic::suggest($email ?? '', $org, $this->suggestionCatalog($workspaceId));
-		$this->insertItem([
+		if (!$this->insertItem([
 			'workspace_id' => $workspaceId,
 			'source_kind' => $kind,
 			'source_fingerprint' => $fp,
@@ -1305,7 +1308,9 @@ class ReviewService
 			'snippet' => $snippet,
 			'status' => 'open',
 			'suggestion_json' => $suggestions,
-		]);
+		])) {
+			return ['added' => false, 'item' => null];
+		}
 
 		$row = $this->findByFingerprint($workspaceId, $kind, $fp);
 		if ($row === null) {
@@ -1467,7 +1472,7 @@ class ReviewService
 	}
 
 	/** @param array<string, mixed> $data */
-	private function insertItem(array $data): void
+	private function insertItem(array $data): bool
 	{
 		$now = $this->timeFactory->getDateTime()->format('Y-m-d H:i:s');
 		$suggestions = $data['suggestion_json'] ?? [];
@@ -1504,7 +1509,16 @@ class ReviewService
 				// Pre-migration installs — source_ref only.
 			}
 		}
-		$ins->insert('crm_review_item')->values($values)->executeStatement();
+		try {
+			$ins->insert('crm_review_item')->values($values)->executeStatement();
+			return true;
+		} catch (DbException $e) {
+			if ($e->getReason() !== DbException::REASON_UNIQUE_CONSTRAINT_VIOLATION) {
+				throw $e;
+			}
+			// Peer enqueued the same fingerprint first — already present.
+			return false;
+		}
 	}
 
 	private function fingerprint(string $kind, int $workspaceId, string $ref): string

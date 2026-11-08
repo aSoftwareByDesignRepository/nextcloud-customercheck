@@ -18,6 +18,7 @@ use OCP\IL10N;
 /**
  * Account coverage + My Accounts + touched — product §12.
  */
+// unique-conflict:ok — companyMapper->update sets touch_interval_days/updated_at only; unique columns (slug, pc_customer_id, tc_customer_id) are never written here.
 class CoverageService
 {
 	public function __construct(

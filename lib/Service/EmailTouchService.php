@@ -11,6 +11,7 @@ use OCA\CustomerCheck\Support\DateMath;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\IL10N;
 
+// unique-conflict:ok — manual/compose touch inserts never set mail_message_id (the only unique column on crm_email_touch); NULL keys cannot collide.
 class EmailTouchService
 {
 	public function __construct(

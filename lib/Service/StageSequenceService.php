@@ -32,6 +32,7 @@ use OCP\IL10N;
  * Moving away from a stage deliberately leaves open follow-ups alone — the work
  * may still be owed. The deal view offers a bulk dismiss instead (§14.2).
  */
+// unique-conflict:ok — the crm_seq_log claim insert lives in claimSequence() under a REASON_UNIQUE catch (returns false = peer claimed); the flagged site inserts non-unique crm_activity.
 class StageSequenceService
 {
 	/** @var array<string, string> stage entered => sequence id */

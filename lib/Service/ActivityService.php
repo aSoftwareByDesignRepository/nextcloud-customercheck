@@ -34,6 +34,7 @@ use OCP\IUserManager;
  * colleague who should act; due reminders target that person (workspace fan-out
  * remains only for legacy unassigned rows).
  */
+// unique-conflict:ok — all inserts/updates run through activityMapper on crm_activity (no unique index); CompanyMapper/WorkspaceMemberMapper references in this file are reads.
 class ActivityService
 {
 	public function __construct(

@@ -182,6 +182,7 @@
         "A Microsoft client secret is saved. Leave blank to keep it.": "A Microsoft client secret is saved. Leave blank to keep it.",
         "A ProjectCheck customer with this name already exists. Link the existing customer instead.": "A ProjectCheck customer with this name already exists. Link the existing customer instead.",
         "A TicketCheck customer with this name already exists. Link the existing customer instead.": "A TicketCheck customer with this name already exists. Link the existing customer instead.",
+        "A checklist template with this name already exists.": "A checklist template with this name already exists.",
         "A clear label, when it ends, and the euro amount. That is enough for Money and renewals.": "A clear label, when it ends, and the euro amount. That is enough for Money and renewals.",
         "A company cannot be merged into itself.": "A company cannot be merged into itself.",
         "A company name is enough. Extra columns are fine.": "A company name is enough. Extra columns are fine.",

@@ -40,6 +40,7 @@ use OCP\IL10N;
  * activity/hours → remlog/seq/pay → event). Every multi-table write in this
  * class acquires locks in exactly that direction.
  */
+// unique-conflict:ok — unique-column write paths route through rethrowMappedUniqueViolation() which maps violations to a conflict response (helper-delegated catch); the remaining flagged updates set non-unique columns only and email-touch references are reads.
 class CompanyService
 {
 	public function __construct(
