@@ -18,7 +18,7 @@ OC.L10N.register(
 		"%1$s: %2$s expired today (grace until %3$s)": "%1$s: %2$s ist heute abgelaufen (Kulanz bis %3$s)",
 		"%1$s: %2$s expires in 30 days": "%1$s: %2$s läuft in 30 Tagen ab",
 		"%1$s: %2$s expires in 60 days": "%1$s: %2$s läuft in 60 Tagen ab",
-		"%1$s: %2$s expires in 7 days — customer clients will hit 402 at expiry": "%1$s: %2$s läuft in 7 Tagen ab – Kundenkunden erreichen bei Ablauf 402",
+		"%1$s: %2$s expires in 7 days — customer clients will hit 402 at expiry": "%1$s: %2$s läuft in 7 Tagen ab – Kunden erreichen bei Ablauf 402",
 		"%1$s: %2$s grace ended — access stopped": "%1$s: %2$s Kulanz beendet – Zugriff gestoppt",
 		"%1$s: %2$s is due today": "%1$s: %2$s ist heute fällig",
 		"%1$s: %2$s is overdue (%3$d day)": "%1$s: %2$s ist überfällig (%3$d Tag)",
