@@ -199,6 +199,10 @@ final class SharedMailboxSmtpClient
 		if ($fp === false) {
 			throw ValidationException::field('VALIDATION', 'smtp', 'SMTP connect failed: ' . $errstr);
 		}
+		if (ImapConnection::dialedPeerIpOrNull($fp) === null) {
+			fclose($fp);
+			throw ValidationException::field('VALIDATION', 'smtp', 'SMTP host resolves to a blocked address.');
+		}
 		stream_set_timeout($fp, 20);
 
 		try {

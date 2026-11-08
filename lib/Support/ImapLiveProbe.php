@@ -69,6 +69,16 @@ final class ImapLiveProbe
 				'detail' => $detail !== '' ? $detail : 'TLS connect failed',
 			];
 		}
+		if (ImapConnection::dialedPeerIpOrNull($fp) === null) {
+			fclose($fp);
+			return [
+				'ok' => false,
+				'reachable' => false,
+				'greeting' => '',
+				'reason' => 'network',
+				'detail' => 'Connection blocked — the dialed address is not allowed.',
+			];
+		}
 
 		stream_set_timeout($fp, (int)max(1, (int)ceil($timeoutSeconds)));
 		try {
@@ -420,6 +430,15 @@ final class ImapLiveProbe
 				'messages' => [],
 			];
 		}
+		if (ImapConnection::dialedPeerIpOrNull($fp) === null) {
+			fclose($fp);
+			return [
+				'ok' => false,
+				'reason' => 'network',
+				'detail' => 'Connection blocked — the dialed address is not allowed.',
+				'messages' => [],
+			];
+		}
 
 		stream_set_timeout($fp, (int)max(1, (int)ceil($timeoutSeconds)));
 		try {
@@ -558,6 +577,10 @@ final class ImapLiveProbe
 		if ($fp === false) {
 			return [];
 		}
+		if (ImapConnection::dialedPeerIpOrNull($fp) === null) {
+			fclose($fp);
+			return [];
+		}
 		stream_set_timeout($fp, (int)max(1, (int)ceil($timeoutSeconds)));
 		$out = [];
 		try {
@@ -658,6 +681,10 @@ final class ImapLiveProbe
 			STREAM_CLIENT_CONNECT,
 		);
 		if ($fp === false) {
+			return [];
+		}
+		if (ImapConnection::dialedPeerIpOrNull($fp) === null) {
+			fclose($fp);
 			return [];
 		}
 		stream_set_timeout($fp, (int)max(1, (int)ceil($timeoutSeconds)));
@@ -780,6 +807,10 @@ final class ImapLiveProbe
 			STREAM_CLIENT_CONNECT,
 		);
 		if ($fp === false) {
+			return [];
+		}
+		if (ImapConnection::dialedPeerIpOrNull($fp) === null) {
+			fclose($fp);
 			return [];
 		}
 		stream_set_timeout($fp, (int)max(1, (int)ceil($timeoutSeconds)));

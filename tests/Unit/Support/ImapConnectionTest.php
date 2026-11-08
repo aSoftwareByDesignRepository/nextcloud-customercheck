@@ -147,4 +147,76 @@ final class ImapConnectionTest extends TestCase
 		$this->assertSame('INBOX/&AMQ-rger', ImapConnection::folderToWire('INBOX/Ärger'));
 		$this->assertSame('INBOX/&AMQ-rger', ImapConnection::folderToWire('INBOX/&AMQ-rger'));
 	}
+
+	// ---------- dialedPeerIpOrNull (DNS-rebinding TOCTOU) ----------
+
+	public function testDialedPeerBlocksPrivateLoopback(): void
+	{
+		// A real socketpair over loopback: the dialed peer is provably
+		// private — post-connect validation must refuse it.
+		$errno = 0;
+		$errstr = '';
+		$server = @stream_socket_server('tcp://127.0.0.1:0', $errno, $errstr);
+		self::assertNotFalse($server, $errstr);
+		$addr = (string)stream_socket_get_name($server, false);
+		$client = @stream_socket_client('tcp://' . $addr, $errno, $errstr, 2);
+		self::assertNotFalse($client, $errstr);
+		$accepted = @stream_socket_accept($server, 2);
+
+		try {
+			self::assertNull(ImapConnection::dialedPeerIpOrNull($client));
+		} finally {
+			if (is_resource($accepted)) {
+				fclose($accepted);
+			}
+			fclose($client);
+			fclose($server);
+		}
+	}
+
+	public function testDialedPeerIsTheRemoteEndNotTheLocalAddress(): void
+	{
+		// Server on 127.0.0.1, client bound to 127.0.0.2: the two ends differ.
+		// Reading the LOCAL end (the original bug) would see 127.0.0.2;
+		// the check must see the remote 127.0.0.1.
+		$errno = 0;
+		$errstr = '';
+		$server = @stream_socket_server('tcp://127.0.0.1:0', $errno, $errstr);
+		self::assertNotFalse($server, $errstr);
+		$addr = (string)stream_socket_get_name($server, false);
+		$ctx = stream_context_create(['socket' => ['bindto' => '127.0.0.2:0']]);
+		$client = @stream_socket_client('tcp://' . $addr, $errno, $errstr, 2, STREAM_CLIENT_CONNECT, $ctx);
+		if ($client === false) {
+			fclose($server);
+			self::markTestSkipped('127.0.0.2 is not usable as a local address here: ' . $errstr);
+		}
+		$accepted = @stream_socket_accept($server, 2);
+
+		try {
+			self::assertStringStartsWith('127.0.0.2:', (string)stream_socket_get_name($client, false));
+			self::assertNull(ImapConnection::dialedPeerIpOrNull($client));
+		} finally {
+			if (is_resource($accepted)) {
+				fclose($accepted);
+			}
+			fclose($client);
+			fclose($server);
+		}
+	}
+
+	public function testDialedPeerUnverifiableFailsClosed(): void
+	{
+		// A unix socketpair has no ip:port peer name — the peer cannot be
+		// proven safe, so it must fail closed.
+		$pair = @stream_socket_pair(STREAM_PF_UNIX, STREAM_SOCK_STREAM, STREAM_IPPROTO_IP);
+		if ($pair === false) {
+			self::markTestSkipped('stream_socket_pair unavailable');
+		}
+		try {
+			self::assertNull(ImapConnection::dialedPeerIpOrNull($pair[0]));
+		} finally {
+			fclose($pair[0]);
+			fclose($pair[1]);
+		}
+	}
 }
