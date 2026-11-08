@@ -219,4 +219,68 @@ final class ImapConnectionTest extends TestCase
 			fclose($pair[1]);
 		}
 	}
+
+	// ---------- verifiedDialIps / specHostForIp (php-imap TOCTOU pinning) ----------
+
+	public function testVerifiedDialIpsRefusesBlockedAndUnresolvable(): void
+	{
+		// Blocked literals and bad shapes fail closed.
+		self::assertSame([], ImapConnection::verifiedDialIps(''));
+		self::assertSame([], ImapConnection::verifiedDialIps('localhost'));
+		self::assertSame([], ImapConnection::verifiedDialIps('printer.local'));
+		self::assertSame([], ImapConnection::verifiedDialIps('127.0.0.1'));
+		self::assertSame([], ImapConnection::verifiedDialIps('::1'));
+		self::assertSame([], ImapConnection::verifiedDialIps('169.254.169.254'));
+		self::assertSame([], ImapConnection::verifiedDialIps('10.0.0.5'));
+		self::assertSame([], ImapConnection::verifiedDialIps('not a host!!'));
+		// .invalid never resolves — dialers must refuse where
+		// isBlockedMailHost() still allowed the save-time form.
+		self::assertSame([], ImapConnection::verifiedDialIps('missing-host-q9x2.invalid'));
+		self::assertFalse(ImapConnection::isBlockedMailHost('missing-host-q9x2.invalid'));
+		// Unblocked IP literals are their own verified dial target.
+		self::assertSame(['8.8.8.8'], ImapConnection::verifiedDialIps('8.8.8.8'));
+		self::assertSame(['2001:4860:4860::8888'], ImapConnection::verifiedDialIps('2001:4860:4860::8888'));
+	}
+
+	public function testSpecHostForIpBracketsIpv6(): void
+	{
+		self::assertSame('1.2.3.4', ImapConnection::specHostForIp('1.2.3.4'));
+		self::assertSame('[2001:db8::1]', ImapConnection::specHostForIp('2001:db8::1'));
+		self::assertSame('[::1]', ImapConnection::specHostForIp(' ::1 '));
+	}
+
+	public function testOpenVerifiedTlsSocketFailsClosedOnRefusal(): void
+	{
+		// Nothing listens on 127.0.0.1:1 — the helper must return fp=null with
+		// a non-empty detail rather than a socket.
+		$dial = ImapConnection::openVerifiedTlsSocket('127.0.0.1', 1, 1.0);
+		self::assertNull($dial['fp']);
+		self::assertNotSame('', $dial['detail']);
+	}
+
+	public function testOpenVerifiedTlsSocketBlocksPrivatePeer(): void
+	{
+		// A real listener on loopback: the dialed peer is provably private —
+		// the post-connect check must refuse it (blocked detail).
+		$errno = 0;
+		$errstr = '';
+		$server = @stream_socket_server('tcp://127.0.0.1:0', $errno, $errstr);
+		self::assertNotFalse($server, $errstr);
+		$addr = (string)stream_socket_get_name($server, false);
+		$port = (int)substr($addr, (int)strrpos($addr, ':') + 1);
+
+		// ssl:// needs a TLS-speaking peer; a plaintext listener makes the
+		// handshake fail — either way the helper must not return a socket.
+		// For the TLS-capable path, php streams complete the handshake lazily
+		// on some builds, so both refusal shapes are asserted honestly.
+		$dial = ImapConnection::openVerifiedTlsSocket('127.0.0.1', $port, 2.0);
+		@stream_socket_accept($server, 2);
+
+		try {
+			self::assertNull($dial['fp']);
+			self::assertNotSame('', $dial['detail']);
+		} finally {
+			fclose($server);
+		}
+	}
 }

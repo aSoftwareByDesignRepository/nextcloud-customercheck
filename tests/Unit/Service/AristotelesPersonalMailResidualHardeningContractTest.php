@@ -22,7 +22,7 @@ final class AristotelesPersonalMailResidualHardeningContractTest extends TestCas
 	{
 		$sync = (string)file_get_contents($this->root . '/lib/Service/MailboxSyncService.php');
 		$this->assertMatchesRegularExpression(
-			'/if \(\$stream === false\) \{\s+\$err = ImapConnection::collectErrors[\s\S]{0,500}'
+			'/if \(\$open === null\) \{\s+\$err = ImapConnection::collectErrors[\s\S]{0,500}'
 			. '\$errReason === \'auth\'[\s\S]{0,200}recordAuthFailure/',
 			$sync,
 		);

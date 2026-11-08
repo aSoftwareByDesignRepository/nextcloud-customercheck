@@ -49,36 +49,17 @@ final class ImapLiveProbe
 			];
 		}
 
-		$remote = 'ssl://' . $host . ':' . $port;
-		$errno = 0;
-		$errstr = '';
-		$fp = @stream_socket_client(
-			$remote,
-			$errno,
-			$errstr,
-			max(1.0, $timeoutSeconds),
-			STREAM_CLIENT_CONNECT,
-		);
-		if ($fp === false) {
-			$detail = ImapConnection::sanitizeError($errstr !== '' ? $errstr : ('connect errno ' . $errno));
-			return [
-				'ok' => false,
-				'reachable' => false,
-				'greeting' => '',
-				'reason' => ImapConnection::classifyError($detail) === 'network' ? 'network' : 'network',
-				'detail' => $detail !== '' ? $detail : 'TLS connect failed',
-			];
-		}
-		if (ImapConnection::dialedPeerIpOrNull($fp) === null) {
-			fclose($fp);
+		$dial = ImapConnection::openVerifiedTlsSocket($host, $port, $timeoutSeconds);
+		if ($dial['fp'] === null) {
 			return [
 				'ok' => false,
 				'reachable' => false,
 				'greeting' => '',
 				'reason' => 'network',
-				'detail' => 'Connection blocked — the dialed address is not allowed.',
+				'detail' => $dial['detail'],
 			];
 		}
+		$fp = $dial['fp'];
 
 		stream_set_timeout($fp, (int)max(1, (int)ceil($timeoutSeconds)));
 		try {
@@ -411,34 +392,16 @@ final class ImapLiveProbe
 			];
 		}
 
-		$remote = 'ssl://' . $host . ':' . $port;
-		$errno = 0;
-		$errstr = '';
-		$fp = @stream_socket_client(
-			$remote,
-			$errno,
-			$errstr,
-			max(1.0, $timeoutSeconds),
-			STREAM_CLIENT_CONNECT,
-		);
-		if ($fp === false) {
-			$detail = ImapConnection::sanitizeError($errstr !== '' ? $errstr : ('connect errno ' . $errno));
+		$dial = ImapConnection::openVerifiedTlsSocket($host, $port, $timeoutSeconds);
+		if ($dial['fp'] === null) {
 			return [
 				'ok' => false,
 				'reason' => 'network',
-				'detail' => $detail !== '' ? $detail : 'TLS connect failed',
+				'detail' => $dial['detail'],
 				'messages' => [],
 			];
 		}
-		if (ImapConnection::dialedPeerIpOrNull($fp) === null) {
-			fclose($fp);
-			return [
-				'ok' => false,
-				'reason' => 'network',
-				'detail' => 'Connection blocked — the dialed address is not allowed.',
-				'messages' => [],
-			];
-		}
+		$fp = $dial['fp'];
 
 		stream_set_timeout($fp, (int)max(1, (int)ceil($timeoutSeconds)));
 		try {
@@ -564,23 +527,11 @@ final class ImapLiveProbe
 			return [];
 		}
 
-		$remote = 'ssl://' . $host . ':' . $port;
-		$errno = 0;
-		$errstr = '';
-		$fp = @stream_socket_client(
-			$remote,
-			$errno,
-			$errstr,
-			max(1.0, $timeoutSeconds),
-			STREAM_CLIENT_CONNECT,
-		);
-		if ($fp === false) {
+		$dial = ImapConnection::openVerifiedTlsSocket($host, $port, $timeoutSeconds);
+		if ($dial['fp'] === null) {
 			return [];
 		}
-		if (ImapConnection::dialedPeerIpOrNull($fp) === null) {
-			fclose($fp);
-			return [];
-		}
+		$fp = $dial['fp'];
 		stream_set_timeout($fp, (int)max(1, (int)ceil($timeoutSeconds)));
 		$out = [];
 		try {
@@ -670,23 +621,11 @@ final class ImapLiveProbe
 			return [];
 		}
 
-		$remote = 'ssl://' . $host . ':' . $port;
-		$errno = 0;
-		$errstr = '';
-		$fp = @stream_socket_client(
-			$remote,
-			$errno,
-			$errstr,
-			max(1.0, $timeoutSeconds),
-			STREAM_CLIENT_CONNECT,
-		);
-		if ($fp === false) {
+		$dial = ImapConnection::openVerifiedTlsSocket($host, $port, $timeoutSeconds);
+		if ($dial['fp'] === null) {
 			return [];
 		}
-		if (ImapConnection::dialedPeerIpOrNull($fp) === null) {
-			fclose($fp);
-			return [];
-		}
+		$fp = $dial['fp'];
 		stream_set_timeout($fp, (int)max(1, (int)ceil($timeoutSeconds)));
 		$out = [];
 		try {
@@ -796,23 +735,11 @@ final class ImapLiveProbe
 			return [];
 		}
 
-		$remote = 'ssl://' . $host . ':' . $port;
-		$errno = 0;
-		$errstr = '';
-		$fp = @stream_socket_client(
-			$remote,
-			$errno,
-			$errstr,
-			max(1.0, $timeoutSeconds),
-			STREAM_CLIENT_CONNECT,
-		);
-		if ($fp === false) {
+		$dial = ImapConnection::openVerifiedTlsSocket($host, $port, $timeoutSeconds);
+		if ($dial['fp'] === null) {
 			return [];
 		}
-		if (ImapConnection::dialedPeerIpOrNull($fp) === null) {
-			fclose($fp);
-			return [];
-		}
+		$fp = $dial['fp'];
 		stream_set_timeout($fp, (int)max(1, (int)ceil($timeoutSeconds)));
 		$out = [];
 		try {
@@ -904,26 +831,16 @@ final class ImapLiveProbe
 			];
 		}
 
-		$remote = 'ssl://' . $host . ':' . $port;
-		$errno = 0;
-		$errstr = '';
-		$fp = @stream_socket_client(
-			$remote,
-			$errno,
-			$errstr,
-			max(1.0, $timeoutSeconds),
-			STREAM_CLIENT_CONNECT,
-		);
-		if ($fp === false) {
-			$detail = ImapConnection::sanitizeError($errstr !== '' ? $errstr : ('connect errno ' . $errno));
-
+		$dial = ImapConnection::openVerifiedTlsSocket($host, $port, $timeoutSeconds);
+		if ($dial['fp'] === null) {
 			return [
 				'ok' => false,
 				'reason' => 'network',
-				'detail' => $detail !== '' ? $detail : 'TLS connect failed',
+				'detail' => $dial['detail'],
 				'alreadyGone' => false,
 			];
 		}
+		$fp = $dial['fp'];
 
 		stream_set_timeout($fp, (int)max(1, (int)ceil($timeoutSeconds)));
 		try {
@@ -1098,27 +1015,17 @@ final class ImapLiveProbe
 			];
 		}
 
-		$remote = 'ssl://' . $host . ':' . $port;
-		$errno = 0;
-		$errstr = '';
-		$fp = @stream_socket_client(
-			$remote,
-			$errno,
-			$errstr,
-			max(1.0, $timeoutSeconds),
-			STREAM_CLIENT_CONNECT,
-		);
-		if ($fp === false) {
-			$detail = ImapConnection::sanitizeError($errstr !== '' ? $errstr : ('connect errno ' . $errno));
-
+		$dial = ImapConnection::openVerifiedTlsSocket($host, $port, $timeoutSeconds);
+		if ($dial['fp'] === null) {
 			return [
 				'ok' => false,
 				'reason' => 'network',
-				'detail' => $detail !== '' ? $detail : 'TLS connect failed',
+				'detail' => $dial['detail'],
 				'text' => '',
 				'truncated' => false,
 			];
 		}
+		$fp = $dial['fp'];
 
 		stream_set_timeout($fp, (int)max(1, (int)ceil($timeoutSeconds)));
 		try {
@@ -1426,21 +1333,11 @@ final class ImapLiveProbe
 			return $empty('protocol', 'unsafe source folder');
 		}
 
-		$remote = 'ssl://' . $host . ':' . $port;
-		$errno = 0;
-		$errstr = '';
-		$fp = @stream_socket_client(
-			$remote,
-			$errno,
-			$errstr,
-			max(1.0, $timeoutSeconds),
-			STREAM_CLIENT_CONNECT,
-		);
-		if ($fp === false) {
-			$detail = ImapConnection::sanitizeError($errstr !== '' ? $errstr : ('connect errno ' . $errno));
-
-			return $empty('network', $detail !== '' ? $detail : 'TLS connect failed');
+		$dial = ImapConnection::openVerifiedTlsSocket($host, $port, $timeoutSeconds);
+		if ($dial['fp'] === null) {
+			return $empty('network', $dial['detail']);
 		}
+		$fp = $dial['fp'];
 
 		stream_set_timeout($fp, (int)max(1, (int)ceil($timeoutSeconds)));
 		try {

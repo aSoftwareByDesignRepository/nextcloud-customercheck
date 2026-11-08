@@ -155,24 +155,14 @@ class MailboxSyncService
 				return true;
 			}
 
-			$mailboxPath = ImapConnection::buildMailboxRoot($host, $port, $enc, false);
-			$stream = @imap_open($mailboxPath . $folder, $user, $secret, 0, 3);
-			if ($stream === false) {
-				$err = ImapConnection::collectErrors(
-					function_exists('imap_errors') ? @imap_errors() : null,
-					function_exists('imap_last_error') ? @imap_last_error() : null,
-				);
-				if (ImapConnection::isCertificateError($err) || $err === '' || ImapConnection::classifyError($err) === 'unknown') {
-					$mailboxPath = ImapConnection::buildMailboxRoot($host, $port, $enc, true);
-					$stream = @imap_open($mailboxPath . $folder, $user, $secret, 0, 3);
-				}
-			}
-			if ($stream === false) {
-				// php-imap open failed — last chance via wire probe (same as sync fallback).
+			$open = $this->openVerifiedImapStream($host, $port, $enc, $user, $secret, $folder);
+			if ($open === null) {
+				// php-imap open failed/refused — last chance via wire probe (same as sync fallback).
 				$this->deleteIndexedMessageViaLiveProbe($workspaceId, $mailboxId, $host, $port, $user, $secret, $folder, $uidRaw, $messageId);
 
 				return true;
 			}
+			$stream = $open['stream'];
 			try {
 				$ftUid = defined('FT_UID') ? FT_UID : 1;
 				// Already gone on the server → success (idempotent spam cleanup).
@@ -855,21 +845,11 @@ class MailboxSyncService
 			$port = $enc === ImapConnection::ENC_TLS ? 143 : 993;
 		}
 		// Open the target folder directly — UIDs are folder-scoped (never blindly reopen).
-		$mailboxPath = ImapConnection::buildMailboxRoot($host, $port, $enc, false);
-		$stream = @imap_open($mailboxPath . $folder, $user, $secret, 0, 3);
-		if ($stream === false) {
-			$err = ImapConnection::collectErrors(
-				function_exists('imap_errors') ? @imap_errors() : null,
-				function_exists('imap_last_error') ? @imap_last_error() : null,
-			);
-			if (ImapConnection::isCertificateError($err) || $err === '' || ImapConnection::classifyError($err) === 'unknown') {
-				$mailboxPath = ImapConnection::buildMailboxRoot($host, $port, $enc, true);
-				$stream = @imap_open($mailboxPath . $folder, $user, $secret, 0, 3);
-			}
-		}
-		if ($stream === false) {
+		$open = $this->openVerifiedImapStream($host, $port, $enc, $user, $secret, $folder);
+		if ($open === null) {
 			return null;
 		}
+		$stream = $open['stream'];
 		try {
 			$msgNo = @imap_msgno($stream, (int)$uid);
 			if ($msgNo < 1) {
@@ -1895,40 +1875,18 @@ class MailboxSyncService
 			@imap_alerts();
 		}
 
-		$stream = $this->openImapStream($host, $port, $enc, $user, $pass, false);
-		$usedNovalidate = false;
-		if ($stream === false) {
-			$firstDetail = ImapConnection::collectErrors(
+		$open = $this->openVerifiedImapStream($host, $port, $enc, $user, $pass, 'INBOX');
+		if ($open === null) {
+			$detail = ImapConnection::collectErrors(
 				function_exists('imap_errors') ? @imap_errors() : null,
 				function_exists('imap_last_error') ? @imap_last_error() : null,
 			);
-			// Retry once without cert hostname checks — common on shared hosts with
-			// mismatched CN / incomplete CA chains. Prefer validated first.
-			// Also retry when the first error was empty/opaque (not clearly auth/network).
-			$firstReason = ImapConnection::classifyError($firstDetail);
-			$shouldRetryNovalidate = ImapConnection::isCertificateError($firstDetail)
-				|| $firstDetail === ''
-				|| $firstReason === 'unknown';
-			if ($shouldRetryNovalidate && $firstReason !== 'auth' && $firstReason !== 'network') {
-				if (function_exists('imap_errors')) {
-					@imap_errors();
-				}
-				$stream = $this->openImapStream($host, $port, $enc, $user, $pass, true);
-				$usedNovalidate = $stream !== false;
-			}
-			if ($stream === false) {
-				$detail = ImapConnection::collectErrors(
-					function_exists('imap_errors') ? @imap_errors() : null,
-					function_exists('imap_last_error') ? @imap_last_error() : null,
-				);
-				if ($detail === '' && $firstDetail !== '') {
-					$detail = $firstDetail;
-				}
-				return $this->failedTestResult($detail);
-			}
+			return $this->failedTestResult($detail);
 		}
+		$stream = $open['stream'];
+		$usedNovalidate = $open['novalidate'];
 
-		$folders = $this->listRemoteFolders($stream, $host, $port, $enc, $usedNovalidate);
+		$folders = $this->listRemoteFolders($stream, $open['root']);
 		imap_close($stream);
 
 		$message = $this->l10n->t('IMAP connection OK.');
@@ -2051,22 +2009,18 @@ class MailboxSyncService
 		if (function_exists('imap_errors')) {
 			@imap_errors();
 		}
-		$stream = $this->openImapStream($host, $port, $enc, $user, $secret, false);
-		$novalidate = false;
-		if ($stream === false) {
-			$stream = $this->openImapStream($host, $port, $enc, $user, $secret, true);
-			$novalidate = $stream !== false;
-		}
-		if ($stream === false) {
+		$open = $this->openVerifiedImapStream($host, $port, $enc, $user, $secret, 'INBOX');
+		if ($open === null) {
 			$probe = ImapLiveProbe::probeLogin($host, $port > 0 ? $port : 993, $user, $secret, 15.0);
 			$folders = isset($probe['folders']) && is_array($probe['folders'])
 				? array_values(array_filter(array_map('strval', $probe['folders'])))
 				: [];
 			return $this->normalizeDiscoveredFolders($folders);
 		}
+		$stream = $open['stream'];
 		try {
 			return $this->normalizeDiscoveredFolders(
-				$this->listRemoteFolders($stream, $host, $port, $enc, $novalidate),
+				$this->listRemoteFolders($stream, $open['root']),
 			);
 		} finally {
 			@imap_close($stream);
@@ -2101,31 +2055,87 @@ class MailboxSyncService
 	}
 
 	/**
-	 * @return resource|\IMAP\Connection|false
+	 * php-imap dial with the DNS-rebinding TOCTOU closed.
+	 *
+	 * c-client re-resolves the hostname at connect and exposes no way to
+	 * inspect the connected peer, so the post-connect peer check the wire
+	 * probes run (ImapConnection::dialedPeerIpOrNull) is impossible on this
+	 * channel. The equivalent guarantee is constructed here:
+	 *
+	 *  1. The cert-validated leg keeps the hostname spec: c-client completes
+	 *     TLS and validates the certificate against the configured hostname
+	 *     before LOGIN/AUTHENTICATE is written, so a rebound DNS answer
+	 *     cannot capture credentials — a private endpoint cannot present a
+	 *     valid certificate for the name.
+	 *  2. The novalidate leg — where credentials ARE sent without any
+	 *     certificate proof — is pinned to an IP literal from
+	 *     ImapConnection::verifiedDialIps(). The dial target is then the
+	 *     pre-checked address itself and can never be re-resolved.
+	 *  3. Plaintext (enc 'none') has no certificate gate at all, so its
+	 *     first leg is pinned to the verified literal as well.
+	 *  4. Hosts that cannot be resolved+verified are refused outright:
+	 *     verifiedDialIps() fails closed where isBlockedMailHost() still
+	 *     allows the save-time form — NSS-only names can no longer skip the
+	 *     IP check leg.
+	 *
+	 * @return array{stream: mixed, root: string, ip: ?string, novalidate: bool}|null
 	 */
-	private function openImapStream(
+	private function openVerifiedImapStream(
 		string $host,
 		int $port,
 		string $enc,
 		string $user,
 		string $pass,
-		bool $novalidateCert,
-	) {
-		$root = ImapConnection::buildMailboxRoot($host, $port, $enc, $novalidateCert);
-		// Select INBOX so auth + mailbox access are both proven (HALFOPEN can hide ACL issues).
-		return @imap_open($root . 'INBOX', $user, $pass, 0, 3);
+		string $folder = 'INBOX',
+	): ?array {
+		$host = ImapConnection::normalizeHost($host);
+		$ips = ImapConnection::verifiedDialIps($host);
+		if ($ips === []) {
+			return null;
+		}
+		// Leg 1 — cert-validated. Hostnames keep the hostname spec (TLS proves
+		// identity before credentials flow); literal IPs are dial targets
+		// already, and plaintext has no cert gate so it is pinned at once.
+		$firstHost = filter_var($host, FILTER_VALIDATE_IP)
+			? ImapConnection::specHostForIp($host)
+			: ($enc === ImapConnection::ENC_NONE ? ImapConnection::specHostForIp($ips[0]) : $host);
+		$root = ImapConnection::buildMailboxRoot($firstHost, $port, $enc, false);
+		$stream = @imap_open($root . $folder, $user, $pass, 0, 3);
+		if ($stream !== false) {
+			return ['stream' => $stream, 'root' => $root, 'ip' => null, 'novalidate' => false];
+		}
+		$err = ImapConnection::collectErrors(
+			function_exists('imap_errors') ? @imap_errors() : null,
+			function_exists('imap_last_error') ? @imap_last_error() : null,
+		);
+		$errReason = ImapConnection::classifyError($err);
+		$retryNovalidate = (ImapConnection::isCertificateError($err) || $err === '' || $errReason === 'unknown')
+			&& $errReason !== 'auth'
+			&& $errReason !== 'network';
+		if (!$retryNovalidate) {
+			return null;
+		}
+		// Leg 2 — novalidate, pinned to the verified literals only.
+		foreach ($ips as $ip) {
+			$root = ImapConnection::buildMailboxRoot(ImapConnection::specHostForIp($ip), $port, $enc, true);
+			$stream = @imap_open($root . $folder, $user, $pass, 0, 3);
+			if ($stream !== false) {
+				return ['stream' => $stream, 'root' => $root, 'ip' => $ip, 'novalidate' => true];
+			}
+		}
+
+		return null;
 	}
 
 	/**
 	 * @param resource|\IMAP\Connection $stream
 	 * @return list<string>
 	 */
-	private function listRemoteFolders($stream, string $host, int $port, string $enc, bool $novalidateCert): array
+	private function listRemoteFolders($stream, string $root): array
 	{
 		if (!function_exists('imap_list')) {
 			return ['INBOX'];
 		}
-		$root = ImapConnection::buildMailboxRoot($host, $port, $enc, $novalidateCert);
 		$list = @imap_list($stream, $root, '*');
 		if (!is_array($list) || $list === []) {
 			return ['INBOX'];
@@ -2271,24 +2281,9 @@ class MailboxSyncService
 		if ($port <= 0) {
 			$port = $enc === ImapConnection::ENC_TLS ? 143 : 993;
 		}
-		$mailboxPath = ImapConnection::buildMailboxRoot($host, $port, $enc, false);
-		$stream = @imap_open($mailboxPath . 'INBOX', $user, $secret, 0, 3);
-		if ($stream === false) {
-			$err = ImapConnection::collectErrors(
-				function_exists('imap_errors') ? @imap_errors() : null,
-				function_exists('imap_last_error') ? @imap_last_error() : null,
-			);
-			$errReason = ImapConnection::classifyError($err);
-			if (
-				ImapConnection::isCertificateError($err)
-				|| $err === ''
-				|| $errReason === 'unknown'
-			) {
-				$mailboxPath = ImapConnection::buildMailboxRoot($host, $port, $enc, true);
-				$stream = @imap_open($mailboxPath . 'INBOX', $user, $secret, 0, 3);
-			}
-		}
-		if ($stream === false) {
+		$open = $this->openVerifiedImapStream($host, $port, $enc, $user, $secret, 'INBOX');
+		$mailboxPath = (string)($open['root'] ?? '');
+		if ($open === null) {
 			$err = ImapConnection::collectErrors(
 				function_exists('imap_errors') ? @imap_errors() : null,
 				function_exists('imap_last_error') ? @imap_last_error() : null,
@@ -2307,6 +2302,7 @@ class MailboxSyncService
 			]);
 			return ['ingested' => 0, 'status' => $errReason === 'network' ? 'network' : 'error'];
 		}
+		$stream = $open['stream'];
 
 		$persons = $this->personIndex($workspaceId);
 		$exclude = $this->matchExcludeEmails($workspaceId);

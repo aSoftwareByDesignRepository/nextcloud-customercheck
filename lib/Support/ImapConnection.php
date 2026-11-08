@@ -59,31 +59,47 @@ final class ImapConnection
 	 */
 	public static function isBlockedMailHost(string $host): bool
 	{
+		$checked = self::resolveCheckedIps($host);
+		if ($checked === null) {
+			return true;
+		}
+		// Unresolvable today — allow save (provider DNS may appear later).
+		// Live dialers must re-check after connect-time resolve / refuse empty resolve.
+		return false;
+	}
+
+	/**
+	 * Single-resolution SSRF verdict: the IPs a dialer may connect to, or
+	 * null when the host must not be dialed at all. The same resolution
+	 * result carries both checks — resolving once and checking twice would
+	 * open a mini-TOCTOU of its own.
+	 *
+	 * @return list<string>|null null = refused (blocked literal, bad host
+	 *         shape, or any resolved private/reserved address); [] =
+	 *         unresolvable; non-empty = every resolved IP verified unblocked.
+	 */
+	private static function resolveCheckedIps(string $host): ?array
+	{
 		$host = self::normalizeHost($host);
 		if ($host === '' || $host === 'localhost' || str_ends_with($host, '.localhost') || str_ends_with($host, '.local')) {
-			return true;
+			return null;
 		}
 		// Bare IPv4 / IPv6 literals (incl. ::1, fc00::/7, link-local).
 		if (filter_var($host, FILTER_VALIDATE_IP)) {
-			return self::isBlockedIp($host);
+			return self::isBlockedIp($host) ? null : [$host];
 		}
 		// Hostname shape only (no spaces / path injection).
 		if (preg_match('/^[a-z0-9.-]+$/i', $host) !== 1 || str_contains($host, '..')) {
-			return true;
+			return null;
 		}
 		$ips = self::resolveHostIps($host);
-		if ($ips === []) {
-			// Unresolvable today — allow save (provider DNS may appear later).
-			// Live dialers must re-check after connect-time resolve / refuse empty resolve.
-			return false;
-		}
 		foreach ($ips as $ip) {
 			if (self::isBlockedIp($ip)) {
-				return true;
+				return null;
 			}
 		}
 
-		return false;
+		return $ips;
 	}
 
 	/**
@@ -120,6 +136,39 @@ final class ImapConnection
 		}
 
 		return $ips;
+	}
+
+	/**
+	 * Concrete IP literals a dialer may connect to for $host — the
+	 * DNS-rebinding TOCTOU closure for dialers that cannot post-check their
+	 * peer (php-imap / c-client exposes no socket). A mailbox spec built on
+	 * one of these literals cannot be re-resolved at connect time, so the
+	 * dial always lands on a pre-checked address.
+	 *
+	 * Fail closed: [] when the host is blocked, unresolvable, or resolves to
+	 * any private/reserved address. Unlike isBlockedMailHost() — which allows
+	 * an empty resolution so a provider DNS can appear later — an empty
+	 * result here means DO NOT DIAL. That also refuses names that only
+	 * resolve inside c-client's NSS path, which would otherwise skip the IP
+	 * check leg entirely.
+	 *
+	 * @return list<string>
+	 */
+	public static function verifiedDialIps(string $host): array
+	{
+		return self::resolveCheckedIps($host) ?? [];
+	}
+
+	/**
+	 * Mailbox-spec host literal for a verified dial IP — brackets IPv6 so
+	 * "{[2001:db8::1]:993/imap/ssl}" parses correctly (an unbracketed v6
+	 * literal makes the spec's host:port split ambiguous).
+	 */
+	public static function specHostForIp(string $ip): string
+	{
+		$ip = trim($ip);
+
+		return str_contains($ip, ':') ? '[' . $ip . ']' : $ip;
 	}
 
 	/**
@@ -212,6 +261,45 @@ final class ImapConnection
 		}
 
 		return $ip;
+	}
+
+	/**
+	 * Verified TLS dial (DNS-rebinding TOCTOU): stream_socket_client resolves
+	 * the hostname a second time at connect, so the dialed address is verified
+	 * here before the caller may write a single protocol byte. Every
+	 * credential-bearing socket in this app must come from this helper — a
+	 * bare stream_socket_client() can be rebound to a private/metadata address
+	 * after isBlockedMailHost() already passed.
+	 *
+	 * @return array{fp: ?resource, detail: string} fp is null on refusal —
+	 *         detail carries the sanitized connect error or the blocked-peer
+	 *         reason. Fail closed.
+	 */
+	public static function openVerifiedTlsSocket(string $host, int $port, float $timeoutSeconds = 20.0): array
+	{
+		$host = self::normalizeHost($host);
+		$remote = 'ssl://' . $host . ':' . $port;
+		$errno = 0;
+		$errstr = '';
+		$fp = @stream_socket_client(
+			$remote,
+			$errno,
+			$errstr,
+			max(1.0, $timeoutSeconds),
+			STREAM_CLIENT_CONNECT,
+		);
+		if ($fp === false) {
+			$detail = self::sanitizeError($errstr !== '' ? $errstr : ('connect errno ' . $errno));
+
+			return ['fp' => null, 'detail' => $detail !== '' ? $detail : 'TLS connect failed'];
+		}
+		if (self::dialedPeerIpOrNull($fp) === null) {
+			fclose($fp);
+
+			return ['fp' => null, 'detail' => 'Connection blocked — the dialed address is not allowed.'];
+		}
+
+		return ['fp' => $fp, 'detail' => ''];
 	}
 
 	public static function isBlockedIp(string $ip): bool
