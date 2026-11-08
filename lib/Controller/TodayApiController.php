@@ -10,6 +10,7 @@ use OCA\CustomerCheck\Service\TodayService;
 use OCA\CustomerCheck\Service\WorkspaceAccessService;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
+use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\IRequest;
 
@@ -24,6 +25,7 @@ class TodayApiController extends Controller
 		private readonly TodayService $today,
 		private readonly CommandBoardService $commandBoard,
 		private readonly WorkspaceAccessService $workspaces,
+		private readonly ?\OCP\ICacheFactory $cacheFactory = null,
 	) {
 		parent::__construct($appName, $request);
 	}
@@ -64,20 +66,45 @@ class TodayApiController extends Controller
 			return $this->fromThrowable($e);
 		}
 	}
-	/** Compact widget snapshot (NH-P2): one doc per sync + serverNow (MH-P18), 60 s/user cache. */
+	/**
+	 * Compact widget snapshot (SPEC NH-P2): ONE document per sync — the same
+	 * command board the app assembles, wrapped with serverNow so widgets can
+	 * correct device-clock skew (MH-P18). Cached 60 s per user + workspace.
+	 */
 	#[NoAdminRequired]
+	#[NoCSRFRequired]
 	public function widgetSnapshot(): JSONResponse
 	{
-		$uid = \OCP\Server::get(\OCP\IUserSession::class)->getUser()?->getUID();
-		if ($uid === null) return new JSONResponse(['error' => 'unauthenticated'], 401);
-		$cache = \OCP\Server::get(\OCP\ICacheFactory::class)->createDistributed('customercheck_wsnap');
-		$key = $uid . ':command';
-		if (($hit = $cache->get($key)) !== null) return new JSONResponse($hit);
-		$status = $this->command()->getData();
-		$payload = ['status' => $status,
-			'serverNow' => (new \DateTimeImmutable('now', new \DateTimeZone('UTC')))->format(\DateTimeInterface::ATOM)];
-		$cache->set($key, $payload, 60);
-		return new JSONResponse($payload);
+		try {
+			// Access door before the cache read — a revoked user must not be
+			// served a cached board inside the TTL window.
+			$this->accessControl->requireCanUseApp();
+			$uid = $this->accessControl->currentUserId();
+			$ctx = $this->workspaces->resolveForUser($uid);
+			$wsId = (int)$ctx['workspace']->getId();
+			// Hand-constructed controllers (tests) may lack the optional tail
+			// dep; autowiring always injects it in production.
+			$cacheFactory = $this->cacheFactory ?? \OCP\Server::get(\OCP\ICacheFactory::class);
+			$cache = $cacheFactory->createDistributed('customercheck_wsnap');
+			// Workspace scopes the cache — a per-user-only key would serve the
+			// previous book's payload for the TTL after a workspace switch.
+			$key = $uid . ':' . $wsId . ':command';
+			if (($hit = $cache->get($key)) !== null) {
+				return new JSONResponse($hit);
+			}
+			$response = $this->command();
+			$doc = $response->getData();
+			// Error envelopes pass through uncached at their real status — a
+			// transient failure must not stick to the user for the TTL window.
+			if (!is_array($doc) || ($doc['success'] ?? false) !== true || !is_array($doc['data'] ?? null)) {
+				return $response;
+			}
+			$doc['data']['serverNow'] = (new \DateTimeImmutable('now', new \DateTimeZone('UTC')))->format(\DateTimeInterface::ATOM);
+			$cache->set($key, $doc, 60);
+			return new JSONResponse($doc);
+		} catch (\Throwable $e) {
+			return $this->fromThrowable($e);
+		}
 	}
 
 }

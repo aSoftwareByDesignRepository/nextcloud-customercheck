@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Added
+
+- compact companion-widget snapshot endpoint (`GET /api/widget-snapshot`) — one cached command-board document per widget sync (60 s, user + workspace scoped) with `serverNow` for device-clock correction
+
+### Fixed
+
+- the release archive build excludes the e2e spec tree and audits the packed member list so dev artifacts cannot reach the App Store tarball
+
 ## 1.6.192 - 2026-11-05
 
 ### Added

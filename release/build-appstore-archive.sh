@@ -71,6 +71,7 @@ EXCLUDES_MONOREPO=(
 	--exclude="${APP}/tests"
 	--exclude="${APP}/scripts"
 	--exclude="${APP}/build"
+	--exclude="${APP}/e2e"
 	--exclude="${APP}/vendor"
 	--exclude="${APP}/docs"
 	--exclude="${APP}/release"
@@ -104,6 +105,7 @@ EXCLUDES_STANDALONE=(
 	--exclude='tests'
 	--exclude='scripts'
 	--exclude='build'
+	--exclude='e2e'
 	--exclude='vendor'
 	--exclude='docs'
 	--exclude='release'
@@ -131,6 +133,21 @@ else
 	# Standalone clone with another directory name (e.g. nextcloud-customercheck): archive top folder must be customercheck/
 	(cd "${APP_DIR}" && tar --mode='u+rwX,go+rX,go-w' --owner=0 --group=0 --numeric-owner --transform "s,^,${APP}/," "${EXCLUDES_STANDALONE[@]}" -czf "${OUT}" .)
 fi
+
+# Post-build member audit — the denylist is enforced on the real artifact so a
+# packaging regression fails the build instead of shipping (class
+# release_tarball_dev_artifact_leak, mobilitycheck mc-crit37). The nested-archive
+# / dev-cache patterns are checked unanchored because they are never legitimate.
+AUDIT_MEMBERS="$(tar -tzf "${OUT}")"
+DENY_APP_RE="^${APP}/(\.git|\.github|\.auth|\.vscode|\.idea|node_modules[^/]*|test-results|playwright-report|blob-report|tests|scripts|build|e2e|tools|documentation|docs|release)(/|$)|^${APP}/(phpunit[^/]*\.xml|playwright\.config\.[^/]*|vitest\.config\.[^/]*|infection[^/]*\.[^/]*|package(-lock)?\.json|composer\.lock|Makefile|ATLAS-[^/]*|[^/]*\.log|appinfo/signature\.json)$"
+leaks="$(printf '%s\n' "${AUDIT_MEMBERS}" | grep -v "^${APP}/vendor/" | grep -E "${DENY_APP_RE}" || true)"
+nested="$(printf '%s\n' "${AUDIT_MEMBERS}" | grep -nE '(\.phpunit\.result\.cache|\.DS_Store|\.tar\.gz|\.tgz)$' || true)"
+if [[ -n "${leaks}${nested}" ]]; then
+	printf '%s\n%s\n' "${leaks}" "${nested}" | sed '/^$/d' >&2
+	echo "RELEASE MEMBER AUDIT FAILED — ${OUT} carries dev artifacts (see above)." >&2
+	exit 1
+fi
+echo "    member audit clean — 0 denylist members in $(printf '%s\n' "${AUDIT_MEMBERS}" | wc -l) members"
 
 echo "Done: ${OUT}"
 echo "Next: sha256sum / sha512sum, openssl signature (see nextcloud-development ready2publish/APPSTORE-RELEASE.md)"

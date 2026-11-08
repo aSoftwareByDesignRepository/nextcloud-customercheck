@@ -88,6 +88,7 @@ return [
 		['name' => 'command_api#createTask', 'url' => '/api/v1/companies/{id}/tasks', 'verb' => 'POST', 'requirements' => ['id' => '\d+']],
 		['name' => 'command_api#platformLinks', 'url' => '/api/v1/companies/{id}/platform-links', 'verb' => 'GET', 'requirements' => ['id' => '\d+']],
 		['name' => 'today_api#command', 'url' => '/api/v1/today/command', 'verb' => 'GET'],
+		['name' => 'today_api#widgetSnapshot', 'url' => '/api/widget-snapshot', 'verb' => 'GET'],
 
 		// ── Persons API ─────────────────────────────────────────────────
 		['name' => 'person_api#index', 'url' => '/api/v1/companies/{id}/persons', 'verb' => 'GET', 'requirements' => ['id' => '\d+']],
@@ -313,5 +314,4 @@ return [
 		['name' => 'lead_webhook#receive', 'url' => '/hooks/lead/{token}', 'verb' => 'POST'],
 		['name' => 'website_order_webhook#receive', 'url' => '/hooks/order/{token}', 'verb' => 'POST'],
 	],
-		['name' => 'today_api#widgetSnapshot', 'url' => '/api/widget-snapshot', 'verb' => 'GET'],
 ];
