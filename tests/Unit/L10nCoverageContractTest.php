@@ -17,7 +17,7 @@ use SplFileInfo;
 final class L10nCoverageContractTest extends TestCase
 {
 	/** @var list<string> */
-	private const LOCALES = ['en', 'de', 'da', 'es', 'fr', 'it', 'nb', 'nl', 'pl', 'sv'];
+	private const LOCALES = ['en', 'de', 'da', 'es', 'fr', 'it', 'nb', 'nl', 'pl', 'sv', 'tr'];
 
 	/** @var list<string> Regional variants mirrored from base catalogs (de_DE etc.). */
 	private const VARIANT_LOCALES = ['en_GB', 'de_DE', 'es_EC', 'es_MX'];
