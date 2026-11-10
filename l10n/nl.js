@@ -1229,7 +1229,7 @@ OC.L10N.register(
 	"In conversation" : "In gesprek",
 	"In this stage" : "In deze fase",
 	"Inbound" : "Inkomend",
-	"Inbox" : "Inbox",
+	"Inbox" : "Postvak IN",
 	"Inbox refreshed — next messages in the queue are shown." : "Inbox vernieuwd — volgende berichten in de wachtrij worden getoond.",
 	"Inbox tabs" : "Inbox-tabbladen",
 	"Include" : "Includeren",

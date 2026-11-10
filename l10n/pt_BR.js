@@ -2671,7 +2671,7 @@ OC.L10N.register(
 	"TicketCheck is not available on this instance, so ticket linking is disabled." : "O TicketCheck não está disponível nesta instância, então não é possível vincular tickets.",
 	"TicketCheck is not available on this instance." : "TicketCheck não está disponível nesta instância.",
 	"TicketCheck missing" : "TicketCheck faltando",
-	"Tickets" : "Tickets",
+	"Tickets" : "Chamados",
 	"Tickets waiting" : "Tickets aguardando",
 	"Timeline" : "Linha do tempo",
 	"Timing" : "Momento",
