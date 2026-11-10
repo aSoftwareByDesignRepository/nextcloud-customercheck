@@ -880,7 +880,7 @@ OC.L10N.register(
 	"Day-to-day or technical contact" : "Contacto do dia a dia ou técnico",
 	"Deal" : "Negócio",
 	"Deal (optional)" : "Negócio (opcional)",
-	"Deal checklist" : "Checklist do negócio",
+	"Deal checklist" : "Lista de verificação do negócio",
 	"Deal claimed." : "Negócio assumido.",
 	"Deal created! Add a next step for your Today board?" : "Negócio criado! Adicionar um próximo passo ao seu quadro Hoje?",
 	"Deal details" : "Detalhes do negócio",
