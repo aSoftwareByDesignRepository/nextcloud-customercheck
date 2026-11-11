@@ -81,6 +81,7 @@ class PageController extends Controller
 		private readonly WorkspaceService $workspaceService,
 		private readonly WorkspaceSettingsSectionCatalog $workspaceSettingsSections,
 		private readonly AppSettingsSectionCatalog $appSettingsSections,
+		private readonly \OCA\CustomerCheck\ConfigTransfer\TransferReceiptStore $transferReceipts,
 		private readonly IURLGenerator $urlGenerator,
 		private readonly IL10N $l10n,
 		private readonly IFactory $l10nFactory,
@@ -1253,7 +1254,16 @@ class PageController extends Controller
 			return new NotFoundResponse();
 		}
 
-		$this->registerFrontEndAssets('pages/settings', null, [], []);
+		// Config & data transfer UI — the bridge exposes the
+		// window.CustomerCheckApi/CustomerCheckMessaging contract the synced
+		// transfer.js expects, so it must load before transfer.js.
+		$isTransferSection = $section === 'transfer';
+		$this->registerFrontEndAssets(
+			'pages/settings',
+			null,
+			$isTransferSection ? ['common/transfer'] : [],
+			$isTransferSection ? ['transfer-bridge', 'transfer'] : [],
+		);
 		$uid = $this->accessControl->currentUserId();
 		$settings = $this->settings->getForUser($uid);
 		$canManage = $this->accessControl->isAppAdmin($uid);
@@ -1298,6 +1308,8 @@ class PageController extends Controller
 				'personalMailOAuthRedirectUri' => $canManage
 					? $this->urlGenerator->linkToRouteAbsolute('customercheck.persona_api.personalMailOAuthCallback')
 					: '',
+				'isSystemAdmin' => $uid !== '' && $this->accessControl->isSystemAdmin($uid),
+				'transferLastReceipt' => $this->transferReceipts->lastReceipt(),
 			],
 			true,
 		);

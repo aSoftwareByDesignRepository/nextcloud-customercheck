@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace OCA\CustomerCheck\Tests\Unit\Controller;
 
+use OCA\CustomerCheck\ConfigTransfer\TransferReceiptStore;
 use OCA\CustomerCheck\Controller\PageController;
 use OCA\CustomerCheck\Db\Agreement;
 use OCA\CustomerCheck\Db\Company;
@@ -42,6 +43,7 @@ use OCP\AppFramework\Http\RedirectResponse;
 use OCP\AppFramework\Http\Response;
 use OCP\AppFramework\Http\TemplateResponse;
 use OCP\AppFramework\Utility\ITimeFactory;
+use OCP\IConfig;
 use OCP\IL10N;
 use OCP\IRequest;
 use OCP\IURLGenerator;
@@ -121,6 +123,17 @@ final class AtlasPageControllerInvokeCoverageTest extends TestCase
 		);
 
 		return $u;
+	}
+
+	/** IConfig stub that honours the caller's default (final TransferReceiptStore cannot be doubled). */
+	private function appConfig(): IConfig
+	{
+		$config = $this->createMock(IConfig::class);
+		$config->method('getAppValue')->willReturnCallback(
+			static fn (string $app, string $key, $default = '') => $default,
+		);
+
+		return $config;
 	}
 
 	private function controller(?AccessControlService $access = null): PageController
@@ -272,6 +285,7 @@ final class AtlasPageControllerInvokeCoverageTest extends TestCase
 			$workspaceService,
 			new WorkspaceSettingsSectionCatalog(),
 			new AppSettingsSectionCatalog(),
+			new TransferReceiptStore($this->appConfig(), 'customercheck'),
 			$this->urls(),
 			$l10n,
 			$l10nFactory,

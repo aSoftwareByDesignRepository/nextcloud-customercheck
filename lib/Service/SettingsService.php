@@ -176,6 +176,98 @@ class SettingsService
 	}
 
 	/**
+	 * Transfer-engine write parity (config-transfer NN-08): normalise a
+	 * STORED string value for $key exactly as {@see update()} would persist
+	 * it — same id-list cleaning, same enabled-uid gate for app admins,
+	 * same bool/numeric bounds. Throws \InvalidArgumentException on a bad
+	 * value and 'UNKNOWN_SETTING' for keys outside CONFIG_DEFAULTS so the
+	 * caller can fall back to a size guard for non-settings keys.
+	 *
+	 * Secret token keys are validated for shape only — they are never
+	 * written by update() (rotate endpoints only) and never transferred.
+	 *
+	 * @throws \InvalidArgumentException
+	 */
+	public function normalizeForWrite(string $key, string $value): string
+	{
+		if (!array_key_exists($key, Constants::CONFIG_DEFAULTS)) {
+			throw new \InvalidArgumentException('UNKNOWN_SETTING');
+		}
+
+		if ($key === Constants::CONFIG_APP_ADMIN_USER_IDS) {
+			$list = json_decode($value, true);
+			if (!is_array($list) || !array_is_list($list)) {
+				throw new \InvalidArgumentException('INVALID_ID_LIST');
+			}
+			// Actor '' — the self-removal guard is a session concern; the
+			// exists+enabled gate still applies.
+			$clean = $this->normalizeAppAdminUserIds('', $list);
+			return json_encode($clean, JSON_THROW_ON_ERROR);
+		}
+
+		if ($key === Constants::CONFIG_ACCESS_ALLOWED_USER_IDS
+			|| $key === Constants::CONFIG_ACCESS_ALLOWED_GROUP_IDS) {
+			$list = json_decode($value, true);
+			if (!is_array($list) || !array_is_list($list)) {
+				throw new \InvalidArgumentException('INVALID_ID_LIST');
+			}
+			$clean = [];
+			foreach ($list as $id) {
+				if (!is_string($id) && !is_int($id)) {
+					continue;
+				}
+				$id = trim((string)$id);
+				if ($id !== '' && strlen($id) <= 64) {
+					$clean[$id] = true;
+				}
+			}
+			return json_encode(array_keys($clean), JSON_THROW_ON_ERROR);
+		}
+
+		if ($key === Constants::CONFIG_ICS_WORKSPACE_TOKENS) {
+			$map = json_decode($value, true);
+			if (!is_array($map) || array_is_list($map)) {
+				throw new \InvalidArgumentException('INVALID_TOKEN_MAP');
+			}
+			$clean = [];
+			foreach ($map as $wsId => $token) {
+				if (!is_string($token) && !is_int($token)) {
+					continue;
+				}
+				$token = trim((string)$token);
+				if ($token !== '' && (int)$wsId > 0) {
+					$clean[(string)(int)$wsId] = $token;
+				}
+			}
+			return json_encode($clean, JSON_THROW_ON_ERROR);
+		}
+
+		if (in_array($key, [Constants::CONFIG_ICS_TOKEN, Constants::CONFIG_LEAD_TOKEN, Constants::CONFIG_ORDER_TOKEN], true)) {
+			$value = trim($value);
+			if ($value !== '' && preg_match('/^[a-zA-Z0-9]{16,128}$/', $value) !== 1) {
+				throw new \InvalidArgumentException('INVALID_TOKEN');
+			}
+			return $value;
+		}
+
+		if (isset(self::NUMERIC_KNOB_RANGES[$key])) {
+			$this->assertWritableValueValid($key, $value);
+			return (string)(int)$value;
+		}
+
+		if (in_array($key, self::BOOL_CONFIG_KEYS, true)) {
+			$this->assertWritableValueValid($key, $value);
+			return $this->truthy($value) ? '1' : '0';
+		}
+
+		// Remaining free-form settings (vtodo_calendar_uri) — bounded string.
+		$this->assertWritableValueValid($key, $value);
+		return strlen($value) <= 4000
+			? $value
+			: throw new \InvalidArgumentException('TOO_LONG');
+	}
+
+	/**
 	 * Dedicated App Admins may be any enabled Nextcloud user (portfolio §2.1).
 	 * Delegated (non–system-admin) operators cannot clear the list while removing themselves.
 	 *

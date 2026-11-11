@@ -410,6 +410,61 @@ class Application extends App implements IBootstrap
 			);
 		});
 
+		// ── Config & data transfer (test → production) ──────────────────
+		$context->registerService(\OCA\CustomerCheck\ConfigTransfer\TransferManifest::class, fn () => new \OCA\CustomerCheck\ConfigTransfer\TransferManifest());
+		$context->registerService(\OCA\CustomerCheck\ConfigTransfer\TransferHooks::class, function ($c): \OCA\CustomerCheck\ConfigTransfer\TransferHooks {
+			return new \OCA\CustomerCheck\ConfigTransfer\TransferHooks(
+				$c->get(\OCA\CustomerCheck\Service\SettingsService::class),
+				$c->get(\OCA\CustomerCheck\Service\AccessControlService::class),
+				$c->get(UpgradeBackupService::class),
+				$c->get(\OCP\IUserManager::class),
+				$c->get(\OCP\IGroupManager::class),
+				$c->get(\Psr\Log\LoggerInterface::class),
+			);
+		});
+		$context->registerService(\OCA\CustomerCheck\ConfigTransfer\TransferPendingStore::class, fn ($c) => new \OCA\CustomerCheck\ConfigTransfer\TransferPendingStore($c->get(IRootFolder::class), $c->get(\OCP\IConfig::class), 'customercheck'));
+		$context->registerService(\OCA\CustomerCheck\ConfigTransfer\TransferReceiptStore::class, fn ($c) => new \OCA\CustomerCheck\ConfigTransfer\TransferReceiptStore($c->get(\OCP\IConfig::class), 'customercheck'));
+		$context->registerService(\OCA\CustomerCheck\ConfigTransfer\TransferService::class, function ($c): \OCA\CustomerCheck\ConfigTransfer\TransferService {
+			return new \OCA\CustomerCheck\ConfigTransfer\TransferService(
+				$c->get(\OCP\IDBConnection::class),
+				$c->get(\OCP\IConfig::class),
+				$c->get(\OCP\IUserManager::class),
+				$c->get(\OCP\IGroupManager::class),
+				$c->get(IRootFolder::class),
+				$c->get(IAppManager::class),
+				$c->get(ILockingProvider::class),
+				$c->get(IURLGenerator::class),
+				$c->get(\Psr\Log\LoggerInterface::class),
+				$c->get(\OCA\CustomerCheck\ConfigTransfer\TransferManifest::class),
+				$c->get(\OCA\CustomerCheck\ConfigTransfer\TransferHooks::class),
+				$c->get(\OCA\CustomerCheck\ConfigTransfer\TransferPendingStore::class),
+				$c->get(\OCA\CustomerCheck\ConfigTransfer\TransferReceiptStore::class),
+				'customercheck',
+				$c->get(\OCP\IAppConfig::class),
+			);
+		});
+		$context->registerService(\OCA\CustomerCheck\BackgroundJob\TransferApplyJob::class, function ($c): \OCA\CustomerCheck\BackgroundJob\TransferApplyJob {
+			return new \OCA\CustomerCheck\BackgroundJob\TransferApplyJob(
+				$c->get(\OCP\AppFramework\Utility\ITimeFactory::class),
+				$c->get(\OCA\CustomerCheck\ConfigTransfer\TransferService::class),
+				$c->get(ILockingProvider::class),
+				$c->get(\OCP\BackgroundJob\IJobList::class),
+				$c->get(\Psr\Log\LoggerInterface::class),
+			);
+		});
+		$context->registerService(\OCA\CustomerCheck\Controller\TransferApiController::class, function ($c): \OCA\CustomerCheck\Controller\TransferApiController {
+			return new \OCA\CustomerCheck\Controller\TransferApiController(
+				'customercheck',
+				$c->get(\OCP\IRequest::class),
+				$c->get(\OCA\CustomerCheck\ConfigTransfer\TransferHooks::class),
+				$c->get(\OCA\CustomerCheck\ConfigTransfer\TransferService::class),
+				$c->get(\OCP\BackgroundJob\IJobList::class),
+				$c->get(\OCP\Security\Bruteforce\IThrottler::class),
+				$c->get(\OCP\IGroupManager::class),
+				$c->get(IUserSession::class),
+			);
+		});
+
 		// ── CUC2 companion licensing (COMPANION-APP §5) ──────────────────
 		$context->registerService(\OCA\CustomerCheck\Service\LicenseService::class, fn ($c) => new \OCA\CustomerCheck\Service\LicenseService(
 			$c->get(\OCP\IDBConnection::class),

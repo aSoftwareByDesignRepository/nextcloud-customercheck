@@ -45,7 +45,7 @@ return [
 		// Keep the requirement literal (route files load without the app autoloader).
 		// tests/Unit/Controller/AppSettingsPagesContractTest pins it to AppSettingsSectionCatalog::routeRequirement().
 		['name' => 'page#appSettingsSection', 'url' => '/app-settings/{section}', 'verb' => 'GET',
-			'requirements' => ['section' => 'access|jobs|tokens|license|product-codes|personal-mail']],
+			'requirements' => ['section' => 'access|jobs|tokens|license|product-codes|personal-mail|transfer']],
 		['name' => 'page#supportUs', 'url' => '/support-us', 'verb' => 'GET'],
 		['name' => 'page#getTheApp', 'url' => '/get-the-app', 'verb' => 'GET'],
 
@@ -252,6 +252,13 @@ return [
 		['name' => 'settings_api#saveProductCodes', 'url' => '/api/v1/settings/product-codes', 'verb' => 'PUT'],
 		['name' => 'settings_api#personalMailOAuthConfig', 'url' => '/api/v1/settings/personal-mail-oauth', 'verb' => 'GET'],
 		['name' => 'settings_api#savePersonalMailOAuthConfig', 'url' => '/api/v1/settings/personal-mail-oauth', 'verb' => 'PUT'],
+
+		// ── Config & data transfer (test → production) ──────────────────
+		['name' => 'transfer_api#status', 'url' => '/api/admin/transfer/status', 'verb' => 'GET'],
+		['name' => 'transfer_api#export', 'url' => '/api/admin/transfer/export', 'verb' => 'POST'],
+		['name' => 'transfer_api#preview', 'url' => '/api/admin/transfer/preview', 'verb' => 'POST'],
+		['name' => 'transfer_api#apply', 'url' => '/api/admin/transfer/apply', 'verb' => 'POST'],
+		['name' => 'transfer_api#reconcile', 'url' => '/api/admin/transfer/reconcile', 'verb' => 'POST'],
 
 		// ── License / companion seats (app-admin, COMPANION-APP §5.2) ───
 		['name' => 'license#show', 'url' => '/api/v1/license', 'verb' => 'GET'],

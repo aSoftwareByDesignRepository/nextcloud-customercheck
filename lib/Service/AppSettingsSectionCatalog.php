@@ -23,6 +23,7 @@ final class AppSettingsSectionCatalog
 		'license',
 		'product-codes',
 		'personal-mail',
+		'transfer',
 	];
 
 	public function isSection(string $section): bool
@@ -44,6 +45,7 @@ final class AppSettingsSectionCatalog
 			'license' => $l->t('Mobile app license'),
 			'product-codes' => $l->t('Agreement catalogue'),
 			'personal-mail' => $l->t('Personal email OAuth'),
+			'transfer' => $l->t('Transfer configuration'),
 			default => $l->t('App settings'),
 		};
 	}
@@ -57,6 +59,7 @@ final class AppSettingsSectionCatalog
 			'license' => $l->t('License'),
 			'product-codes' => $l->t('Catalogue'),
 			'personal-mail' => $l->t('Mail OAuth'),
+			'transfer' => $l->t('Transfer'),
 			default => $l->t('App'),
 		};
 	}
@@ -70,6 +73,7 @@ final class AppSettingsSectionCatalog
 			'license' => $l->t('Official mobile seats — the web app stays free either way.'),
 			'product-codes' => $l->t('Labels and kinds for agreements across CustomerCheck.'),
 			'personal-mail' => $l->t('Google and Microsoft OAuth apps so people can connect their email without a password.'),
+			'transfer' => $l->t('Copy all settings, catalogues and data between a test and a production instance — one encrypted file, dry-run before anything is written.'),
 			default => $l->t('Access control, reminders, tokens, mobile license, and the agreement catalogue.'),
 		};
 	}

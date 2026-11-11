@@ -30,6 +30,12 @@ final class ThemeFeatureCssZeroHexContractTest extends TestCase
 			if ($rel === 'css/common/tokens.css') {
 				continue;
 			}
+			// Synced pack file (apps/_shared/config-transfer) — regenerated
+			// centrally, never restyled app-side; its NC-var hex fallbacks are
+			// the same class as the intentional tokens.css notif fallbacks.
+			if ($rel === 'css/common/transfer.css') {
+				continue;
+			}
 			$css = (string)file_get_contents($file->getPathname());
 			$css = preg_replace('/\/\*[\s\S]*?\*\//', ' ', $css) ?? $css;
 			if (preg_match('/#[0-9a-fA-F]{3,8}\b|(?:rgb|rgba|hsl|hsla)\(\s*[\d.]/', $css, $m)) {

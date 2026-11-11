@@ -12,6 +12,7 @@ use OCA\CustomerCheck\BackgroundJob\MailRetentionPurgeJob;
 use OCA\CustomerCheck\BackgroundJob\PersonaMaintenanceJob;
 use OCA\CustomerCheck\BackgroundJob\RenewalReminderJob;
 use OCA\CustomerCheck\BackgroundJob\ReviewIngressJob;
+use OCA\CustomerCheck\BackgroundJob\TransferApplyJob;
 use OCA\CustomerCheck\BackgroundJob\WeeklyDigestJob;
 use OCA\CustomerCheck\Service\EntityRevisionService;
 use OCA\CustomerCheck\Service\MailboxSyncService;
@@ -41,6 +42,7 @@ final class UpgradeBackupSharedLockTest extends TestCase
 		PersonaMaintenanceJob::class,
 		RenewalReminderJob::class,
 		ReviewIngressJob::class,
+		TransferApplyJob::class,
 		WeeklyDigestJob::class,
 	];
 

@@ -33,8 +33,8 @@ foreach ($locales as $lang) {
 	$last = count($keys) - 1;
 	$body = "{\n";
 	foreach ($keys as $i => $k) {
-		$line = "\t" . json_encode($k, JSON_UNESCAPED_UNICODE)
-			. ' : ' . json_encode($translations[$k], JSON_UNESCAPED_UNICODE);
+		$line = "\t\t" . json_encode($k, JSON_UNESCAPED_UNICODE)
+			. ': ' . json_encode($translations[$k], JSON_UNESCAPED_UNICODE);
 		if ($i !== $last) {
 			$line .= ',';
 		}
