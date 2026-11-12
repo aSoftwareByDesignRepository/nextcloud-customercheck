@@ -6,13 +6,40 @@ declare(strict_types=1);
  * Ensures translated strings keep the same printf-style placeholders as their msgid.
  * Named placeholders like {project} are also checked.
  *
- * Locales match arbeitszeitcheck: en, de, da, es, fr, it, nb, nl, pl, sv.
+ * Maintained base catalogs: en, de, da, es, fr, it, nb, nl, pl, sv, pt, pt_BR,
+ * tr, zh_CN, zh_TW, en_GB. Generated variants (de_DE/es_EC/es_MX) are verified
+ * by scripts/sync-l10n-variants.php --check.
  *
  * Exit 0 = OK, 1 = mismatch printed to STDERR.
  */
 
 $base = __DIR__ . '/../l10n';
-$localeFiles = ['en', 'de', 'da', 'es', 'fr', 'it', 'nb', 'nl', 'pl', 'sv', 'tr'];
+$localeFiles = ['en', 'de', 'da', 'es', 'fr', 'it', 'nb', 'nl', 'pl', 'sv', 'pt', 'pt_BR', 'tr', 'zh_CN', 'zh_TW', 'en_GB'];
+
+// Guard the roster's input domain both ways: a shipped base catalog
+// l10n/<locale>.json that is not rostered must FAIL (silent-skip blindness —
+// zh_CN/zh_TW shipped unrostered, gate_key_blindness), and a rostered locale
+// whose catalog is missing FAILS in the load loop below. Generated regional
+// variants (sync-l10n-variants.php) are derived copies verified by that
+// script's own --check, so they are exempted here — a newly shipped catalog
+// still FATALs until it is classified base-or-variant. en_GB is a maintained
+// catalog (real British forms), not a generated variant — it stays rostered.
+$generatedVariants = [
+	'de_DE', 'es_EC', 'es_MX',
+];
+$shipped = [];
+foreach (glob($base . '/*.json') ?: [] as $jsonFile) {
+	$loc = basename($jsonFile, '.json');
+	if (!in_array($loc, $generatedVariants, true)) {
+		$shipped[] = $loc;
+	}
+}
+$unrostered = array_values(array_diff($shipped, $localeFiles));
+if ($unrostered !== []) {
+	sort($unrostered);
+	fwrite(STDERR, 'Shipped catalogs missing from placeholder-check roster: ' . implode(', ', $unrostered) . "\n");
+	exit(1);
+}
 
 /**
  * Placeholder tokens understood by the app's t()/n() helpers:
@@ -74,7 +101,10 @@ foreach ($enT as $key => $enVal) {
 		$val = (string) $langT[$key];
 
 		$valPrintf = cucPrintfPlaceholders($val);
-		if ($keyPrintf !== $valPrintf) {
+		// Multiset compare: positional %N$s tokens exist so a locale may reorder
+		// arguments (zh renders "%2$s 的 %1$s"); order is not a defect. Missing
+		// or added tokens still fail.
+		if (array_count_values($keyPrintf) != array_count_values($valPrintf)) {
 			$failed = true;
 			fwrite(STDERR, "{$lang}.json printf placeholder mismatch for key: $key\n");
 			fwrite(STDERR, '  expected: ' . implode(', ', $keyPrintf) . "\n");
@@ -88,7 +118,7 @@ foreach ($enT as $key => $enVal) {
 		}
 
 		$valNamed = cucNamedPlaceholders($val);
-		if ($keyNamed !== $valNamed) {
+		if (array_count_values($keyNamed) != array_count_values($valNamed)) {
 			$failed = true;
 			fwrite(STDERR, "{$lang}.json named placeholder mismatch for key: $key\n");
 			fwrite(STDERR, '  expected: ' . implode(', ', $keyNamed) . "\n");

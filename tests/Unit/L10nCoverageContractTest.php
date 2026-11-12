@@ -12,15 +12,16 @@ use SplFileInfo;
 
 /**
  * AC10: every literal passed to PHP $l->t() / ->n() and page JS t()/tr() must exist in all locale catalogs.
- * Locales match arbeitszeitcheck: en, de, da, es, fr, it, nb, nl, pl, sv.
+ * Maintained base catalogs: en, de, da, es, fr, it, nb, nl, pl, sv, pt, pt_BR,
+ * tr, en_GB, zh_CN, zh_TW; generated variants de_DE/es_EC/es_MX.
  */
 final class L10nCoverageContractTest extends TestCase
 {
-	/** @var list<string> */
-	private const LOCALES = ['en', 'de', 'da', 'es', 'fr', 'it', 'nb', 'nl', 'pl', 'sv', 'tr'];
+	/** @var list<string> Maintained base catalogs (en_GB ships real British forms). */
+	private const LOCALES = ['en', 'de', 'da', 'es', 'fr', 'it', 'nb', 'nl', 'pl', 'sv', 'pt', 'pt_BR', 'tr', 'en_GB', 'zh_CN', 'zh_TW'];
 
-	/** @var list<string> Regional variants mirrored from base catalogs (de_DE etc.). */
-	private const VARIANT_LOCALES = ['en_GB', 'de_DE', 'es_EC', 'es_MX'];
+	/** @var list<string> Regional variants generated from base catalogs by scripts/sync-l10n-variants.php. */
+	private const VARIANT_LOCALES = ['de_DE', 'es_EC', 'es_MX'];
 
 	/** Product/brand names that stay identical in German by convention. */
 	private const IDENTITY_DE_ALLOW = [
@@ -85,8 +86,9 @@ final class L10nCoverageContractTest extends TestCase
 	private function extractJsLiterals(): array
 	{
 		$root = dirname(__DIR__, 2);
-		// Must match scripts/sync-l10n-from-literals.php (pages + common + utils).
+		// Must match scripts/sync-l10n-from-literals.php (top-level + pages + common + utils).
 		$globs = array_merge(
+			glob($root . '/js/*.js') ?: [],
 			glob($root . '/js/pages/*.js') ?: [],
 			glob($root . '/js/common/*.js') ?: [],
 			glob($root . '/js/utils/*.js') ?: [],
@@ -106,9 +108,50 @@ final class L10nCoverageContractTest extends TestCase
 					$found[] = stripcslashes($lit);
 				}
 			}
+			// Dynamic-map pass (sync-l10n-from-literals.php parity): bare-string
+			// values inside lookup maps whose subscripted result is rendered
+			// through t() — js/transfer.js `const phase = PHASES[job.phase]`
+			// then `t(phase)` — runtime literals invisible to the call shapes.
+			if (preg_match_all('/(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*\{([^{}]*)\}/s', $src, $mm, PREG_SET_ORDER)) {
+				foreach ($mm as $block) {
+					$ident = $block[1];
+					$body = $block[2];
+					$direct = preg_match('/t\(\s*' . preg_quote($ident, '/') . '\s*\[/', $src) === 1;
+					$aliased = !$direct
+						&& preg_match('/(\w+)\s*=\s*' . preg_quote($ident, '/') . '\s*\[[^]]*\][\s\S]{0,400}?t\(\s*\1\b/', $src) === 1;
+					if (!$direct && !$aliased) {
+						continue;
+					}
+					if (preg_match_all('/[\'"]((?:[^\'"\\\\]|\\\\.)*)[\'"]/', $body, $vm)) {
+						foreach ($vm[1] as $lit) {
+							$found[] = stripcslashes($lit);
+						}
+					}
+				}
+			}
 		}
 
 		return array_values(array_unique($found));
+	}
+
+	public function testEveryShippedCatalogIsRostered(): void
+	{
+		// gate_key_blindness guard: l10n/*.json shipped set must equal
+		// LOCALES + VARIANT_LOCALES exactly — a new catalog that lands
+		// unrostered fails here (zh_CN/zh_TW shipped unrostered), and a
+		// rostered-but-missing catalog fails in the other direction.
+		$shipped = array_map(
+			static fn (string $p): string => basename($p, '.json'),
+			glob(dirname(__DIR__, 2) . '/l10n/*.json') ?: []
+		);
+		sort($shipped);
+		$rostered = array_merge(self::LOCALES, self::VARIANT_LOCALES);
+		sort($rostered);
+		$this->assertSame(
+			$rostered,
+			$shipped,
+			'l10n/*.json must match LOCALES+VARIANT_LOCALES exactly (no unrostered ship, no phantom roster entry)'
+		);
 	}
 
 	public function testAllLocalesHaveIdenticalTranslationKeys(): void

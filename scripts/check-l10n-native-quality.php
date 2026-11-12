@@ -173,6 +173,7 @@ $allowExact = [
 	'%s minutes' => true,
 	'dd.mm.yyyy' => true,
 	'Website' => true,
+	'Phase: %s' => true, // de "Phase" is the correct native word — identical by nature
 ];
 
 /** Banned English leftovers in any non-en msgstr. */

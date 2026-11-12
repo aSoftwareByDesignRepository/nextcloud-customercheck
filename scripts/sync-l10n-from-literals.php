@@ -51,6 +51,7 @@ function extractJs(string $root): array
 {
 	$found = [];
 	$globs = array_merge(
+		glob($root . '/js/*.js') ?: [],
 		glob($root . '/js/pages/*.js') ?: [],
 		glob($root . '/js/common/*.js') ?: [],
 		glob($root . '/js/utils/*.js') ?: [],
@@ -65,6 +66,28 @@ function extractJs(string $root): array
 		if (preg_match_all('/(?<![\\w.])(?:t|tr)\\(\\s*"((?:\\\\"|[^\"])*)"\\s*[,)]/', $src, $m)) {
 			foreach ($m[1] as $lit) {
 				$found[] = stripcslashes($lit);
+			}
+		}
+		// Dynamic-map pass: bare-string values inside lookup maps whose
+		// subscripted result is rendered through t() — e.g. js/transfer.js
+		// `const phase = PHASES[job.phase]` then `t(phase)` — invisible to the
+		// call-shape patterns above but still runtime-translated literals.
+		// Maps never reaching t() (icon/class/enum tables) stay invisible.
+		if (preg_match_all('/(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*\{([^{}]*)\}/s', $src, $mm, PREG_SET_ORDER)) {
+			foreach ($mm as $block) {
+				$ident = $block[1];
+				$body = $block[2];
+				$direct = preg_match('/t\(\s*' . preg_quote($ident, '/') . '\s*\[/', $src) === 1;
+				$aliased = !$direct
+					&& preg_match('/(\w+)\s*=\s*' . preg_quote($ident, '/') . '\s*\[[^]]*\][\s\S]{0,400}?t\(\s*\1\b/', $src) === 1;
+				if (!$direct && !$aliased) {
+					continue;
+				}
+				if (preg_match_all('/[\'"]((?:[^\'"\\\\]|\\\\.)*)[\'"]/', $body, $vm)) {
+					foreach ($vm[1] as $lit) {
+						$found[] = stripcslashes($lit);
+					}
+				}
 			}
 		}
 	}
@@ -168,7 +191,10 @@ file_put_contents(
 writeL10n($root, 'en', $enTr, $enPrev['pluralForm'] ?? null);
 writeL10n($root, 'de', $deTr, $dePrev['pluralForm'] ?? null);
 
-$secondary = ['da', 'es', 'fr', 'it', 'nb', 'nl', 'pl', 'sv', 'pt_BR'];
+// Every maintained base catalog — pt/tr/en_GB/zh_CN/zh_TW were silently
+// skipped before (gate_key_blindness roster gap); generated variants
+// (de_DE/es_EC/es_MX) stay excluded — sync-l10n-variants.php rebuilds them.
+$secondary = ['da', 'es', 'fr', 'it', 'nb', 'nl', 'pl', 'sv', 'pt', 'pt_BR', 'tr', 'en_GB', 'zh_CN', 'zh_TW'];
 $secondaryCounts = [];
 foreach ($secondary as $lang) {
 	$path = $root . '/l10n/' . $lang . '.json';

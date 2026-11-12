@@ -107,6 +107,7 @@ $allowExact = [
 	'Austria' => true,
 	'Malta' => true, // German name is identical
 	'Portugal' => true, // German name is identical
+	'Phase: %s' => true, // "Phase" is the correct German word — identical by nature
 ];
 
 /**

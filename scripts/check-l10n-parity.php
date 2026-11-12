@@ -6,13 +6,41 @@ declare(strict_types=1);
  * Verifies that all locale JSON files contain exactly the same set of msgid keys
  * (and the same key order as en.json).
  *
- * Locales match arbeitszeitcheck: en, de, da, es, fr, it, nb, nl, pl, sv.
+ * Maintained base catalogs: en, de, da, es, fr, it, nb, nl, pl, sv, pt, pt_BR,
+ * tr, zh_CN, zh_TW, en_GB. Generated variants (de_DE/es_EC/es_MX) are verified
+ * by scripts/sync-l10n-variants.php --check.
  *
  * Usage: php scripts/check-l10n-parity.php
  */
 
 $base = __DIR__ . '/../l10n';
-$localeFiles = ['en', 'de', 'da', 'es', 'fr', 'it', 'nb', 'nl', 'pl', 'sv', 'pt', 'pt_BR', 'tr'];
+$localeFiles = ['en', 'de', 'da', 'es', 'fr', 'it', 'nb', 'nl', 'pl', 'sv', 'pt', 'pt_BR', 'tr', 'zh_CN', 'zh_TW', 'en_GB'];
+
+// Guard the roster's input domain both ways: a shipped base catalog
+// l10n/<locale>.json that is not rostered must FAIL (silent-skip blindness —
+// zh_CN/zh_TW shipped unrostered, gate_key_blindness), and a rostered locale
+// whose catalog is missing FAILS in the load loop below. Generated regional
+// variants (sync-l10n-variants.php) are derived copies verified by that
+// script's own --check, so they are exempted here — a newly shipped catalog
+// still FATALs until it is classified base-or-variant. en_GB is a maintained
+// catalog (real British forms), not a generated variant — it stays rostered.
+$generatedVariants = [
+	'de_DE', 'es_EC', 'es_MX',
+];
+$shipped = [];
+foreach (glob($base . '/*.json') ?: [] as $jsonFile) {
+	$loc = basename($jsonFile, '.json');
+	if (!in_array($loc, $generatedVariants, true)) {
+		$shipped[] = $loc;
+	}
+}
+$unrostered = array_values(array_diff($shipped, $localeFiles));
+if ($unrostered !== []) {
+	sort($unrostered);
+	fwrite(STDERR, 'Shipped catalogs missing from parity roster: ' . implode(', ', $unrostered) . "\n");
+	exit(1);
+}
+
 $catalogs = [];
 
 foreach ($localeFiles as $lang) {
