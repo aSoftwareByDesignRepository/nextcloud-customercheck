@@ -12,6 +12,11 @@
  * (token row + Cancel + Apply import) must paint inside the dialog client
  * box at 1280/375/320 (required_field_or_step_undiscoverable donor fix —
  * the .crm-dialog flex-column + .crm-dialog__body scroller).
+ * Recaptured again after the donor margin:auto fix: the NC core reset
+ * 'html,body,…,dialog,…{margin:0}' collapses the UA top-layer centering;
+ * ≥481px dialogs must be centered on both axes over the dimmed backdrop
+ * (never flush viewport top-left — native_dialog_margin_reset_uncentered),
+ * while the ≤480px media query keeps the full-bleed margin:0 sheet.
  *
  * Session note: SessionCsrfMiddleware demands the session requesttoken on
  * every staff non-GET — API calls here go through the page's own
@@ -104,6 +109,33 @@ async function assertToastCloseArmored(page, where) {
 	expect(m.height, `${where}: toast-close height ${Math.round(m.height)}px below 44px target`)
 		.toBeGreaterThanOrEqual(44)
 }
+/** native_dialog_margin_reset_uncentered: NC core's html,body,…,dialog
+ * reset zeroes the UA 'margin:auto' that centers a top-layer <dialog> —
+ * a pack dialog without a margin re-declaration anchors to the viewport
+ * top-left. mode 'centered' proves the pack margin:auto restored both-axis
+ * centering over the dimmed backdrop; mode 'fullbleed' proves the ≤480px
+ * media query margin:0 sheet still wins at narrow widths. */
+async function assertDialogTopLayerGeometry(dialog, mode, where) {
+	const m = await dialog.evaluate((d) => {
+		const r = d.getBoundingClientRect()
+		return { l: r.left, t: r.top, w: r.width, h: r.height, vpW: window.innerWidth, vpH: window.innerHeight }
+	})
+	if (mode === 'centered') {
+		const expL = Math.max(0, (m.vpW - m.w) / 2)
+		const expT = Math.max(0, (m.vpH - m.h) / 2)
+		expect(Math.abs(m.l - expL),
+			`${where}: dialog left ${Math.round(m.l)} ≠ centered ${Math.round(expL)} — margin:auto did not survive the NC reset`)
+			.toBeLessThanOrEqual(2)
+		expect(Math.abs(m.t - expT),
+			`${where}: dialog top ${Math.round(m.t)} ≠ centered ${Math.round(expT)}`)
+			.toBeLessThanOrEqual(2)
+		expect(m.l, `${where}: flush-left top-left anchor regression`).toBeGreaterThan(1)
+	} else {
+		expect(Math.abs(m.l), `${where}: ≤480 full-bleed sheet must pin to the left edge`).toBeLessThanOrEqual(1)
+		expect(m.w, `${where}: ≤480 full-bleed sheet must span viewport width`).toBeGreaterThanOrEqual(m.vpW - 1)
+		expect(m.t, `${where}: ≤480 full-bleed sheet must pin to the top edge`).toBeLessThanOrEqual(1)
+	}
+}
 /** Authenticated request through the page's own cookie jar + the session
  * CSRF token the app middleware demands on non-GET. */
 async function authedPost(page, url, data) {
@@ -165,6 +197,7 @@ test.describe('craft transfer', () => {
 		// positional t() interpolation: localized values, never raw tokens
 		const fileLine = await page.locator('#crm-transfer-report-file').textContent()
 		expect(fileLine || '').not.toMatch(/\{\d+\}|%\d+\$s|%d(?!\w)/)
+		await assertDialogTopLayerGeometry(report, 'centered', 'report 1280')
 		await shot(page, 'cuc-admin-transfer-report-dialog-light-1280')
 
 		// apply → progress dialog stays open while the job waits queued
@@ -172,6 +205,7 @@ test.describe('craft transfer', () => {
 		const progress = page.locator('#crm-transfer-progress')
 		await expect(progress).toBeVisible({ timeout: 10000 })
 		await expect(page.locator('#crm-transfer-progress-text')).not.toBeEmpty()
+		await assertDialogTopLayerGeometry(progress, 'centered', 'progress 1280')
 		await shot(page, 'cuc-admin-transfer-progress-light-1280')
 
 		// app-namespaced class id — other apps' TransferApplyJob rows never match
@@ -313,15 +347,18 @@ test.describe('craft transfer', () => {
 				.toBeLessThanOrEqual(1)
 		}
 		await assertDialogFooterPainted('1280')
+		await assertDialogTopLayerGeometry(report, 'centered', 'replace-confirm 1280')
 
 		await shot(page, 'cuc-admin-transfer-replace-confirm-light-1280')
 		await page.setViewportSize({ width: 375, height: 812 })
 		await page.waitForTimeout(300)
 		await assertDialogFooterPainted('375')
+		await assertDialogTopLayerGeometry(report, 'fullbleed', 'replace-confirm 375')
 		await shot(page, 'cuc-admin-transfer-replace-confirm-light-375')
 		await page.setViewportSize({ width: 320, height: 700 })
 		await page.waitForTimeout(300)
 		await assertDialogFooterPainted('320')
+		await assertDialogTopLayerGeometry(report, 'fullbleed', 'replace-confirm 320')
 		await shot(page, 'cuc-admin-transfer-replace-confirm-light-320')
 		// Never apply — replace is destructive; close the dialog instead.
 		await page.keyboard.press('Escape')
