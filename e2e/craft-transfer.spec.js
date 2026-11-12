@@ -104,9 +104,9 @@ async function assertToastCloseArmored(page, where) {
 		.toBe(0)
 	expect(m.width, `${where}: toast-close width ${Math.round(m.width)}px — core ~130px pin won`)
 		.toBeLessThan(80)
-	expect(m.width, `${where}: toast-close width ${Math.round(m.width)}px below 44px target`)
+	expect(Math.round(m.width), `${where}: toast-close width ${Math.round(m.width)}px below 44px target`)
 		.toBeGreaterThanOrEqual(44)
-	expect(m.height, `${where}: toast-close height ${Math.round(m.height)}px below 44px target`)
+	expect(Math.round(m.height), `${where}: toast-close height ${Math.round(m.height)}px below 44px target`)
 		.toBeGreaterThanOrEqual(44)
 }
 /** native_dialog_margin_reset_uncentered: NC core's html,body,…,dialog

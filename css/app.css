@@ -2163,6 +2163,29 @@ dialog.entitlement-explain-dialog::backdrop {
 	background: color-mix(in srgb, var(--crm-text) 45%, transparent);
 }
 
+/* Top-layer dialogs nested inside the page stack: the stack rhythm reset
+   (#app-content.crm-app .crm-page-stack > * { margin:0 }) is meant for
+   in-flow children, but it also zeroes the margin:auto that centers a
+   modal <dialog> — pinning it to the viewport top-left
+   (native_dialog_margin_reset_uncentered). Re-assert both-axis centering;
+   ≤480px keeps the full-bleed sheet margin the pack media query intends.
+   Named dialog recipes (modal--md etc.) stay more specific and win. */
+#app-content.crm-app .crm-page-stack > dialog {
+	margin: auto;
+}
+@media (max-width: 480px) {
+	#app-content.crm-app .crm-page-stack > dialog {
+		margin: 0;
+	}
+	/* Pack full-bleed sheet contract for .crm-dialog: the app-level
+	   dialog.crm-dialog unified rule above (0-1-1) otherwise keeps a
+	   floating-card max-width/radius under the pack's ≤480 media query. */
+	#app-content.crm-app .crm-page-stack > dialog.crm-dialog {
+		max-width: 100vw;
+		border-radius: 0;
+	}
+}
+
 /* CustomerCheck page utilities — radio/checkbox + label on one baseline.
  * !important on display/size: Nextcloud core + stale app.css caches otherwise leave
  * oversized native controls stacked above the label text (Import source radios).
