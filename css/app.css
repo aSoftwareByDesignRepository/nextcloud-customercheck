@@ -2164,23 +2164,28 @@ dialog.entitlement-explain-dialog::backdrop {
 }
 
 /* Top-layer dialogs nested inside the page stack: the stack rhythm reset
-   (#app-content.crm-app .crm-page-stack > * { margin:0 }) is meant for
-   in-flow children, but it also zeroes the margin:auto that centers a
+   (#app-content.crm-app .crm-page-stack > * { margin:0 }, 1-2-0) is meant
+   for in-flow children, but it also zeroes the margin:auto that centers a
    modal <dialog> — pinning it to the viewport top-left
    (native_dialog_margin_reset_uncentered). Re-assert both-axis centering;
    ≤480px keeps the full-bleed sheet margin the pack media query intends.
-   Named dialog recipes (modal--md etc.) stay more specific and win. */
-#app-content.crm-app .crm-page-stack > dialog {
+   Named dialog recipes (modal--md etc.) stay more specific and win.
+   Scope note: the dialog-pattern gate bans app/content wrapper ancestors
+   (#app-content/.crm-app) on dialog selectors — dead whenever a dialog is
+   body-appended — so the counter-rule anchors on the app's own
+   #crm-main-content landmark (always an ancestor of .crm-page-stack)
+   plus [open] to hold the same 1-2-1 specificity. */
+#crm-main-content .crm-page-stack > dialog[open] {
 	margin: auto;
 }
 @media (max-width: 480px) {
-	#app-content.crm-app .crm-page-stack > dialog {
+	#crm-main-content .crm-page-stack > dialog[open] {
 		margin: 0;
 	}
 	/* Pack full-bleed sheet contract for .crm-dialog: the app-level
 	   dialog.crm-dialog unified rule above (0-1-1) otherwise keeps a
 	   floating-card max-width/radius under the pack's ≤480 media query. */
-	#app-content.crm-app .crm-page-stack > dialog.crm-dialog {
+	#crm-main-content .crm-page-stack > dialog.crm-dialog[open] {
 		max-width: 100vw;
 		border-radius: 0;
 	}
