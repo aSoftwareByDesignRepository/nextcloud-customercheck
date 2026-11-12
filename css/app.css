@@ -393,6 +393,28 @@ dialog.crm-native-dialog .crm-btn--ghost,
 	text-decoration: none !important;
 }
 
+/* ── Overlay close-control armor (overlay_toast_button_armor_gap) ──────────
+ * The toast stack mounts on document.body (#toast-container/.toast-container,
+ * components.js) — outside every .crm-app/#app-content scope — so the bare
+ * .toast-close (0,1,0) rule loses wholesale to NC core's
+ * button:not(.button-vue,[class^=vs__]) repaint (0,1,1: ~130px width + pale
+ * fill + border + padding) and the :not(.app-navigation-entry-button) margin
+ * repaint (0,2,1: margin-inline-start:0). Overlay-scoped selectors pin every
+ * repainted property !important (donor shape: whistlecheck
+ * #wc-toasts button.wc-toast__close, budgetcheck .bc-toasts button.bc-toast__close).
+ * The stack mounts with id AND class, so both scopes are required.
+ */
+#toast-container button.toast-close,
+.toast-container button.toast-close {
+	width: auto !important;
+	margin: 0 !important;
+	padding: var(--crm-space-1, 0.25rem) !important;
+	background: transparent !important;
+	border: 0 !important;
+	min-width: 44px;
+	min-height: 44px;
+}
+
 /* WCAG 2.1 AA 2.5.5 / suite UX6: interactive targets ≥ 44×44 CSS px (px units — rem shrinks under NC 15px root font). */
 #app-content.crm-app .crm-btn--sm,
 #app-content-wrapper .crm-btn--sm,

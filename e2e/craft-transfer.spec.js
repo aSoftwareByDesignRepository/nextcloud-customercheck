@@ -76,6 +76,34 @@ function deprovisionFixture(uid) {
 async function shot(page, name) {
 	await page.screenshot({ path: path.join(OUT, `${name}.png`), fullPage: false })
 }
+
+/** overlay_toast_button_armor_gap: the body-mounted toast close is a real
+ * <button> — NC core's button:not(.button-vue) repaint (0,1,1) would paint a
+ * ~130px pale block without the overlay-scoped armor rule in css/app.css.
+ * Assert computed style: transparent fill, no border, ~44px box, width auto. */
+async function assertToastCloseArmored(page, where) {
+	const close = page.locator('.toast-container .toast-close, #toast-container .toast-close').first()
+	await expect(close).toBeVisible({ timeout: 10000 })
+	const m = await close.evaluate((el) => {
+		const cs = getComputedStyle(el)
+		const r = el.getBoundingClientRect()
+		return {
+			width: r.width, height: r.height,
+			bg: cs.backgroundColor, borderW: cs.borderTopWidth,
+			paddingLeft: cs.paddingLeft, marginLeft: cs.marginLeft,
+		}
+	})
+	expect(m.bg, `${where}: toast-close repainted ${m.bg} — core pale fill won (armor gap)`)
+		.toBe('rgba(0, 0, 0, 0)')
+	expect(parseFloat(m.borderW), `${where}: toast-close border ${m.borderW} — core border won`)
+		.toBe(0)
+	expect(m.width, `${where}: toast-close width ${Math.round(m.width)}px — core ~130px pin won`)
+		.toBeLessThan(80)
+	expect(m.width, `${where}: toast-close width ${Math.round(m.width)}px below 44px target`)
+		.toBeGreaterThanOrEqual(44)
+	expect(m.height, `${where}: toast-close height ${Math.round(m.height)}px below 44px target`)
+		.toBeGreaterThanOrEqual(44)
+}
 /** Authenticated request through the page's own cookie jar + the session
  * CSRF token the app middleware demands on non-GET. */
 async function authedPost(page, url, data) {
@@ -124,6 +152,9 @@ test.describe('craft transfer', () => {
 		// gone from NC≥31 bundles — the old bridge silently no-ops there).
 		await expect(page.locator('.toast--error').first()).toBeVisible({ timeout: 30000 })
 		await expect(page.locator('#crm-transfer-result-live')).not.toBeEmpty()
+		// overlay_toast_button_armor_gap: body-mounted close must keep the
+		// declared transparent 44px icon look, not core's ~130px pale repaint.
+		await assertToastCloseArmored(page, '1280')
 		await shot(page, 'cuc-admin-transfer-fileerror-light-1280')
 
 		// correct passphrase → preview → report dialog (interpolated counters)
@@ -209,6 +240,7 @@ test.describe('craft transfer', () => {
 		await page.locator('#crm-transfer-import-passphrase').fill('wrong-passphrase-000')
 		await expect(page.locator('.toast--error').first()).toBeVisible({ timeout: 30000 })
 		await expect(page.locator('#crm-transfer-result-live')).not.toBeEmpty()
+		await assertToastCloseArmored(page, '375')
 		await shot(page, 'cuc-admin-transfer-fileerror-light-375')
 	})
 
