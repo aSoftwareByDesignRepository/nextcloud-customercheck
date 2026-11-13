@@ -5,6 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.6.193 - 2026-11-13
+
+### Fixed
+
+- re-sync pack — donor element+class sheet contract
+- dialog-pattern-gate-compliant page-stack counter-rule
+- restore top-layer dialog margins inside page-stack
+- margin:auto pack dialog sync + top-layer geometry spec + dbg dialog probe
+- roster full base catalog set + bidirectional glob guard
+- armor body-mounted toast close against core button repaint
+- sync config-transfer pack — schema cache, file-input specificity, sheet clip
+- pack re-sync — schemaCache + 320px clip armor + localized receipt enum
+- sync config-transfer pack — positional t() interpolation
+- label-in-name consistency in wave cells + canonical .js emitter
+- verified-dial everywhere — close 3 missed sites + php-imap TOCTOU
+- verify dialed peer after connect — DNS-rebinding TOCTOU
+- restore de canonical domain vocabulary reverted by catalog regen
+- fused 'Kundenkunden' token in de license copy
+- doubled 'Personen' token in de guidance + variant mirrors
+- unique-index conflict paths — strengthened-gate adjudication
+- register widget-snapshot route + harden endpoint contract
+
+### Added
+
+- config & data transfer — encrypted test→prod pack
+- widget-snapshot endpoint
+
+### Changed
+
+- l10n(transfer): catalogue 56 runtime msgids across 19 catalogs + cell repairs
+- craft-transfer spec — dialogs, typed-REPLACE gating, 320px clip, localized receipt
+- pack re-sync — replace-confirm token width (cramped_form_controls)
+- l10n: zh-Hant/zh_TW catalog + locale wiring
+- l10n: complete translations across the app language set
+- translations + parity scripts + coverage test
+- repair v1.6.192 section
+
 ## Unreleased
 
 ### Added
