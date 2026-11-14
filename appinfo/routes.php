@@ -267,6 +267,7 @@ return [
 		['name' => 'license#seats', 'url' => '/api/v1/license/seats', 'verb' => 'GET'],
 		['name' => 'license#assignSeat', 'url' => '/api/v1/license/seats', 'verb' => 'POST'],
 		['name' => 'license#removeSeat', 'url' => '/api/v1/license/seats/{uid}', 'verb' => 'DELETE'],
+		['name' => 'license#removeSeatPost', 'url' => '/api/v1/license/seats/remove', 'verb' => 'POST'],
 
 		// ── Companion mobile API v1 (Basic auth, COMPANION-APP §9) ──────
 		['name' => 'mobile#bootstrap', 'url' => '/api/mobile/v1/bootstrap', 'verb' => 'GET'],

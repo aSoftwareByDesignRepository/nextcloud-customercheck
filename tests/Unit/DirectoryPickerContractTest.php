@@ -37,16 +37,18 @@ final class DirectoryPickerContractTest extends TestCase
 
 	public function testLicenseSeatAssignUsesDirectoryPickerNotRawUidInput(): void
 	{
-		$html = (string)file_get_contents($this->root . '/templates/settings/license.php');
-		$this->assertStringContainsString('id="crm-license-seat-search"', $html);
+		// Seat assignment goes through the shared license page's WAI-ARIA
+		// combobox (server user search → selectable listbox), never a raw
+		// uid text field.
+		$html = (string)file_get_contents($this->root . '/templates/common/license-page.php');
+		$this->assertStringContainsString('id="crm-seat-user-search"', $html);
 		$this->assertStringContainsString('role="combobox"', $html);
-		$this->assertStringContainsString('id="crm-license-seat-user"', $html);
+		$this->assertStringContainsString('role="listbox"', $html);
 		$this->assertDoesNotMatchRegularExpression(
-			'/<input[^>]+id="crm-license-seat-user"[^>]+type="text"/',
+			'/<input[^>]+name="(uid|userId|user_id)"[^>]+type="text"/',
 			$html,
 		);
 		$this->assertStringNotContainsString('Nextcloud user id, e.g. anna', $html);
-		$this->assertStringContainsString('Never type a raw user id', $html);
 	}
 
 	public function testReviewSourcesScanActorsUseDirectoryPickers(): void

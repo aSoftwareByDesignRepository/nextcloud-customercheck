@@ -98,7 +98,7 @@ class LicenseController extends Controller
 			$result = $this->license->assignSeat($uid, $this->request->getParam('userId'));
 
 			return new JSONResponse(
-				$result['seat'],
+				['ok' => true, 'seat' => $result['seat'], 'created' => !empty($result['created'])],
 				$result['created'] ? Http::STATUS_CREATED : Http::STATUS_OK,
 			);
 		} catch (LicenseException $e) {
@@ -114,6 +114,20 @@ class LicenseController extends Controller
 			$this->license->removeSeat($uid);
 
 			return new JSONResponse(['deleted' => true]);
+		} catch (LicenseException $e) {
+			return $this->fromLicenseException($e);
+		}
+	}
+
+	#[NoAdminRequired]
+	public function removeSeatPost(): JSONResponse
+	{
+		try {
+			$this->requireAppAdmin();
+			$uid = (string)$this->request->getParam('userId', '');
+			$this->license->removeSeat($uid);
+
+			return new JSONResponse(['ok' => true, 'deleted' => true]);
 		} catch (LicenseException $e) {
 			return $this->fromLicenseException($e);
 		}
