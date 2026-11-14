@@ -155,7 +155,7 @@ final class LicenseApiIntegrationTest extends TestCase
 		self::assertSame(201, $this->controller(['userId' => $this->user])->assignSeat()->getStatus());
 		$second = $this->controller(['userId' => $this->second])->assignSeat();
 		self::assertSame(201, $second->getStatus());
-		self::assertTrue($second->getData()['withinLimit']);
+		self::assertTrue($second->getData()['seat']['withinLimit']);
 
 		$third = $this->controller(['userId' => $this->admin])->assignSeat();
 		self::assertSame(409, $third->getStatus());
@@ -163,7 +163,7 @@ final class LicenseApiIntegrationTest extends TestCase
 
 		$again = $this->controller(['userId' => $this->user])->assignSeat();
 		self::assertSame(200, $again->getStatus());
-		self::assertSame($this->user, $again->getData()['uid']);
+		self::assertSame($this->user, $again->getData()['seat']['uid']);
 
 		$seats = $this->controller()->seats();
 		self::assertSame(200, $seats->getStatus());

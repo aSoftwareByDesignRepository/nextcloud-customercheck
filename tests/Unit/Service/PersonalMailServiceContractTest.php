@@ -17,7 +17,6 @@ final class PersonalMailServiceContractTest extends TestCase
 	{
 		$ref = new \ReflectionClass(PersonalMailService::class);
 		$m = $ref->getMethod('defaultFolderSpecs');
-		$m->setAccessible(true);
 		/** @var PersonalMailService $svc */
 		$svc = $ref->newInstanceWithoutConstructor();
 		$specs = $m->invoke($svc, ['INBOX', 'Sent', 'Archive']);

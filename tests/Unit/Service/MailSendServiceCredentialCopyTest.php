@@ -42,11 +42,9 @@ final class MailSendServiceCredentialCopyTest extends TestCase
 		$ref = new \ReflectionClass(MailSendService::class);
 		$svc = $ref->newInstanceWithoutConstructor();
 		$prop = $ref->getProperty('l10n');
-		$prop->setAccessible(true);
 		$prop->setValue($svc, $l10n);
 
 		$method = new ReflectionMethod(MailSendService::class, 'smtpCredentialMissingMessage');
-		$method->setAccessible(true);
 
 		return (string)$method->invoke($svc, $decryptFailed, $oauthFailed, $isPersonal);
 	}

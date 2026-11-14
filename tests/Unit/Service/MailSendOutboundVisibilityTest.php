@@ -256,7 +256,6 @@ final class MailSendOutboundVisibilityTest extends TestCase
 
 		$ref = new \ReflectionClass($svc);
 		$method = $ref->getMethod('indexOutboundMessage');
-		$method->setAccessible(true);
 		$method->invoke(
 			$svc,
 			1,

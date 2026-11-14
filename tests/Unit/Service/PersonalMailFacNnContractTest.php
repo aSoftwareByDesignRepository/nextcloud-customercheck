@@ -143,7 +143,6 @@ final class PersonalMailFacNnContractTest extends TestCase
 
 		$ref = new \ReflectionClass($svc);
 		$method = $ref->getMethod('doSync');
-		$method->setAccessible(true);
 		$out = $method->invoke($svc, 9, 1);
 		$this->assertSame('disabled', $out['status']);
 		$this->assertSame(0, $out['ingested']);

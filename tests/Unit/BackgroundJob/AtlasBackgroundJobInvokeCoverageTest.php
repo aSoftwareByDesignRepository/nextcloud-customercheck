@@ -37,7 +37,6 @@ final class AtlasBackgroundJobInvokeCoverageTest extends TestCase
 	private function invokeRun(object $job, mixed $argument = []): void
 	{
 		$method = new ReflectionMethod($job, 'run');
-		$method->setAccessible(true);
 		$method->invoke($job, $argument);
 	}
 

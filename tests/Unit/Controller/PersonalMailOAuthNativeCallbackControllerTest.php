@@ -59,7 +59,6 @@ final class PersonalMailOAuthNativeCallbackControllerTest extends TestCase
 		$parent = $ref->getParentClass();
 		if ($parent !== false && $parent->hasProperty('request')) {
 			$p = $parent->getProperty('request');
-			$p->setAccessible(true);
 			$p->setValue($ctrl, $request);
 		}
 		foreach ([
@@ -68,7 +67,6 @@ final class PersonalMailOAuthNativeCallbackControllerTest extends TestCase
 			'l10n' => $this->l10n(),
 		] as $name => $value) {
 			$p = $ref->getProperty($name);
-			$p->setAccessible(true);
 			$p->setValue($ctrl, $value);
 		}
 

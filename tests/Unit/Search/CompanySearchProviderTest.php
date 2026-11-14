@@ -106,7 +106,6 @@ class CompanySearchProviderTest extends TestCase
 		$ref = new \ReflectionObject($result);
 		if ($ref->hasProperty('entries')) {
 			$prop = $ref->getProperty('entries');
-			$prop->setAccessible(true);
 			$entries = $prop->getValue($result);
 			return is_array($entries) ? $entries : [];
 		}

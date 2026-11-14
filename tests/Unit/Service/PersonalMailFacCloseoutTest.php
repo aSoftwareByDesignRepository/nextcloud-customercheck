@@ -131,7 +131,6 @@ final class PersonalMailFacCloseoutTest extends TestCase
 		);
 		$ref = new \ReflectionClass($svc);
 		$method = $ref->getMethod('serializeAccount');
-		$method->setAccessible(true);
 		$out = $method->invoke($svc, [
 			'id' => 9,
 			'owner_user_id' => 'ae',

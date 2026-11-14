@@ -25,7 +25,6 @@ final class ReviewSentAtLogicTest extends TestCase
 	{
 		$svc = $this->bareService();
 		$m = new ReflectionMethod(ReviewService::class, 'reviewItemMatchesDateQuery');
-		$m->setAccessible(true);
 
 		$item = [
 			'sentAt' => '2026-08-12 14:30:00',
@@ -43,7 +42,6 @@ final class ReviewSentAtLogicTest extends TestCase
 	{
 		$svc = $this->bareService();
 		$m = new ReflectionMethod(ReviewService::class, 'reviewItemMatchesDateQuery');
-		$m->setAccessible(true);
 		$item = [
 			'sentAt' => null,
 			'createdAt' => '2026-07-01 08:15:00',
@@ -57,7 +55,6 @@ final class ReviewSentAtLogicTest extends TestCase
 	{
 		$svc = $this->bareService();
 		$m = new ReflectionMethod(ReviewService::class, 'enrichSentAt');
-		$m->setAccessible(true);
 
 		$items = [
 			[

@@ -75,7 +75,6 @@ final class FrontEndAssetServiceTest extends TestCase
 	{
 		$ref = new ReflectionClass(FrontEndAssetService::class);
 		$prop = $ref->getProperty('coreRegistered');
-		$prop->setAccessible(true);
 		$prop->setValue(null, false);
 	}
 

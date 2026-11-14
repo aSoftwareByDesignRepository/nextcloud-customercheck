@@ -71,16 +71,24 @@ $lastReceipt = is_array($_['transferLastReceipt'] ?? null) ? $_['transferLastRec
 	</p>
 	<?php endif; ?>
 	<form id="crm-transfer-import-form" class="crm-form" novalidate>
-		<fieldset class="crm-form-row crm-fieldset">
+		<fieldset class="crm-form-row crm-fieldset" aria-describedby="crm-transfer-replace-hint">
 			<legend><?php p($l->t('Mode')); ?></legend>
-			<label class="crm-radio">
-				<input type="radio" name="mode" value="merge" checked>
-				<span><strong><?php p($l->t('Merge')); ?></strong> — <?php p($l->t('add and update; nothing is deleted')); ?></span>
-			</label>
-			<label class="crm-radio crm-radio--danger">
-				<input type="radio" name="mode" value="replace" <?php if (!$isSystemAdmin): ?>disabled<?php endif; ?>>
-				<span><strong><?php p($l->t('Replace')); ?></strong> — <?php p($l->t('make identical to the file; prod-only rows are deleted')); ?></span>
-			</label>
+			<div class="crm-choice-cards">
+				<label class="crm-choice-card">
+					<input type="radio" name="mode" value="merge" checked>
+					<span class="crm-choice-card__copy">
+						<span class="crm-choice-card__title"><?php p($l->t('Merge')); ?></span>
+						<span class="crm-choice-card__hint"><?php p($l->t('add and update; nothing is deleted')); ?></span>
+					</span>
+				</label>
+				<label class="crm-choice-card crm-choice-card--danger">
+					<input type="radio" name="mode" value="replace" <?php if (!$isSystemAdmin): ?>disabled<?php endif; ?>>
+					<span class="crm-choice-card__copy">
+						<span class="crm-choice-card__title"><?php p($l->t('Replace')); ?></span>
+						<span class="crm-choice-card__hint"><?php p($l->t('make identical to the file; prod-only rows are deleted')); ?></span>
+					</span>
+				</label>
+			</div>
 			<p class="crm-form-row__hint" id="crm-transfer-replace-hint">
 				<?php if ($isSystemAdmin): ?>
 					<?php p($l->t('Replace needs maintenance mode ON (occ maintenance:mode --on) — you will type REPLACE in the preview to confirm.')); ?>
