@@ -34,7 +34,7 @@ foreach ($locales as $lang) {
 	$body = "{\n";
 	foreach ($keys as $i => $k) {
 		$line = "\t\t" . json_encode($k, JSON_UNESCAPED_UNICODE)
-			. ': ' . json_encode($translations[$k], JSON_UNESCAPED_UNICODE);
+			. ' : ' . json_encode($translations[$k], JSON_UNESCAPED_UNICODE);
 		if ($i !== $last) {
 			$line .= ',';
 		}

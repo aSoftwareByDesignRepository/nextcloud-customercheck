@@ -1,7 +1,7 @@
 {
 	"translations": {
 		"%1$d of %2$d assigned": "%1$d de %2$d atribuídos",
-		"%1$d of %2$d device slots in use.": "%1$d de %2$d espaços para dispositivos em uso.",
+		"%1$d of %2$d device slots in use.": "%1$d de %2$d lugares para dispositivos em uso.",
 		"%1$d of %2$d seats assigned": "%1$d de %2$d lugares atribuídos",
 		"%1$d renewals, %2$d overdue activities — open Today.": "%1$d renovações, %2$d atividades em atraso — abra Hoje.",
 		"%1$s (%2$s) needs follow-up. Open Pipeline.": "%1$s (%2$s) precisa de acompanhamento. Abra o Pipeline.",
@@ -334,7 +334,7 @@
 		"All customer data stays on this Nextcloud — CustomerCheck never contacts external services.": "Todos os dados de clientes ficam neste Nextcloud — o CustomerCheck nunca contacta serviços externos.",
 		"All deals — table or board": "Todos os negócios — tabela ou quadro",
 		"All deals — table or board. Each deal has an owner.": "Todos os negócios — tabela ou quadro. Cada negócio tem um responsável.",
-		"All device slots are in use. Revoke a device or upgrade your license.": "Todos os espaços para dispositivos estão em uso. Revoga um dispositivo ou aumenta a tua licença.",
+		"All device slots are in use. Revoke a device or upgrade your license.": "Todos os lugares para dispositivos estão em uso. Revoga um dispositivo ou aumenta a tua licença.",
 		"All kinds": "Todos os tipos",
 		"All licensed seats are assigned. Remove a seat or upgrade the license.": "Todos os postos licenciados estão atribuídos. Remova um posto ou aumente a licença.",
 		"All links set — nice.": "Todas as ligações definidas — ótimo.",
@@ -1993,7 +1993,7 @@
 		"Paid (last 30 days)": "Pago (últimos 30 dias)",
 		"Paid lately": "Pago recentemente",
 		"Paid up": "Em dia",
-		"Pair devices from the linked administration area. Each paired device uses one license slot.": "Emparelha dispositivos a partir da área de administração ligada. Cada dispositivo emparelhado usa um espaço de licença.",
+		"Pair devices from the linked administration area. Each paired device uses one license slot.": "Emparelha dispositivos a partir da área de administração ligada. Cada dispositivo emparelhado usa um lugar de licença.",
 		"Parallel edits are detected with a three-way compare — not last-write-wins. Every resolution needs a reason.": "As edições paralelas são detetadas com uma comparação a três vias — não é último-a-escrever-ganha. Cada resolução precisa de uma razão.",
 		"Parallel edits need a resolution with a reason.": "As edições paralelas precisam de uma resolução com razão.",
 		"Parallel edits on %1$s #%2$d need a resolution with a reason.": "As edições paralelas em %1$s n.º %2$d precisam de uma resolução com razão.",

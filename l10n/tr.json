@@ -2247,7 +2247,7 @@
 		"Remove mailbox: %s": "Posta kutusunu kaldır: %s",
 		"Remove member": "Üyeyi kaldır",
 		"Remove mobile seat": "Mobil lisansı kaldır",
-		"Remove mobile seat for this person?": "Bu kişinin mobil koltuğu kaldırılsın mı?",
+		"Remove mobile seat for this person?": "Bu kişinin mobil lisansı kaldırılsın mı?",
 		"Remove mobile seat of %s": "%s kişisinin mobil lisansını kaldır",
 		"Remove seat": "Lisansı kaldır",
 		"Remove the organisation license and revoke all seats and devices? This cannot be undone.": "Kuruluş lisansı kaldırılsın ve tüm koltuklar ile cihazlar iptal edilsin mi? Bu işlem geri alınamaz.",
