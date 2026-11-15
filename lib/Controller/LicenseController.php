@@ -58,7 +58,7 @@ class LicenseController extends Controller
 				], Http::STATUS_UNPROCESSABLE_ENTITY);
 			}
 
-			return new JSONResponse($this->license->apply($uid, $key));
+			return new JSONResponse(['ok' => true] + $this->license->apply($uid, $key));
 		} catch (LicenseException $e) {
 			return $this->fromLicenseException($e);
 		}
@@ -70,7 +70,7 @@ class LicenseController extends Controller
 		try {
 			$this->requireAppAdmin();
 
-			return new JSONResponse($this->license->remove());
+			return new JSONResponse(['ok' => true] + $this->license->remove());
 		} catch (LicenseException $e) {
 			return $this->fromLicenseException($e);
 		}
