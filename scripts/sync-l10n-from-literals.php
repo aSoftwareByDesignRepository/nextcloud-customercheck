@@ -42,6 +42,22 @@ function extractPhp(string $root): array
 				$found[] = stripcslashes($lit);
 			}
 		}
+		// Shared-pack JS-visible msgids are declared as 'key' => 'msgid'
+		// inside $i18nMsgids — live literals, not wrapped in ->t().
+		if (preg_match_all('/\$i18nMsgids\s*=\s*\[(.*?)\];/s', $src, $blocks)) {
+			foreach ($blocks[1] as $block) {
+				if (preg_match_all("/=>\\s*'((?:\\\\'|[^'])*)'\\s*,/", $block, $m)) {
+					foreach ($m[1] as $lit) {
+						$found[] = stripcslashes($lit);
+					}
+				}
+				if (preg_match_all('/=>\\s*"((?:\\\\"|[^"])*)"\\s*,/', $block, $m)) {
+					foreach ($m[1] as $lit) {
+						$found[] = stripcslashes($lit);
+					}
+				}
+			}
+		}
 	}
 
 	return array_values(array_unique($found));
@@ -116,7 +132,9 @@ function writeL10n(string $root, string $lang, array $translations, ?string $plu
 
 	$entries = [];
 	foreach ($translations as $k => $v) {
-		$entries[] = "\t\t\"" . jsEscape($k) . "\": \"" . jsEscape($v) . "\"";
+		// Family-canonical "key" : "value" — the shared license-page pack's
+		// inject_js detects existing keys via that exact spacing.
+		$entries[] = "\t\t\"" . jsEscape($k) . "\" : \"" . jsEscape($v) . "\"";
 	}
 	// CSP / Nextcloud ≥26: OC.L10N.register takes (appId, translations) only —
 	// a third gettext pluralForm arg is eval'd via new Function() by legacy

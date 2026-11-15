@@ -77,6 +77,22 @@ final class L10nCoverageContractTest extends TestCase
 					$found[] = stripcslashes($lit);
 				}
 			}
+			// Shared-pack JS-visible msgids are declared as 'key' => 'msgid'
+			// inside $i18nMsgids — live literals, not wrapped in ->t().
+			if (preg_match_all('/\$i18nMsgids\s*=\s*\[(.*?)\];/s', $src, $blocks)) {
+				foreach ($blocks[1] as $block) {
+					if (preg_match_all("/=>\\s*'((?:\\\\'|[^'])*)'\\s*,/", $block, $m)) {
+						foreach ($m[1] as $lit) {
+							$found[] = stripcslashes($lit);
+						}
+					}
+					if (preg_match_all('/=>\\s*"((?:\\\\"|[^"])*)"\\s*,/', $block, $m)) {
+						foreach ($m[1] as $lit) {
+							$found[] = stripcslashes($lit);
+						}
+					}
+				}
+			}
 		}
 
 		return array_values(array_unique($found));

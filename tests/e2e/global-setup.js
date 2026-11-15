@@ -171,18 +171,19 @@ export default async function globalSetup(config) {
 		return;
 	}
 
-	const langPin = occUserSet(username, 'lang', 'en');
-	if (langPin.status !== 0) {
-		console.warn('[globalSetup] core/lang=en pin failed:', (langPin.stderr || langPin.stdout || '').trim());
-	}
-
 	// Same self-heal for theming: theme sweeps (ds-chrome / theme-matrix /
 	// sales-inbox) enable dark/highcontrast per user and can die before their
 	// cleanup — a leftover `enabled-themes=["dark"]` then poisons computed-style
 	// and axe assertions in unrelated specs. Shared helper deletes the pref
 	// (default theme); `--delete` dodges NC 34's legacy-typed-pref
 	// TypeConflictException that a literal '[]' write can hit.
+	// Must run BEFORE the lang pin — the reset also deletes core/lang.
 	resetE2eUserState({ uids: [username] });
+
+	const langPin = occUserSet(username, 'lang', 'en');
+	if (langPin.status !== 0) {
+		console.warn('[globalSetup] core/lang=en pin failed:', (langPin.stderr || langPin.stdout || '').trim());
+	}
 
 	mkdirSync(dirname(STORAGE_STATE_PATH), { recursive: true });
 	if (await storageStillValid(baseURL)) {

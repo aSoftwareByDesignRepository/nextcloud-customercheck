@@ -20,14 +20,15 @@ test.describe('ATLAS_VERTICAL_SCROLL_CONTRACT', () => {
 		await page.setViewportSize({ width: 1280, height: 640 });
 		await page.goto(LICENSE, { waitUntil: 'domcontentloaded' });
 		await page.waitForSelector(
-			'#section-license, #crm-license-form, #crm-license-key',
+			'#section-license, #crm-license-key-input',
 			{ timeout: 45_000 },
 		);
 
 		await assertAtlasVerticalScrollReachable(page, {
 			scrollport: '#app-content',
-			target:
-				'#crm-license-form button[type="submit"], #crm-license-seats-block, #crm-license-key-help, #crm-license-empty',
+			// shared-pack markup: last rendered section is the scroll end
+			// (seats/terminals render only when licensed — key card otherwise)
+			target: '#crm-license-page > section:last-of-type',
 			bottomSlopPx: 12,
 		});
 	});
@@ -36,14 +37,13 @@ test.describe('ATLAS_VERTICAL_SCROLL_CONTRACT', () => {
 		await page.setViewportSize({ width: 390, height: 667 });
 		await page.goto(LICENSE, { waitUntil: 'domcontentloaded' });
 		await page.waitForSelector(
-			'#section-license, #crm-license-form, #crm-license-key',
+			'#section-license, #crm-license-key-input',
 			{ timeout: 45_000 },
 		);
 
 		await assertAtlasVerticalScrollReachable(page, {
 			scrollport: '#app-content',
-			target:
-				'#crm-license-form button[type="submit"], #crm-license-seats-block, #crm-license-key-help, #crm-license-empty',
+			target: '#crm-license-page > section:last-of-type',
 			bottomSlopPx: 16,
 		});
 	});
