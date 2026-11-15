@@ -3120,7 +3120,7 @@ OC.L10N.register(
 		"record" : "记录",
 		"removed from the list" : "已从列表移除",
 		"set it on this instance" : "在此实例上设置",
-		"the CustomerCheck mobile companion app" : "the CustomerCheck mobile companion app",
+		"the CustomerCheck mobile companion app" : "CustomerCheck 移动端配套应用",
 		"the companion apps" : "配套应用",
 		"the mobile companion app" : "移动端配套应用",
 		"this workspace" : "此工作区",

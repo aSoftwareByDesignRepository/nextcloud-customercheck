@@ -2239,7 +2239,7 @@ OC.L10N.register(
 		"Remove from Assign?" : "Remove from Assign?",
 		"Remove from this company" : "Remove from this company",
 		"Remove inbox" : "Remove inbox",
-		"Remove license" : "Remove licence",
+		"Remove license" : "Remove license",
 		"Remove mailbox: %s" : "Remove mailbox: %s",
 		"Remove member" : "Remove member",
 		"Remove mobile seat" : "Remove mobile seat",

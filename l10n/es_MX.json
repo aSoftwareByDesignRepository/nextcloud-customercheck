@@ -1161,7 +1161,7 @@
 		"Follow-ups on the go": "Seguimientos en desplazamiento",
 		"Follow-ups, renewals, invoices, promises, mail, and tasks from this workspace are grouped. Start at the top — that is what needs you first.": "Se agrupan los seguimientos, renovaciones, facturas, promesas, correo y tareas de este espacio de trabajo. Empiece desde arriba: eso es lo que le necesita primero.",
 		"Forecast": "Pronóstico",
-		"Format: %1$s followed by a signed payload. One key per organisation.": "Formato: %1$s seguido de una carga firmada. Una clave por organización.",
+		"Format: %1$s followed by a signed payload. One key per organisation.": "Formato: %1$s seguido de una carga útil firmada. Una clave por organización.",
 		"Formatting": "Formato",
 		"Found %s new folder(s). Turn on Sync for the ones you want — changes save automatically.": "Se encontraron %s carpeta(s) nueva(s). Activa Sync en las que quieras — se guarda solo.",
 		"Free to run under AGPL": "Gratis para ejecutar bajo AGPL",

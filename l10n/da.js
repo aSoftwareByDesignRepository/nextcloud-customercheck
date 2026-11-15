@@ -2167,7 +2167,7 @@ OC.L10N.register(
 		"Promises left" : "Løfter tilbage",
 		"Provide a valid email address." : "Angiv en gyldig e-mailadresse.",
 		"Provide a valid email or a phone number (at least 5 characters)." : "Angiv en gyldig e-mail eller et telefonnummer (mindst 5 tegn).",
-		"Provide this ID when ordering a license so the key can be bound to this server." : "Angiv dette ID, Når bestiller en licens, så nøglen kan knyttes til denne server.",
+		"Provide this ID when ordering a license so the key can be bound to this server." : "Angiv dette ID, når du afgiver en licensordre, så nøglen kan knyttes til denne server.",
 		"Public calendar URL for agreement renewals. Rotate if the link leaks." : "Offentlig kalender-URL til aftalefornyelser. Forny linket, hvis det lækker.",
 		"Public feeds & intake" : "Offentlige feeds og indmeldinger",
 		"Purchase or renew license" : "Køb eller forny licens",
