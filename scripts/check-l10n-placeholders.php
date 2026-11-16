@@ -98,9 +98,24 @@ foreach ($enT as $key => $enVal) {
 		if (!isset($langT[$key])) {
 			continue;
 		}
-		$val = (string) $langT[$key];
+		// Combined _sg_::_pl_ plural keys carry [sg, pl] array values — a cell
+		// legitimately drops %n in favour of the literal '1', so the compared
+		// multiset is the per-placeholder max count across cells; strays are
+		// checked per cell.
+		$cells = is_array($langT[$key])
+			? array_map('strval', $langT[$key])
+			: [(string) $langT[$key]];
 
-		$valPrintf = cucPrintfPlaceholders($val);
+		$printfMax = [];
+		foreach ($cells as $cell) {
+			foreach (array_count_values(cucPrintfPlaceholders($cell)) as $ph => $n) {
+				$printfMax[$ph] = max($printfMax[$ph] ?? 0, $n);
+			}
+		}
+		$valPrintf = [];
+		foreach ($printfMax as $ph => $n) {
+			$valPrintf = array_merge($valPrintf, array_fill(0, $n, $ph));
+		}
 		// Multiset compare: positional %N$s tokens exist so a locale may reorder
 		// arguments (zh renders "%2$s 的 %1$s"); order is not a defect. Missing
 		// or added tokens still fail.
@@ -111,13 +126,24 @@ foreach ($enT as $key => $enVal) {
 			fwrite(STDERR, '  got:      ' . implode(', ', $valPrintf) . "\n");
 		}
 
-		if (cucHasStrayPercent($val)) {
-			$failed = true;
-			fwrite(STDERR, "{$lang}.json stray '%' (would fatal in vsprintf) for key: $key\n");
-			fwrite(STDERR, "  value: $val\n");
+		foreach ($cells as $val) {
+			if (cucHasStrayPercent($val)) {
+				$failed = true;
+				fwrite(STDERR, "{$lang}.json stray '%' (would fatal in vsprintf) for key: $key\n");
+				fwrite(STDERR, "  value: $val\n");
+			}
 		}
 
-		$valNamed = cucNamedPlaceholders($val);
+		$namedMax = [];
+		foreach ($cells as $cell) {
+			foreach (array_count_values(cucNamedPlaceholders($cell)) as $ph => $n) {
+				$namedMax[$ph] = max($namedMax[$ph] ?? 0, $n);
+			}
+		}
+		$valNamed = [];
+		foreach ($namedMax as $ph => $n) {
+			$valNamed = array_merge($valNamed, array_fill(0, $n, $ph));
+		}
 		if (array_count_values($keyNamed) != array_count_values($valNamed)) {
 			$failed = true;
 			fwrite(STDERR, "{$lang}.json named placeholder mismatch for key: $key\n");

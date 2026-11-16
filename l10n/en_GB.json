@@ -30,8 +30,6 @@
         "%1$s: %2$s. %3$s. %4$s": "%1$s: %2$s. %3$s. %4$s",
         "%d dedicated app admin(s) selected": "%d dedicated app admin(s) selected",
         "%d group(s) selected": "%d group(s) selected",
-        "%d row(s) need a value on this instance": "%d row(s) need a value on this instance",
-        "%d row(s) skipped and %d reference(s) unresolved — see the groups below.": "%d row(s) skipped and %d reference(s) unresolved — see the groups below.",
         "%n company name appears more than once": "%n company name appears more than once",
         "%n company names appear more than once": "%n company names appear more than once",
         "%n contact with email": "%n contact with email",
@@ -85,10 +83,6 @@
         "%s unpaid — open money": "%s unpaid — open money",
         "%s waiting": "%s waiting",
         "%s · %d need attention · %d open deals": "%s · %d need attention · %d open deals",
-        "(%d env-bound value(s) emptied)": "(%d env-bound value(s) emptied)",
-        "(%d filtered)": "(%d filtered)",
-        "(%d secret(s) redacted)": "(%d secret(s) redacted)",
-        "(%d unresolved ref)": "(%d unresolved ref)",
         "(%s file(s) attached)": "(%s file(s) attached)",
         "(No subject)": "(No subject)",
         "(Preview truncated)": "(Preview truncated)",
@@ -2953,7 +2947,6 @@
         "Waiting on us": "Waiting on us",
         "Waiting ticket": "Waiting ticket",
         "Waiting tickets": "Waiting tickets",
-        "Warning: %d row(s) will be permanently deleted, then the file data is loaded.": "Warning: %d row(s) will be permanently deleted, then the file data is loaded.",
         "We update mail automatically. You can also tap Update mail.": "We update mail automatically. You can also tap Update mail.",
         "Webhook": "Webhook",
         "Website": "Website",
@@ -3094,6 +3087,38 @@
         "Your whole Files home is too broad. Pick a specific folder.": "Your whole Files home is too broad. Pick a specific folder.",
         "Yours": "Yours",
         "You’re clear — nice.": "You’re clear — nice.",
+        "_(1 env-bound value emptied)_::_(%n env-bound values emptied)_": [
+            "(1 env-bound value emptied)",
+            "(%n env-bound values emptied)"
+        ],
+        "_(1 filtered)_::_(%n filtered)_": [
+            "(1 filtered)",
+            "(%n filtered)"
+        ],
+        "_(1 secret redacted)_::_(%n secrets redacted)_": [
+            "(1 secret redacted)",
+            "(%n secrets redacted)"
+        ],
+        "_(1 unresolved ref)_::_(%n unresolved refs)_": [
+            "(1 unresolved ref)",
+            "(%n unresolved refs)"
+        ],
+        "_1 reference unresolved — see the groups below._::_%n references unresolved — see the groups below._": [
+            "1 reference unresolved — see the groups below.",
+            "%n references unresolved — see the groups below."
+        ],
+        "_1 row needs a value on this instance_::_%n rows need a value on this instance_": [
+            "1 row needs a value on this instance",
+            "%n rows need a value on this instance"
+        ],
+        "_1 row skipped._::_%n rows skipped._": [
+            "1 row skipped.",
+            "%n rows skipped."
+        ],
+        "_Warning: 1 row will be permanently deleted, then the file data is loaded._::_Warning: %n rows will be permanently deleted, then the file data is loaded._": [
+            "Warning: 1 row will be permanently deleted, then the file data is loaded.",
+            "Warning: %n rows will be permanently deleted, then the file data is loaded."
+        ],
         "a customer": "a customer",
         "a deal": "a deal",
         "add and update; nothing is deleted": "add and update; nothing is deleted",

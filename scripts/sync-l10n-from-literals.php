@@ -63,15 +63,20 @@ function extractPhp(string $root): array
 	return array_values(array_unique($found));
 }
 
-function extractJs(string $root): array
+function jsGlobs(string $root): array
 {
-	$found = [];
-	$globs = array_merge(
+	return array_merge(
 		glob($root . '/js/*.js') ?: [],
 		glob($root . '/js/pages/*.js') ?: [],
 		glob($root . '/js/common/*.js') ?: [],
 		glob($root . '/js/utils/*.js') ?: [],
 	);
+}
+
+function extractJs(string $root): array
+{
+	$found = [];
+	$globs = jsGlobs($root);
 	foreach ($globs as $path) {
 		$src = (string)file_get_contents($path);
 		// fillOne(template, v) is the single-arg t() interpolation helper in
@@ -113,6 +118,33 @@ function extractJs(string $root): array
 	return array_values(array_unique($found));
 }
 
+/**
+ * Bare n('singular', 'plural', count) JS calls — js/transfer.js wraps
+ * window.n() so the literals sit on a local helper. Runtime resolves the
+ * _sg_::_pl_ combined catalog key, so each pair is emitted as that key
+ * with a [singular, plural] value (NC catalog convention).
+ *
+ * @return array<array{0: string, 1: string}>
+ */
+function extractJsPlurals(string $root): array
+{
+	$found = [];
+	foreach (jsGlobs($root) as $path) {
+		$src = (string)file_get_contents($path);
+		if (preg_match_all("/(?<![\\w.])n\\(\\s*'((?:\\\\'|[^'])*)'\\s*,\\s*'((?:\\\\'|[^'])*)'\\s*,/", $src, $m)) {
+			foreach ($m[1] as $i => $sg) {
+				$found[] = [stripcslashes($sg), stripcslashes($m[2][$i])];
+			}
+		}
+		if (preg_match_all('/(?<![\\w.])n\\(\\s*"((?:\\\\"|[^"])*)"\\s*,\\s*"((?:\\\\"|[^"])*)"\\s*,/', $src, $m)) {
+			foreach ($m[1] as $i => $sg) {
+				$found[] = [stripcslashes($sg), stripcslashes($m[2][$i])];
+			}
+		}
+	}
+	return $found;
+}
+
 function jsEscape(string $s): string
 {
 	return str_replace(
@@ -136,7 +168,13 @@ function writeL10n(string $root, string $lang, array $translations, ?string $plu
 	foreach ($translations as $k => $v) {
 		// Family-canonical "key" : "value" — the shared license-page pack's
 		// inject_js detects existing keys via that exact spacing.
-		$entries[] = "\t\t\"" . jsEscape($k) . "\" : \"" . jsEscape($v) . "\"";
+		if (is_array($v)) {
+			$entries[] = "\t\t\"" . jsEscape($k) . "\" : ["
+				. implode(',', array_map(static fn ($cell) => '"' . jsEscape((string)$cell) . '"', $v))
+				. "]";
+		} else {
+			$entries[] = "\t\t\"" . jsEscape($k) . "\" : \"" . jsEscape($v) . "\"";
+		}
 	}
 	// CSP / Nextcloud ≥26: OC.L10N.register takes (appId, translations) only —
 	// a third gettext pluralForm arg is eval'd via new Function() by legacy
@@ -169,21 +207,34 @@ foreach (array_merge(extractPhp($root), extractJs($root)) as $lit) {
 	$live[$lit] = true;
 }
 
+// Plural pairs live under the _sg_::_pl_ combined key; identity value is
+// the [singular, plural] pair, not the key string.
+$pluralKeys = [];
+foreach (extractJsPlurals($root) as [$sg, $pl]) {
+	if ($sg === '' || $pl === '') {
+		continue;
+	}
+	$key = '_' . $sg . '_::_' . $pl . '_';
+	$pluralKeys[$key] = [$sg, $pl];
+	$live[$key] = true;
+}
+
 $enTr = [];
 $deTr = [];
 $added = 0;
 $pruned = 0;
 foreach (array_keys($live) as $lit) {
-	$enTr[$lit] = $lit;
+	$identity = $pluralKeys[$lit] ?? $lit;
+	$enTr[$lit] = $identity;
 	if (!array_key_exists($lit, $enOld)) {
 		$added++;
 	}
 	if (isset($deMap[$lit])) {
 		$deTr[$lit] = $deMap[$lit];
-	} elseif (array_key_exists($lit, $deOld) && $deOld[$lit] !== $lit) {
+	} elseif (array_key_exists($lit, $deOld) && $deOld[$lit] !== $identity) {
 		$deTr[$lit] = $deOld[$lit];
 	} else {
-		$deTr[$lit] = $lit;
+		$deTr[$lit] = $identity;
 	}
 }
 foreach (array_keys($enOld) as $oldKey) {
@@ -225,10 +276,11 @@ foreach ($secondary as $lang) {
 	$old = is_array($prev['translations'] ?? null) ? $prev['translations'] : [];
 	$out = [];
 	foreach (array_keys($live) as $lit) {
-		if (array_key_exists($lit, $old) && $old[$lit] !== $lit) {
+		$identity = $pluralKeys[$lit] ?? $lit;
+		if (array_key_exists($lit, $old) && $old[$lit] !== $identity) {
 			$out[$lit] = $old[$lit];
 		} else {
-			$out[$lit] = $lit;
+			$out[$lit] = $identity;
 		}
 	}
 	writeL10n($root, $lang, $out, $prev['pluralForm'] ?? null);

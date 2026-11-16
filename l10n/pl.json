@@ -30,8 +30,6 @@
         "%1$s: %2$s. %3$s. %4$s": "%1$s: %2$s. %3$s. %4$s",
         "%d dedicated app admin(s) selected": "Wybrany (-e) admin (y) aplikacji dedykowanej %d",
         "%d group(s) selected": "Wybrane grupy %d",
-        "%d row(s) need a value on this instance": "%d wierszy wymaga wartości na tej instancji",
-        "%d row(s) skipped and %d reference(s) unresolved — see the groups below.": "Pominięto %d wierszy i nierozwiązano %d odwołań — zobacz grupy poniżej.",
         "%n company name appears more than once": "%n nazwa firmy pojawia się więcej niż raz",
         "%n company names appear more than once": "%n nazwy firm pojawiają się więcej niż raz",
         "%n contact with email": "%n kontakt z e-mailem",
@@ -85,10 +83,6 @@
         "%s unpaid — open money": "%s nieodpłatne — otwórz Pieniądze",
         "%s waiting": "%s czeka",
         "%s · %d need attention · %d open deals": "%s · %d potrzebuje uwagi · %d otwarte transakcje",
-        "(%d env-bound value(s) emptied)": "(%d opróżnione wartości związane z instancją)",
-        "(%d filtered)": "(%d odfiltrowane)",
-        "(%d secret(s) redacted)": "(%d ukryte sekrety)",
-        "(%d unresolved ref)": "(%d nierozwiązane odwołania)",
         "(%s file(s) attached)": "(%s plik(ów) dołączonych)",
         "(No subject)": "(Brak tematu)",
         "(Preview truncated)": "(Podgląd skrócony)",
@@ -2953,7 +2947,6 @@
         "Waiting on us": "Czekam na nas.",
         "Waiting ticket": "Oczekujące zgłoszenie",
         "Waiting tickets": "Oczekujące zgłoszenia",
-        "Warning: %d row(s) will be permanently deleted, then the file data is loaded.": "Ostrzeżenie: %d wierszy zostanie trwale usuniętych, a następnie dane z pliku zostaną wczytane.",
         "We update mail automatically. You can also tap Update mail.": "Aktualizujemy pocztę automatycznie. Możesz też dotknąć Aktualizuj pocztę.",
         "Webhook": "Hak internetowy",
         "Website": "Strona www",
@@ -3094,6 +3087,38 @@
         "Your whole Files home is too broad. Pick a specific folder.": "Twój cały dom jest za szeroki. Wybierz konkretny folder.",
         "Yours": "Twoje",
         "You’re clear — nice.": "Jesteś czysty - miły.",
+        "_(1 env-bound value emptied)_::_(%n env-bound values emptied)_": [
+            "(1 opróżniona wartość związana z instancją)",
+            "(%n opróżnionych wartości związanych z instancją)"
+        ],
+        "_(1 filtered)_::_(%n filtered)_": [
+            "(1 odfiltrowane)",
+            "(%n odfiltrowanych)"
+        ],
+        "_(1 secret redacted)_::_(%n secrets redacted)_": [
+            "(1 ukryty sekret)",
+            "(%n ukrytych sekretów)"
+        ],
+        "_(1 unresolved ref)_::_(%n unresolved refs)_": [
+            "(1 nierozwiązane odwołanie)",
+            "(%n nierozwiązanych odwołań)"
+        ],
+        "_1 reference unresolved — see the groups below._::_%n references unresolved — see the groups below._": [
+            "Nierozwiązano 1 odwołanie — zobacz grupy poniżej.",
+            "Nierozwiązano %n odwołań — zobacz grupy poniżej."
+        ],
+        "_1 row needs a value on this instance_::_%n rows need a value on this instance_": [
+            "1 wiersz wymaga wartości na tej instancji",
+            "%n wierszy wymaga wartości na tej instancji"
+        ],
+        "_1 row skipped._::_%n rows skipped._": [
+            "Pominięto 1 wiersz.",
+            "Pominięto %n wierszy."
+        ],
+        "_Warning: 1 row will be permanently deleted, then the file data is loaded._::_Warning: %n rows will be permanently deleted, then the file data is loaded._": [
+            "Ostrzeżenie: 1 wiersz zostanie trwale usunięty, a następnie dane z pliku zostaną wczytane.",
+            "Ostrzeżenie: %n wierszy zostanie trwale usuniętych, a następnie dane z pliku zostaną wczytane."
+        ],
         "a customer": "klient",
         "a deal": "jedna transakcja",
         "add and update; nothing is deleted": "dodaj i aktualizuj; nic nie jest usuwane",

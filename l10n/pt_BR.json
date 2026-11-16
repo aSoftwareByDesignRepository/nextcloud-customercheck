@@ -30,8 +30,6 @@
         "%1$s: %2$s. %3$s. %4$s": "%1$s: %2$s. %3$s. %4$s",
         "%d dedicated app admin(s) selected": "%d administradores de aplicativos dedicados selecionados",
         "%d group(s) selected": "%d grupo(s) selecionado(s)",
-        "%d row(s) need a value on this instance": "%d linha(s) precisam de um valor nesta instância",
-        "%d row(s) skipped and %d reference(s) unresolved — see the groups below.": "%d linha(s) ignorada(s) e %d referência(s) não resolvida(s) — veja os grupos abaixo.",
         "%n company name appears more than once": "%n nome de empresa aparece mais de uma vez",
         "%n company names appear more than once": "%n nomes de empresa aparecem mais de uma vez",
         "%n contact with email": "%n contato com e-mail",
@@ -85,10 +83,6 @@
         "%s unpaid — open money": "%s não pago — abra Dinheiro",
         "%s waiting": "%s esperando",
         "%s · %d need attention · %d open deals": "%s · %d precisa de atenção · %d negócios abertos",
-        "(%d env-bound value(s) emptied)": "(%d valor(es) vinculados à instância esvaziados)",
-        "(%d filtered)": "(%d filtrada(s))",
-        "(%d secret(s) redacted)": "(%d segredo(s) ocultado(s))",
-        "(%d unresolved ref)": "(%d referência(s) não resolvida(s))",
         "(%s file(s) attached)": "(arquivos %s anexados)",
         "(No subject)": "(Sem assunto)",
         "(Preview truncated)": "(Visualização truncada)",
@@ -2953,7 +2947,6 @@
         "Waiting on us": "Esperando por nós",
         "Waiting ticket": "Ticket em espera",
         "Waiting tickets": "Tickets em espera",
-        "Warning: %d row(s) will be permanently deleted, then the file data is loaded.": "Aviso: %d linha(s) serão excluídas permanentemente e, em seguida, os dados do arquivo serão carregados.",
         "We update mail automatically. You can also tap Update mail.": "Atualizamos o e-mail automaticamente. Você também pode tocar em Atualizar e-mail.",
         "Webhook": "Webhook",
         "Website": "Site",
@@ -3094,6 +3087,38 @@
         "Your whole Files home is too broad. Pick a specific folder.": "Toda a página inicial dos Arquivos é muito ampla. Escolha uma pasta específica.",
         "Yours": "Seu",
         "You’re clear — nice.": "Você está claro - legal.",
+        "_(1 env-bound value emptied)_::_(%n env-bound values emptied)_": [
+            "(1 valor vinculado à instância esvaziado)",
+            "(%n valores vinculados à instância esvaziados)"
+        ],
+        "_(1 filtered)_::_(%n filtered)_": [
+            "(1 filtrada)",
+            "(%n filtradas)"
+        ],
+        "_(1 secret redacted)_::_(%n secrets redacted)_": [
+            "(1 segredo ocultado)",
+            "(%n segredos ocultados)"
+        ],
+        "_(1 unresolved ref)_::_(%n unresolved refs)_": [
+            "(1 referência não resolvida)",
+            "(%n referências não resolvidas)"
+        ],
+        "_1 reference unresolved — see the groups below._::_%n references unresolved — see the groups below._": [
+            "1 referência não resolvida — veja os grupos abaixo.",
+            "%n referências não resolvidas — veja os grupos abaixo."
+        ],
+        "_1 row needs a value on this instance_::_%n rows need a value on this instance_": [
+            "1 linha precisa de um valor nesta instância",
+            "%n linhas precisam de um valor nesta instância"
+        ],
+        "_1 row skipped._::_%n rows skipped._": [
+            "1 linha ignorada.",
+            "%n linhas ignoradas."
+        ],
+        "_Warning: 1 row will be permanently deleted, then the file data is loaded._::_Warning: %n rows will be permanently deleted, then the file data is loaded._": [
+            "Aviso: 1 linha será excluída permanentemente e, em seguida, os dados do arquivo serão carregados.",
+            "Aviso: %n linhas serão excluídas permanentemente e, em seguida, os dados do arquivo serão carregados."
+        ],
         "a customer": "um cliente",
         "a deal": "um negócio",
         "add and update; nothing is deleted": "adicionar e atualizar; nada é excluído",

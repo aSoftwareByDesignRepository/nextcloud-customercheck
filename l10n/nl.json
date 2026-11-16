@@ -30,8 +30,6 @@
         "%1$s: %2$s. %3$s. %4$s": "%1$s: %2$s. %3$s. %4$s",
         "%d dedicated app admin(s) selected": "%d toegewijde app-beheerder(s) geselecteerd",
         "%d group(s) selected": "%d-groep(s) geselecteerd",
-        "%d row(s) need a value on this instance": "%d rij(en) hebben een waarde nodig op deze installatie",
-        "%d row(s) skipped and %d reference(s) unresolved — see the groups below.": "%d rij(en) overgeslagen en %d verwijzing(en) onopgelost — zie de groepen hieronder.",
         "%n company name appears more than once": "%n bedrijfsnaam komt meer dan eens voor",
         "%n company names appear more than once": "%n bedrijfsnamen komen meer dan eens voor",
         "%n contact with email": "%n contact met e-mail",
@@ -85,10 +83,6 @@
         "%s unpaid — open money": "%s niet betaald — open Geld",
         "%s waiting": "%s wacht",
         "%s · %d need attention · %d open deals": "%s · %d heeft aandacht nodig · %d open deals",
-        "(%d env-bound value(s) emptied)": "(%d installatiegebonden waarden geleegd)",
-        "(%d filtered)": "(%d gefilterd)",
-        "(%d secret(s) redacted)": "(%d geheimen gemaskeerd)",
-        "(%d unresolved ref)": "(%d onopgeloste verwijzingen)",
         "(%s file(s) attached)": "(%s bestand(en) bijgevoegd)",
         "(No subject)": "(Geen onderwerp)",
         "(Preview truncated)": "(Voorbeeld ingekort)",
@@ -2953,7 +2947,6 @@
         "Waiting on us": "Wachten op ons",
         "Waiting ticket": "Wachtend ticket",
         "Waiting tickets": "Wachtende tickets",
-        "Warning: %d row(s) will be permanently deleted, then the file data is loaded.": "Waarschuwing: %d rij(en) worden definitief verwijderd, daarna worden de bestandsgegevens geladen.",
         "We update mail automatically. You can also tap Update mail.": "We werken mail automatisch bij. Je kunt ook op Mail bijwerken tikken.",
         "Webhook": "Webhook",
         "Website": "Website",
@@ -3094,6 +3087,38 @@
         "Your whole Files home is too broad. Pick a specific folder.": "Je hele Files huis is te breed. Kies een specifieke map.",
         "Yours": "Van jou",
         "You’re clear — nice.": "Je bent duidelijk mooi.",
+        "_(1 env-bound value emptied)_::_(%n env-bound values emptied)_": [
+            "(1 installatiegebonden waarde geleegd)",
+            "(%n installatiegebonden waarden geleegd)"
+        ],
+        "_(1 filtered)_::_(%n filtered)_": [
+            "(1 gefilterd)",
+            "(%n gefilterd)"
+        ],
+        "_(1 secret redacted)_::_(%n secrets redacted)_": [
+            "(1 geheim gemaskeerd)",
+            "(%n geheimen gemaskeerd)"
+        ],
+        "_(1 unresolved ref)_::_(%n unresolved refs)_": [
+            "(1 onopgeloste verwijzing)",
+            "(%n onopgeloste verwijzingen)"
+        ],
+        "_1 reference unresolved — see the groups below._::_%n references unresolved — see the groups below._": [
+            "1 verwijzing onopgelost — zie de groepen hieronder.",
+            "%n verwijzingen onopgelost — zie de groepen hieronder."
+        ],
+        "_1 row needs a value on this instance_::_%n rows need a value on this instance_": [
+            "1 rij heeft een waarde nodig op deze installatie",
+            "%n rijen hebben een waarde nodig op deze installatie"
+        ],
+        "_1 row skipped._::_%n rows skipped._": [
+            "1 rij overgeslagen.",
+            "%n rijen overgeslagen."
+        ],
+        "_Warning: 1 row will be permanently deleted, then the file data is loaded._::_Warning: %n rows will be permanently deleted, then the file data is loaded._": [
+            "Waarschuwing: 1 rij wordt definitief verwijderd, daarna worden de bestandsgegevens geladen.",
+            "Waarschuwing: %n rijen worden definitief verwijderd, daarna worden de bestandsgegevens geladen."
+        ],
         "a customer": "een klant",
         "a deal": "een Deal",
         "add and update; nothing is deleted": "toevoegen en bijwerken; niets wordt verwijderd",

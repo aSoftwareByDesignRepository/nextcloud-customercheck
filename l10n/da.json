@@ -30,8 +30,6 @@
         "%1$s: %2$s. %3$s. %4$s": "%1$s: %2$s. %3$s. %4$s",
         "%d dedicated app admin(s) selected": "%d dedikeret app-administrator(er) valgt",
         "%d group(s) selected": "%d gruppe(r) valgt",
-        "%d row(s) need a value on this instance": "%d række(r) kræver en værdi på denne instans",
-        "%d row(s) skipped and %d reference(s) unresolved — see the groups below.": "%d række(r) sprunget over og %d reference(r) uopløst — se grupperne nedenfor.",
         "%n company name appears more than once": "%n firmanavn optræder mere end én gang",
         "%n company names appear more than once": "%n firmanavne optræder mere end én gang",
         "%n contact with email": "%n kontakt med e-mail",
@@ -85,10 +83,6 @@
         "%s unpaid — open money": "%s ubetalt — åbn Penge",
         "%s waiting": "%s venter",
         "%s · %d need attention · %d open deals": "%s · %d har brug for opmærksomhed · %d åbne deals",
-        "(%d env-bound value(s) emptied)": "(%d instansbundne værdier tømt)",
-        "(%d filtered)": "(%d filtreret)",
-        "(%d secret(s) redacted)": "(%d hemmelighed(er) sløret)",
-        "(%d unresolved ref)": "(%d uopløst reference)",
         "(%s file(s) attached)": "(%s fil(er) vedhæftet)",
         "(No subject)": "(Intet emne)",
         "(Preview truncated)": "(Forhåndsvisning afkortet)",
@@ -2953,7 +2947,6 @@
         "Waiting on us": "Venter på os",
         "Waiting ticket": "Ventende sag",
         "Waiting tickets": "Ventende sager",
-        "Warning: %d row(s) will be permanently deleted, then the file data is loaded.": "Advarsel: %d række(r) slettes permanent, derefter indlæses fildataene.",
         "We update mail automatically. You can also tap Update mail.": "Vi opdaterer mail automatisk. Du kan også trykke på Opdater mail.",
         "Webhook": "Webhook",
         "Website": "Websted",
@@ -3094,6 +3087,38 @@
         "Your whole Files home is too broad. Pick a specific folder.": "Hele dit Files-hjem er for bredt. Vælg en bestemt mappe.",
         "Yours": "Dine",
         "You’re clear — nice.": "Du er klar - pæn.",
+        "_(1 env-bound value emptied)_::_(%n env-bound values emptied)_": [
+            "(1 instansbunden værdi tømt)",
+            "(%n instansbundne værdier tømt)"
+        ],
+        "_(1 filtered)_::_(%n filtered)_": [
+            "(1 filtreret)",
+            "(%n filtreret)"
+        ],
+        "_(1 secret redacted)_::_(%n secrets redacted)_": [
+            "(1 hemmelighed sløret)",
+            "(%n hemmeligheder sløret)"
+        ],
+        "_(1 unresolved ref)_::_(%n unresolved refs)_": [
+            "(1 uopløst reference)",
+            "(%n uopløste referencer)"
+        ],
+        "_1 reference unresolved — see the groups below._::_%n references unresolved — see the groups below._": [
+            "1 reference uopløst — se grupperne nedenfor.",
+            "%n referencer uopløst — se grupperne nedenfor."
+        ],
+        "_1 row needs a value on this instance_::_%n rows need a value on this instance_": [
+            "1 række kræver en værdi på denne instans",
+            "%n rækker kræver en værdi på denne instans"
+        ],
+        "_1 row skipped._::_%n rows skipped._": [
+            "1 række sprunget over.",
+            "%n rækker sprunget over."
+        ],
+        "_Warning: 1 row will be permanently deleted, then the file data is loaded._::_Warning: %n rows will be permanently deleted, then the file data is loaded._": [
+            "Advarsel: 1 række slettes permanent, derefter indlæses fildataene.",
+            "Advarsel: %n rækker slettes permanent, derefter indlæses fildataene."
+        ],
         "a customer": "en kunde",
         "a deal": "et Deal",
         "add and update; nothing is deleted": "tilføj og opdatér; intet slettes",
