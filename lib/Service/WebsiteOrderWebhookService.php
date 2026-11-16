@@ -146,7 +146,7 @@ class WebsiteOrderWebhookService
 			foreach ($agreements as $agreement) {
 				$this->agreementService->create($agreement + ['companyId' => (int)$company->getId(), 'status' => 'draft'], 'webhook');
 			}
-			$this->createTodo($company, $deal, $this->l10n->t('Issue licence key(s)'), $now);
+			$this->createTodo($company, $deal, $this->l10n->n('Issue %n licence key', 'Issue %n licence keys', count($agreements)), $now);
 			$this->createTodo($company, $deal, $this->l10n->t('Write invoice'), $now);
 
 			$this->timelineService->append((int)$company->getId(), 'order.webhook', 'webhook', [

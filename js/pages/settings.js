@@ -17,6 +17,17 @@
     }
     return out;
   };
+  // Plural-aware translate — window.n resolves the _sg_::_pl_ combined
+  // catalog key and substitutes %n. Singular msgids carry the literal '1'
+  // (catalog convention), plurals carry %n. Never '(s)'-hack a count into a
+  // single msgid — lazy_plural_paren class.
+  const n = (singular, plural, count) => {
+    const c = Number.isFinite(Number(count)) ? Number(count) : 0;
+    if (typeof window.n === 'function') {
+      return window.n('customercheck', singular, plural, c);
+    }
+    return String(c === 1 ? singular : plural).replace('%n', String(c));
+  };
   if (C && C.init) { C.init(); }
 
   const root = document.getElementById('crm-settings-root');
@@ -974,7 +985,7 @@
       if (Present && typeof Present.renderMailboxList === 'function' && listHost) {
         Present.renderMailboxList(listHost, rows, tr, fillMailboxFormFromCache, syncMailboxNow, removeMailboxNow);
       } else if (listHost) {
-        listHost.textContent = rows.length ? tr('%s mailbox(es) connected.', [String(rows.length)]) : '';
+        listHost.textContent = rows.length ? n('1 mailbox connected.', '%n mailboxes connected.', rows.length) : '';
       }
       if (emptyHost) {
         const showEmpty = Present && typeof Present.mailboxEmptyVisible === 'function'
@@ -1338,7 +1349,7 @@
           msg += ' ' + tr('%s already on the team had their role updated.', [String(updated)]);
         }
         if (skipped > 0) {
-          msg += ' ' + tr('%s skipped.', [String(skipped)]);
+          msg += ' ' + n('1 skipped.', '%n skipped.', skipped);
         }
         if (data.limitReached) {
           msg += ' ' + tr('Member limit reached — some people were not added.');
@@ -1389,7 +1400,7 @@
           msg += ' ' + tr('%s already on the team had their role updated.', [String(updated)]);
         }
         if (skipped > 0) {
-          msg += ' ' + tr('%s skipped.', [String(skipped)]);
+          msg += ' ' + n('1 skipped.', '%n skipped.', skipped);
         }
         if (data.limitReached) {
           msg += ' ' + tr('Member limit reached — some people were not added.');
@@ -2793,7 +2804,7 @@
         renderPersonalFolders(box.folders || []);
         const added = parseInt(String(box.foldersAdded || 0), 10) || 0;
         let msg = added > 0
-          ? tr('Found %s new folder(s). Turn on Sync for the ones you want — changes save automatically.', [String(added)])
+          ? n('Found 1 new folder. Turn on Sync for the ones you want — changes save automatically.', 'Found %n new folders. Turn on Sync for the ones you want — changes save automatically.', added)
           : tr('Folder list updated. Turn on Sync for any folder you want — changes save automatically.');
         if (box.atFolderCap) {
           msg += ' ' + tr('You already track the maximum of %s folders. Turn Sync off to free a slot before adding another.', [String(box.folderCap || 20)]);
@@ -3062,7 +3073,7 @@
         empty.hidden = hasCustom;
       }
       showClTmplStatus(rows.length
-        ? tr('%n template(s) ready to use on deals.', [rows.length])
+        ? n('1 template ready to use on deals.', '%n templates ready to use on deals.', rows.length)
         : tr('No templates yet.'));
     } catch (e) {
       showClTmplStatus('');

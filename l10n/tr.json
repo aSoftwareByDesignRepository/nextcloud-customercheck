@@ -28,8 +28,6 @@
         "%1$s: %2$s needs follow-up (%3$d days in stage)": "%1$s: %2$s takip bekliyor (%3$d gündür aynı aşamada)",
         "%1$s: %2$s renewal reminder": "%1$s: %2$s yenileme hatırlatması",
         "%1$s: %2$s. %3$s. %4$s": "%1$s: %2$s. %3$s. %4$s",
-        "%d dedicated app admin(s) selected": "%d özel uygulama yöneticisi seçildi",
-        "%d group(s) selected": "%d grup seçildi",
         "%n company name appears more than once": "%n şirket adı birden fazla geçiyor",
         "%n company names appear more than once": "%n şirket adı birden fazla geçiyor",
         "%n contact with email": "e-postalı %n kişi",
@@ -42,6 +40,10 @@
         "%n days ago": "%n gün önce",
         "%n days in stage": "%n gündür aynı aşamada",
         "%n days past due": "%n gün gecikmiş",
+        "%n dedicated app admin selected": "%n özel uygulama yöneticisi seçildi",
+        "%n dedicated app admins selected": "%n özel uygulama yöneticisi seçildi",
+        "%n group selected": "%n grup seçildi",
+        "%n groups selected": "%n grup seçildi",
         "%n item": "%n öğe",
         "%n items": "%n öğe",
         "%n logged message": "%n kaydedilmiş mesaj",
@@ -50,7 +52,6 @@
         "%n open edit conflicts": "%n açık düzenleme çakışması",
         "%n review item needs a decision": "%n inceleme öğesi karar bekliyor",
         "%n review items need a decision": "%n inceleme öğesi karar bekliyor",
-        "%n template(s) ready to use on deals.": "Deal'lerde kullanıma hazır %n şablon.",
         "%s already on the team had their role updated.": "Ekipte zaten bulunan %s için rol güncellendi.",
         "%s companies are ready. Tap the green button to add them.": "%s şirket hazır. Eklemek için yeşil düğmeye dokun.",
         "%s days": "%s gün",
@@ -62,8 +63,6 @@
         "%s hours %s minutes": "%s saat %s dakika",
         "%s is AGPL software on your Nextcloud. Bug reports and ideas on GitHub stay welcome. When you need priority email, hour packs, workshops, or a commissioned feature, we invoice only after you accept a quote.": "%s, Nextcloud'unda çalışan AGPL lisanslı bir yazılımdır. GitHub'daki hata bildirimleri ve fikirler her zaman hoş karşılanır. Öncelikli e-posta, saat paketleri, atölye çalışmaları veya özel geliştirme gerektiğinde, yalnızca teklifi kabul ettikten sonra fatura keseriz.",
         "%s items need a decision": "%s öğe karar bekliyor",
-        "%s license invoice(s) still unpaid.": "%s lisans faturası hâlâ ödenmedi.",
-        "%s mailbox(es) connected.": "%s posta kutusu bağlı.",
         "%s messages": "%s mesaj",
         "%s messages deleted or removed": "%s mesaj silindi veya kaldırıldı",
         "%s messages marked as spam": "%s mesaj spam işaretlendi",
@@ -76,14 +75,11 @@
         "%s open in TicketCheck": "TicketCheck'te %s açık",
         "%s percent match": "yüzde %s eşleşme",
         "%s product codes available for agreements.": "Anlaşmalarda kullanılabilecek %s ürün kodu var.",
-        "%s row error(s).": "%s satır hatası.",
         "%s rows match": "%s satır eşleşiyor",
         "%s shared mailboxes connected.": "%s paylaşılan posta kutusu bağlı.",
-        "%s skipped.": "%s atlandı.",
         "%s unpaid — open money": "%s ödenmemiş — Para'yı aç",
         "%s waiting": "%s bekliyor",
         "%s · %d need attention · %d open deals": "%s · %d ilgi bekliyor · %d açık Deal",
-        "(%s file(s) attached)": "(%s dosya eklendi)",
         "(No subject)": "(Konu yok)",
         "(Preview truncated)": "(Önizleme kısaltıldı)",
         "(copy)": "(kopya)",
@@ -1160,7 +1156,6 @@
         "Forecast": "Öngörü",
         "Format: %1$s followed by a signed payload. One key per organisation.": "Biçim: %1$s ve ardından imzalı bir yük. Kuruluş başına bir anahtar.",
         "Formatting": "Biçimlendirme",
-        "Found %s new folder(s). Turn on Sync for the ones you want — changes save automatically.": "%s yeni klasör bulundu. İstediklerin için Eşitle'yi aç — değişiklikler otomatik kaydedilir.",
         "Free to run under AGPL": "AGPL altında ücretsiz çalışır",
         "Friday": "Cuma",
         "From": "Kimden",
@@ -1320,7 +1315,8 @@
         "Invoices for the linked InvoiceCheck customer show up here.": "Bağlı InvoiceCheck müşterisinin faturaları burada görünür.",
         "Invoices sent but not marked paid.": "Gönderilmiş ama ödendi işaretlenmemiş faturalar.",
         "Issue": "Sorun",
-        "Issue licence key(s)": "Lisans anahtarı üret",
+        "Issue %n licence key": "%n lisans anahtarı üret",
+        "Issue %n licence keys": "%n lisans anahtarı üret",
         "Italic": "İtalik",
         "Item assigned": "Öğe atandı",
         "Items": "Öğeler",
@@ -2026,7 +2022,6 @@
         "Person added.": "Kişi eklendi.",
         "Person away": "Kişi yok",
         "Person removed.": "Kişi kaldırıldı.",
-        "Person removed. %s mail item(s) returned to Assign.": "Kişi kaldırıldı. %s posta öğesi Atama'ya geri döndü.",
         "Person updated.": "Kişi güncellendi.",
         "Personal": "Kişisel",
         "Personal choices that do not affect other users.": "Diğer kullanıcıları etkilemeyen kişisel tercihler.",
@@ -2253,7 +2248,6 @@
         "Removed from Assign (no live mail-server id yet)": "Atama'dan kaldırıldı (henüz canlı posta sunucusu kimliği yok)",
         "Removed — message no longer in the shared mailbox": "Kaldırıldı — mesaj artık paylaşılan posta kutusunda değil",
         "Removed “%s”.": "“%s” kaldırıldı.",
-        "Removed “%s”. %s mail item(s) returned to Assign.": "“%s” kaldırıldı. %s posta öğesi Atama'ya geri döndü.",
         "Removes the address-book link only. The contact stays in Contacts.": "Yalnızca adres defteri bağlantısını kaldırır. Kişi Kişiler'de kalır.",
         "Removes the link only. Files stay in Nextcloud Files.": "Yalnızca bağlantıyı kaldırır. Dosyalar Nextcloud Dosyalar'da kalır.",
         "Removes them from this company in CustomerCheck. The Contacts app entry stays.": "Kişiyi CustomerCheck'te bu şirketten kaldırır. Kişiler uygulaması kaydı kalır.",
@@ -3091,6 +3085,10 @@
             "(1 örneğe bağlı değer boşaltıldı)",
             "(%n örneğe bağlı değer boşaltıldı)"
         ],
+        "_(1 file attached)_::_(%n files attached)_": [
+            "(1 dosya eklendi)",
+            "(%n dosya eklendi)"
+        ],
         "_(1 filtered)_::_(%n filtered)_": [
             "(1 filtrelendi)",
             "(%n filtrelendi)"
@@ -3103,9 +3101,25 @@
             "(1 çözümlenemeyen başvuru)",
             "(%n çözümlenemeyen başvuru)"
         ],
+        "_1 license invoice still unpaid._::_%n license invoices still unpaid._": [
+            "1 lisans faturası hâlâ ödenmedi.",
+            "%n lisans faturası hâlâ ödenmedi."
+        ],
+        "_1 mail item returned to Assign._::_%n mail items returned to Assign._": [
+            "1 posta öğesi Atama'ya geri döndü.",
+            "%n posta öğesi Atama'ya geri döndü."
+        ],
+        "_1 mailbox connected._::_%n mailboxes connected._": [
+            "1 posta kutusu bağlı.",
+            "%n posta kutusu bağlı."
+        ],
         "_1 reference unresolved — see the groups below._::_%n references unresolved — see the groups below._": [
             "1 başvuru çözümlenemedi — aşağıdaki gruplara bakın.",
             "%n başvuru çözümlenemedi — aşağıdaki gruplara bakın."
+        ],
+        "_1 row error._::_%n row errors._": [
+            "1 satır hatası.",
+            "%n satır hatası."
         ],
         "_1 row needs a value on this instance_::_%n rows need a value on this instance_": [
             "1 satırın bu örnekte bir değere ihtiyacı var",
@@ -3114,6 +3128,18 @@
         "_1 row skipped._::_%n rows skipped._": [
             "1 satır atlandı.",
             "%n satır atlandı."
+        ],
+        "_1 skipped._::_%n skipped._": [
+            "1 atlandı.",
+            "%n atlandı."
+        ],
+        "_1 template ready to use on deals._::_%n templates ready to use on deals._": [
+            "Deal'lerde kullanıma hazır 1 şablon.",
+            "Deal'lerde kullanıma hazır %n şablon."
+        ],
+        "_Found 1 new folder. Turn on Sync for the ones you want — changes save automatically._::_Found %n new folders. Turn on Sync for the ones you want — changes save automatically._": [
+            "1 yeni klasör bulundu. İstediklerin için Eşitle'yi aç — değişiklikler otomatik kaydedilir.",
+            "%n yeni klasör bulundu. İstediklerin için Eşitle'yi aç — değişiklikler otomatik kaydedilir."
         ],
         "_Warning: 1 row will be permanently deleted, then the file data is loaded._::_Warning: %n rows will be permanently deleted, then the file data is loaded._": [
             "Uyarı: 1 satır kalıcı olarak silinecek, ardından dosya verileri yüklenecek.",

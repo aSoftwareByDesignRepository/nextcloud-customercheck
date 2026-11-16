@@ -17,6 +17,17 @@
     }
     return out;
   };
+  // Plural-aware translate — window.n resolves the _sg_::_pl_ combined
+  // catalog key and substitutes %n. Singular msgids carry the literal '1'
+  // (catalog convention), plurals carry %n. Never '(s)'-hack a count into a
+  // single msgid — lazy_plural_paren class.
+  const n = (singular, plural, count) => {
+    const c = Number.isFinite(Number(count)) ? Number(count) : 0;
+    if (typeof window.n === 'function') {
+      return window.n('customercheck', singular, plural, c);
+    }
+    return String(c === 1 ? singular : plural).replace('%n', String(c));
+  };
   if (C && C.init) { C.init(); }
 
   let lastScan = null;
@@ -576,15 +587,15 @@
         ? (function () {
             const items = summary.errors.slice(0, 8).map(function (err) {
               const msg = String((err && (err.message || err.reason)) || t('Unknown error'));
-              const n = err && err.index != null ? String(Number(err.index) + 1) : '';
-              const text = n !== '' ? t('Row %s: %s', [n, msg]) : msg;
+              const rowNo = err && err.index != null ? String(Number(err.index) + 1) : '';
+              const text = rowNo !== '' ? t('Row %s: %s', [rowNo, msg]) : msg;
               return '<li>' + escapeHtml(text) + '</li>';
             }).join('');
             const more = summary.errors.length > 8
               ? '<p>' + escapeHtml(fillOne('…and %s more.', summary.errors.length - 8)) + '</p>'
               : '';
             return '<div class="crm-callout crm-callout--warning" role="status">' +
-              '<p>' + escapeHtml(fillOne('%s row error(s).', summary.errors.length)) + '</p>' +
+              '<p>' + escapeHtml(n('1 row error.', '%n row errors.', summary.errors.length)) + '</p>' +
               '<ul class="crm-import-error-list">' + items + '</ul>' + more +
               '</div>';
           })()

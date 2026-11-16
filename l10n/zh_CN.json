@@ -28,8 +28,6 @@
         "%1$s: %2$s needs follow-up (%3$d days in stage)": "%1$s：%2$s 需要跟进（在当前阶段已 %3$d 天）",
         "%1$s: %2$s renewal reminder": "%1$s：%2$s 续约提醒",
         "%1$s: %2$s. %3$s. %4$s": "%1$s：%2$s。%3$s。%4$s",
-        "%d dedicated app admin(s) selected": "已选择 %d 位专职应用管理员",
-        "%d group(s) selected": "已选择 %d 个群组",
         "%n company name appears more than once": "%n 个公司名称重复出现",
         "%n company names appear more than once": "%n 个公司名称重复出现",
         "%n contact with email": "%n 位带邮箱的联系人",
@@ -42,6 +40,10 @@
         "%n days ago": "%n 天前",
         "%n days in stage": "在当前阶段 %n 天",
         "%n days past due": "逾期 %n 天",
+        "%n dedicated app admin selected": "已选择 %n 位专职应用管理员",
+        "%n dedicated app admins selected": "已选择 %n 位专职应用管理员",
+        "%n group selected": "已选择 %n 个群组",
+        "%n groups selected": "已选择 %n 个群组",
         "%n item": "%n 项",
         "%n items": "%n 项",
         "%n logged message": "%n 条已记录的消息",
@@ -50,7 +52,6 @@
         "%n open edit conflicts": "%n 个未解决的编辑冲突",
         "%n review item needs a decision": "%n 个待处理项需要处理",
         "%n review items need a decision": "%n 个待处理项需要处理",
-        "%n template(s) ready to use on deals.": "%n 个模板可用于商机。",
         "%s already on the team had their role updated.": "团队中原有的 %s 位成员角色已更新。",
         "%s companies are ready. Tap the green button to add them.": "%s 家公司已就绪。点按绿色按钮添加它们。",
         "%s days": "%s 天",
@@ -62,8 +63,6 @@
         "%s hours %s minutes": "%s 小时 %s 分钟",
         "%s is AGPL software on your Nextcloud. Bug reports and ideas on GitHub stay welcome. When you need priority email, hour packs, workshops, or a commissioned feature, we invoice only after you accept a quote.": "%s 是运行在您 Nextcloud 上的 AGPL 软件。欢迎在 GitHub 提交缺陷和建议。当您需要优先邮件支持、工时包、工作坊或委托开发功能时，我们仅在您接受报价后开票。",
         "%s items need a decision": "%s 项需要处理",
-        "%s license invoice(s) still unpaid.": "%s 张许可证发票仍未付款。",
-        "%s mailbox(es) connected.": "已连接 %s 个邮箱。",
         "%s messages": "%s 条消息",
         "%s messages deleted or removed": "已删除或移除 %s 条消息",
         "%s messages marked as spam": "已将 %s 条消息标记为垃圾邮件",
@@ -76,14 +75,11 @@
         "%s open in TicketCheck": "TicketCheck 中 %s 个进行中",
         "%s percent match": "匹配度 %s％",
         "%s product codes available for agreements.": "%s 个产品代码可用于协议。",
-        "%s row error(s).": "%s 行错误。",
         "%s rows match": "%s 行匹配",
         "%s shared mailboxes connected.": "已连接 %s 个共享邮箱。",
-        "%s skipped.": "已跳过 %s 项。",
         "%s unpaid — open money": "%s 笔未付款——请打开“资金”",
         "%s waiting": "%s 项待处理",
         "%s · %d need attention · %d open deals": "%s · %d 项需要关注 · %d 个进行中的商机",
-        "(%s file(s) attached)": "（已附 %s 个文件）",
         "(No subject)": "（无主题）",
         "(Preview truncated)": "（预览已截断）",
         "(copy)": "（副本）",
@@ -1160,7 +1156,6 @@
         "Forecast": "预测",
         "Format: %1$s followed by a signed payload. One key per organisation.": "格式：%1$s 后接签名负载。每个组织一个密钥。",
         "Formatting": "格式",
-        "Found %s new folder(s). Turn on Sync for the ones you want — changes save automatically.": "发现 %s 个新文件夹。为需要的文件夹开启“同步”——更改自动保存。",
         "Free to run under AGPL": "AGPL 下免费使用",
         "Friday": "周五",
         "From": "从",
@@ -1320,7 +1315,8 @@
         "Invoices for the linked InvoiceCheck customer show up here.": "关联 InvoiceCheck 客户的发票显示在此。",
         "Invoices sent but not marked paid.": "已发送但未标记为付款的发票。",
         "Issue": "出库",
-        "Issue licence key(s)": "签发许可证密钥",
+        "Issue %n licence key": "签发 %n 个许可证密钥",
+        "Issue %n licence keys": "签发 %n 个许可证密钥",
         "Italic": "斜体",
         "Item assigned": "项目已分配",
         "Items": "物品",
@@ -2026,7 +2022,6 @@
         "Person added.": "联系人已添加。",
         "Person away": "人员缺席",
         "Person removed.": "联系人已移除。",
-        "Person removed. %s mail item(s) returned to Assign.": "联系人已移除。%s 个邮件项已退回“分配”。",
         "Person updated.": "联系人已更新。",
         "Personal": "个人",
         "Personal choices that do not affect other users.": "不影响其他用户的个人选择。",
@@ -2253,7 +2248,6 @@
         "Removed from Assign (no live mail-server id yet)": "已从“分配”移除（尚无邮件服务器 ID）",
         "Removed — message no longer in the shared mailbox": "已移除——消息已不在共享邮箱中",
         "Removed “%s”.": "已移除“%s”。",
-        "Removed “%s”. %s mail item(s) returned to Assign.": "已移除“%s”。%s 个邮件项已退回“分配”。",
         "Removes the address-book link only. The contact stays in Contacts.": "仅移除通讯录关联。联系人仍保留在“通讯录”中。",
         "Removes the link only. Files stay in Nextcloud Files.": "仅移除关联。文件仍保留在 Nextcloud“文件”中。",
         "Removes them from this company in CustomerCheck. The Contacts app entry stays.": "将其从 CustomerCheck 的此公司中移除。“通讯录”应用中的条目保留。",
@@ -3091,6 +3085,10 @@
             "（已清空 1 个实例绑定值）",
             "（已清空 %n 个实例绑定值）"
         ],
+        "_(1 file attached)_::_(%n files attached)_": [
+            "（已附 1 个文件）",
+            "（已附 %n 个文件）"
+        ],
         "_(1 filtered)_::_(%n filtered)_": [
             "（已过滤 1 项）",
             "（已过滤 %n 项）"
@@ -3103,9 +3101,25 @@
             "（1 个引用未解析）",
             "（%n 个引用未解析）"
         ],
+        "_1 license invoice still unpaid._::_%n license invoices still unpaid._": [
+            "1 张许可证发票仍未付款。",
+            "%n 张许可证发票仍未付款。"
+        ],
+        "_1 mail item returned to Assign._::_%n mail items returned to Assign._": [
+            "1 个邮件项已退回“分配”。",
+            "%n 个邮件项已退回“分配”。"
+        ],
+        "_1 mailbox connected._::_%n mailboxes connected._": [
+            "已连接 1 个邮箱。",
+            "已连接 %n 个邮箱。"
+        ],
         "_1 reference unresolved — see the groups below._::_%n references unresolved — see the groups below._": [
             "1 个引用未能解析——请查看下方分组。",
             "%n 个引用未能解析——请查看下方分组。"
+        ],
+        "_1 row error._::_%n row errors._": [
+            "1 行错误。",
+            "%n 行错误。"
         ],
         "_1 row needs a value on this instance_::_%n rows need a value on this instance_": [
             "1 行需要在此实例上填写值",
@@ -3114,6 +3128,18 @@
         "_1 row skipped._::_%n rows skipped._": [
             "已跳过 1 行。",
             "已跳过 %n 行。"
+        ],
+        "_1 skipped._::_%n skipped._": [
+            "已跳过 1 项。",
+            "已跳过 %n 项。"
+        ],
+        "_1 template ready to use on deals._::_%n templates ready to use on deals._": [
+            "1 个模板可用于商机。",
+            "%n 个模板可用于商机。"
+        ],
+        "_Found 1 new folder. Turn on Sync for the ones you want — changes save automatically._::_Found %n new folders. Turn on Sync for the ones you want — changes save automatically._": [
+            "发现 1 个新文件夹。为需要的文件夹开启“同步”——更改自动保存。",
+            "发现 %n 个新文件夹。为需要的文件夹开启“同步”——更改自动保存。"
         ],
         "_Warning: 1 row will be permanently deleted, then the file data is loaded._::_Warning: %n rows will be permanently deleted, then the file data is loaded._": [
             "警告：1 行将被永久删除，然后加载文件数据。",

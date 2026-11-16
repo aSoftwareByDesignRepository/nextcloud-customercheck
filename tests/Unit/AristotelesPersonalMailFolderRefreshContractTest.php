@@ -50,7 +50,7 @@ final class AristotelesPersonalMailFolderRefreshContractTest extends TestCase
 		$this->assertStringContainsString('Refresh folders', $tpl);
 		$this->assertStringContainsString('/folders/refresh', $js);
 		$this->assertStringContainsString('folderDisplayMeta', $js);
-		$this->assertStringContainsString('Found %s new folder(s)', $js);
+		$this->assertStringContainsString('Found %n new folders', $js);
 		$this->assertStringContainsString('--crm-folder-depth', $js);
 		$this->assertStringContainsString('crm-personal-mail-folder--nested', $js);
 		$this->assertStringContainsString('crm-personal-mail-folder__mark', $js);

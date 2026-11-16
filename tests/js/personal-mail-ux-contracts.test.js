@@ -375,7 +375,7 @@ describe('personal-mail settings UX contracts', () => {
     expect(tpl).toContain('crm-personal-mail-folders-refresh');
     expect(js).toContain('/folders/refresh');
     expect(js).toContain('folderDisplayMeta');
-    expect(js).toContain('Found %s new folder(s)');
+    expect(js).toContain('Found %n new folders');
     expect(js).toContain('crm-personal-mail-folder--nested');
     expect(js).toContain('crm-personal-mail-folder__mark');
     expect(js).not.toContain('crm-personal-mail-folder__path');

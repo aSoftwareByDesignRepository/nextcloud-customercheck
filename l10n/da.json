@@ -28,8 +28,6 @@
         "%1$s: %2$s needs follow-up (%3$d days in stage)": "%1$s: %2$s har brug for opfølgning (%3$d dage i fase)",
         "%1$s: %2$s renewal reminder": "%1$s: %2$s-fornyelsespåmindelse",
         "%1$s: %2$s. %3$s. %4$s": "%1$s: %2$s. %3$s. %4$s",
-        "%d dedicated app admin(s) selected": "%d dedikeret app-administrator(er) valgt",
-        "%d group(s) selected": "%d gruppe(r) valgt",
         "%n company name appears more than once": "%n firmanavn optræder mere end én gang",
         "%n company names appear more than once": "%n firmanavne optræder mere end én gang",
         "%n contact with email": "%n kontakt med e-mail",
@@ -42,6 +40,10 @@
         "%n days ago": "%n dage siden",
         "%n days in stage": "%n dage i fase",
         "%n days past due": "%n dage efter termin",
+        "%n dedicated app admin selected": "%n dedikeret app-administrator valgt",
+        "%n dedicated app admins selected": "%n dedikerede app-administratorer valgt",
+        "%n group selected": "%n gruppe valgt",
+        "%n groups selected": "%n grupper valgt",
         "%n item": "%n vare",
         "%n items": "%n elementer",
         "%n logged message": "%n logget besked",
@@ -50,7 +52,6 @@
         "%n open edit conflicts": "%n åbne redigeringskonflikter",
         "%n review item needs a decision": "%n anmeldelseselement kræver en beslutning",
         "%n review items need a decision": "%n gennemgangsemner kræver en beslutning",
-        "%n template(s) ready to use on deals.": "%n skabelon(er) klar til brug på deals.",
         "%s already on the team had their role updated.": "%s allerede på teamet fik deres rolle opdateret.",
         "%s companies are ready. Tap the green button to add them.": "%s virksomheder er klar. Tryk på den grønne knap for at tilføje dem.",
         "%s days": "%s dage",
@@ -62,8 +63,6 @@
         "%s hours %s minutes": "%s timer %s minutter",
         "%s is AGPL software on your Nextcloud. Bug reports and ideas on GitHub stay welcome. When you need priority email, hour packs, workshops, or a commissioned feature, we invoice only after you accept a quote.": "%s er AGPL-software på din Nextcloud. Fejlrapporter og ideer på GitHub forbliver velkomne. Når du har brug for prioriteret e-mail, timepakker, workshops eller en bestilt funktion, fakturerer vi først, når du har accepteret et tilbud.",
         "%s items need a decision": "%s-emner kræver en beslutning",
-        "%s license invoice(s) still unpaid.": "%s licensfaktura(er) stadig ubetalt.",
-        "%s mailbox(es) connected.": "%s postkasse (r) tilsluttet.",
         "%s messages": "%s beskeder",
         "%s messages deleted or removed": "%s beskeder slettet eller fjernet",
         "%s messages marked as spam": "%s beskeder markeret som spam",
@@ -76,14 +75,11 @@
         "%s open in TicketCheck": "%s åbnes i TicketCheck",
         "%s percent match": "%s procent match",
         "%s product codes available for agreements.": "%s produktkoder tilgængelige for aftaler.",
-        "%s row error(s).": "%s rækkefejl.",
         "%s rows match": "%s rækker matcher",
         "%s shared mailboxes connected.": "%s fælles postkasser forbundet.",
-        "%s skipped.": "%s sprunget over.",
         "%s unpaid — open money": "%s ubetalt — åbn Penge",
         "%s waiting": "%s venter",
         "%s · %d need attention · %d open deals": "%s · %d har brug for opmærksomhed · %d åbne deals",
-        "(%s file(s) attached)": "(%s fil(er) vedhæftet)",
         "(No subject)": "(Intet emne)",
         "(Preview truncated)": "(Forhåndsvisning afkortet)",
         "(copy)": "(kopi)",
@@ -1160,7 +1156,6 @@
         "Forecast": "Vejrudsigt",
         "Format: %1$s followed by a signed payload. One key per organisation.": "Format: %1$s efterfulgt af en signeret nyttelast. Én nøgle pr. organisation.",
         "Formatting": "Formatering",
-        "Found %s new folder(s). Turn on Sync for the ones you want — changes save automatically.": "Fandt %s ny(e) mappe(r). Slå Sync til for dem, du vil — ændringer gemmes automatisk.",
         "Free to run under AGPL": "Gratis at køre under AGPL",
         "Friday": "fredag",
         "From": "Fra",
@@ -1320,7 +1315,8 @@
         "Invoices for the linked InvoiceCheck customer show up here.": "Fakturaer for den linkede InvoiceCheck-kunde vises her.",
         "Invoices sent but not marked paid.": "Fakturaer sendt, men ikke markeret som betalt.",
         "Issue": "Spørgsmål",
-        "Issue licence key(s)": "Udsted licensnøgler",
+        "Issue %n licence key": "Udsted %n licensnøgle",
+        "Issue %n licence keys": "Udsted %n licensnøgler",
         "Italic": "Kursiv",
         "Item assigned": "Gennemgå element tildelt",
         "Items": "genstande",
@@ -2026,7 +2022,6 @@
         "Person added.": "Person tilføjet.",
         "Person away": "Person væk",
         "Person removed.": "Person fjernet.",
-        "Person removed. %s mail item(s) returned to Assign.": "Person fjernet. %s mail(s) returneret til Tildeling.",
         "Person updated.": "Person opdateret.",
         "Personal": "Personlig",
         "Personal choices that do not affect other users.": "Personlige valg, der ikke påvirker andre brugere.",
@@ -2253,7 +2248,6 @@
         "Removed from Assign (no live mail-server id yet)": "Fjernet fra Tildeling (endnu intet live mailserver-id)",
         "Removed — message no longer in the shared mailbox": "Fjernet — beskeden er ikke længere i den fælles postkasse",
         "Removed “%s”.": "Fjernede „%s“.",
-        "Removed “%s”. %s mail item(s) returned to Assign.": "„%s“ fjernet. %s mail(s) returneret til Tildeling.",
         "Removes the address-book link only. The contact stays in Contacts.": "Fjerner kun adressebogslinket. Kontakten forbliver i Kontakter.",
         "Removes the link only. Files stay in Nextcloud Files.": "Fjerner kun linket. Filer bliver i Nextcloud Files.",
         "Removes them from this company in CustomerCheck. The Contacts app entry stays.": "Fjerner dem fra dette firma i CustomerCheck. Kontakter-app-posten bliver.",
@@ -3091,6 +3085,10 @@
             "(1 instansbunden værdi tømt)",
             "(%n instansbundne værdier tømt)"
         ],
+        "_(1 file attached)_::_(%n files attached)_": [
+            "(1 fil vedhæftet)",
+            "(%n filer vedhæftet)"
+        ],
         "_(1 filtered)_::_(%n filtered)_": [
             "(1 filtreret)",
             "(%n filtreret)"
@@ -3103,9 +3101,25 @@
             "(1 uopløst reference)",
             "(%n uopløste referencer)"
         ],
+        "_1 license invoice still unpaid._::_%n license invoices still unpaid._": [
+            "1 licensfaktura stadig ubetalt.",
+            "%n licensfakturaer stadig ubetalt."
+        ],
+        "_1 mail item returned to Assign._::_%n mail items returned to Assign._": [
+            "1 mail returneret til Tildeling.",
+            "%n mails returneret til Tildeling."
+        ],
+        "_1 mailbox connected._::_%n mailboxes connected._": [
+            "1 postkasse tilsluttet.",
+            "%n postkasser tilsluttet."
+        ],
         "_1 reference unresolved — see the groups below._::_%n references unresolved — see the groups below._": [
             "1 reference uopløst — se grupperne nedenfor.",
             "%n referencer uopløst — se grupperne nedenfor."
+        ],
+        "_1 row error._::_%n row errors._": [
+            "1 rækkefejl.",
+            "%n rækkefejl."
         ],
         "_1 row needs a value on this instance_::_%n rows need a value on this instance_": [
             "1 række kræver en værdi på denne instans",
@@ -3114,6 +3128,18 @@
         "_1 row skipped._::_%n rows skipped._": [
             "1 række sprunget over.",
             "%n rækker sprunget over."
+        ],
+        "_1 skipped._::_%n skipped._": [
+            "1 sprunget over.",
+            "%n sprunget over."
+        ],
+        "_1 template ready to use on deals._::_%n templates ready to use on deals._": [
+            "1 skabelon klar til brug på deals.",
+            "%n skabeloner klar til brug på deals."
+        ],
+        "_Found 1 new folder. Turn on Sync for the ones you want — changes save automatically._::_Found %n new folders. Turn on Sync for the ones you want — changes save automatically._": [
+            "Fandt 1 ny mappe. Slå Sync til for den, du vil — ændringer gemmes automatisk.",
+            "Fandt %n nye mapper. Slå Sync til for dem, du vil — ændringer gemmes automatisk."
         ],
         "_Warning: 1 row will be permanently deleted, then the file data is loaded._::_Warning: %n rows will be permanently deleted, then the file data is loaded._": [
             "Advarsel: 1 række slettes permanent, derefter indlæses fildataene.",

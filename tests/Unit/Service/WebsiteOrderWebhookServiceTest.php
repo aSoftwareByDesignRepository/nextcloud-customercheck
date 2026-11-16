@@ -82,6 +82,9 @@ class WebsiteOrderWebhookServiceTest extends TestCase
 		$time->method('getDateTime')->willReturn(new \DateTime('2026-07-20 12:00:00'));
 		$l10n = $this->createMock(IL10N::class);
 		$l10n->method('t')->willReturnCallback(static fn (string $text): string => $text);
+		$l10n->method('n')->willReturnCallback(
+			static fn (string $sg, string $pl, int $count): string => str_replace('%n', (string)$count, $count === 1 ? $sg : $pl)
+		);
 
 		return new WebsiteOrderWebhookService(
 			$settings,
@@ -157,7 +160,7 @@ class WebsiteOrderWebhookServiceTest extends TestCase
 		$this->assertSame('license', $this->agreements[0]['kind']);
 		$this->assertSame(['mobileSeats' => 5, 'terminalDevices' => 0, 'bundle' => false], $this->agreements[0]['limits']);
 		$this->assertCount(2, $this->activities);
-		$this->assertSame(['Issue licence key(s)', 'Write invoice'], array_map(static fn (Activity $a) => $a->getTitle(), $this->activities));
+		$this->assertSame(['Issue 1 licence key', 'Write invoice'], array_map(static fn (Activity $a) => $a->getTitle(), $this->activities));
 		$this->assertSame(['todo', 'todo'], array_map(static fn (Activity $a) => $a->getType(), $this->activities));
 	}
 
@@ -201,6 +204,9 @@ class WebsiteOrderWebhookServiceTest extends TestCase
 		$time->method('getDateTime')->willReturn(new \DateTime('2026-07-20 12:00:00'));
 		$l10n = $this->createMock(IL10N::class);
 		$l10n->method('t')->willReturnCallback(static fn (string $text): string => $text);
+		$l10n->method('n')->willReturnCallback(
+			static fn (string $sg, string $pl, int $count): string => str_replace('%n', (string)$count, $count === 1 ? $sg : $pl)
+		);
 
 		$service = new WebsiteOrderWebhookService(
 			$settings,

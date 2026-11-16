@@ -29,6 +29,18 @@
     return out;
   }
 
+  // Plural-aware translate — window.n resolves the _sg_::_pl_ combined
+  // catalog key and substitutes %n. Singular msgids carry the literal '1'
+  // (catalog convention), plurals carry %n. Never '(s)'-hack a count into a
+  // single msgid — lazy_plural_paren class.
+  function n(singular, plural, count) {
+    const c = Number.isFinite(Number(count)) ? Number(count) : 0;
+    if (typeof window.n === 'function') {
+      return window.n('customercheck', singular, plural, c);
+    }
+    return String(c === 1 ? singular : plural).replace('%n', String(c));
+  }
+
   function esc(s) {
     return String(s || '').replace(/[<>&"]/g, function (ch) {
       return ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' })[ch];
@@ -248,7 +260,7 @@
     const elevatingPrivate = !personal
       && (sourceVis === 'private' || sourceKind === 'personal');
     const attachNote = attachmentFileIds.length
-      ? ' ' + t('(%s file(s) attached)', [String(attachmentFileIds.length)])
+      ? ' ' + n('(1 file attached)', '(%n files attached)', attachmentFileIds.length)
       : '';
     var confirmMessage = personal
       ? t('This sends as your personal account (%s). Only you see private folders; shared folders follow your folder settings.', [label]) + attachNote

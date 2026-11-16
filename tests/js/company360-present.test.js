@@ -127,6 +127,6 @@ describe('buildBillingHonesty', () => {
         },
         rawT,
       ).text,
-    ).toBe('2 license invoice(s) still unpaid.');
+    ).toBe('2 license invoices still unpaid.');
   });
 });

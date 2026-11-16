@@ -36,7 +36,7 @@ $restrictionOn = !empty($settings['access_restriction_enabled']);
 						<?php
 						$count = count($selectedAppAdmins);
 						p($count > 0
-							? $l->t('%d dedicated app admin(s) selected', [$count])
+							? $l->n('%n dedicated app admin selected', '%n dedicated app admins selected', $count)
 							: $l->t('No dedicated app admins yet — every Nextcloud admin can still manage CustomerCheck.'));
 						?>
 					</p>
@@ -82,7 +82,7 @@ $restrictionOn = !empty($settings['access_restriction_enabled']);
 						<?php
 						$gCount = count($selectedGroups);
 						p($gCount > 0
-							? $l->t('%d group(s) selected', [$gCount])
+							? $l->n('%n group selected', '%n groups selected', $gCount)
 							: $l->t('No groups selected.'));
 						?>
 					</p>

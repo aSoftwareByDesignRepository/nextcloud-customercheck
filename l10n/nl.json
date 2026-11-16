@@ -28,8 +28,6 @@
         "%1$s: %2$s needs follow-up (%3$d days in stage)": "%1$s: %2$s heeft follow-up nodig (%3$d dagen in fase)",
         "%1$s: %2$s renewal reminder": "%1$s: %2$s-hernieuwingsherinnering",
         "%1$s: %2$s. %3$s. %4$s": "%1$s: %2$s. %3$s. %4$s",
-        "%d dedicated app admin(s) selected": "%d toegewijde app-beheerder(s) geselecteerd",
-        "%d group(s) selected": "%d-groep(s) geselecteerd",
         "%n company name appears more than once": "%n bedrijfsnaam komt meer dan eens voor",
         "%n company names appear more than once": "%n bedrijfsnamen komen meer dan eens voor",
         "%n contact with email": "%n contact met e-mail",
@@ -42,6 +40,10 @@
         "%n days ago": "%n dagen geleden",
         "%n days in stage": "%n dagen in fase",
         "%n days past due": "%n dagen verlopen",
+        "%n dedicated app admin selected": "%n toegewijde app-beheerder geselecteerd",
+        "%n dedicated app admins selected": "%n toegewijde app-beheerders geselecteerd",
+        "%n group selected": "%n groep geselecteerd",
+        "%n groups selected": "%n groepen geselecteerd",
         "%n item": "%n vermelding",
         "%n items": "%n vermeldingen",
         "%n logged message": "%n gelogd bericht",
@@ -50,7 +52,6 @@
         "%n open edit conflicts": "%n openstaande bewerkingsconflicten",
         "%n review item needs a decision": "%n herzieningsitem heeft een beslissing nodig",
         "%n review items need a decision": "%n herzieningsitems hebben een beslissing nodig",
-        "%n template(s) ready to use on deals.": "%n sjabloon(en) klaar voor gebruik op deals.",
         "%s already on the team had their role updated.": "%s die al in het team zaten kregen hun rol bijgewerkt.",
         "%s companies are ready. Tap the green button to add them.": "%s ondernemingen zijn klaar. Tik op de groene knop om ze toe te voegen.",
         "%s days": "%s dagen",
@@ -62,8 +63,6 @@
         "%s hours %s minutes": "%s uur %s minuten",
         "%s is AGPL software on your Nextcloud. Bug reports and ideas on GitHub stay welcome. When you need priority email, hour packs, workshops, or a commissioned feature, we invoice only after you accept a quote.": "%s is AGPL-software op jouw Nextcloud. Bugrapporten en ideeën op GitHub blijven welkom. Als je prioriteitsmail, urenpakketten, workshops of een maatwerkfunctie nodig hebt, factureren we pas nadat je een offerte hebt geaccepteerd.",
         "%s items need a decision": "%s-items hebben een beslissing nodig",
-        "%s license invoice(s) still unpaid.": "%s licentiefactuur/facturen nog onbetaald.",
-        "%s mailbox(es) connected.": "%s mailbox(es) verbonden.",
         "%s messages": "%s berichten",
         "%s messages deleted or removed": "%s berichten verwijderd of weggehaald",
         "%s messages marked as spam": "%s berichten gemarkeerd als spam",
@@ -76,14 +75,11 @@
         "%s open in TicketCheck": "%s geopend in TicketCheck",
         "%s percent match": "%s procent komt overeen",
         "%s product codes available for agreements.": "%s productcodes beschikbaar voor overeenkomsten.",
-        "%s row error(s).": "%s rijfouten.",
         "%s rows match": "%s rijen komen overeen",
         "%s shared mailboxes connected.": "%s gedeelde mailboxen verbonden.",
-        "%s skipped.": "%s is overgeslagen.",
         "%s unpaid — open money": "%s niet betaald — open Geld",
         "%s waiting": "%s wacht",
         "%s · %d need attention · %d open deals": "%s · %d heeft aandacht nodig · %d open deals",
-        "(%s file(s) attached)": "(%s bestand(en) bijgevoegd)",
         "(No subject)": "(Geen onderwerp)",
         "(Preview truncated)": "(Voorbeeld ingekort)",
         "(copy)": "(kopie)",
@@ -1160,7 +1156,6 @@
         "Forecast": "Voorspelling",
         "Format: %1$s followed by a signed payload. One key per organisation.": "Formaat: %1$s gevolgd door een ondertekende payload. Eén sleutel per organisatie.",
         "Formatting": "Opmaak",
-        "Found %s new folder(s). Turn on Sync for the ones you want — changes save automatically.": "%s nieuwe map(pen) gevonden. Zet Sync aan voor die je wilt — wijzigingen worden automatisch opgeslagen.",
         "Free to run under AGPL": "Gratis te gebruiken onder AGPL",
         "Friday": "Vrijdag",
         "From": "Van",
@@ -1320,7 +1315,8 @@
         "Invoices for the linked InvoiceCheck customer show up here.": "Facturen voor de verbonden InvoiceCheck-klant verschijnen hier.",
         "Invoices sent but not marked paid.": "Facturen verzonden maar niet gemarkeerd betaald.",
         "Issue": "Onderwerp",
-        "Issue licence key(s)": "Licentiesleutels afgeven",
+        "Issue %n licence key": "%n licentiesleutel afgeven",
+        "Issue %n licence keys": "%n licentiesleutels afgeven",
         "Italic": "Cursief",
         "Item assigned": "Beoordelende post",
         "Items": "Vermeldingen",
@@ -2026,7 +2022,6 @@
         "Person added.": "Persoon toegevoegd.",
         "Person away": "Persoon weg",
         "Person removed.": "Persoon verwijderd.",
-        "Person removed. %s mail item(s) returned to Assign.": "Persoon verwijderd. %s mailitem(s) terug naar Toewijzing.",
         "Person updated.": "Persoon bijgewerkt.",
         "Personal": "Persoonlijk",
         "Personal choices that do not affect other users.": "Persoonlijke keuzes die andere gebruikers niet beïnvloeden.",
@@ -2253,7 +2248,6 @@
         "Removed from Assign (no live mail-server id yet)": "Verwijderd uit Toewijzing (nog geen live mailserver-id)",
         "Removed — message no longer in the shared mailbox": "Verwijderd — bericht staat niet meer in de gedeelde mailbox",
         "Removed “%s”.": "“%s” verwijderd.",
-        "Removed “%s”. %s mail item(s) returned to Assign.": "„%s” verwijderd. %s mailitem(s) terug naar Toewijzing.",
         "Removes the address-book link only. The contact stays in Contacts.": "Verwijdert alleen de adresboeklink. Het contact blijft in Contacten.",
         "Removes the link only. Files stay in Nextcloud Files.": "Verwijdert alleen de koppeling. Bestanden blijven in Nextcloud-bestanden.",
         "Removes them from this company in CustomerCheck. The Contacts app entry stays.": "Verwijdert ze uit dit bedrijf in CustomerCheck. Het Contacten-app-item blijft.",
@@ -3091,6 +3085,10 @@
             "(1 installatiegebonden waarde geleegd)",
             "(%n installatiegebonden waarden geleegd)"
         ],
+        "_(1 file attached)_::_(%n files attached)_": [
+            "(1 bestand bijgevoegd)",
+            "(%n bestanden bijgevoegd)"
+        ],
         "_(1 filtered)_::_(%n filtered)_": [
             "(1 gefilterd)",
             "(%n gefilterd)"
@@ -3103,9 +3101,25 @@
             "(1 onopgeloste verwijzing)",
             "(%n onopgeloste verwijzingen)"
         ],
+        "_1 license invoice still unpaid._::_%n license invoices still unpaid._": [
+            "1 licentiefactuur nog onbetaald.",
+            "%n licentiefacturen nog onbetaald."
+        ],
+        "_1 mail item returned to Assign._::_%n mail items returned to Assign._": [
+            "1 mailitem terug naar Toewijzing.",
+            "%n mailitems terug naar Toewijzing."
+        ],
+        "_1 mailbox connected._::_%n mailboxes connected._": [
+            "1 mailbox verbonden.",
+            "%n mailboxen verbonden."
+        ],
         "_1 reference unresolved — see the groups below._::_%n references unresolved — see the groups below._": [
             "1 verwijzing onopgelost — zie de groepen hieronder.",
             "%n verwijzingen onopgelost — zie de groepen hieronder."
+        ],
+        "_1 row error._::_%n row errors._": [
+            "1 rijfout.",
+            "%n rijfouten."
         ],
         "_1 row needs a value on this instance_::_%n rows need a value on this instance_": [
             "1 rij heeft een waarde nodig op deze installatie",
@@ -3114,6 +3128,18 @@
         "_1 row skipped._::_%n rows skipped._": [
             "1 rij overgeslagen.",
             "%n rijen overgeslagen."
+        ],
+        "_1 skipped._::_%n skipped._": [
+            "1 overgeslagen.",
+            "%n overgeslagen."
+        ],
+        "_1 template ready to use on deals._::_%n templates ready to use on deals._": [
+            "1 sjabloon klaar voor gebruik op deals.",
+            "%n sjablonen klaar voor gebruik op deals."
+        ],
+        "_Found 1 new folder. Turn on Sync for the ones you want — changes save automatically._::_Found %n new folders. Turn on Sync for the ones you want — changes save automatically._": [
+            "1 nieuwe map gevonden. Zet Sync aan voor die je wilt — wijzigingen worden automatisch opgeslagen.",
+            "%n nieuwe mappen gevonden. Zet Sync aan voor die je wilt — wijzigingen worden automatisch opgeslagen."
         ],
         "_Warning: 1 row will be permanently deleted, then the file data is loaded._::_Warning: %n rows will be permanently deleted, then the file data is loaded._": [
             "Waarschuwing: 1 rij wordt definitief verwijderd, daarna worden de bestandsgegevens geladen.",

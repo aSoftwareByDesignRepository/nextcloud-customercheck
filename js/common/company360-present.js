@@ -33,6 +33,18 @@
     };
   }
 
+  // Plural-aware translate — window.n resolves the _sg_::_pl_ combined
+  // catalog key and substitutes %n. Singular msgids carry the literal '1'
+  // (catalog convention), plurals carry %n. Never '(s)'-hack a count into a
+  // single msgid — lazy_plural_paren class.
+  function n(singular, plural, count) {
+    const c = Number.isFinite(Number(count)) ? Number(count) : 0;
+    if (typeof window.n === 'function') {
+      return window.n('customercheck', singular, plural, c);
+    }
+    return String(c === 1 ? singular : plural).replace('%n', String(c));
+  }
+
   function safeInternalHref(href, fallback) {
     const fb = fallback == null ? '/' : String(fallback);
     const s = String(href == null ? '' : href).trim();
@@ -109,7 +121,7 @@
     if (licenseUnpaid > 0) {
       return {
         tone: 'warning',
-        text: t('%s license invoice(s) still unpaid.', [String(licenseUnpaid)]),
+        text: n('1 license invoice still unpaid.', '%n license invoices still unpaid.', licenseUnpaid),
       };
     }
     return {

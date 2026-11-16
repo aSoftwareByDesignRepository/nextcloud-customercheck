@@ -28,8 +28,6 @@
         "%1$s: %2$s needs follow-up (%3$d days in stage)": "%1$s: %2$s behöver uppföljning (%3$d dagar i steg)",
         "%1$s: %2$s renewal reminder": "%1$s: %2$s förnyelsepåminnelse",
         "%1$s: %2$s. %3$s. %4$s": "%1$s: %2$s. %3$s. %4$s",
-        "%d dedicated app admin(s) selected": "%d dedikerad(e) appadministratör(er) vald(a)",
-        "%d group(s) selected": "%d grupp(er) valda",
         "%n company name appears more than once": "%n företagsnamn förekommer mer än en gång",
         "%n company names appear more than once": "%n företagsnamn förekommer mer än en gång",
         "%n contact with email": "%n kontakt med e-post",
@@ -42,6 +40,10 @@
         "%n days ago": "%n dagar sedan",
         "%n days in stage": "%n dagar i steg",
         "%n days past due": "%n dagar försenade",
+        "%n dedicated app admin selected": "%n dedikerad appadministratör vald",
+        "%n dedicated app admins selected": "%n dedikerade appadministratörer valda",
+        "%n group selected": "%n grupp vald",
+        "%n groups selected": "%n grupper valda",
         "%n item": "%n objekt",
         "%n items": "%n objekt",
         "%n logged message": "%n loggat meddelande",
@@ -50,7 +52,6 @@
         "%n open edit conflicts": "%n öppna redigeringskonflikter",
         "%n review item needs a decision": "%n granskningsobjekt behöver ett beslut",
         "%n review items need a decision": "%n granskningsobjekt behöver ett beslut",
-        "%n template(s) ready to use on deals.": "%n mall(ar) redo att användas på deals.",
         "%s already on the team had their role updated.": "%s som redan var i teamet fick sin roll uppdaterad.",
         "%s companies are ready. Tap the green button to add them.": "%s företag är klara. Tryck på den gröna knappen för att lägga till dem.",
         "%s days": "%s dagar",
@@ -62,8 +63,6 @@
         "%s hours %s minutes": "%s timmar %s minuter",
         "%s is AGPL software on your Nextcloud. Bug reports and ideas on GitHub stay welcome. When you need priority email, hour packs, workshops, or a commissioned feature, we invoice only after you accept a quote.": "%s är AGPL-programvara på din Nextcloud. Felrapporter och idéer på GitHub är alltid välkomna. När du behöver prioriterad e-post, timpaket, workshops eller en beställd funktion fakturerar vi först efter att du accepterat en offert.",
         "%s items need a decision": "%s-objekt behöver ett beslut",
-        "%s license invoice(s) still unpaid.": "%s licensfaktura/fakturor fortfarande obetald/a.",
-        "%s mailbox(es) connected.": "%s brevlådor anslutna.",
         "%s messages": "%s meddelanden",
         "%s messages deleted or removed": "%s meddelanden raderade eller borttagna",
         "%s messages marked as spam": "%s meddelanden markerade som spam",
@@ -76,14 +75,11 @@
         "%s open in TicketCheck": "%s öppna i TicketCheck",
         "%s percent match": "%s procents matchning",
         "%s product codes available for agreements.": "%s produktkoder tillgängliga för avtal.",
-        "%s row error(s).": "%s radfel.",
         "%s rows match": "%s rader matchar",
         "%s shared mailboxes connected.": "%s delade brevlådor anslutna.",
-        "%s skipped.": "%s hoppades över.",
         "%s unpaid — open money": "%s obetalda – öppna Pengar",
         "%s waiting": "%s väntar",
         "%s · %d need attention · %d open deals": "%s · %d behöver uppmärksamhet · %d öppna deals",
-        "(%s file(s) attached)": "(%s fil(er) bifogade)",
         "(No subject)": "(Inget ämne)",
         "(Preview truncated)": "(Förhandsvisning avkortad)",
         "(copy)": "(kopia)",
@@ -1160,7 +1156,6 @@
         "Forecast": "Prognos",
         "Format: %1$s followed by a signed payload. One key per organisation.": "Format: %1$s följt av en signerad nyttolast. En nyckel per organisation.",
         "Formatting": "Formatering",
-        "Found %s new folder(s). Turn on Sync for the ones you want — changes save automatically.": "Hittade %s ny(a) mapp(ar). Slå på Sync för dem du vill — ändringar sparas automatiskt.",
         "Free to run under AGPL": "Gratis att köra under AGPL",
         "Friday": "Fredag",
         "From": "Från",
@@ -1320,7 +1315,8 @@
         "Invoices for the linked InvoiceCheck customer show up here.": "Fakturor för den länkade InvoiceCheck-kunden visas här.",
         "Invoices sent but not marked paid.": "Fakturor skickade men inte markerade betalda.",
         "Issue": "Problem",
-        "Issue licence key(s)": "Utfärda licensnyckel/nycklar",
+        "Issue %n licence key": "Utfärda %n licensnyckel",
+        "Issue %n licence keys": "Utfärda %n licensnycklar",
         "Italic": "Kursiv",
         "Item assigned": "Objekt tilldelat",
         "Items": "Objekt",
@@ -2026,7 +2022,6 @@
         "Person added.": "Person tillagd.",
         "Person away": "Personen borta",
         "Person removed.": "Person borttagen.",
-        "Person removed. %s mail item(s) returned to Assign.": "Person borttagen. %s e-postobjekt returnerade till Tilldela.",
         "Person updated.": "Personen uppdaterad.",
         "Personal": "Personlig",
         "Personal choices that do not affect other users.": "Personliga val som inte påverkar andra användare.",
@@ -2253,7 +2248,6 @@
         "Removed from Assign (no live mail-server id yet)": "Borttagen från Tilldela (inget live e-postserver-id ännu)",
         "Removed — message no longer in the shared mailbox": "Borttaget — meddelandet finns inte längre i den delade brevlådan",
         "Removed “%s”.": "Tog bort ”%s”.",
-        "Removed “%s”. %s mail item(s) returned to Assign.": "”%s” borttagen. %s e-postobjekt returnerade till Tilldela.",
         "Removes the address-book link only. The contact stays in Contacts.": "Tar bara bort adressbokslänken. Kontakten finns kvar i Kontakter.",
         "Removes the link only. Files stay in Nextcloud Files.": "Tar bara bort länken. Filerna finns kvar i Nextcloud Filer.",
         "Removes them from this company in CustomerCheck. The Contacts app entry stays.": "Tar bort dem från det här företaget i CustomerCheck. Posten i Kontakter-appen finns kvar.",
@@ -3091,6 +3085,10 @@
             "(1 instansbundet värde tömt)",
             "(%n instansbundna värden tömda)"
         ],
+        "_(1 file attached)_::_(%n files attached)_": [
+            "(1 fil bifogad)",
+            "(%n filer bifogade)"
+        ],
         "_(1 filtered)_::_(%n filtered)_": [
             "(1 filtrerad)",
             "(%n filtrerade)"
@@ -3103,9 +3101,25 @@
             "(1 olöst referens)",
             "(%n olösta referenser)"
         ],
+        "_1 license invoice still unpaid._::_%n license invoices still unpaid._": [
+            "1 licensfaktura fortfarande obetald.",
+            "%n licensfakturor fortfarande obetalda."
+        ],
+        "_1 mail item returned to Assign._::_%n mail items returned to Assign._": [
+            "1 e-postobjekt returnerat till Tilldela.",
+            "%n e-postobjekt returnerade till Tilldela."
+        ],
+        "_1 mailbox connected._::_%n mailboxes connected._": [
+            "1 brevlåda ansluten.",
+            "%n brevlådor anslutna."
+        ],
         "_1 reference unresolved — see the groups below._::_%n references unresolved — see the groups below._": [
             "1 referens är olöst — se grupperna nedan.",
             "%n referenser är olösta — se grupperna nedan."
+        ],
+        "_1 row error._::_%n row errors._": [
+            "1 radfel.",
+            "%n radfel."
         ],
         "_1 row needs a value on this instance_::_%n rows need a value on this instance_": [
             "1 rad behöver ett värde på den här instansen",
@@ -3114,6 +3128,18 @@
         "_1 row skipped._::_%n rows skipped._": [
             "1 rad hoppades över.",
             "%n rader hoppades över."
+        ],
+        "_1 skipped._::_%n skipped._": [
+            "1 hoppades över.",
+            "%n hoppades över."
+        ],
+        "_1 template ready to use on deals._::_%n templates ready to use on deals._": [
+            "1 mall redo att användas på deals.",
+            "%n mallar redo att användas på deals."
+        ],
+        "_Found 1 new folder. Turn on Sync for the ones you want — changes save automatically._::_Found %n new folders. Turn on Sync for the ones you want — changes save automatically._": [
+            "Hittade 1 ny mapp. Slå på Sync för den du vill — ändringar sparas automatiskt.",
+            "Hittade %n nya mappar. Slå på Sync för dem du vill — ändringar sparas automatiskt."
         ],
         "_Warning: 1 row will be permanently deleted, then the file data is loaded._::_Warning: %n rows will be permanently deleted, then the file data is loaded._": [
             "Varning: 1 rad raderas permanent, sedan läses filens data in.",

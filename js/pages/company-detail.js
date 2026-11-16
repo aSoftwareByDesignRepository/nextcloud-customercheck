@@ -18,6 +18,17 @@
     }
     return out;
   };
+  // Plural-aware translate — window.n resolves the _sg_::_pl_ combined
+  // catalog key and substitutes %n. Singular msgids carry the literal '1'
+  // (catalog convention), plurals carry %n. Never '(s)'-hack a count into a
+  // single msgid — lazy_plural_paren class.
+  const n = (singular, plural, count) => {
+    const c = Number.isFinite(Number(count)) ? Number(count) : 0;
+    if (typeof window.n === 'function') {
+      return window.n('customercheck', singular, plural, c);
+    }
+    return String(c === 1 ? singular : plural).replace('%n', String(c));
+  };
   if (C && C.init) { C.init(); }
 
   function shellCan(flag) {
@@ -1098,9 +1109,8 @@
         const live = document.getElementById('crm-live-region');
         if (live) {
           if (mailN > 0) {
-            live.textContent = personName
-              ? t('Removed “%s”. %s mail item(s) returned to Assign.', [personName, String(mailN)])
-              : t('Person removed. %s mail item(s) returned to Assign.', [String(mailN)]);
+            live.textContent = (personName ? t('Removed “%s”.', [personName]) : t('Person removed.'))
+              + ' ' + n('1 mail item returned to Assign.', '%n mail items returned to Assign.', mailN);
           } else {
             live.textContent = personName
               ? t('Removed “%s”.', [personName])

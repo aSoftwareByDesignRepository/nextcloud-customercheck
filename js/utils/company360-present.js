@@ -31,6 +31,25 @@ export function sprintfT(base) {
 }
 
 /**
+ * Plural-aware translate — window.n resolves the _sg_::_pl_ combined
+ * catalog key and substitutes %n. Singular msgids carry the literal '1'
+ * (catalog convention), plurals carry %n. Never '(s)'-hack a count into a
+ * single msgid — lazy_plural_paren class.
+ * @param {string} singular
+ * @param {string} plural
+ * @param {unknown} count
+ * @returns {string}
+ */
+function n(singular, plural, count) {
+  const c = Number.isFinite(Number(count)) ? Number(count) : 0;
+  const baseN = typeof window !== 'undefined' && typeof window.n === 'function' ? window.n : null;
+  if (baseN) {
+    return baseN('customercheck', singular, plural, c);
+  }
+  return String(c === 1 ? singular : plural).replace('%n', String(c));
+}
+
+/**
  * Allow only same-origin absolute paths (no protocol-relative, no javascript:).
  * @param {unknown} href
  * @param {string} [fallback='/']
@@ -128,7 +147,7 @@ export function buildBillingHonesty(billing, t) {
   if (licenseUnpaid > 0) {
     return {
       tone: 'warning',
-      text: t('%s license invoice(s) still unpaid.', [String(licenseUnpaid)]),
+      text: n('1 license invoice still unpaid.', '%n license invoices still unpaid.', licenseUnpaid),
     };
   }
   return {

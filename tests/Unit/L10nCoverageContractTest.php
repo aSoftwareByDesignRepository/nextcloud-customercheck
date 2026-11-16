@@ -124,6 +124,18 @@ final class L10nCoverageContractTest extends TestCase
 					$found[] = stripcslashes($lit);
 				}
 			}
+			// Bare n('singular', 'plural', count) — sync-l10n-from-literals.php
+			// emits the combined _sg_::_pl_ catalog key for JS plural pairs.
+			if (preg_match_all("/(?<![\\w.])n\\(\\s*'((?:\\\\'|[^'])*)'\\s*,\\s*'((?:\\\\'|[^'])*)'\\s*,/", $src, $m)) {
+				foreach ($m[1] as $i => $sg) {
+					$found[] = '_' . stripcslashes($sg) . '_::_' . stripcslashes($m[2][$i]) . '_';
+				}
+			}
+			if (preg_match_all('/(?<![\\w.])n\\(\\s*"((?:\\\\"|[^"])*)"\\s*,\\s*"((?:\\\\"|[^"])*)"\\s*,/', $src, $m)) {
+				foreach ($m[1] as $i => $sg) {
+					$found[] = '_' . stripcslashes($sg) . '_::_' . stripcslashes($m[2][$i]) . '_';
+				}
+			}
 			// Dynamic-map pass (sync-l10n-from-literals.php parity): bare-string
 			// values inside lookup maps whose subscripted result is rendered
 			// through t() — js/transfer.js `const phase = PHASES[job.phase]`

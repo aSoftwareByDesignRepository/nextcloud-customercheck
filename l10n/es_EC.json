@@ -28,8 +28,6 @@
 		"%1$s: %2$s needs follow-up (%3$d days in stage)": "%1$s: %2$s necesita seguimiento (%3$d días en la etapa)",
 		"%1$s: %2$s renewal reminder": "%1$s: recordatorio de renovación de %2$s",
 		"%1$s: %2$s. %3$s. %4$s": "%1$s: %2$s. %3$s. %4$s",
-		"%d dedicated app admin(s) selected": "Administrador(es) de la aplicación dedicada %d seleccionados",
-		"%d group(s) selected": "Grupo(s) %d seleccionados",
 		"%n company name appears more than once": "%n nombre de empresa aparece más de una vez",
 		"%n company names appear more than once": "%n nombres de empresa aparecen más de una vez",
 		"%n contact with email": "%n contacto con correo electrónico",
@@ -42,6 +40,10 @@
 		"%n days ago": "hace %n días",
 		"%n days in stage": "%n días en la etapa",
 		"%n days past due": "%n días de atraso",
+		"%n dedicated app admin selected": "%n administrador de la aplicación dedicada seleccionado",
+		"%n dedicated app admins selected": "%n administradores de la aplicación dedicada seleccionados",
+		"%n group selected": "%n grupo seleccionado",
+		"%n groups selected": "%n grupos seleccionados",
 		"%n item": "%n artículo",
 		"%n items": "%n elementos",
 		"%n logged message": "%n mensaje registrado",
@@ -50,7 +52,6 @@
 		"%n open edit conflicts": "%n conflictos de edición abiertos",
 		"%n review item needs a decision": "%n elemento de revisión necesita una decisión",
 		"%n review items need a decision": "%n elementos de revisión necesitan una decisión",
-		"%n template(s) ready to use on deals.": "%n plantilla(s) lista(s) para usar en ofertas.",
 		"%s already on the team had their role updated.": "Se actualizó el rol de %s que ya estaban en el equipo.",
 		"%s companies are ready. Tap the green button to add them.": "%s empresas están listas. Toca el botón verde para añadirlas.",
 		"%s days": "%s días",
@@ -62,8 +63,6 @@
 		"%s hours %s minutes": "%s horas %s minutos",
 		"%s is AGPL software on your Nextcloud. Bug reports and ideas on GitHub stay welcome. When you need priority email, hour packs, workshops, or a commissioned feature, we invoice only after you accept a quote.": "%s es el software AGPL en su Nextcloud. Los informes de errores y las ideas en GitHub son bienvenidos. Cuando necesita correo electrónico prioritario, paquetes de horas, talleres o una función encargada, facturamos solo después de que acepte un presupuesto.",
 		"%s items need a decision": "Los elementos %s necesitan una decisión",
-		"%s license invoice(s) still unpaid.": "%s factura(s) de licencia aún sin pagar.",
-		"%s mailbox(es) connected.": "%s buzón(es) conectado.",
 		"%s messages": "%s mensajes",
 		"%s messages deleted or removed": "%s mensajes eliminados o quitados",
 		"%s messages marked as spam": "%s mensajes marcados como spam",
@@ -76,14 +75,11 @@
 		"%s open in TicketCheck": "%s abierto en TicketCheck",
 		"%s percent match": "Coincidencia porcentual %s",
 		"%s product codes available for agreements.": "Códigos de producto %s disponibles para acuerdos.",
-		"%s row error(s).": "%s errores de fila.",
 		"%s rows match": "%s filas coinciden",
 		"%s shared mailboxes connected.": "%s buzones compartidos conectados.",
-		"%s skipped.": "%s se saltó.",
 		"%s unpaid — open money": "%s no pagado — abre Dinero",
 		"%s waiting": "%s esperando",
 		"%s · %d need attention · %d open deals": "%s · %d necesita atención · %d ofertas abiertas",
-		"(%s file(s) attached)": "(%s archivo(s) adjunto(s))",
 		"(No subject)": "(Sin asunto)",
 		"(Preview truncated)": "(Vista previa truncada)",
 		"(copy)": "(copia)",
@@ -1160,7 +1156,6 @@
 		"Forecast": "Pronóstico",
 		"Format: %1$s followed by a signed payload. One key per organisation.": "Formato: %1$s seguido de una carga útil firmada. Una clave por organización.",
 		"Formatting": "Formato",
-		"Found %s new folder(s). Turn on Sync for the ones you want — changes save automatically.": "Se encontraron %s carpeta(s) nueva(s). Activa Sync en las que quieras — se guarda solo.",
 		"Free to run under AGPL": "Gratis para ejecutar bajo AGPL",
 		"Friday": "Viernes",
 		"From": "De",
@@ -1320,7 +1315,8 @@
 		"Invoices for the linked InvoiceCheck customer show up here.": "Las facturas del cliente de InvoiceCheck vinculado aparecen aquí.",
 		"Invoices sent but not marked paid.": "Facturas enviadas pero no marcadas como pagadas.",
 		"Issue": "Asunto",
-		"Issue licence key(s)": "Emitir claves de licencia",
+		"Issue %n licence key": "Emitir %n clave de licencia",
+		"Issue %n licence keys": "Emitir %n claves de licencia",
 		"Italic": "Cursiva",
 		"Item assigned": "Revisar elemento asignado",
 		"Items": "Elementos",
@@ -2026,7 +2022,6 @@
 		"Person added.": "Persona añadida.",
 		"Person away": "Persona ausente",
 		"Person removed.": "Persona eliminada.",
-		"Person removed. %s mail item(s) returned to Assign.": "Persona eliminada. %s elemento(s) de correo devuelto(s) a Asignar.",
 		"Person updated.": "Persona actualizada.",
 		"Personal": "Personal",
 		"Personal choices that do not affect other users.": "Elecciones personales que no afectan a otros usuarios.",
@@ -2253,7 +2248,6 @@
 		"Removed from Assign (no live mail-server id yet)": "Quitado de Asignar (aún no hay id en el servidor de correo)",
 		"Removed — message no longer in the shared mailbox": "Eliminado — el mensaje ya no está en el buzón compartido",
 		"Removed “%s”.": "Se eliminó “%s”.",
-		"Removed “%s”. %s mail item(s) returned to Assign.": "Se eliminó “%s”. %s elemento(s) de correo devuelto(s) a Asignar.",
 		"Removes the address-book link only. The contact stays in Contacts.": "Elimina únicamente el enlace de la libreta de direcciones. El contacto permanece en Contactos.",
 		"Removes the link only. Files stay in Nextcloud Files.": "Elimina solo el enlace. Los archivos permanecen en Nextcloud Files.",
 		"Removes them from this company in CustomerCheck. The Contacts app entry stays.": "Los quita de esta empresa en CustomerCheck. La ticket en la app Contactos se queda.",
@@ -3091,6 +3085,10 @@
 			"(1 valor ligado a la instancia vaciado)",
 			"(%n valores ligados a la instancia vaciados)"
 		],
+		"_(1 file attached)_::_(%n files attached)_": [
+			"(1 archivo adjunto)",
+			"(%n archivos adjuntos)"
+		],
 		"_(1 filtered)_::_(%n filtered)_": [
 			"(1 filtrada)",
 			"(%n filtradas)"
@@ -3103,9 +3101,25 @@
 			"(1 referencia sin resolver)",
 			"(%n referencias sin resolver)"
 		],
+		"_1 license invoice still unpaid._::_%n license invoices still unpaid._": [
+			"1 factura de licencia aún sin pagar.",
+			"%n facturas de licencia aún sin pagar."
+		],
+		"_1 mail item returned to Assign._::_%n mail items returned to Assign._": [
+			"1 elemento de correo devuelto a Asignar.",
+			"%n elementos de correo devueltos a Asignar."
+		],
+		"_1 mailbox connected._::_%n mailboxes connected._": [
+			"1 buzón conectado.",
+			"%n buzones conectados."
+		],
 		"_1 reference unresolved — see the groups below._::_%n references unresolved — see the groups below._": [
 			"1 referencia sin resolver — consulta los grupos siguientes.",
 			"%n referencias sin resolver — consulta los grupos siguientes."
+		],
+		"_1 row error._::_%n row errors._": [
+			"1 error de fila.",
+			"%n errores de fila."
 		],
 		"_1 row needs a value on this instance_::_%n rows need a value on this instance_": [
 			"1 fila necesita un valor en esta instancia",
@@ -3114,6 +3128,18 @@
 		"_1 row skipped._::_%n rows skipped._": [
 			"1 fila omitida.",
 			"%n filas omitidas."
+		],
+		"_1 skipped._::_%n skipped._": [
+			"1 omitido.",
+			"%n omitidos."
+		],
+		"_1 template ready to use on deals._::_%n templates ready to use on deals._": [
+			"1 plantilla lista para usar en ofertas.",
+			"%n plantillas listas para usar en ofertas."
+		],
+		"_Found 1 new folder. Turn on Sync for the ones you want — changes save automatically._::_Found %n new folders. Turn on Sync for the ones you want — changes save automatically._": [
+			"Se encontró 1 carpeta nueva. Activa Sync en la que quieras — se guarda solo.",
+			"Se encontraron %n carpetas nuevas. Activa Sync en las que quieras — se guarda solo."
 		],
 		"_Warning: 1 row will be permanently deleted, then the file data is loaded._::_Warning: %n rows will be permanently deleted, then the file data is loaded._": [
 			"Advertencia: 1 fila se eliminará permanentemente y después se cargarán los datos del archivo.",
