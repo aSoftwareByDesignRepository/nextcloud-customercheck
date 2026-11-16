@@ -74,12 +74,14 @@ function extractJs(string $root): array
 	);
 	foreach ($globs as $path) {
 		$src = (string)file_get_contents($path);
-		if (preg_match_all("/(?<![\\w.])(?:t|tr)\\(\\s*'((?:\\\\'|[^'])*)'\\s*[,)]/", $src, $m)) {
+		// fillOne(template, v) is the single-arg t() interpolation helper in
+		// js/pages/import.js — its first arg is a live msgid.
+		if (preg_match_all("/(?<![\\w.])(?:t|tr|fillOne)\\(\\s*'((?:\\\\'|[^'])*)'\\s*[,)]/", $src, $m)) {
 			foreach ($m[1] as $lit) {
 				$found[] = stripcslashes($lit);
 			}
 		}
-		if (preg_match_all('/(?<![\\w.])(?:t|tr)\\(\\s*"((?:\\\\"|[^\"])*)"\\s*[,)]/', $src, $m)) {
+		if (preg_match_all('/(?<![\\w.])(?:t|tr|fillOne)\\(\\s*"((?:\\\\"|[^\"])*)"\\s*[,)]/', $src, $m)) {
 			foreach ($m[1] as $lit) {
 				$found[] = stripcslashes($lit);
 			}
