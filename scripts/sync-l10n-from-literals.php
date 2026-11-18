@@ -162,6 +162,10 @@ function writeL10n(string $root, string $lang, array $translations, ?string $plu
 		$payload['pluralForm'] = $pluralForm;
 	}
 	$json = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT) . "\n";
+	// Family-canonical tab indent — the license-page pack sync writes tab
+	// (json.dumps indent="\t"), so 4-space PRETTY_PRINT churns whole files
+	// on every emit. Fold each leading 4-space run back to tabs.
+	$json = preg_replace_callback('/^ +/m', static fn ($m) => str_repeat("\t", intdiv(strlen($m[0]), 4)), $json);
 	file_put_contents($root . '/l10n/' . $lang . '.json', $json);
 
 	$entries = [];
