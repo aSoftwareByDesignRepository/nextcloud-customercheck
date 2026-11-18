@@ -1381,6 +1381,7 @@ OC.L10N.register(
 		"License expires soon" : "Licensen går snart ut",
 		"License invoices" : "Licensfakturor",
 		"License key" : "Licensnyckel",
+		"License key and official mobile seats" : "Licensnyckel och officiella mobilplatser",
 		"License overview" : "Licensöversikt",
 		"License removed." : "Licens borttagen.",
 		"License sales" : "Licensförsäljning",
@@ -3140,6 +3141,14 @@ OC.L10N.register(
 		"this workspace" : "den här arbetsytan",
 		"undo via snapshot" : "ångra via ögonblicksbild",
 		"will be skipped" : "kommer att hoppas över",
-		"…and %s more." : "…och %s till."
+		"…and %s more." : "…och %s till.",
+		"1 setting" : "1 inställning",
+		"%n settings" : "%n inställningar",
+		"1 row" : "1 rad",
+		"%n rows" : "%n rader",
+		"_1 row_::_%n rows_" : ["1 rad","%n rader"],
+		"_1 setting_::_%n settings_" : ["1 inställning","%n inställningar"],
+		"This will update %1$s and %2$s — nothing is deleted." : "Detta uppdaterar %1$s och %2$s — inget raderas.",
+		"Import applied. %1$s and %2$s written." : "Importen har tillämpats. %1$s och %2$s skrivna."
 	}
 );

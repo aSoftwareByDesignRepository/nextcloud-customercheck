@@ -64,4 +64,18 @@ final class SettingsSplitContractTest extends TestCase
 		$this->assertStringContainsString("u('appSettings')", $nav);
 		$this->assertStringContainsString('$canManageNav', $nav);
 	}
+
+	public function testNavExposesDedicatedLicenseLinkForAdmins(): void
+	{
+		$nav = (string)file_get_contents(dirname(__DIR__, 2) . '/templates/common/navigation.php');
+		// The purchasable license must be one click deep in the sidebar —
+		// not buried behind App settings → chip navigation.
+		$this->assertStringContainsString("appSettingsSections['license']", $nav);
+		$this->assertStringContainsString("settingsSection === 'license'", $nav);
+		$this->assertStringContainsString('<a href="<?php p($licenseUrl); ?>"', $nav);
+		$this->assertMatchesRegularExpression(
+			'/\$onLicenseSection\): \?>aria-current="page"/',
+			$nav,
+		);
+	}
 }

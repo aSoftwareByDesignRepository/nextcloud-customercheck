@@ -1381,6 +1381,7 @@ OC.L10N.register(
 		"License expires soon" : "Lisansın süresi yakında doluyor",
 		"License invoices" : "Lisans faturaları",
 		"License key" : "Lisans anahtarı",
+		"License key and official mobile seats" : "Lisans anahtarı ve resmi mobil lisanslar",
 		"License overview" : "Lisans genel bakışı",
 		"License removed." : "Lisans kaldırıldı.",
 		"License sales" : "Lisans satışları",
@@ -3140,6 +3141,14 @@ OC.L10N.register(
 		"this workspace" : "bu çalışma alanı",
 		"undo via snapshot" : "anlık görüntüyle geri al",
 		"will be skipped" : "atlanacak",
-		"…and %s more." : "…ve %s tane daha."
+		"…and %s more." : "…ve %s tane daha.",
+		"1 setting" : "1 ayar",
+		"%n settings" : "%n ayar",
+		"1 row" : "1 satır",
+		"%n rows" : "%n satır",
+		"_1 row_::_%n rows_" : ["%n satır"],
+		"_1 setting_::_%n settings_" : ["%n ayar"],
+		"This will update %1$s and %2$s — nothing is deleted." : "Bu işlem %1$s ve %2$s güncelleyecek — hiçbir şey silinmeyecek.",
+		"Import applied. %1$s and %2$s written." : "İçe aktarma uygulandı. %1$s ve %2$s yazıldı."
 	}
 );

@@ -1381,6 +1381,7 @@ OC.L10N.register(
 		"License expires soon" : "License expires soon",
 		"License invoices" : "Licence invoices",
 		"License key" : "License key",
+		"License key and official mobile seats" : "License key and official mobile seats",
 		"License overview" : "License overview",
 		"License removed." : "License removed.",
 		"License sales" : "Licence sales",
@@ -3140,6 +3141,14 @@ OC.L10N.register(
 		"this workspace" : "this workspace",
 		"undo via snapshot" : "undo via snapshot",
 		"will be skipped" : "will be skipped",
-		"…and %s more." : "…and %s more."
+		"…and %s more." : "…and %s more.",
+		"1 setting" : "1 setting",
+		"%n settings" : "%n settings",
+		"1 row" : "1 row",
+		"%n rows" : "%n rows",
+		"_1 row_::_%n rows_" : ["1 row","%n rows"],
+		"_1 setting_::_%n settings_" : ["1 setting","%n settings"],
+		"This will update %1$s and %2$s — nothing is deleted." : "This will update %1$s and %2$s — nothing is deleted.",
+		"Import applied. %1$s and %2$s written." : "Import applied. %1$s and %2$s written."
 	}
 );

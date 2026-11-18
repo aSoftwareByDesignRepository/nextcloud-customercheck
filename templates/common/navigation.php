@@ -21,8 +21,11 @@ $canManageWorkspaceNav = !empty($_['canManageWorkspace']);
 $canWriteNav = !empty($_['canWrite']);
 $settingsSection = (string)($_['settingsSection'] ?? '');
 $settingsSections = is_array($urls['settingsSections'] ?? null) ? $urls['settingsSections'] : [];
+$appSettingsSections = is_array($urls['appSettingsSections'] ?? null) ? $urls['appSettingsSections'] : [];
 $myEmailUrl = (string)($settingsSections['my-email'] ?? '');
 $teamMailboxUrl = (string)($settingsSections['mailbox'] ?? '');
+$licenseUrl = (string)($appSettingsSections['license'] ?? '');
+$onLicenseSection = $is('app-settings') && $settingsSection === 'license';
 $wsQ = $workspaceId > 0 ? ('?workspaceId=' . $workspaceId) : '';
 $u = static function (string $key) use ($urls, $wsQ): string {
 	$base = $urls[$key] ?? '#';
@@ -131,7 +134,10 @@ $navItem = static function (
 				<li class="<?php p(($is('settings') && $settingsSection === 'mailbox') ? 'active' : ''); ?>"><a href="<?php p($sectionHref($teamMailboxUrl)); ?>" title="<?php p($l->t('Members and mailbox')); ?>"><?php p($l->t('Team & mailbox')); ?></a></li>
 				<?php endif; ?>
 				<?php if ($canManageNav): ?>
-				<li class="<?php p($is('app-settings') ? 'active' : ''); ?>"><a href="<?php p($u('appSettings')); ?>" title="<?php p($l->t('Access, seats, and tokens')); ?>"><?php p($l->t('App settings')); ?></a></li>
+				<li class="<?php p(($is('app-settings') && !$onLicenseSection) ? 'active' : ''); ?>"><a href="<?php p($u('appSettings')); ?>" title="<?php p($l->t('Access, seats, and tokens')); ?>"><?php p($l->t('App settings')); ?></a></li>
+				<?php if ($licenseUrl !== ''): ?>
+				<li class="<?php p($onLicenseSection ? 'active' : ''); ?>" <?php if ($onLicenseSection): ?>aria-current="page"<?php endif; ?>><a href="<?php p($licenseUrl); ?>" title="<?php p($l->t('License key and official mobile seats')); ?>"><?php p($l->t('License')); ?></a></li>
+				<?php endif; ?>
 				<?php endif; ?>
 				<li class="<?php p($is('get-the-app') ? 'active' : ''); ?>"><a href="<?php p($u('getTheApp')); ?>" title="<?php p($l->t('Official Android companion')); ?>"><?php p($l->t('Get the App')); ?></a></li>
 				<li class="<?php p($is('support-us') ? 'active' : ''); ?>"><a href="<?php p($u('supportUs')); ?>" title="<?php p($l->t('Optional project support')); ?>"><?php p($l->t('Support & us')); ?></a></li>

@@ -1381,6 +1381,7 @@ OC.L10N.register(
 		"License expires soon" : "Licentie verloopt binnenkort",
 		"License invoices" : "Licentiefacturen",
 		"License key" : "Licentiesleutel",
+		"License key and official mobile seats" : "Licentiesleutel en officiële mobiele plaatsen",
 		"License overview" : "Licentieoverzicht",
 		"License removed." : "Licentie verwijderd.",
 		"License sales" : "Verkoop van licenties",
@@ -3140,6 +3141,14 @@ OC.L10N.register(
 		"this workspace" : "deze werkruimte",
 		"undo via snapshot" : "ongedaan maken via momentopname",
 		"will be skipped" : "wordt overgeslagen",
-		"…and %s more." : "…en %s meer."
+		"…and %s more." : "…en %s meer.",
+		"1 setting" : "1 instelling",
+		"%n settings" : "%n instellingen",
+		"1 row" : "1 rij",
+		"%n rows" : "%n rijen",
+		"_1 row_::_%n rows_" : ["1 rij","%n rijen"],
+		"_1 setting_::_%n settings_" : ["1 instelling","%n instellingen"],
+		"This will update %1$s and %2$s — nothing is deleted." : "Dit werkt %1$s en %2$s bij — er wordt niets verwijderd.",
+		"Import applied. %1$s and %2$s written." : "Import toegepast. %1$s en %2$s geschreven."
 	}
 );

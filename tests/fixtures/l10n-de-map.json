@@ -1293,6 +1293,7 @@
     "Licence orders from the website. Creates the company (or finds it by email), a deal, draft licences, and “Issue licence” / “Write invoice” tasks. On the website set customercheck_order_url to the part ending in /hooks/order and customercheck_order_token to the secret after /order/. Same rate limit as leads.": "Lizenzbestellungen von der Website. Legt die Firma an (oder findet sie per E-Mail), einen Deal, Lizenzentwürfe und Aufgaben „Lizenz ausstellen“ / „Rechnung schreiben“. Auf der Website customercheck_order_url auf den Teil mit /hooks/order und customercheck_order_token auf das Geheimnis nach /order/ setzen. Gleiches Ratenlimit wie Leads.",
     "License": "Lizenz",
     "License invoices": "Lizenzrechnungen",
+    "License key and official mobile seats": "Lizenzschlüssel und offizielle Mobil-Plätze",
     "License sales": "Lizenzverkäufe",
     "Licenses": "Lizenzen",
     "Licenses & renewals": "Lizenzen & Verlängerungen",

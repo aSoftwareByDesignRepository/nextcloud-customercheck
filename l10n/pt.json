@@ -1380,6 +1380,7 @@
 		"License expires soon": "A licença expira em breve",
 		"License invoices": "Faturas de licenças",
 		"License key": "Chave de licença",
+		"License key and official mobile seats": "Chave de licença e lugares móveis oficiais",
 		"License overview": "Visão geral da licença",
 		"License removed.": "Licença removida.",
 		"License sales": "Vendas de licenças",
@@ -3187,7 +3188,21 @@
 		"this workspace": "este espaço de trabalho",
 		"undo via snapshot": "anular via instantâneo",
 		"will be skipped": "será ignorado",
-		"…and %s more.": "…e mais %s."
+		"…and %s more.": "…e mais %s.",
+		"1 setting": "1 definição",
+		"%n settings": "%n definições",
+		"1 row": "1 linha",
+		"%n rows": "%n linhas",
+		"_1 row_::_%n rows_": [
+			"1 linha",
+			"%n linhas"
+		],
+		"_1 setting_::_%n settings_": [
+			"1 definição",
+			"%n definições"
+		],
+		"This will update %1$s and %2$s — nothing is deleted.": "Isto irá atualizar %1$s e %2$s — nada será eliminado.",
+		"Import applied. %1$s and %2$s written.": "Importação aplicada. %1$s e %2$s escritas."
 	},
 	"pluralForm": "nplurals=2; plural=(n != 1);"
 }

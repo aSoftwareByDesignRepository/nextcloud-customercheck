@@ -1381,6 +1381,7 @@ OC.L10N.register(
 		"License expires soon" : "Licencja wkrótce wygasa",
 		"License invoices" : "Faktury licencyjne",
 		"License key" : "Klucz licencji",
+		"License key and official mobile seats" : "Klucz licencji i oficjalne miejsca mobilne",
 		"License overview" : "Przegląd licencji",
 		"License removed." : "Licencję usunięto.",
 		"License sales" : "Sprzedaż licencji",
@@ -3140,6 +3141,14 @@ OC.L10N.register(
 		"this workspace" : "to miejsce pracy",
 		"undo via snapshot" : "cofnij za pomocą migawki",
 		"will be skipped" : "zostanie pominięte",
-		"…and %s more." : "…i %s więcej."
+		"…and %s more." : "…i %s więcej.",
+		"1 setting" : "1 ustawienie",
+		"%n settings" : "%n ustawienia",
+		"1 row" : "1 wiersz",
+		"%n rows" : "%n wiersze",
+		"_1 row_::_%n rows_" : ["1 wiersz","%n wiersze","%n wierszy"],
+		"_1 setting_::_%n settings_" : ["1 ustawienie","%n ustawienia","%n ustawień"],
+		"This will update %1$s and %2$s — nothing is deleted." : "Spowoduje to aktualizację %1$s i %2$s — nic nie zostanie usunięte.",
+		"Import applied. %1$s and %2$s written." : "Import zastosowany. Zapisano %1$s i %2$s."
 	}
 );

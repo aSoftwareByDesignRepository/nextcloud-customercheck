@@ -1381,6 +1381,7 @@ OC.L10N.register(
 		"License expires soon" : "许可证即将到期",
 		"License invoices" : "许可证发票",
 		"License key" : "许可证密钥",
+		"License key and official mobile seats" : "许可证密钥和官方移动端席位",
 		"License overview" : "许可证概览",
 		"License removed." : "许可证已移除。",
 		"License sales" : "许可证销售",
@@ -3140,6 +3141,14 @@ OC.L10N.register(
 		"this workspace" : "此工作区",
 		"undo via snapshot" : "通过快照撤销",
 		"will be skipped" : "将被跳过",
-		"…and %s more." : "…还有 %s 个。"
+		"…and %s more." : "…还有 %s 个。",
+		"1 setting" : "1 项设置",
+		"%n settings" : "%n 项设置",
+		"1 row" : "1 行",
+		"%n rows" : "%n 行",
+		"_1 row_::_%n rows_" : ["%n 行"],
+		"_1 setting_::_%n settings_" : ["%n 项设置"],
+		"This will update %1$s and %2$s — nothing is deleted." : "这将更新 %1$s 和 %2$s——不会删除任何内容。",
+		"Import applied. %1$s and %2$s written." : "导入已应用。已写入 %1$s 和 %2$s。"
 	}
 );

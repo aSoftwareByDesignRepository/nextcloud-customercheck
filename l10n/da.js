@@ -1381,6 +1381,7 @@ OC.L10N.register(
 		"License expires soon" : "Licens udløber snart",
 		"License invoices" : "Licensfakturaer",
 		"License key" : "Licensnøgle",
+		"License key and official mobile seats" : "Licensnøgle og officielle mobilpladser",
 		"License overview" : "Licensoversigt",
 		"License removed." : "Licens fjernet.",
 		"License sales" : "Licenssalg",
@@ -3140,6 +3141,14 @@ OC.L10N.register(
 		"this workspace" : "dette arbejdsområde",
 		"undo via snapshot" : "fortryd via snapshot",
 		"will be skipped" : "springes over",
-		"…and %s more." : "…og %s flere."
+		"…and %s more." : "…og %s flere.",
+		"1 setting" : "1 indstilling",
+		"%n settings" : "%n indstillinger",
+		"1 row" : "1 række",
+		"%n rows" : "%n rækker",
+		"_1 row_::_%n rows_" : ["1 række","%n rækker"],
+		"_1 setting_::_%n settings_" : ["1 indstilling","%n indstillinger"],
+		"This will update %1$s and %2$s — nothing is deleted." : "Dette opdaterer %1$s og %2$s — intet slettes.",
+		"Import applied. %1$s and %2$s written." : "Import anvendt. %1$s og %2$s skrevet."
 	}
 );
