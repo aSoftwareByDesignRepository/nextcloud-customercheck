@@ -116,6 +116,11 @@ describe('CSS design-token compliance (no hardcoded colors)', () => {
     for (const file of files) {
       const rel = relative(appRoot, file);
       if (rel === 'css/common/tokens.css') continue;
+      // Verbatim-synced _shared pack files (transfer.css, license-page.css,
+      // field-errors.css, …) are donor-owned — the app copy must not be
+      // edited, so fallback hygiene is judged at the donor, not here.
+      const head = readFileSync(file, 'utf8').slice(0, 800);
+      if (/_shared|synced file|synced from/i.test(head)) continue;
       const css = stripComments(readFileSync(file, 'utf8'));
       for (const { value } of declarationValues(css)) {
         const match = value.match(RAW_COLOR);

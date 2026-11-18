@@ -112,14 +112,14 @@ final class L10nCoverageContractTest extends TestCase
 		$found = [];
 		foreach ($globs as $path) {
 			$src = (string)file_get_contents($path);
-			// t('…') / tr('…') / t("…")
-			// Local helpers are t()/tr(); exclude window.t('customercheck', …).
-			if (preg_match_all("/(?<![\\w.])(?:t|tr)\\(\\s*'((?:\\\\'|[^'])*)'\\s*[,)]/", $src, $m)) {
+			// t('…') / tr('…') / fillOne('…') / t("…")
+			// Local helpers are t()/tr()/fillOne(); exclude window.t('customercheck', …).
+			if (preg_match_all("/(?<![\\w.])(?:t|tr|fillOne)\\(\\s*'((?:\\\\'|[^'])*)'\\s*[,)]/", $src, $m)) {
 				foreach ($m[1] as $lit) {
 					$found[] = stripcslashes($lit);
 				}
 			}
-			if (preg_match_all("/(?<![\\w.])(?:t|tr)\\(\\s*\"((?:\\\\\"|[^\"])*)\"\\s*[,)]/", $src, $m)) {
+			if (preg_match_all("/(?<![\\w.])(?:t|tr|fillOne)\\(\\s*\"((?:\\\\\"|[^\"])*)\"\\s*[,)]/", $src, $m)) {
 				foreach ($m[1] as $lit) {
 					$found[] = stripcslashes($lit);
 				}

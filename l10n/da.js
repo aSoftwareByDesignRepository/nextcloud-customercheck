@@ -2240,7 +2240,7 @@ OC.L10N.register(
 		"Remove license" : "Fjern licens",
 		"Remove mailbox: %s" : "Fjern postkasse: %s",
 		"Remove member" : "Fjern medlem",
-		"Remove mobile seat" : "Fjern mobil plads",
+		"Remove mobile seat" : "Fjern mobilplads",
 		"Remove mobile seat for this person?" : "Fjern mobilplads for denne person?",
 		"Remove the organisation license and revoke all seats and devices? This cannot be undone." : "Fjern organisationslicensen og tilbagekald alle pladser og enheder? Dette kan ikke fortrydes.",
 		"Remove this mailbox?" : "Fjern denne postkasse?",
