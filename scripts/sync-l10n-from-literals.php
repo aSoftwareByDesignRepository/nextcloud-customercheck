@@ -269,7 +269,7 @@ writeL10n($root, 'de', $deTr, $dePrev['pluralForm'] ?? null);
 // Every maintained base catalog — pt/tr/en_GB/zh_CN/zh_TW were silently
 // skipped before (gate_key_blindness roster gap); generated variants
 // (de_DE/es_EC/es_MX) stay excluded — sync-l10n-variants.php rebuilds them.
-$secondary = ['da', 'es', 'fr', 'it', 'nb', 'nl', 'pl', 'sv', 'pt', 'pt_BR', 'tr', 'en_GB', 'zh_CN', 'zh_TW'];
+$secondary = ['da', 'es', 'fr', 'it', 'nb', 'nl', 'pl', 'sv', 'pt', 'pt_BR', 'tr', 'en_GB', 'zh_CN', 'zh_TW', 'ru'];
 $secondaryCounts = [];
 foreach ($secondary as $lang) {
 	$path = $root . '/l10n/' . $lang . '.json';

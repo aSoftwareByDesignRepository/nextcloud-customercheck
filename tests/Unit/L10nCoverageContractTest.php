@@ -18,7 +18,7 @@ use SplFileInfo;
 final class L10nCoverageContractTest extends TestCase
 {
 	/** @var list<string> Maintained base catalogs (en_GB ships real British forms). */
-	private const LOCALES = ['en', 'de', 'da', 'es', 'fr', 'it', 'nb', 'nl', 'pl', 'sv', 'pt', 'pt_BR', 'tr', 'en_GB', 'zh_CN', 'zh_TW'];
+	private const LOCALES = ['en', 'de', 'da', 'es', 'fr', 'it', 'nb', 'nl', 'pl', 'sv', 'pt', 'pt_BR', 'tr', 'en_GB', 'zh_CN', 'zh_TW', 'ru'];
 
 	/** @var list<string> Regional variants generated from base catalogs by scripts/sync-l10n-variants.php. */
 	private const VARIANT_LOCALES = ['de_DE', 'es_EC', 'es_MX'];
