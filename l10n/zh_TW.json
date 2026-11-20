@@ -3083,67 +3083,51 @@
 		"Yours": "您的",
 		"You’re clear — nice.": "全部清空——很好。",
 		"_(1 env-bound value emptied)_::_(%n env-bound values emptied)_": [
-			"（已清空 1 個實例綁定值）",
 			"（已清空 %n 個實例綁定值）"
 		],
 		"_(1 file attached)_::_(%n files attached)_": [
-			"（已附 1 個檔案）",
 			"（已附 %n 個檔案）"
 		],
 		"_(1 filtered)_::_(%n filtered)_": [
-			"（已篩選 1 項）",
 			"（已篩選 %n 項）"
 		],
 		"_(1 secret redacted)_::_(%n secrets redacted)_": [
-			"（已遮蔽 1 個密鑰）",
 			"（已遮蔽 %n 個密鑰）"
 		],
 		"_(1 unresolved ref)_::_(%n unresolved refs)_": [
-			"（1 個參照未解析）",
 			"（%n 個參照未解析）"
 		],
 		"_1 license invoice still unpaid._::_%n license invoices still unpaid._": [
-			"1 張授權發票仍未付款。",
 			"%n 張授權發票仍未付款。"
 		],
 		"_1 mail item returned to Assign._::_%n mail items returned to Assign._": [
-			"1 個郵件項已退回「分配」。",
 			"%n 個郵件項已退回「分配」。"
 		],
 		"_1 mailbox connected._::_%n mailboxes connected._": [
-			"已連線 1 個郵箱。",
 			"已連線 %n 個郵箱。"
 		],
 		"_1 reference unresolved — see the groups below._::_%n references unresolved — see the groups below._": [
-			"1 個參照未能解析——請查看下方群組。",
 			"%n 個參照未能解析——請查看下方群組。"
 		],
 		"_1 row error._::_%n row errors._": [
-			"1 行錯誤。",
 			"%n 行錯誤。"
 		],
 		"_1 row needs a value on this instance_::_%n rows need a value on this instance_": [
-			"1 列需要在此實例上填寫值",
 			"%n 列需要在此實例上填寫值"
 		],
 		"_1 row skipped._::_%n rows skipped._": [
-			"已略過 1 列。",
 			"已略過 %n 列。"
 		],
 		"_1 skipped._::_%n skipped._": [
-			"已跳過 1 項。",
 			"已跳過 %n 項。"
 		],
 		"_1 template ready to use on deals._::_%n templates ready to use on deals._": [
-			"1 個模板可用於商機。",
 			"%n 個模板可用於商機。"
 		],
 		"_Found 1 new folder. Turn on Sync for the ones you want — changes save automatically._::_Found %n new folders. Turn on Sync for the ones you want — changes save automatically._": [
-			"發現 1 個新資料夾。為需要的資料夾開啟「同步」——更改自動儲存。",
 			"發現 %n 個新資料夾。為需要的資料夾開啟「同步」——更改自動儲存。"
 		],
 		"_Warning: 1 row will be permanently deleted, then the file data is loaded._::_Warning: %n rows will be permanently deleted, then the file data is loaded._": [
-			"警告：1 列將被永久刪除，然後載入檔案資料。",
 			"警告：%n 列將被永久刪除，然後載入檔案資料。"
 		],
 		"a customer": "一個客戶",

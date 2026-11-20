@@ -14,7 +14,7 @@ OC.L10N.register(
 	"%1$s · %2$s · promises %3$d\/%4$d · expected cash €%5$s (deals not counted as cash). Open This week." : "%1$s · %2$s · løfter %3$d\/%4$d · forventede kontanter €%5$s (deals tælles ikke som kontanter). Åbn Denne uge.",
 	"%1$s — %2$s" : "%1$s — %2$s",
 	"%1$s — open CustomerCheck for details." : "%1$s — åbn CustomerCheck for detaljer.",
-	"%1$s, %2$s deals, %3$s" : "%1$s, %2$s handler, %3$s",
+	"%1$s, %2$s deals, %3$s" : "%1$s, %2$s deals, %3$s",
 	"%1$s: %2$s expired today" : "%1$s: %2$s udløb i dag",
 	"%1$s: %2$s expired today (grace until %3$s)" : "%1$s: %2$s udløb i dag (respit indtil %3$s)",
 	"%1$s: %2$s expires in 30 days" : "%1$s: %2$s udløber om 30 dage",
