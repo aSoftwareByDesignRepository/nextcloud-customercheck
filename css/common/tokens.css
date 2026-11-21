@@ -1,7 +1,9 @@
+/* Auto-adapted from arbeitszeitcheck/css/common/tokens.css for the Check-family shell. Do not invent divergent layout rules here. */
 /*
- * ArbeitszeitCheck design tokens (--crm-*).
+ * Customercheck design tokens (--crm-*).
  * Colors derive from Nextcloud theme variables; no raw hex in feature CSS.
- * Spacing/typography on :root; theme colors on body (NC sets --color-* on body).
+ * Spacing/typography on :root; theme colors on body + themed app surfaces
+ * (NC sets --color-* on body [data-theme-*]).
  */
 :root {
 	--crm-space-1: 4px;
@@ -13,16 +15,33 @@
 	--crm-space-7: 48px;
 	--crm-space-8: 64px;
 
-	/*
-	 * Radii: design-system scale (6 / 12 / 16). Map only lg → NC --border-radius-large
-	 * so custom theming can round panels without collapsing cards to NC’s ~3px --border-radius.
-	 */
-	--crm-radius-sm: 6px;
-	--crm-radius-md: 12px;
+	/* Legacy --space-* aliases used by ported AZC layout/dialog sheets */
+	--space-1: var(--crm-space-1);
+	--space-2: var(--crm-space-2);
+	--space-3: var(--crm-space-3);
+	--space-4: var(--crm-space-4);
+	--space-5: var(--crm-space-5);
+	--space-6: var(--crm-space-6);
+	--space-7: var(--crm-space-7);
+	--space-8: var(--crm-space-8);
+	--space-10: 80px;
+	--space-12: 96px;
+
+	/* Radii — design-system scale, bound to NC --border-radius-* when present */
+	--crm-radius-sm: var(--border-radius, 6px);
+	--crm-radius-md: var(--border-radius-element, var(--border-radius-large, 12px));
 	--crm-radius-lg: var(--border-radius-large, 16px);
 	--crm-radius-pill: var(--border-radius-pill, 999px);
 
-	--crm-fs-xs: 0.75rem;
+	/* Legacy --radius-* used by ported app-layout / dialogs sheets */
+	--radius-base: var(--crm-radius-sm);
+	--radius-lg: var(--crm-radius-md);
+	--radius-xl: var(--crm-radius-lg);
+	--radius-2xl: var(--crm-radius-lg);
+	--radius-full: var(--crm-radius-pill);
+
+	/* Floor 0.875rem (14px) — no type below 14px on mobile (responsive directive) */
+	--crm-fs-xs: 0.875rem;
 	--crm-fs-sm: 0.875rem;
 	--crm-fs-md: 1rem;
 	--crm-fs-lg: 1.125rem;
@@ -44,137 +63,207 @@
 	--crm-icon-stroke: 2;
 
 	--crm-tab-num: tabular-nums;
-
-	/* Touch targets (WCAG 2.5.5 / design-system §0.4) */
+	/* Touch targets (WCAG 2.5.5 / design-system) */
 	--crm-touch: 44px;
 	--crm-touch-lg: 48px;
 
-	/* Desktop app-navigation rail (Nextcloud drawer collapses below 1024px). */
-	--crm-nav-width: 280px;
-	--crm-nav-width-compact: 240px;
-
 	/*
-	 * Legacy --space-* / --azc-space-* bridges → design-system 4px grid (px, not rem).
-	 * Rem-based spacing under-delivers under Nextcloud’s 15px root font.
+	 * QR / barcode canvas must stay light for scannability in every theme.
+	 * This is the only intentional non-theme surface in Customercheck feature CSS.
 	 */
-	--space-0: 0;
-	--space-1: var(--crm-space-1);
-	--space-2: var(--crm-space-2);
-	--space-3: var(--crm-space-3);
-	--space-4: var(--crm-space-4);
-	--space-5: var(--crm-space-5);
-	--space-6: var(--crm-space-6);
-	--space-7: var(--crm-space-7);
-	--space-8: var(--crm-space-8);
-	--space-10: 40px;
-	--space-12: var(--crm-space-7);
-	--space-16: var(--crm-space-8);
-	--space-20: 80px;
-	--space-24: 96px;
-	--space-32: 128px;
-
-	--azc-space-1: var(--crm-space-1);
-	--azc-space-2: var(--crm-space-2);
-	--azc-space-3: var(--crm-space-3);
-	--azc-space-4: var(--crm-space-4);
-	--azc-space-5: var(--crm-space-5);
+	--crm-qr-canvas: #ffffff;
 }
 
-/* Theme-bound tokens — must follow body [data-theme-*] where NC defines --color-* */
-body {
-	/* Support-us brand surfaces — theme-adaptive (never fixed white ink) */
-	--crm-support-brand-plate: var(--crm-bg-card);
-	--crm-support-brand-ink: var(--crm-text);
-	--crm-support-brand-muted: var(--crm-muted);
-
-	/* Fixed overlays (panels, backdrops, mobile nav) sit below NC #header, not under the profile menu */
+/*
+ * Theme-dependent tokens MUST resolve where Nextcloud sets --color-* (body /
+ * [data-theme-*]) and on themed app surfaces. Resolving color-mix only on
+ * :root can fall back to light surfaces while text inherits dark-theme ink.
+ */
+body,
+#content.app-customercheck,
+#app-content.crm-app,
+.crm-app,
+.crm-dialog,
+.crm-modal,
+.crm-toast-region,
+.crm-toasts,
+.crm-license-modal {
+	/* Fixed overlays (panels, backdrops, mobile nav) sit below NC #header */
 	--crm-overlay-top: var(--header-height, 50px);
 	--crm-overlay-height: calc(100dvh - var(--header-height, 50px));
 
 	--crm-bg-soft: color-mix(in srgb, var(--color-main-background) 96%, var(--color-main-text) 4%);
 	--crm-bg-card: var(--color-main-background);
-	--crm-surface-muted: var(--crm-bg-soft);
+	--crm-bg-stripe: color-mix(in srgb, var(--color-main-background) 92%, var(--color-main-text) 8%);
+	--crm-bg-hover: var(--color-background-hover);
 	--crm-text: var(--color-main-text);
 	--crm-muted: var(--color-text-maxcontrast);
+	/* Muted ink on tinted surfaces (callouts/badges): main-text keeps it
+	   readable where pure maxcontrast washes out on the tint fill. */
+	--crm-muted-on-tint: color-mix(in srgb, var(--color-text-maxcontrast) 55%, var(--color-main-text));
+	/* Monospace for codes/refs (claim numbers, payment refs): NC ships no mono
+	   var, so pin a platform-native stack. */
+	--crm-mono: ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', 'Liberation Mono', Menlo, Consolas, monospace;
 	--crm-border: color-mix(in srgb, var(--color-main-text) 12%, transparent);
-	--crm-border-strong: color-mix(in srgb, var(--color-main-text) 24%, transparent);
+	/* Boundaries of cards/controls/callouts/dialogs need >=3:1 vs the adjacent
+	   surface (WCAG 1.4.11): NC's --color-border-maxcontrast is theme-tuned for
+	   exactly that (dark + high-contrast themes included). The faint 24% mix
+	   measured ~1.3:1 — below the floor in every theme. */
+	--crm-border-strong: var(--color-border-maxcontrast, color-mix(in srgb, var(--color-main-text) 24%, transparent));
 	/* Interactive controls need >=3:1 (WCAG 1.4.11): maxcontrast is NC's own
 	   input border; --color-border / --crm-border stay surface-only. */
 	--crm-form-border: var(--color-border-maxcontrast, var(--crm-border-strong));
+	/* Filled controls (secondary/ghost/summary buttons): the border sits on a
+	   mid-gray fill, so it must read against BOTH fill and page — maxcontrast
+	   lands ~2.9:1 on the 18%-ink secondary fill. Ink-tuned maxcontrast text
+	   token clears 3:1 against both in every theme. */
+	--crm-control-border: var(--color-text-maxcontrast, var(--color-border-maxcontrast, var(--crm-border-strong)));
+
+	/* Primary / focus — track NC accent for custom branding */
+	--crm-primary: var(--color-primary-element);
+	--crm-primary-text: var(--color-primary-element-text);
+	/* Accent used as text/icon ink on surfaces: pure --color-primary-element
+	   drops below WCAG AA 4.5:1 on dark themes (~4.3:1); the dark override
+	   below blends it toward main-text. Fills keep --crm-primary. */
+	--crm-accent-ink: var(--color-primary-element);
+	--crm-focus: 3px solid var(--color-primary-element);
+	--crm-focus-offset: 2px;
 
 	/* Mix with main background — not transparent — so callouts stay visible on all NC themes */
 	--crm-tint-success: color-mix(in srgb, var(--color-success-text, var(--color-success)) 18%, var(--color-main-background));
 	--crm-tint-warning: color-mix(in srgb, var(--color-warning-text, var(--color-warning)) 22%, var(--color-main-background));
 	--crm-tint-danger: color-mix(in srgb, var(--color-error-text, var(--color-error)) 18%, var(--color-main-background));
+	/* Alias used by badges/callouts/toasts — mix into main-bg (never transparent) so dark themes stay visible */
+	--crm-tint-critical: var(--crm-tint-danger);
 	--crm-tint-info: color-mix(in srgb, var(--color-primary-element) 16%, var(--color-main-background));
+
+	/*
+	 * Solid danger CTA fill (design-system §3.3 / WCAG 1.4.3).
+	 * NC 30+ maps --color-error to a pale tint — never put on-fill text on that.
+	 */
+	--crm-danger-fill: var(--color-element-error, var(--color-error));
+	--crm-danger-on-fill: var(--color-primary-element-text, var(--color-primary-text));
+	--crm-danger-ink: var(--color-error-text, var(--color-error));
 
 	/*
 	 * Notification icon wells — pale tint + semantic stroke (see .crm-page-header__icon).
 	 * NC *-text tokens are tuned per theme for contrast on main-background.
 	 */
-	--crm-notif-fg-info: var(--color-primary-element, #00679e);
-	--crm-notif-fg-warning: var(--color-warning-text, var(--color-warning, #a37200));
-	--crm-notif-fg-success: var(--color-success-text, var(--color-success, #2d7b46));
-	--crm-notif-fg-danger: var(--color-error-text, var(--color-error, #db0606));
+	--crm-notif-fg-info: var(--color-primary-element);
+	--crm-notif-fg-warning: var(--color-warning-text, var(--color-warning));
+	--crm-notif-fg-success: var(--color-success-text, var(--color-success));
+	--crm-notif-fg-danger: var(--color-error-text, var(--color-error));
 
 	--crm-shadow-sm: 0 1px 2px color-mix(in srgb, var(--color-main-text) 8%, transparent);
 	--crm-shadow-md: 0 8px 24px color-mix(in srgb, var(--color-main-text) 12%, transparent);
+	--crm-shadow-lg: 0 1rem 3rem color-mix(in srgb, var(--color-main-text) 28%, transparent);
 
-	/* Modal / overlay scrim — theme-aware, never raw black rgba (AZC --azc-scrim). */
+	/* Overlay scrims — theme ink, never hardcoded #000 */
 	--crm-scrim: color-mix(in srgb, var(--color-main-text) 45%, transparent);
+	--crm-scrim-strong: color-mix(in srgb, var(--color-main-text) 55%, transparent);
 
 	/*
-	 * Solid danger CTA fill (design-system §3.3 / WCAG 1.4.3).
-	 * NC 30+ maps --color-error to a pale tint — never put on-fill text on that.
-	 * Use --color-element-error; dark themes darken the fill so ink stays ≥ 4.5:1.
+	 * Legacy --customercheck-* aliases (shell dialogs / app-layout ported from AZC).
+	 * Feature CSS should prefer --crm-*; every alias maps to NC/--crm-* so
+	 * undefined custom properties never blank out surfaces in any theme.
 	 */
-	--crm-danger-fill: var(--color-element-error, var(--color-error));
-	--crm-danger-on-fill: var(--color-primary-element-text, var(--color-primary-text));
-	--crm-danger-ink: var(--color-error-text, var(--color-error));
-	/* Painted edge: solid fill already reads ≥3:1 on light surfaces. */
-	--crm-danger-edge: var(--crm-danger-fill);
-
-	/* Accent used as *text* (active sort heads, selected links). The raw
-	   primary-element fill colour drops under 4.5:1 on dark canvases — the
-	   dark override below mixes it toward main text. */
-	--crm-accent-ink: var(--color-primary-element);
+	--customercheck-color-modal-background: var(--crm-bg-card);
+	--customercheck-color-modal-border: var(--crm-border);
+	--customercheck-color-modal-footer-background: var(--crm-bg-soft);
+	--customercheck-color-background: var(--color-main-background);
+	--customercheck-color-background-elevated: var(--crm-bg-card);
+	--customercheck-color-background-secondary: var(--crm-bg-soft);
+	--customercheck-color-background-tertiary: var(--crm-bg-soft);
+	--customercheck-color-text: var(--crm-text);
+	--customercheck-color-text-muted: var(--crm-muted);
+	--customercheck-color-text-maxcontrast: var(--crm-muted);
+	--customercheck-color-text-secondary: var(--crm-muted);
+	--customercheck-color-text-tertiary: var(--crm-muted);
+	--customercheck-color-primary: var(--color-primary-element);
+	--customercheck-color-primary-element: var(--color-primary-element);
+	--customercheck-color-primary-light: color-mix(in srgb, var(--color-primary-element) 28%, transparent);
+	--customercheck-color-border: var(--crm-border);
+	--customercheck-color-border-focus: var(--color-primary-element);
+	--customercheck-color-border-warning: var(--color-warning-text, var(--color-warning));
+	--customercheck-color-error: var(--crm-danger-ink);
+	--customercheck-color-error-light: color-mix(in srgb, var(--crm-danger-ink) 28%, transparent);
+	--customercheck-color-success-light: color-mix(in srgb, var(--color-success-text, var(--color-success)) 28%, transparent);
+	--customercheck-color-warning-light: color-mix(in srgb, var(--color-warning-text, var(--color-warning)) 28%, transparent);
+	--customercheck-color-form-required: var(--crm-danger-ink);
+	--customercheck-color-form-label: var(--crm-text);
+	--customercheck-color-form-background: var(--color-main-background);
+	--customercheck-color-form-border: var(--color-border-maxcontrast, var(--crm-border-strong));
+	--customercheck-color-form-border-focus: var(--color-primary-element);
+	--customercheck-color-form-border-error: var(--crm-danger-ink);
+	--customercheck-color-form-border-success: var(--color-success-text, var(--color-success));
+	--customercheck-color-table-border: var(--crm-border);
+	--customercheck-color-table-header-background: var(--color-background-dark, var(--crm-bg-stripe));
+	--customercheck-font-family-sans: var(--font-face, inherit);
+	--customercheck-font-size-sm: var(--crm-fs-sm);
+	--customercheck-font-size-base: var(--crm-fs-md);
+	--customercheck-font-size-lg: var(--crm-fs-lg);
+	--customercheck-font-size-xl: var(--crm-fs-xl);
+	--customercheck-font-size-3xl: var(--crm-fs-2xl);
+	--customercheck-font-weight-medium: 500;
+	--customercheck-font-weight-semibold: 600;
+	--customercheck-font-weight-bold: 700;
+	--customercheck-letter-spacing-tight: -0.02em;
+	--customercheck-line-height-tight: var(--crm-line-tight);
+	--customercheck-line-height-normal: var(--crm-line-base);
+	--customercheck-line-height-relaxed: 1.6;
 }
 
-/* Bright accent fills on dark themes fail AA with white/black ink — darken fill + use main-text. */
+/* Bright accent fills on dark themes fail AA with white ink — darken fill + use main-text. */
 body[data-theme-dark],
-body[data-theme-dark-highcontrast] {
+body[data-theme-dark-highcontrast],
+body[data-theme-dark] #content.app-customercheck,
+body[data-theme-dark-highcontrast] #content.app-customercheck {
 	--crm-danger-fill: color-mix(
 		in srgb,
 		var(--color-element-error, var(--color-error)) 40%,
 		var(--color-main-background)
 	);
 	--crm-danger-on-fill: var(--color-main-text);
-	/* Darkened fill sits ~1.9:1 on the dark canvas — paint the control's
-	   edge with the strong error ink so the CTA boundary stays ≥3:1 (1.4.11). */
-	--crm-danger-edge: var(--color-error-text, var(--color-element-error, var(--color-error)));
 	--crm-accent-ink: color-mix(in srgb, var(--color-primary-element) 70%, var(--color-main-text));
 }
 
-/* Dual-token bridge: CRM aliases map to identical computed values (D11) */
-/* (legacy --azc-space-* / --space-* live in :root above) */
+/* NC high-contrast themes: stronger borders / shadows for 3:1 UI chrome */
+body[data-theme-light-highcontrast],
+body[data-theme-dark-highcontrast],
+body[data-theme-light-highcontrast] #content.app-customercheck,
+body[data-theme-dark-highcontrast] #content.app-customercheck {
+	--crm-border: color-mix(in srgb, var(--color-main-text) 32%, transparent);
+	/* HC themes push --color-border-maxcontrast to near-ink — keep it first so
+	   boundary chrome stays >=3:1 against HC surfaces. */
+	--crm-border-strong: var(--color-border-maxcontrast, color-mix(in srgb, var(--color-main-text) 48%, transparent));
+	--crm-shadow-sm: 0 0 0 1px var(--crm-border-strong);
+	--crm-shadow-md: 0 0 0 2px var(--crm-border-strong);
+	--customercheck-color-border: var(--crm-border);
+	--customercheck-color-modal-border: var(--crm-border);
+}
 
-/* Aliases for dead-name refs (literal fallbacks masked them). */
+@media (prefers-contrast: more) {
+	:root {
+		--crm-icon-stroke: 2.25;
+	}
+
+	body,
+	#content.app-customercheck,
+	#app-content.crm-app,
+	.crm-app,
+	.crm-dialog,
+	.crm-modal,
+	.crm-toast-region,
+	.crm-toasts,
+	.crm-license-modal {
+		--crm-border: color-mix(in srgb, var(--color-main-text) 28%, transparent);
+		--crm-border-strong: var(--color-border-maxcontrast, color-mix(in srgb, var(--color-main-text) 40%, transparent));
+		--crm-shadow-sm: 0 0 0 1px var(--crm-border-strong);
+		--crm-shadow-md: 0 0 0 1px var(--crm-border-strong);
+	}
+}
+
+/* Alias for dead-name ref (literal fallback masked it). */
 body {
 	--crm-bg: var(--crm-bg-card);
-	--crm-bg-page: var(--color-main-background);
-	--crm-surface: var(--color-main-background);
-	--crm-surface-muted: var(--crm-bg-soft, var(--color-background-dark));
-	--crm-hover: var(--color-background-hover);
-	--crm-border-dark: var(--color-border-dark);
-	--crm-color-form-background: var(--color-main-background);
-	--crm-color-form-border: var(--crm-form-border);
-	--crm-focus: var(--color-primary-element);
-	--crm-link: var(--color-primary-element);
-	--crm-font: var(--font-face, inherit);
-	--crm-font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-	--crm-font-size-sm: var(--crm-fs-sm);
-	--crm-fs-base: var(--crm-fs-md);
-	--crm-radius: var(--crm-radius-md);
-	--crm-text-maxcontrast: var(--color-text-maxcontrast);
-	--crm-text-muted: var(--crm-muted);
 }
