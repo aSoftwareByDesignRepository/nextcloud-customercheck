@@ -121,12 +121,15 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 		'unpaidInvoices' => 0,
 		'openTickets' => 0,
 		'waitingTickets' => 0,
+		'openExpenseClaims' => 0,
 		'projectcheck' => false,
 		'invoicecheck' => false,
 		'ticketcheck' => false,
+		'expensecheck' => false,
 		'projectsHref' => '#crm-projects',
 		'invoicesHref' => '#crm-invoices',
 		'ticketsHref' => '#crm-tickets',
+		'expensesHref' => '#crm-projects',
 	];
 	$density = \OCA\CustomerCheck\Support\GlanceDensityPresenter::normalizeInvoiceHref($density);
 	$glanceTiles = \OCA\CustomerCheck\Support\GlanceDensityPresenter::tiles($density, $l);

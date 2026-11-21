@@ -71,6 +71,7 @@
 		"%s need you": "%s te necesitan",
 		"%s needs a quick reconnect. Tap Reconnect — your synced mail stays.": "%s necesita reconectar. Toca Reconectar: tu correo sincronizado se queda.",
 		"%s older messages loaded": "%s mensajes anteriores cargados",
+		"%s open in ExpenseCheck": "%s abierto en ExpenseCheck",
 		"%s open in ProjectCheck": "%s abierto en ProjectCheck",
 		"%s open in TicketCheck": "%s abierto en TicketCheck",
 		"%s percent match": "Coincidencia porcentual %s",
@@ -1071,6 +1072,7 @@
 		"Existing customer": "Cliente existente",
 		"Expected cash this month": "Efectivo esperado este mes",
 		"Expected close": "Cierre previsto",
+		"Expense claims": "Notas de gastos",
 		"Expired": "Venció",
 		"Expired %n day ago": "Caducó hace %n días",
 		"Expired %n day ago — in grace": "Caducó hace %n día — en período de gracia",
@@ -1257,7 +1259,7 @@
 		"Import a Nextcloud group once": "Importar un grupo de Nextcloud una vez",
 		"Import a list or add a company. Today then shows renewals and follow-ups.": "Importe una lista o agregue una empresa. Hoy luego muestra renovaciones y seguimientos.",
 		"Import anomalies (country / ambiguous names)": "Anomalías de importación (países/nombres ambiguos)",
-		"Import applied. %d settings and %d rows written.": "Importación aplicada. %d ajustes y %d filas escritos.",
+		"Import applied. %1$s and %2$s written.": "Importación aplicada. %1$s y %2$s escritos.",
 		"Import companies and deals": "Importar empresas y ofertas",
 		"Import configuration": "Importar configuración",
 		"Import failed": "Importación fallida",
@@ -1792,6 +1794,7 @@
 		"Nothing open": "Nada abierto",
 		"Nothing open for this company.": "Nada abierto para esta empresa.",
 		"Nothing open right now": "No hay nada abierto ahora",
+		"Nothing open · ExpenseCheck": "Nada abierto · ExpenseCheck",
 		"Nothing open · ProjectCheck": "Nada abierto · ProjectCheck",
 		"Nothing open · TicketCheck": "Nada abierto · TicketCheck",
 		"Nothing ready to import yet.": "Nada listo para importar todavía.",
@@ -2766,7 +2769,7 @@
 		"This token is shown only once. Paste it into the companion app on the device.": "Este token solo se muestra una vez. Pega el código en la app complementaria del dispositivo.",
 		"This week": "Esta semana",
 		"This week’s owned promises": "Las promesas propias de esta semana",
-		"This will update %d settings and %d rows — nothing is deleted.": "Esto actualizará %d ajustes y %d filas — no se eliminará nada.",
+		"This will update %1$s and %2$s — nothing is deleted.": "Esto actualizará %1$s y %2$s — no se eliminará nada.",
 		"This workspace is archived and read-only.": "Este espacio de trabajo está archivado y es de solo lectura.",
 		"This year": "Este año",
 		"Three short steps to make this customer useful.": "Tres pasos cortos para que este cliente sea útil.",
@@ -3130,6 +3133,14 @@
 			"1 fila omitida.",
 			"%n filas omitidas."
 		],
+		"_1 row_::_%n rows_": [
+			"1 fila",
+			"%n filas"
+		],
+		"_1 setting_::_%n settings_": [
+			"1 ajuste",
+			"%n ajustes"
+		],
 		"_1 skipped._::_%n skipped._": [
 			"1 omitido.",
 			"%n omitidos."
@@ -3188,21 +3199,7 @@
 		"this workspace": "este espacio de trabajo",
 		"undo via snapshot": "deshacer mediante instantánea",
 		"will be skipped": "se omitirá",
-		"…and %s more.": "…y %s más.",
-		"1 setting": "1 ajuste",
-		"%n settings": "%n ajustes",
-		"1 row": "1 fila",
-		"%n rows": "%n filas",
-		"_1 row_::_%n rows_": [
-			"1 fila",
-			"%n filas"
-		],
-		"_1 setting_::_%n settings_": [
-			"1 ajuste",
-			"%n ajustes"
-		],
-		"This will update %1$s and %2$s — nothing is deleted.": "Esto actualizará %1$s y %2$s — no se eliminará nada.",
-		"Import applied. %1$s and %2$s written.": "Importación aplicada. %1$s y %2$s escritos."
+		"…and %s more.": "…y %s más."
 	},
 	"pluralForm": "nplurals=2; plural=(n != 1);"
 }

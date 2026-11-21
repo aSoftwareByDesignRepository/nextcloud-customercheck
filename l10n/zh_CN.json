@@ -71,6 +71,7 @@
 		"%s need you": "%s 项需要您处理",
 		"%s needs a quick reconnect. Tap Reconnect — your synced mail stays.": "%s 需要快速重新连接。点按“重新连接”——已同步的邮件会保留。",
 		"%s older messages loaded": "已加载 %s 条更早的消息",
+		"%s open in ExpenseCheck": "ExpenseCheck 中 %s 个进行中",
 		"%s open in ProjectCheck": "ProjectCheck 中 %s 个进行中",
 		"%s open in TicketCheck": "TicketCheck 中 %s 个进行中",
 		"%s percent match": "匹配度 %s％",
@@ -1071,6 +1072,7 @@
 		"Existing customer": "现有客户",
 		"Expected cash this month": "本月预期回款",
 		"Expected close": "预计成交",
+		"Expense claims": "报销单",
 		"Expired": "已过期",
 		"Expired %n day ago": "%n 天前到期",
 		"Expired %n day ago — in grace": "%n 天前到期——宽限期内",
@@ -1257,7 +1259,7 @@
 		"Import a Nextcloud group once": "一次性导入 Nextcloud 群组",
 		"Import a list or add a company. Today then shows renewals and follow-ups.": "导入列表或添加公司。“今天”随即显示续约和跟进。",
 		"Import anomalies (country / ambiguous names)": "导入异常（国家/地区、歧义名称）",
-		"Import applied. %d settings and %d rows written.": "导入已应用。已写入 %d 项设置和 %d 行。",
+		"Import applied. %1$s and %2$s written.": "导入已应用。已写入 %1$s 和 %2$s。",
 		"Import companies and deals": "导入公司和商机",
 		"Import configuration": "导入配置",
 		"Import failed": "导入失败",
@@ -1792,6 +1794,7 @@
 		"Nothing open": "暂无未结项",
 		"Nothing open for this company.": "此公司没有未结项。",
 		"Nothing open right now": "当前没有未结项",
+		"Nothing open · ExpenseCheck": "无未结项 · ExpenseCheck",
 		"Nothing open · ProjectCheck": "无未结项 · ProjectCheck",
 		"Nothing open · TicketCheck": "无未结项 · TicketCheck",
 		"Nothing ready to import yet.": "暂无可导入的内容。",
@@ -2766,7 +2769,7 @@
 		"This token is shown only once. Paste it into the companion app on the device.": "此令牌仅显示一次。请将其粘贴到设备上的配套应用中。",
 		"This week": "本周",
 		"This week’s owned promises": "本周名下的承诺",
-		"This will update %d settings and %d rows — nothing is deleted.": "这将更新 %d 项设置和 %d 行数据——不会删除任何内容。",
+		"This will update %1$s and %2$s — nothing is deleted.": "这将更新 %1$s 和 %2$s——不会删除任何内容。",
 		"This workspace is archived and read-only.": "此工作区已归档，为只读。",
 		"This year": "今年",
 		"Three short steps to make this customer useful.": "三个简短步骤，让这个客户变得可用。",
@@ -3118,6 +3121,12 @@
 		"_1 row skipped._::_%n rows skipped._": [
 			"已跳过 %n 行。"
 		],
+		"_1 row_::_%n rows_": [
+			"%n 行"
+		],
+		"_1 setting_::_%n settings_": [
+			"%n 项设置"
+		],
 		"_1 skipped._::_%n skipped._": [
 			"已跳过 %n 项。"
 		],
@@ -3172,19 +3181,7 @@
 		"this workspace": "此工作区",
 		"undo via snapshot": "通过快照撤销",
 		"will be skipped": "将被跳过",
-		"…and %s more.": "…还有 %s 个。",
-		"1 setting": "1 项设置",
-		"%n settings": "%n 项设置",
-		"1 row": "1 行",
-		"%n rows": "%n 行",
-		"_1 row_::_%n rows_": [
-			"%n 行"
-		],
-		"_1 setting_::_%n settings_": [
-			"%n 项设置"
-		],
-		"This will update %1$s and %2$s — nothing is deleted.": "这将更新 %1$s 和 %2$s——不会删除任何内容。",
-		"Import applied. %1$s and %2$s written.": "导入已应用。已写入 %1$s 和 %2$s。"
+		"…and %s more.": "…还有 %s 个。"
 	},
 	"pluralForm": "nplurals=1; plural=0;"
 }

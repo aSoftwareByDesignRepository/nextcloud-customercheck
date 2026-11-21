@@ -23,12 +23,15 @@ final class GlanceDensityPresenter
 	 *   unpaidInvoices?:int|string,
 	 *   openTickets?:int|string,
 	 *   waitingTickets?:int|string,
+	 *   openExpenseClaims?:int|string,
 	 *   projectcheck?:bool,
 	 *   invoicecheck?:bool,
 	 *   ticketcheck?:bool,
+	 *   expensecheck?:bool,
 	 *   projectsHref?:string,
 	 *   invoicesHref?:string,
-	 *   ticketsHref?:string
+	 *   ticketsHref?:string,
+	 *   expensesHref?:string
 	 * } $density
 	 * @return list<array{
 	 *   key: string,
@@ -49,13 +52,17 @@ final class GlanceDensityPresenter
 		$openTickets = max(0, (int)($density['openTickets'] ?? $density['waitingTickets'] ?? 0));
 		$waiting = max(0, (int)($density['waitingTickets'] ?? 0));
 
+		$openExpenses = max(0, (int)($density['openExpenseClaims'] ?? 0));
+
 		$pc = !empty($density['projectcheck']);
 		$ic = !empty($density['invoicecheck']);
 		$tc = !empty($density['ticketcheck']);
+		$exp = !empty($density['expensecheck']);
 
 		$projectsHref = self::safeHref((string)($density['projectsHref'] ?? ''), '#crm-projects');
 		$invoicesHref = self::safeHref((string)($density['invoicesHref'] ?? ''), '#crm-invoices');
 		$ticketsHref = self::safeHref((string)($density['ticketsHref'] ?? ''), '#crm-tickets');
+		$expensesHref = self::safeHref((string)($density['expensesHref'] ?? ''), '#crm-projects');
 
 		return [
 			self::tile(
@@ -103,6 +110,21 @@ final class GlanceDensityPresenter
 				!$tc ? self::TONE_OFFLINE : (($waiting > 0 || $openTickets > 0) ? self::TONE_ATTENTION : self::TONE_CALM),
 				$tc,
 				$tc ? $l->t('View') : $l->t('Link'),
+				$l
+			),
+			self::tile(
+				'expenses',
+				$exp ? $expensesHref : '#crm-identity-links',
+				$openExpenses,
+				$l->t('Expense claims'),
+				$exp
+					? ($openExpenses > 0
+						? $l->t('%s open in ExpenseCheck', [(string)$openExpenses])
+						: $l->t('Nothing open · ExpenseCheck'))
+					: $l->t('App not installed — link under Identity'),
+				!$exp ? self::TONE_OFFLINE : ($openExpenses > 0 ? self::TONE_ATTENTION : self::TONE_CALM),
+				$exp,
+				$exp ? $l->t('View') : $l->t('Link'),
 				$l
 			),
 		];

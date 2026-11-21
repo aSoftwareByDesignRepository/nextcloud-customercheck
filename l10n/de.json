@@ -71,6 +71,7 @@
 		"%s need you": "%s brauchen dich",
 		"%s needs a quick reconnect. Tap Reconnect — your synced mail stays.": "%s braucht eine kurze erneute Verbindung. Auf Erneut verbinden tippen — synchronisierte Mails bleiben.",
 		"%s older messages loaded": "%s ältere Nachrichten geladen",
+		"%s open in ExpenseCheck": "%s offen in ExpenseCheck",
 		"%s open in ProjectCheck": "%s offen in ProjectCheck",
 		"%s open in TicketCheck": "%s offen in TicketCheck",
 		"%s percent match": "%s Prozent Treffer",
@@ -1071,6 +1072,7 @@
 		"Existing customer": "Bestehender Kunde",
 		"Expected cash this month": "Erwarteter Cash diesen Monat",
 		"Expected close": "Geplanter Abschluss",
+		"Expense claims": "Spesenabrechnungen",
 		"Expired": "Abgelaufen",
 		"Expired %n day ago": "Vor %n Tag abgelaufen",
 		"Expired %n day ago — in grace": "Vor %n Tag abgelaufen – in Kulanzfrist",
@@ -1257,7 +1259,7 @@
 		"Import a Nextcloud group once": "Nextcloud-Gruppe einmalig importieren",
 		"Import a list or add a company. Today then shows renewals and follow-ups.": "Importiere eine Liste oder füge eine Firma hinzu. Heute zeigt dann Verlängerungen und Follow-ups.",
 		"Import anomalies (country / ambiguous names)": "Import-Anomalien (Land / mehrdeutige Namen)",
-		"Import applied. %d settings and %d rows written.": "Import angewendet. %d Einstellungen und %d Zeilen geschrieben.",
+		"Import applied. %1$s and %2$s written.": "Import angewendet. %1$s und %2$s geschrieben.",
 		"Import companies and deals": "Unternehmen und Deals importieren",
 		"Import configuration": "Konfiguration importieren",
 		"Import failed": "Import fehlgeschlagen",
@@ -1792,6 +1794,7 @@
 		"Nothing open": "Nichts offen",
 		"Nothing open for this company.": "Nichts Offen für diese Firma.",
 		"Nothing open right now": "Gerade nichts Offen",
+		"Nothing open · ExpenseCheck": "Nichts offen · ExpenseCheck",
 		"Nothing open · ProjectCheck": "Nichts offen · ProjectCheck",
 		"Nothing open · TicketCheck": "Nichts offen · TicketCheck",
 		"Nothing ready to import yet.": "Noch nichts bereit zum Import.",
@@ -2766,7 +2769,7 @@
 		"This token is shown only once. Paste it into the companion app on the device.": "Dieses Token wird nur einmal angezeigt. Füge es in der Begleit-App auf dem Gerät ein.",
 		"This week": "Diese Woche",
 		"This week’s owned promises": "Eigene Zusagen dieser Woche",
-		"This will update %d settings and %d rows — nothing is deleted.": "Dies aktualisiert %d Einstellungen und %d Zeilen — nichts wird gelöscht.",
+		"This will update %1$s and %2$s — nothing is deleted.": "Dies aktualisiert %1$s und %2$s — nichts wird gelöscht.",
 		"This workspace is archived and read-only.": "Dieser Arbeitsbereich ist archiviert und schreibgeschützt.",
 		"This year": "Dieses Jahr",
 		"Three short steps to make this customer useful.": "Drei kurze Schritte, damit dieser Kundeneintrag nützlich wird.",
@@ -3130,6 +3133,14 @@
 			"1 Zeile übersprungen.",
 			"%n Zeilen übersprungen."
 		],
+		"_1 row_::_%n rows_": [
+			"1 Zeile",
+			"%n Zeilen"
+		],
+		"_1 setting_::_%n settings_": [
+			"1 Einstellung",
+			"%n Einstellungen"
+		],
 		"_1 skipped._::_%n skipped._": [
 			"1 übersprungen.",
 			"%n übersprungen."
@@ -3188,20 +3199,6 @@
 		"this workspace": "dieser Arbeitsbereich",
 		"undo via snapshot": "per Snapshot rückgängig machen",
 		"will be skipped": "wird übersprungen",
-		"…and %s more.": "…und %s weitere.",
-		"1 setting": "1 Einstellung",
-		"%n settings": "%n Einstellungen",
-		"1 row": "1 Zeile",
-		"%n rows": "%n Zeilen",
-		"_1 row_::_%n rows_": [
-			"1 Zeile",
-			"%n Zeilen"
-		],
-		"_1 setting_::_%n settings_": [
-			"1 Einstellung",
-			"%n Einstellungen"
-		],
-		"This will update %1$s and %2$s — nothing is deleted.": "Dies aktualisiert %1$s und %2$s — nichts wird gelöscht.",
-		"Import applied. %1$s and %2$s written.": "Import angewendet. %1$s und %2$s geschrieben."
+		"…and %s more.": "…und %s weitere."
 	}
 }

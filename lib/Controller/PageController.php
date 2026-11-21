@@ -646,6 +646,15 @@ class PageController extends Controller
 			return $proj;
 		}, $projects);
 
+		$expenseClaims = ['claims' => 0, 'open' => 0, 'approved_or_settled' => 0];
+		if (!empty($capabilities['expensecheck']) && $pcCustomerId > 0) {
+			try {
+				$expenseClaims = $this->facades->expenseClaimCountsFor($pcCustomerId);
+			} catch (\Throwable) {
+				$expenseClaims = ['claims' => 0, 'open' => 0, 'approved_or_settled' => 0];
+			}
+		}
+
 		$openProjectCount = DensityCounts::openProjects($projects);
 		$unpaidInvoiceCount = DensityCounts::unpaidInvoices($invoices);
 		$openTicketCount = DensityCounts::openTickets($tickets);
@@ -656,12 +665,15 @@ class PageController extends Controller
 			'unpaidInvoices' => $unpaidInvoiceCount,
 			'openTickets' => $openTicketCount,
 			'waitingTickets' => $waitingTicketCount,
+			'openExpenseClaims' => $expenseClaims['open'],
 			'projectcheck' => !empty($capabilities['projectcheck']),
 			'invoicecheck' => !empty($capabilities['invoicecheck']),
 			'ticketcheck' => !empty($capabilities['ticketcheck']),
+			'expensecheck' => !empty($capabilities['expensecheck']),
 			'projectsHref' => '#crm-projects',
 			'invoicesHref' => '#crm-invoices',
 			'ticketsHref' => '#crm-tickets',
+			'expensesHref' => '#crm-projects',
 		];
 		$identityLinks = $this->identityHealth->classifyCompany($company);
 		// When PC/TC target is broken, do not pretend projects/tickets loaded for a ghost id.
@@ -672,7 +684,9 @@ class PageController extends Controller
 			$invoiceError = false;
 			$density['openProjects'] = 0;
 			$density['unpaidInvoices'] = 0;
+			$density['openExpenseClaims'] = 0;
 			$density['projectsHref'] = '#crm-identity-links';
+			$density['expensesHref'] = '#crm-identity-links';
 		}
 		if (($identityLinks['tc']['state'] ?? '') === IdentityLinkHealthService::STATE_BROKEN) {
 			$tickets = [];
@@ -712,6 +726,17 @@ class PageController extends Controller
 				}
 			}
 		} catch (\Throwable) {
+		}
+		try {
+			if ($density['expensecheck'] && $pcCustomerId > 0) {
+				// Counts-only facade — jump to the EXP claims overview,
+				// never a fabricated per-claim deep link.
+				$density['expensesHref'] = $this->urlGenerator->linkToRoute(
+					'expensecheck.page.allClaims',
+				);
+			}
+		} catch (\Throwable) {
+			$density['expensesHref'] = '#crm-projects';
 		}
 		$density = \OCA\CustomerCheck\Support\GlanceDensityPresenter::normalizeInvoiceHref($density);
 		try {

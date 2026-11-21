@@ -164,6 +164,11 @@ class FacadeProbeService
 			SiblingFacadeContracts::MAINTENANCE_CHECK_IDENTITY_FACADE,
 			SiblingFacadeContracts::MAINTENANCE_CHECK_IDENTITY_MIN_VERSION,
 		);
+		$exp = $this->probeApp(
+			SiblingFacadeContracts::EXPENSE_CHECK_APP,
+			SiblingFacadeContracts::EXPENSE_CHECK_FACADE,
+			SiblingFacadeContracts::EXPENSE_CHECK_MIN_VERSION,
+		);
 
 		return [
 			'sbdlicenseops' => $sbd['usable'],
@@ -173,6 +178,7 @@ class FacadeProbeService
 			'projectcheckWrite' => $pcWrite['usable'],
 			'ticketcheckWrite' => $tcWrite['usable'],
 			'maintenancecheck' => $mn['usable'],
+			'expensecheck' => $exp['usable'],
 			'mail' => $mailOn,
 			'sbdlicenseops_detail' => $sbd,
 			'invoicecheck_detail' => $inv,
@@ -181,6 +187,7 @@ class FacadeProbeService
 			'projectcheckWrite_detail' => $pcWrite,
 			'ticketcheckWrite_detail' => $tcWrite,
 			'maintenancecheck_detail' => $mn,
+			'expensecheck_detail' => $exp,
 			'mail_detail' => [
 				'available' => $mailOn,
 				'usable' => $mailOn,
@@ -224,6 +231,37 @@ class FacadeProbeService
 		} catch (\Throwable $e) {
 			$this->warnOnce('ticket_open', 'CustomerCheck TicketCheck open-tickets facade failed', $e);
 			return [];
+		}
+	}
+
+	public function expensecheckAvailable(): bool
+	{
+		return $this->probeApp(
+			SiblingFacadeContracts::EXPENSE_CHECK_APP,
+			SiblingFacadeContracts::EXPENSE_CHECK_FACADE,
+			SiblingFacadeContracts::EXPENSE_CHECK_MIN_VERSION,
+		)['usable'];
+	}
+
+	/**
+	 * Per-customer claim counts for the 360 panel (FC-EXP-CUC).
+	 * Counts only — the facade never exposes claim contents.
+	 *
+	 * @return array{claims:int,open:int,approved_or_settled:int}
+	 */
+	public function expenseClaimCountsFor(int $pcCustomerId): array
+	{
+		$empty = ['claims' => 0, 'open' => 0, 'approved_or_settled' => 0];
+		if ($pcCustomerId <= 0 || !$this->expensecheckAvailable()) {
+			return $empty;
+		}
+		try {
+			$facade = \OC::$server->get(SiblingFacadeContracts::EXPENSE_CHECK_FACADE);
+			$result = $facade->countsFor($pcCustomerId);
+			return is_array($result) ? $result + $empty : $empty;
+		} catch (\Throwable $e) {
+			$this->warnOnce('expense_claims', 'CustomerCheck ExpenseCheck claims facade failed', $e);
+			return $empty;
 		}
 	}
 

@@ -71,6 +71,7 @@
 		"%s need you": "%s need you",
 		"%s needs a quick reconnect. Tap Reconnect — your synced mail stays.": "%s needs a quick reconnect. Tap Reconnect — your synced mail stays.",
 		"%s older messages loaded": "%s older messages loaded",
+		"%s open in ExpenseCheck": "%s open in ExpenseCheck",
 		"%s open in ProjectCheck": "%s open in ProjectCheck",
 		"%s open in TicketCheck": "%s open in TicketCheck",
 		"%s percent match": "%s percent match",
@@ -1071,6 +1072,7 @@
 		"Existing customer": "Existing customer",
 		"Expected cash this month": "Expected cash this month",
 		"Expected close": "Expected close",
+		"Expense claims": "Expense claims",
 		"Expired": "Expired",
 		"Expired %n day ago": "Expired %n day ago",
 		"Expired %n day ago — in grace": "Expired %n day ago — in grace",
@@ -1257,7 +1259,7 @@
 		"Import a Nextcloud group once": "Import a Nextcloud group once",
 		"Import a list or add a company. Today then shows renewals and follow-ups.": "Import a list or add a company. Today then shows renewals and follow-ups.",
 		"Import anomalies (country / ambiguous names)": "Import anomalies (country / ambiguous names)",
-		"Import applied. %d settings and %d rows written.": "Import applied. %d settings and %d rows written.",
+		"Import applied. %1$s and %2$s written.": "Import applied. %1$s and %2$s written.",
 		"Import companies and deals": "Import companies and deals",
 		"Import configuration": "Import configuration",
 		"Import failed": "Import failed",
@@ -1792,6 +1794,7 @@
 		"Nothing open": "Nothing open",
 		"Nothing open for this company.": "Nothing open for this company.",
 		"Nothing open right now": "Nothing open right now",
+		"Nothing open · ExpenseCheck": "Nothing open · ExpenseCheck",
 		"Nothing open · ProjectCheck": "Nothing open · ProjectCheck",
 		"Nothing open · TicketCheck": "Nothing open · TicketCheck",
 		"Nothing ready to import yet.": "Nothing ready to import yet.",
@@ -2766,7 +2769,7 @@
 		"This token is shown only once. Paste it into the companion app on the device.": "This token is shown only once. Paste it into the companion app on the device.",
 		"This week": "This week",
 		"This week’s owned promises": "This week’s owned promises",
-		"This will update %d settings and %d rows — nothing is deleted.": "This will update %d settings and %d rows — nothing is deleted.",
+		"This will update %1$s and %2$s — nothing is deleted.": "This will update %1$s and %2$s — nothing is deleted.",
 		"This workspace is archived and read-only.": "This workspace is archived and read-only.",
 		"This year": "This year",
 		"Three short steps to make this customer useful.": "Three short steps to make this customer useful.",
@@ -3130,6 +3133,14 @@
 			"1 row skipped.",
 			"%n rows skipped."
 		],
+		"_1 row_::_%n rows_": [
+			"1 row",
+			"%n rows"
+		],
+		"_1 setting_::_%n settings_": [
+			"1 setting",
+			"%n settings"
+		],
 		"_1 skipped._::_%n skipped._": [
 			"1 skipped.",
 			"%n skipped."
@@ -3188,20 +3199,6 @@
 		"this workspace": "this workspace",
 		"undo via snapshot": "undo via snapshot",
 		"will be skipped": "will be skipped",
-		"…and %s more.": "…and %s more.",
-		"1 setting": "1 setting",
-		"%n settings": "%n settings",
-		"1 row": "1 row",
-		"%n rows": "%n rows",
-		"_1 row_::_%n rows_": [
-			"1 row",
-			"%n rows"
-		],
-		"_1 setting_::_%n settings_": [
-			"1 setting",
-			"%n settings"
-		],
-		"This will update %1$s and %2$s — nothing is deleted.": "This will update %1$s and %2$s — nothing is deleted.",
-		"Import applied. %1$s and %2$s written.": "Import applied. %1$s and %2$s written."
+		"…and %s more.": "…and %s more."
 	}
 }

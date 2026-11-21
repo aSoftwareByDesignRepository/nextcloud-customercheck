@@ -62,7 +62,7 @@ final class L10nVerbCtaContractTest extends TestCase
 	public function testGlanceTileCtasUseView(): void
 	{
 		$src = $this->src('lib/Support/GlanceDensityPresenter.php');
-		$this->assertSame(3, substr_count($src, "\$l->t('View') : \$l->t('Link')"));
+		$this->assertSame(4, substr_count($src, "\$l->t('View') : \$l->t('Link')"));
 		$this->assertStringNotContainsString("\$l->t('Open')", $src);
 
 		$list = $this->src('templates/common/crm-glance-density-list.php');

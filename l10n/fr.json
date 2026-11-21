@@ -71,6 +71,7 @@
 		"%s need you": "%s ont besoin de toi",
 		"%s needs a quick reconnect. Tap Reconnect — your synced mail stays.": "%s a besoin d’une reconnexion rapide. Appuie sur Reconnecter — tes mails synchronisés restent.",
 		"%s older messages loaded": "%s messages plus anciens chargés",
+		"%s open in ExpenseCheck": "%s ouvert dans ExpenseCheck",
 		"%s open in ProjectCheck": "%s ouvert dans ProjectCheck",
 		"%s open in TicketCheck": "%s ouvert dans TicketCheck",
 		"%s percent match": "Correspondance en pourcentage %s",
@@ -1071,6 +1072,7 @@
 		"Existing customer": "Client existant",
 		"Expected cash this month": "Trésorerie attendue ce mois-ci",
 		"Expected close": "Clôture prévue",
+		"Expense claims": "Notes de frais",
 		"Expired": "Expiré",
 		"Expired %n day ago": "Expiré il y a %n jours",
 		"Expired %n day ago — in grace": "Expiré il y a %n jour — en délai de grâce",
@@ -1257,7 +1259,7 @@
 		"Import a Nextcloud group once": "Importer un groupe Nextcloud une fois",
 		"Import a list or add a company. Today then shows renewals and follow-ups.": "Importez une liste ou ajoutez une entreprise. Aujourd’hui montre ensuite les renouvellements et les suivis.",
 		"Import anomalies (country / ambiguous names)": "Anomalies d'importation (pays / noms ambigus)",
-		"Import applied. %d settings and %d rows written.": "Import appliqué. %d paramètres et %d lignes écrits.",
+		"Import applied. %1$s and %2$s written.": "Import appliqué. %1$s et %2$s écrits.",
 		"Import companies and deals": "Importer des entreprises et des transactions",
 		"Import configuration": "Importer la configuration",
 		"Import failed": "Échec de l'importation",
@@ -1792,6 +1794,7 @@
 		"Nothing open": "Rien d'ouvert",
 		"Nothing open for this company.": "Rien d'ouvert pour cette entreprise.",
 		"Nothing open right now": "Rien n'est ouvert pour le moment",
+		"Nothing open · ExpenseCheck": "Rien d'ouvert · ExpenseCheck",
 		"Nothing open · ProjectCheck": "Rien d'ouvert · ProjectCheck",
 		"Nothing open · TicketCheck": "Rien d'ouvert · TicketCheck",
 		"Nothing ready to import yet.": "Rien de prêt à importer pour l'instant.",
@@ -2766,7 +2769,7 @@
 		"This token is shown only once. Paste it into the companion app on the device.": "Ce jeton n’est affiché qu’une seule fois. Colle-le dans l’application compagnon sur l’appareil.",
 		"This week": "Cette semaine",
 		"This week’s owned promises": "Tes propres promesses cette semaine",
-		"This will update %d settings and %d rows — nothing is deleted.": "Cette opération mettra à jour %d paramètres et %d lignes — rien ne sera supprimé.",
+		"This will update %1$s and %2$s — nothing is deleted.": "Cette opération mettra à jour %1$s et %2$s — rien ne sera supprimé.",
 		"This workspace is archived and read-only.": "Cet espace de travail est archivé et en lecture seule.",
 		"This year": "Cette année",
 		"Three short steps to make this customer useful.": "Trois courtes étapes pour rendre ce client utile.",
@@ -3130,6 +3133,14 @@
 			"1 ligne ignorée.",
 			"%n lignes ignorées."
 		],
+		"_1 row_::_%n rows_": [
+			"1 ligne",
+			"%n lignes"
+		],
+		"_1 setting_::_%n settings_": [
+			"1 paramètre",
+			"%n paramètres"
+		],
 		"_1 skipped._::_%n skipped._": [
 			"1 ignoré.",
 			"%n ignorés."
@@ -3188,21 +3199,7 @@
 		"this workspace": "cet espace de travail",
 		"undo via snapshot": "annuler via un instantané",
 		"will be skipped": "sera ignoré",
-		"…and %s more.": "…et %s de plus.",
-		"1 setting": "1 paramètre",
-		"%n settings": "%n paramètres",
-		"1 row": "1 ligne",
-		"%n rows": "%n lignes",
-		"_1 row_::_%n rows_": [
-			"1 ligne",
-			"%n lignes"
-		],
-		"_1 setting_::_%n settings_": [
-			"1 paramètre",
-			"%n paramètres"
-		],
-		"This will update %1$s and %2$s — nothing is deleted.": "Cette opération mettra à jour %1$s et %2$s — rien ne sera supprimé.",
-		"Import applied. %1$s and %2$s written.": "Import appliqué. %1$s et %2$s écrits."
+		"…and %s more.": "…et %s de plus."
 	},
 	"pluralForm": "nplurals=2; plural=(n > 1);"
 }

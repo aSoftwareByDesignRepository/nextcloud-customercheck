@@ -44,6 +44,11 @@ final class SiblingFacadeContracts
 	public const MAINTENANCE_CHECK_IDENTITY_FACADE = 'OCA\\MaintenanceCheck\\Public\\CrmFieldCustomerFacade';
 	public const MAINTENANCE_CHECK_IDENTITY_MIN_VERSION = 1;
 
+	/** ExpenseCheck per-customer claim counts (FC-EXP-CUC, suite F-cat). */
+	public const EXPENSE_CHECK_APP = 'expensecheck';
+	public const EXPENSE_CHECK_FACADE = 'OCA\\ExpenseCheck\\Public\\ExpCustomerClaimsReadFacade';
+	public const EXPENSE_CHECK_MIN_VERSION = 1;
+
 	private function __construct()
 	{
 	}

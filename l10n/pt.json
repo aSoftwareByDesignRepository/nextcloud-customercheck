@@ -71,6 +71,7 @@
 		"%s need you": "%s precisam de si",
 		"%s needs a quick reconnect. Tap Reconnect — your synced mail stays.": "%s precisa de uma religação rápida. Toque em Voltar a ligar — o seu correio sincronizado fica.",
 		"%s older messages loaded": "%s mensagens mais antigas carregadas",
+		"%s open in ExpenseCheck": "%s em aberto no ExpenseCheck",
 		"%s open in ProjectCheck": "%s em aberto no ProjectCheck",
 		"%s open in TicketCheck": "%s em aberto no TicketCheck",
 		"%s percent match": "%s percentagem de correspondência",
@@ -1071,6 +1072,7 @@
 		"Existing customer": "Cliente existente",
 		"Expected cash this month": "Dinheiro previsto este mês",
 		"Expected close": "Fecho previsto",
+		"Expense claims": "Notas de despesas",
 		"Expired": "Expirada",
 		"Expired %n day ago": "Expirou há %n dia",
 		"Expired %n day ago — in grace": "Expirou há %n dia — em tolerância",
@@ -1257,7 +1259,7 @@
 		"Import a Nextcloud group once": "Importar um grupo Nextcloud uma vez",
 		"Import a list or add a company. Today then shows renewals and follow-ups.": "Importe uma lista ou adicione uma empresa. O Hoje passa então a mostrar renovações e acompanhamentos.",
 		"Import anomalies (country / ambiguous names)": "Anomalias de importação (país / nomes ambíguos)",
-		"Import applied. %d settings and %d rows written.": "Importação aplicada. %d definições e %d linhas escritas.",
+		"Import applied. %1$s and %2$s written.": "Importação aplicada. %1$s e %2$s escritas.",
 		"Import companies and deals": "Importar empresas e negócios",
 		"Import configuration": "Importar configuração",
 		"Import failed": "A importação falhou",
@@ -1792,6 +1794,7 @@
 		"Nothing open": "Nada em aberto",
 		"Nothing open for this company.": "Nada em aberto para esta empresa.",
 		"Nothing open right now": "Nada em aberto neste momento",
+		"Nothing open · ExpenseCheck": "Nada em aberto · ExpenseCheck",
 		"Nothing open · ProjectCheck": "Nada em aberto · ProjectCheck",
 		"Nothing open · TicketCheck": "Nada em aberto · TicketCheck",
 		"Nothing ready to import yet.": "Ainda nada pronto a importar.",
@@ -2766,7 +2769,7 @@
 		"This token is shown only once. Paste it into the companion app on the device.": "Este token só é mostrado uma vez. Cole-o na aplicação complementar no dispositivo.",
 		"This week": "Esta semana",
 		"This week’s owned promises": "As suas promessas desta semana",
-		"This will update %d settings and %d rows — nothing is deleted.": "Isto irá atualizar %d definições e %d linhas — nada será eliminado.",
+		"This will update %1$s and %2$s — nothing is deleted.": "Isto irá atualizar %1$s e %2$s — nada será eliminado.",
 		"This workspace is archived and read-only.": "Este espaço de trabalho está arquivado e é só de leitura.",
 		"This year": "Este ano",
 		"Three short steps to make this customer useful.": "Três passos curtos para tornar este cliente útil.",
@@ -3130,6 +3133,14 @@
 			"1 linha ignorada.",
 			"%n linhas ignoradas."
 		],
+		"_1 row_::_%n rows_": [
+			"1 linha",
+			"%n linhas"
+		],
+		"_1 setting_::_%n settings_": [
+			"1 definição",
+			"%n definições"
+		],
 		"_1 skipped._::_%n skipped._": [
 			"1 ignorado.",
 			"%n ignorados."
@@ -3188,21 +3199,7 @@
 		"this workspace": "este espaço de trabalho",
 		"undo via snapshot": "anular via instantâneo",
 		"will be skipped": "será ignorado",
-		"…and %s more.": "…e mais %s.",
-		"1 setting": "1 definição",
-		"%n settings": "%n definições",
-		"1 row": "1 linha",
-		"%n rows": "%n linhas",
-		"_1 row_::_%n rows_": [
-			"1 linha",
-			"%n linhas"
-		],
-		"_1 setting_::_%n settings_": [
-			"1 definição",
-			"%n definições"
-		],
-		"This will update %1$s and %2$s — nothing is deleted.": "Isto irá atualizar %1$s e %2$s — nada será eliminado.",
-		"Import applied. %1$s and %2$s written.": "Importação aplicada. %1$s e %2$s escritas."
+		"…and %s more.": "…e mais %s."
 	},
 	"pluralForm": "nplurals=2; plural=(n != 1);"
 }

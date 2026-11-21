@@ -71,6 +71,7 @@
 		"%s need you": "%s 項需要您處理",
 		"%s needs a quick reconnect. Tap Reconnect — your synced mail stays.": "%s 需要快速重新連線。點按“重新連線”——已同步的郵件會保留。",
 		"%s older messages loaded": "已載入 %s 條更早的訊息",
+		"%s open in ExpenseCheck": "ExpenseCheck 中 %s 個進行中",
 		"%s open in ProjectCheck": "ProjectCheck 中 %s 個進行中",
 		"%s open in TicketCheck": "TicketCheck 中 %s 個進行中",
 		"%s percent match": "匹配度 %s％",
@@ -1071,6 +1072,7 @@
 		"Existing customer": "現有客戶",
 		"Expected cash this month": "本月預期回款",
 		"Expected close": "預計成交",
+		"Expense claims": "報銷單",
 		"Expired": "已過期",
 		"Expired %n day ago": "%n 天前到期",
 		"Expired %n day ago — in grace": "%n 天前到期——寬限期內",
@@ -1257,7 +1259,7 @@
 		"Import a Nextcloud group once": "一次性匯入 Nextcloud 群組",
 		"Import a list or add a company. Today then shows renewals and follow-ups.": "匯入列表或新增公司。“今天”隨即顯示續約和跟進。",
 		"Import anomalies (country / ambiguous names)": "匯入異常（國家/地區、歧義名稱）",
-		"Import applied. %d settings and %d rows written.": "匯入已套用。已寫入 %d 項設定與 %d 列。",
+		"Import applied. %1$s and %2$s written.": "匯入已套用。已寫入 %1$s 與 %2$s。",
 		"Import companies and deals": "匯入公司和商機",
 		"Import configuration": "匯入配置",
 		"Import failed": "匯入失敗",
@@ -1792,6 +1794,7 @@
 		"Nothing open": "暫無未結項",
 		"Nothing open for this company.": "此公司沒有未結項。",
 		"Nothing open right now": "當前沒有未結項",
+		"Nothing open · ExpenseCheck": "無未結項 · ExpenseCheck",
 		"Nothing open · ProjectCheck": "無未結項 · ProjectCheck",
 		"Nothing open · TicketCheck": "無未結項 · TicketCheck",
 		"Nothing ready to import yet.": "暫無可匯入的內容。",
@@ -2766,7 +2769,7 @@
 		"This token is shown only once. Paste it into the companion app on the device.": "此權杖僅顯示一次。請將其貼上到裝置上的配套應用程式中。",
 		"This week": "本週",
 		"This week’s owned promises": "本週名下的承諾",
-		"This will update %d settings and %d rows — nothing is deleted.": "這將更新 %d 項設定與 %d 列資料——不會刪除任何內容。",
+		"This will update %1$s and %2$s — nothing is deleted.": "這將更新 %1$s 與 %2$s——不會刪除任何內容。",
 		"This workspace is archived and read-only.": "此工作區已歸檔，為只讀。",
 		"This year": "今年",
 		"Three short steps to make this customer useful.": "三個簡短步驟，讓這個客戶變得可用。",
@@ -3118,6 +3121,12 @@
 		"_1 row skipped._::_%n rows skipped._": [
 			"已略過 %n 列。"
 		],
+		"_1 row_::_%n rows_": [
+			"%n 列"
+		],
+		"_1 setting_::_%n settings_": [
+			"%n 項設定"
+		],
 		"_1 skipped._::_%n skipped._": [
 			"已跳過 %n 項。"
 		],
@@ -3172,19 +3181,7 @@
 		"this workspace": "此工作區",
 		"undo via snapshot": "透過快照撤銷",
 		"will be skipped": "將被跳過",
-		"…and %s more.": "…還有 %s 個。",
-		"1 setting": "1 項設定",
-		"%n settings": "%n 項設定",
-		"1 row": "1 列",
-		"%n rows": "%n 列",
-		"_1 row_::_%n rows_": [
-			"%n 列"
-		],
-		"_1 setting_::_%n settings_": [
-			"%n 項設定"
-		],
-		"This will update %1$s and %2$s — nothing is deleted.": "這將更新 %1$s 與 %2$s——不會刪除任何內容。",
-		"Import applied. %1$s and %2$s written.": "匯入已套用。已寫入 %1$s 與 %2$s。"
+		"…and %s more.": "…還有 %s 個。"
 	},
 	"pluralForm": "nplurals=1; plural=0;"
 }

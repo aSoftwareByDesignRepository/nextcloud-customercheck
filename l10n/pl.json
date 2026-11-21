@@ -71,6 +71,7 @@
 		"%s need you": "%s potrzebuje cię",
 		"%s needs a quick reconnect. Tap Reconnect — your synced mail stays.": "%s wymaga szybkiego ponownego połączenia. Dotknij Połącz ponownie — zsynchronizowana poczta zostaje.",
 		"%s older messages loaded": "Wczytano %s starszych wiadomości",
+		"%s open in ExpenseCheck": "%s otwarte w ExpenseCheck",
 		"%s open in ProjectCheck": "%s otwarty w ProjectCheck",
 		"%s open in TicketCheck": "%s otwarte w TicketCheck",
 		"%s percent match": "%s procent dopasowania",
@@ -1071,6 +1072,7 @@
 		"Existing customer": "Istniejący klient",
 		"Expected cash this month": "Oczekiwane środki pieniężne w tym miesiącu",
 		"Expected close": "Planowane zamknięcie",
+		"Expense claims": "Rozliczenia wydatków",
 		"Expired": "Wygasłe",
 		"Expired %n day ago": "Wygasa%n dzień temu",
 		"Expired %n day ago — in grace": "%n dzień temu — w okresie karencji",
@@ -1257,7 +1259,7 @@
 		"Import a Nextcloud group once": "Importuj grupę Nextcloud raz",
 		"Import a list or add a company. Today then shows renewals and follow-ups.": "Importuj listę lub dodaj firmę. Dziś pokazuje wznowienie i kontynuacje.",
 		"Import anomalies (country / ambiguous names)": "Importuj nieprawidłowości (nazwy krajów / niejednoznaczne nazwy)",
-		"Import applied. %d settings and %d rows written.": "Import zastosowany. Zapisano %d ustawień i %d wierszy.",
+		"Import applied. %1$s and %2$s written.": "Import zastosowany. Zapisano %1$s i %2$s.",
 		"Import companies and deals": "Przedsiębiorstwa importujące i transakcje",
 		"Import configuration": "Importuj konfigurację",
 		"Import failed": "Importuj nieudany",
@@ -1792,6 +1794,7 @@
 		"Nothing open": "Nic nie jest otwarte.",
 		"Nothing open for this company.": "Nic nie jest otwarte dla tej firmy.",
 		"Nothing open right now": "Nic nie jest teraz otwarte.",
+		"Nothing open · ExpenseCheck": "Nic otwartego · ExpenseCheck",
 		"Nothing open · ProjectCheck": "Nic otwartego · ProjectCheck",
 		"Nothing open · TicketCheck": "Nic otwartego · TicketCheck",
 		"Nothing ready to import yet.": "Nic jeszcze nie jest gotowe do importu.",
@@ -2766,7 +2769,7 @@
 		"This token is shown only once. Paste it into the companion app on the device.": "Ten token jest wyświetlany tylko raz. Wklej go w aplikacji towarzyszącej na urządzeniu.",
 		"This week": "W tym tygodniu",
 		"This week’s owned promises": "Własne obietnice na ten tydzień",
-		"This will update %d settings and %d rows — nothing is deleted.": "Spowoduje to aktualizację %d ustawień i %d wierszy — nic nie zostanie usunięte.",
+		"This will update %1$s and %2$s — nothing is deleted.": "Spowoduje to aktualizację %1$s i %2$s — nic nie zostanie usunięte.",
 		"This workspace is archived and read-only.": "Ta przestrzeń robocza jest archiwizowana i tylko do odczytu.",
 		"This year": "W tym roku",
 		"Three short steps to make this customer useful.": "Trzy krótkie kroki, by ten klient był przydatny.",
@@ -3142,6 +3145,16 @@
 			"Pominięto %n wiersze.",
 			"Pominięto %n wierszy."
 		],
+		"_1 row_::_%n rows_": [
+			"1 wiersz",
+			"%n wiersze",
+			"%n wierszy"
+		],
+		"_1 setting_::_%n settings_": [
+			"1 ustawienie",
+			"%n ustawienia",
+			"%n ustawień"
+		],
 		"_1 skipped._::_%n skipped._": [
 			"1 pominięty.",
 			"%n pominięte.",
@@ -3204,23 +3217,7 @@
 		"this workspace": "to miejsce pracy",
 		"undo via snapshot": "cofnij za pomocą migawki",
 		"will be skipped": "zostanie pominięte",
-		"…and %s more.": "…i %s więcej.",
-		"1 setting": "1 ustawienie",
-		"%n settings": "%n ustawienia",
-		"1 row": "1 wiersz",
-		"%n rows": "%n wiersze",
-		"_1 row_::_%n rows_": [
-			"1 wiersz",
-			"%n wiersze",
-			"%n wierszy"
-		],
-		"_1 setting_::_%n settings_": [
-			"1 ustawienie",
-			"%n ustawienia",
-			"%n ustawień"
-		],
-		"This will update %1$s and %2$s — nothing is deleted.": "Spowoduje to aktualizację %1$s i %2$s — nic nie zostanie usunięte.",
-		"Import applied. %1$s and %2$s written.": "Import zastosowany. Zapisano %1$s i %2$s."
+		"…and %s more.": "…i %s więcej."
 	},
 	"pluralForm": "nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);"
 }

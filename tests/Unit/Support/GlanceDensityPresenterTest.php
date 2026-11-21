@@ -42,7 +42,7 @@ final class GlanceDensityPresenterTest extends TestCase
 			'ticketsHref' => '#crm-tickets',
 		], $this->l10n());
 
-		$this->assertCount(3, $tiles);
+		$this->assertCount(4, $tiles);
 		$byKey = [];
 		foreach ($tiles as $t) {
 			$byKey[$t['key']] = $t;
@@ -51,6 +51,34 @@ final class GlanceDensityPresenterTest extends TestCase
 		$this->assertSame(0, $byKey['invoices']['value']);
 		$this->assertStringContainsString('All clear', $byKey['invoices']['hint']);
 		$this->assertSame('View', $byKey['invoices']['cta']);
+	}
+
+	public function testExpenseClaimsTileMirrorsTheContract(): void
+	{
+		// Missing app: offline tone, Link CTA, identity anchor.
+		$offline = GlanceDensityPresenter::tiles(['expensecheck' => false], $this->l10n());
+		$exp = $offline[3];
+		$this->assertSame('expenses', $exp['key']);
+		$this->assertSame(GlanceDensityPresenter::TONE_OFFLINE, $exp['tone']);
+		$this->assertSame('#crm-identity-links', $exp['href']);
+		$this->assertFalse($exp['available']);
+
+		// Open claims: attention tone + real count + the deep href.
+		$open = GlanceDensityPresenter::tiles([
+			'expensecheck' => true,
+			'openExpenseClaims' => 5,
+			'expensesHref' => '/apps/expensecheck/all',
+		], $this->l10n());
+		$exp = $open[3];
+		$this->assertSame(GlanceDensityPresenter::TONE_ATTENTION, $exp['tone']);
+		$this->assertSame(5, $exp['value']);
+		$this->assertSame('/apps/expensecheck/all', $exp['href']);
+		$this->assertStringContainsString('5 open', $exp['hint']);
+		$this->assertSame('View', $exp['cta']);
+
+		// Nothing open: calm, never fake-warning.
+		$clear = GlanceDensityPresenter::tiles(['expensecheck' => true, 'openExpenseClaims' => 0], $this->l10n());
+		$this->assertSame(GlanceDensityPresenter::TONE_CALM, $clear[3]['tone']);
 	}
 
 	public function testUnpaidUsesAttentionAndKeepsDeepHref(): void
@@ -150,6 +178,7 @@ final class GlanceDensityPresenterTest extends TestCase
 			'projectcheck' => true,
 			'invoicecheck' => true,
 			'ticketcheck' => true,
+			'expensecheck' => true,
 		], $this->l10n());
 		$this->assertFalse(GlanceDensityPresenter::needsAttention($tiles));
 	}

@@ -71,6 +71,7 @@
 		"%s need you": "%s heeft je nodig",
 		"%s needs a quick reconnect. Tap Reconnect — your synced mail stays.": "%s moet even opnieuw verbinden. Tik op Opnieuw verbinden — je gesynchroniseerde mail blijft.",
 		"%s older messages loaded": "%s oudere berichten geladen",
+		"%s open in ExpenseCheck": "%s geopend in ExpenseCheck",
 		"%s open in ProjectCheck": "%s geopend in ProjectCheck",
 		"%s open in TicketCheck": "%s geopend in TicketCheck",
 		"%s percent match": "%s procent komt overeen",
@@ -1071,6 +1072,7 @@
 		"Existing customer": "Bestaande klant",
 		"Expected cash this month": "Verwacht contant geld deze maand",
 		"Expected close": "Verwachte closing",
+		"Expense claims": "Declaraties",
 		"Expired": "Verlopen",
 		"Expired %n day ago": "Verlopen %n dag geleden",
 		"Expired %n day ago — in grace": "Verlopen %n dag geleden — in respijt",
@@ -1257,7 +1259,7 @@
 		"Import a Nextcloud group once": "Een volgende cloud-groep importeren",
 		"Import a list or add a company. Today then shows renewals and follow-ups.": "Importeer een lijst of voeg een bedrijf toe. Vandaag toont dan vernieuwing en follow-ups.",
 		"Import anomalies (country / ambiguous names)": "Onregelmatigheden bij invoer (land / dubbelzinnige namen)",
-		"Import applied. %d settings and %d rows written.": "Import toegepast. %d instellingen en %d rijen geschreven.",
+		"Import applied. %1$s and %2$s written.": "Import toegepast. %1$s en %2$s geschreven.",
 		"Import companies and deals": "Importbedrijven en deals",
 		"Import configuration": "Configuratie importeren",
 		"Import failed": "Importeren mislukt",
@@ -1792,6 +1794,7 @@
 		"Nothing open": "Niets open.",
 		"Nothing open for this company.": "Niets open voor dit bedrijf.",
 		"Nothing open right now": "Er is nu niets open.",
+		"Nothing open · ExpenseCheck": "Niets geopend · ExpenseCheck",
 		"Nothing open · ProjectCheck": "Niets geopend · ProjectCheck",
 		"Nothing open · TicketCheck": "Niets geopend · TicketCheck",
 		"Nothing ready to import yet.": "Nog niets te importeren.",
@@ -2766,7 +2769,7 @@
 		"This token is shown only once. Paste it into the companion app on the device.": "Dit token wordt slechts één keer getoond. Plak het in de companion-app op het apparaat.",
 		"This week": "Deze week",
 		"This week’s owned promises": "De eigen beloften van deze week",
-		"This will update %d settings and %d rows — nothing is deleted.": "Dit werkt %d instellingen en %d rijen bij — er wordt niets verwijderd.",
+		"This will update %1$s and %2$s — nothing is deleted.": "Dit werkt %1$s en %2$s bij — er wordt niets verwijderd.",
 		"This workspace is archived and read-only.": "Deze werkruimte is gearchiveerd en alleen-lezen.",
 		"This year": "Dit jaar",
 		"Three short steps to make this customer useful.": "Drie korte stappen om deze klant nuttig te maken.",
@@ -3130,6 +3133,14 @@
 			"1 rij overgeslagen.",
 			"%n rijen overgeslagen."
 		],
+		"_1 row_::_%n rows_": [
+			"1 rij",
+			"%n rijen"
+		],
+		"_1 setting_::_%n settings_": [
+			"1 instelling",
+			"%n instellingen"
+		],
 		"_1 skipped._::_%n skipped._": [
 			"1 overgeslagen.",
 			"%n overgeslagen."
@@ -3188,21 +3199,7 @@
 		"this workspace": "deze werkruimte",
 		"undo via snapshot": "ongedaan maken via momentopname",
 		"will be skipped": "wordt overgeslagen",
-		"…and %s more.": "…en %s meer.",
-		"1 setting": "1 instelling",
-		"%n settings": "%n instellingen",
-		"1 row": "1 rij",
-		"%n rows": "%n rijen",
-		"_1 row_::_%n rows_": [
-			"1 rij",
-			"%n rijen"
-		],
-		"_1 setting_::_%n settings_": [
-			"1 instelling",
-			"%n instellingen"
-		],
-		"This will update %1$s and %2$s — nothing is deleted.": "Dit werkt %1$s en %2$s bij — er wordt niets verwijderd.",
-		"Import applied. %1$s and %2$s written.": "Import toegepast. %1$s en %2$s geschreven."
+		"…and %s more.": "…en %s meer."
 	},
 	"pluralForm": "nplurals=2; plural=(n != 1);"
 }

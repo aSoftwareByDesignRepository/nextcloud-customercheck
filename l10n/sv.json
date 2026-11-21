@@ -71,6 +71,7 @@
 		"%s need you": "%s behöver dig",
 		"%s needs a quick reconnect. Tap Reconnect — your synced mail stays.": "%s behöver en snabb återanslutning. Tryck på Återanslut – din synkade e-post finns kvar.",
 		"%s older messages loaded": "%s äldre meddelanden laddade",
+		"%s open in ExpenseCheck": "%s öppna i ExpenseCheck",
 		"%s open in ProjectCheck": "%s öppna i ProjectCheck",
 		"%s open in TicketCheck": "%s öppna i TicketCheck",
 		"%s percent match": "%s procents matchning",
@@ -1071,6 +1072,7 @@
 		"Existing customer": "Befintlig kund",
 		"Expected cash this month": "Förväntade kontanter denna månad",
 		"Expected close": "Förväntat avslut",
+		"Expense claims": "Utlägg",
 		"Expired": "Utgångna",
 		"Expired %n day ago": "Utgången för %n dag sedan",
 		"Expired %n day ago — in grace": "Utgången för %n dag sedan – i respit",
@@ -1257,7 +1259,7 @@
 		"Import a Nextcloud group once": "Importera en Nextcloud-grupp en gång",
 		"Import a list or add a company. Today then shows renewals and follow-ups.": "Importera en lista eller lägg till ett företag. Idag visar sedan förnyelser och uppföljningar.",
 		"Import anomalies (country / ambiguous names)": "Importavvikelser (land / tvetydiga namn)",
-		"Import applied. %d settings and %d rows written.": "Importen har tillämpats. %d inställningar och %d rader skrivna.",
+		"Import applied. %1$s and %2$s written.": "Importen har tillämpats. %1$s och %2$s skrivna.",
 		"Import companies and deals": "Importera företag och deals",
 		"Import configuration": "Importera konfiguration",
 		"Import failed": "Import misslyckades",
@@ -1792,6 +1794,7 @@
 		"Nothing open": "Inget öppet",
 		"Nothing open for this company.": "Inget öppet för detta företag.",
 		"Nothing open right now": "Inget öppet just nu",
+		"Nothing open · ExpenseCheck": "Ingenting öppet · ExpenseCheck",
 		"Nothing open · ProjectCheck": "Inget öppet · ProjectCheck",
 		"Nothing open · TicketCheck": "Ingenting öppet · TicketCheck",
 		"Nothing ready to import yet.": "Ingenting redo att importera ännu.",
@@ -2766,7 +2769,7 @@
 		"This token is shown only once. Paste it into the companion app on the device.": "Denna token visas bara en gång. Klistra in den i kompanjonappen på enheten.",
 		"This week": "Denna vecka",
 		"This week’s owned promises": "Veckans egna löften",
-		"This will update %d settings and %d rows — nothing is deleted.": "Detta uppdaterar %d inställningar och %d rader — inget raderas.",
+		"This will update %1$s and %2$s — nothing is deleted.": "Detta uppdaterar %1$s och %2$s — inget raderas.",
 		"This workspace is archived and read-only.": "Den här arbetsytan är arkiverad och skrivskyddad.",
 		"This year": "I år",
 		"Three short steps to make this customer useful.": "Tre korta steg för att göra den här kunden användbar.",
@@ -3130,6 +3133,14 @@
 			"1 rad hoppades över.",
 			"%n rader hoppades över."
 		],
+		"_1 row_::_%n rows_": [
+			"1 rad",
+			"%n rader"
+		],
+		"_1 setting_::_%n settings_": [
+			"1 inställning",
+			"%n inställningar"
+		],
 		"_1 skipped._::_%n skipped._": [
 			"1 hoppades över.",
 			"%n hoppades över."
@@ -3188,21 +3199,7 @@
 		"this workspace": "den här arbetsytan",
 		"undo via snapshot": "ångra via ögonblicksbild",
 		"will be skipped": "kommer att hoppas över",
-		"…and %s more.": "…och %s till.",
-		"1 setting": "1 inställning",
-		"%n settings": "%n inställningar",
-		"1 row": "1 rad",
-		"%n rows": "%n rader",
-		"_1 row_::_%n rows_": [
-			"1 rad",
-			"%n rader"
-		],
-		"_1 setting_::_%n settings_": [
-			"1 inställning",
-			"%n inställningar"
-		],
-		"This will update %1$s and %2$s — nothing is deleted.": "Detta uppdaterar %1$s och %2$s — inget raderas.",
-		"Import applied. %1$s and %2$s written.": "Importen har tillämpats. %1$s och %2$s skrivna."
+		"…and %s more.": "…och %s till."
 	},
 	"pluralForm": "nplurals=2; plural=(n != 1);"
 }
