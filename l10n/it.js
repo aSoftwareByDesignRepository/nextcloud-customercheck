@@ -3126,7 +3126,7 @@ OC.L10N.register(
 		"in %n days" : "in %n giorni",
 		"inactive" : "inattivo",
 		"kept as-is" : "mantenuto così com’è",
-		"mail send" : "e-mail",
+		"mail send" : "invio e-mail",
 		"make identical to the file; prod-only rows are deleted" : "rendi identico al file; le righe presenti solo in prod vengono eliminate",
 		"matched by email" : "abbinato per e-mail",
 		"matched by id" : "abbinato per id",

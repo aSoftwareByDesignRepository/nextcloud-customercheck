@@ -2361,7 +2361,7 @@ OC.L10N.register(
 		"Saved. Your mailbox is listed above: %s. Change something only after you test the connection again." : "Gespeichert. Dein Postfach steht oben in der Liste: %s. Ändere etwas erst, nachdem du die Verbindung erneut getestet hast.",
 		"Saving folders…" : "Ordner werden gespeichert…",
 		"Saving…" : "Wird gespeichert …",
-		"Say what you will finish. Change anything that is no longer realistic before you confirm." : "Sag, was du fertigstellst. Ändere alles Unrealistische, bevor du bestätigst.",
+		"Say what you will finish. Change anything that is no longer realistic before you confirm." : "Sag, was du fertigstellst. Ändere alles, was nicht mehr realistisch ist, bevor du bestätigst.",
 		"Say why the agreement is cancelled — it stays on the record." : "Sagen du, warum die Vereinbarung gekündigt wird – es bleibt aktenkundig.",
 		"Scan as teammate" : "Als Teammitglied scannen",
 		"Schedules a call for tomorrow" : "Plant einen Anruf für morgen",

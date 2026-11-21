@@ -866,7 +866,7 @@ OC.L10N.register(
 		"Current" : "Mevcut",
 		"Current license" : "Mevcut lisans",
 		"Custom" : "Özel",
-		"Custom codes can stay inactive for old agreements while disappearing from new forms." : "Özel kodlar, eski anlaşmalarda etkin kalırken yeni formlardan kaybolabilir.",
+		"Custom codes can stay inactive for old agreements while disappearing from new forms." : "Özel kodlar eski anlaşmalarda pasif kalabilir ve yeni formlardan kaybolabilir.",
 		"Custom codes use lowercase letters, digits and hyphens (2–32 characters)." : "Özel kodlar küçük harf, rakam ve tire kullanır (2–32 karakter).",
 		"Custom product code added." : "Özel ürün kodu eklendi.",
 		"Custom promise" : "Özel söz",
