@@ -45,14 +45,14 @@ final class ThemeFeatureCssZeroHexContractTest extends TestCase
 		$this->assertSame([], $offenders, "Hex outside tokens.css:\n" . implode("\n", $offenders));
 	}
 
-	public function testSupportBrandTokensAreThemeAdaptive(): void
+	public function testSupportBrandSurfacesAreThemeAdaptive(): void
 	{
-		$tokens = (string)file_get_contents(dirname(__DIR__, 2) . '/css/common/tokens.css');
-		$this->assertStringContainsString('--crm-support-brand-plate: var(--crm-bg-card);', $tokens);
-		$this->assertStringContainsString('--crm-support-brand-ink: var(--crm-text);', $tokens);
-		$this->assertStringContainsString('--crm-support-brand-muted: var(--crm-muted);', $tokens);
+		// Post check-shell sync the brand plate/ink resolve straight to the
+		// theme-adaptive tokens — no fixed brand ink anywhere.
 		$support = (string)file_get_contents(dirname(__DIR__, 2) . '/css/admin-support-us.css');
-		$this->assertStringContainsString('var(--crm-support-brand-plate', $support);
+		$this->assertStringContainsString('var(--crm-bg-card)', $support);
+		$this->assertStringContainsString('var(--crm-text)', $support);
+		$this->assertStringContainsString('var(--crm-muted)', $support);
 		$this->assertDoesNotMatchRegularExpression('/#[0-9a-fA-F]{3,8}/', $support);
 	}
 }

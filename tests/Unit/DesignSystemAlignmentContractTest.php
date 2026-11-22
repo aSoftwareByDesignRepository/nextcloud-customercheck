@@ -24,7 +24,7 @@ final class DesignSystemAlignmentContractTest extends TestCase
 	public function testTokensMirrorDesignSystemScale(): void
 	{
 		$tokens = (string)file_get_contents($this->root . '/css/common/tokens.css');
-		foreach (['--crm-space-1: 4px', '--crm-space-5: 24px', '--crm-radius-sm: 6px', '--crm-radius-md: 12px', '--crm-fs-2xl: 1.875rem', '--crm-touch: 44px', '--crm-touch-lg: 48px'] as $needle) {
+		foreach (['--crm-space-1: 4px', '--crm-space-5: 24px', '--crm-radius-sm: var(--border-radius, 6px)', '--crm-radius-md: var(--border-radius-element, var(--border-radius-large, 12px))', '--crm-fs-2xl: 1.875rem', '--crm-touch: 44px', '--crm-touch-lg: 48px'] as $needle) {
 			$this->assertStringContainsString($needle, $tokens);
 		}
 		$this->assertStringContainsString('--crm-radius-lg: var(--border-radius-large', $tokens);

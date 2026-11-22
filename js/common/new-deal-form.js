@@ -10,13 +10,14 @@
    */
   function sprintfT(base) {
     const baseT = typeof base === 'function' ? base : function (m) { return m; };
-    return function (msg, args) {
+    return function t(msg, args) {
       let out = baseT(msg, args);
       const list = Array.isArray(args) ? args : [];
-      if (list.length && typeof out === 'string' && out.indexOf('%') !== -1) {
+      if (typeof out === 'string' && out.indexOf('%') !== -1) {
         let i = 0;
         out = out.replace(/%%|%(?:\d+\$)?[sd]/g, function (m) {
           if (m === '%%') { return '%'; }
+          if (!list.length) { return m; }
           const v = list[i];
           i += 1;
           return v == null ? '' : String(v);

@@ -100,7 +100,7 @@
 	border-radius: var(--crm-radius-md, 12px);
 	border: 1px solid color-mix(in srgb, var(--color-main-text) 12%, transparent);
 	/* Solid light plate — logo fills are dark; token with hex fallback only. */
-	background-color: var(--crm-support-brand-plate, var(--crm-bg-card)) !important;
+	background-color: var(--crm-bg-card) !important;
 	box-shadow: var(--crm-shadow-sm);
 	text-decoration: none !important;
 	color: inherit !important;
@@ -111,7 +111,7 @@
 }
 
 #app-content.crm-app--support-us a.crm-support-us-page__brand-link {
-	background-color: var(--crm-support-brand-plate, var(--crm-bg-card)) !important;
+	background-color: var(--crm-bg-card) !important;
 	text-decoration: none !important;
 }
 
@@ -156,7 +156,7 @@
 	font-weight: 700;
 	letter-spacing: 0.04em;
 	line-height: 1.05;
-	color: var(--crm-support-brand-ink, var(--crm-text));
+	color: var(--crm-text);
 	white-space: nowrap;
 }
 
@@ -167,7 +167,7 @@
 	font-style: italic;
 	letter-spacing: 0.06em;
 	line-height: 1.1;
-	color: var(--crm-support-brand-muted, var(--crm-muted));
+	color: var(--crm-muted);
 	white-space: nowrap;
 }
 

@@ -23,7 +23,7 @@ dialog.crm-native-dialog .crm-form--new-deal .crm-new-deal__company-fixed {
   margin: 0 0 1rem;
   padding: 0.65rem 0.85rem;
   border-radius: var(--border-radius-large, 8px);
-  background: var(--crm-surface-muted);
+  background: var(--crm-bg-soft, var(--color-background-dark));
 }
 
 dialog.crm-native-dialog .crm-form--new-deal .crm-new-deal__section--basics .form-group + .form-group {

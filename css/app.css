@@ -34,6 +34,16 @@
 @import url('common/notification-surfaces.css');
 /* Shell layout critical path is reinforced at end of this file (after imports). */
 
+/*
+ * App-local layout tokens with no fleet twin: the synced tokens pack does
+ * not carry page-rail widths, but the synced app-layout sheet and this file
+ * both consume them — declared app-locally outside the synced pack.
+ */
+:root {
+	--crm-nav-width: 280px;
+	--crm-nav-width-compact: 240px;
+}
+
 /* ── Skip link / live regions ─────────────────────────────── */
 .crm-skip-link {
 	position: absolute;
@@ -368,7 +378,7 @@ dialog.crm-native-dialog .crm-btn--danger,
 .crm-nc-admin-settings .crm-btn--danger,
 .crm-nc-settings-panel .crm-btn--danger {
 	background-color: var(--crm-danger-fill) !important;
-	border-color: var(--crm-danger-edge, var(--crm-danger-fill)) !important;
+	border-color: var(--crm-danger-fill) !important;
 	color: var(--crm-danger-on-fill) !important;
 }
 
@@ -1239,7 +1249,7 @@ dialog.crm-native-dialog .crm-form-actions--start {
 	 * chrome now spans the content column, aligned with the cards. */
 	margin: 0;
 	padding: var(--crm-space-2, 0.5rem) var(--crm-space-4, 1rem);
-	background: color-mix(in srgb, var(--crm-bg-page, var(--color-main-background)) 92%, transparent);
+	background: color-mix(in srgb, var(--crm-bg-card, var(--color-main-background)) 92%, transparent);
 	backdrop-filter: blur(6px);
 	border-block-end: 1px solid var(--crm-border, var(--color-border));
 	box-shadow: 0 6px 16px color-mix(in srgb, var(--color-box-shadow, var(--color-main-text)) 8%, transparent);
@@ -1312,7 +1322,7 @@ dialog.crm-native-dialog .crm-form-actions--start {
 @media (prefers-reduced-transparency: reduce) {
 	#app-content.crm-app--company-detail .crm-360-focus__chrome {
 		backdrop-filter: none;
-		background: var(--crm-bg-page, var(--color-main-background));
+		background: var(--crm-bg-card, var(--color-main-background));
 	}
 }
 @media (max-width: 480px) {
@@ -2390,8 +2400,8 @@ dialog.crm-native-dialog .crm-dl__row dd {
 	gap: var(--crm-space-3);
 }
 #app-content.crm-app .crm-kanban__column {
-	background: var(--crm-surface-muted, var(--color-background-dark, var(--crm-bg-soft)));
-	border-radius: var(--crm-radius, 8px);
+	background: var(--crm-bg-soft, var(--color-background-dark));
+	border-radius: var(--crm-radius-md, 8px);
 	padding: 0.5rem;
 	min-height: 8rem;
 }
@@ -2534,8 +2544,8 @@ dialog.crm-native-dialog .crm-dl__row dd {
 	max-height: 16rem;
 	overflow-y: auto;
 	border: 1px solid var(--crm-border, var(--color-border));
-	border-radius: var(--crm-radius, 6px);
-	background: var(--crm-surface, var(--color-main-background));
+	border-radius: var(--crm-radius-md, 6px);
+	background: var(--crm-bg-card, var(--color-main-background));
 }
 #app-content.crm-app .access-groups-item {
 	display: grid;
@@ -2547,12 +2557,12 @@ dialog.crm-native-dialog .crm-dl__row dd {
 	align-items: start;
 	padding: var(--space-2, 0.5rem) var(--space-3, 0.75rem);
 	min-height: 44px; /* WCAG 2.5.5 target size is defined in CSS px; rem shrinks under NC 15px root font */
-	border-bottom: 1px solid var(--crm-border-dark, var(--color-border-dark));
+	border-bottom: 1px solid var(--color-border-dark);
 	cursor: pointer;
 }
 #app-content.crm-app .access-groups-item:last-child { border-bottom: none; }
 #app-content.crm-app .access-groups-item:hover {
-	background: var(--crm-hover, var(--color-background-hover));
+	background: var(--crm-bg-hover, var(--color-background-hover));
 }
 #app-content.crm-app .access-groups-item input[type="checkbox"] {
 	grid-area: checkbox;
@@ -2565,7 +2575,7 @@ dialog.crm-native-dialog .crm-dl__row dd {
 #app-content.crm-app .access-groups-item__meta {
 	grid-area: meta;
 	font-size: 0.8125rem;
-	color: var(--crm-text-muted, var(--color-text-maxcontrast));
+	color: var(--crm-muted, var(--color-text-maxcontrast));
 }
 #app-content.crm-app .crm-chip-list {
 	list-style: none;
@@ -2581,8 +2591,8 @@ dialog.crm-native-dialog .crm-dl__row dd {
 	gap: var(--crm-space-1);
 	padding: 0.25rem 0.5rem;
 	border: 1px solid var(--crm-border, var(--color-border));
-	border-radius: var(--crm-radius, 6px);
-	background: var(--crm-surface-muted, var(--color-background-dark));
+	border-radius: var(--crm-radius-md, 6px);
+	background: var(--crm-bg-soft, var(--color-background-dark));
 	min-height: 2rem;
 }
 #app-content.crm-app .crm-chip__remove {
@@ -2600,8 +2610,8 @@ dialog.crm-native-dialog .crm-dl__row dd {
 }
 #app-content.crm-app .crm-suggest {
 	border: 1px solid var(--crm-border, var(--color-border));
-	border-radius: var(--crm-radius, 6px);
-	background: var(--crm-surface, var(--color-main-background));
+	border-radius: var(--crm-radius-md, 6px);
+	background: var(--crm-bg-card, var(--color-main-background));
 	max-height: 12rem;
 	overflow-y: auto;
 	margin-top: 0.25rem;
@@ -2618,7 +2628,7 @@ dialog.crm-native-dialog .crm-dl__row dd {
 }
 #app-content.crm-app .crm-suggest__item:hover,
 #app-content.crm-app .crm-suggest__item:focus {
-	background: var(--crm-hover, var(--color-background-hover));
+	background: var(--crm-bg-hover, var(--color-background-hover));
 }
 #app-content.crm-app .crm-token-row {
 	display: flex;
@@ -2672,8 +2682,8 @@ dialog.crm-native-dialog .crm-pre {
 	max-height: 16rem;
 	overflow: auto;
 	padding: var(--crm-space-3);
-	background: var(--crm-surface-muted, var(--color-background-dark));
-	border-radius: var(--crm-radius, 6px);
+	background: var(--crm-bg-soft, var(--color-background-dark));
+	border-radius: var(--crm-radius-md, 6px);
 }
 @media (max-width: 768.98px) {
 	#app-content.crm-app .crm-kanban {
@@ -2790,7 +2800,7 @@ dialog.crm-native-dialog .crm-pre {
 	padding: 0.5rem 1.1rem;
 	border-radius: 999px;
 	border: 2px solid var(--crm-border, var(--color-border));
-	background: var(--crm-surface, var(--color-main-background));
+	background: var(--crm-bg-card, var(--color-main-background));
 	color: var(--crm-text, var(--color-main-text));
 	font-weight: 600;
 	font-size: 1rem;
@@ -2815,7 +2825,7 @@ dialog.crm-native-dialog .crm-advanced {
 	margin: var(--crm-space-3) 0 var(--crm-space-5);
 	border: 1px solid var(--crm-border, var(--color-border));
 	border-radius: var(--crm-radius-sm);
-	background: var(--crm-surface-muted, var(--color-background-dark));
+	background: var(--crm-bg-soft, var(--color-background-dark));
 }
 #app-content.crm-app .crm-advanced__summary,
 #app-content.crm-app .crm-advanced > summary,
@@ -2902,7 +2912,7 @@ dialog.crm-native-dialog .crm-advanced > .crm-form--stack {
 	padding: var(--crm-space-4) var(--crm-space-4);
 	border: 1px solid var(--crm-border, var(--color-border));
 	border-radius: var(--crm-radius-sm);
-	background: var(--crm-surface-muted, var(--color-background-dark));
+	background: var(--crm-bg-soft, var(--color-background-dark));
 }
 #app-content.crm-app .crm-ag-lifecycle__title {
 	margin: 0 0 var(--crm-space-1);
@@ -2945,7 +2955,7 @@ dialog.crm-native-dialog .crm-advanced > .crm-form--stack {
 	font-size: 1.05rem;
 }
 #app-content.crm-app .crm-linked-bundle__hint {
-	color: var(--crm-text-muted, var(--color-text-maxcontrast));
+	color: var(--crm-muted, var(--color-text-maxcontrast));
 	font-size: 0.9375rem;
 }
 #app-content.crm-app .crm-linked-bundle__body {
@@ -2980,7 +2990,7 @@ dialog.crm-native-dialog .crm-advanced > .crm-form--stack {
 	min-height: 44px;
 	padding: var(--crm-space-3, 0.75rem) var(--crm-space-4, 1rem);
 	border: 1px solid var(--crm-border, var(--color-border));
-	border-radius: var(--crm-radius, 8px);
+	border-radius: var(--crm-radius-md, 8px);
 	background: var(--crm-bg-soft, var(--color-background-dark, var(--color-main-background)));
 	scroll-margin-top: 6.5rem;
 }
@@ -3394,8 +3404,8 @@ dialog.crm-native-dialog .crm-advanced > .crm-form--stack {
 	gap: var(--crm-space-3, 0.75rem);
 	padding: var(--crm-space-3, 0.75rem);
 	border: 1px solid var(--crm-border, var(--color-border));
-	border-radius: var(--crm-radius, 8px);
-	background: var(--crm-surface, var(--color-main-background));
+	border-radius: var(--crm-radius-md, 8px);
+	background: var(--crm-bg-card, var(--color-main-background));
 }
 .crm-deal-checklist__item--closed {
 	opacity: 0.72;
@@ -3622,7 +3632,7 @@ dialog.crm-native-dialog .crm-advanced > .crm-form--stack {
 	overflow: auto;
 	white-space: pre-wrap;
 	overflow-wrap: anywhere;
-	font-family: var(--crm-font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+	font-family: var(--crm-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
 	font-size: var(--crm-fs-sm, 0.875rem);
 	line-height: 1.5;
 	border: 1px solid var(--crm-border, var(--color-border));
@@ -3639,21 +3649,21 @@ dialog.crm-native-dialog .crm-advanced > .crm-form--stack {
 }
 #app-content.crm-app .crm-mail-preview__body--html {
 	white-space: normal;
-	font-family: var(--crm-font, var(--font-face));
+	font-family: var(--customercheck-font-family-sans, var(--font-face));
 	font-size: var(--crm-fs-md, 1rem);
 }
 #app-content.crm-app .crm-mail-preview__body--html a {
-	color: var(--crm-link, var(--color-primary-element));
+	color: var(--crm-primary, var(--color-primary-element));
 	text-decoration: underline;
 }
 #app-content.crm-app .crm-mail-preview__body--html blockquote {
 	margin: 0.5rem 0;
 	padding-left: 0.75rem;
 	border-left: 3px solid var(--crm-border, var(--color-border));
-	color: var(--crm-text-maxcontrast, var(--color-text-maxcontrast));
+	color: var(--crm-muted, var(--color-text-maxcontrast));
 }
 #app-content.crm-app .crm-mail-preview__body:focus {
-	outline: 2px solid var(--crm-focus, var(--color-primary-element));
+	outline: 2px solid var(--color-primary-element);
 	outline-offset: 2px;
 }
 #app-content.crm-app .crm-mail-preview__body--pending:not([hidden]) {
@@ -5112,7 +5122,7 @@ dialog.crm-native-dialog .crm-prepared-mail__meta {
 	padding: var(--crm-space-3, 0.75rem) var(--crm-space-4, 1rem);
 	border: 1px solid var(--crm-border, var(--color-border));
 	border-radius: var(--crm-radius-md, 8px);
-	background: var(--crm-surface-muted, var(--color-background-dark));
+	background: var(--crm-bg-soft, var(--color-background-dark));
 }
 dialog.crm-native-dialog .crm-prepared-mail__subject,
 dialog.crm-native-dialog .crm-prepared-mail__to {
@@ -6085,7 +6095,7 @@ dialog.crm-native-dialog .crm-muted {
 
 #app-content.crm-app #crm-forecast-disclaimer {
 	margin: 0 0 var(--crm-space-3, 0.75rem);
-	font-size: var(--crm-font-size-sm, 0.875rem);
+	font-size: var(--crm-fs-sm, 0.875rem);
 	line-height: 1.4;
 	max-width: 42rem;
 	color: var(--crm-muted, var(--crm-muted));
@@ -6250,7 +6260,7 @@ dialog.crm-native-dialog label.crm-check {
 	min-height: 5.75rem;
 	border: 2px solid var(--crm-border, var(--color-border));
 	border-radius: var(--crm-radius-md, 0.5rem);
-	background: var(--crm-surface, var(--color-main-background));
+	background: var(--crm-bg-card, var(--color-main-background));
 	cursor: pointer;
 	line-height: 1.35;
 	transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
@@ -6357,7 +6367,7 @@ dialog.crm-native-dialog label.crm-check {
 #app-content.crm-app .crm-import-drop.is-dragover {
 	border-color: var(--color-primary-element);
 	border-style: solid;
-	background: var(--color-primary-element-light, var(--crm-surface, var(--color-main-background)));
+	background: var(--color-primary-element-light, var(--crm-bg-card, var(--color-main-background)));
 	outline: 2px solid var(--color-primary-element);
 	outline-offset: 2px;
 }
@@ -6384,7 +6394,7 @@ dialog.crm-native-dialog label.crm-check {
 	padding: 0.55rem 1.2rem;
 	border: 2px solid var(--color-primary-element);
 	border-radius: var(--crm-radius-md, 0.5rem);
-	background: var(--crm-surface, var(--color-main-background));
+	background: var(--crm-bg-card, var(--color-main-background));
 	color: var(--crm-accent-ink, var(--color-primary-element));
 	font-weight: 700;
 	font-size: 1rem;
@@ -6630,8 +6640,8 @@ dialog.crm-native-dialog label.crm-check {
   gap: var(--crm-space-3, 0.75rem);
   padding: var(--crm-space-3, 0.75rem) var(--crm-space-4, 1rem);
   border: 1px solid var(--crm-border, var(--color-border));
-  border-radius: var(--crm-radius, 8px);
-  background: var(--crm-surface, var(--color-main-background));
+  border-radius: var(--crm-radius-md, 8px);
+  background: var(--crm-bg-card, var(--color-main-background));
 }
 #app-content.crm-app .crm-todo-list__main {
   flex: 1 1 12rem;
@@ -7365,7 +7375,7 @@ dialog.crm-native-dialog label.crm-check {
 	max-width: 100%;
 	box-sizing: border-box;
 	border: 1px solid var(--crm-border, var(--color-border));
-	border-radius: var(--crm-radius, 8px);
+	border-radius: var(--crm-radius-md, 8px);
 	background: var(--color-background-dark, var(--color-background-hover, var(--crm-bg-soft)));
 }
 #app-content.crm-app .crm-rich-mail__toolbar .crm-btn,
@@ -7397,7 +7407,7 @@ dialog.crm-native-dialog label.crm-check {
 	overflow: auto;
 	line-height: 1.5;
 	border: 1px solid var(--crm-border, var(--color-border));
-	border-radius: var(--crm-radius, 8px);
+	border-radius: var(--crm-radius-md, 8px);
 	background: var(--crm-bg-card);
 }
 #app-content.crm-app .crm-rich-mail__editor:focus,
@@ -7426,7 +7436,7 @@ dialog.crm-native-dialog label.crm-check {
 	overflow: auto;
 	line-height: var(--crm-line-base)5;
 	border: 1px solid var(--crm-border, var(--color-border));
-	border-radius: var(--crm-radius, 8px);
+	border-radius: var(--crm-radius-md, 8px);
 	background: var(--color-background-dark, var(--crm-bg-soft));
 	color: var(--crm-muted);
 	overflow-wrap: anywhere;
@@ -7542,7 +7552,7 @@ dialog.crm-native-dialog label.crm-check {
 	margin-top: var(--crm-space-4, 1rem);
 	padding: var(--crm-space-4, 1rem);
 	border: 1px solid var(--crm-border, var(--color-border));
-	border-radius: var(--crm-radius, 10px);
+	border-radius: var(--crm-radius-md, 10px);
 	background: var(--crm-bg-card);
 	box-shadow: var(--crm-shadow-sm, 0 1px 2px color-mix(in srgb, var(--color-main-text) 8%, transparent));
 	width: 100%;
@@ -7633,7 +7643,7 @@ dialog.crm-native-dialog label.crm-check {
 #app-content.crm-app .crm-sales-compose__cc:not([hidden]) {
 	padding: var(--crm-space-2, 0.5rem) var(--crm-space-3, 0.75rem);
 	border: 1px solid var(--crm-border, var(--color-border));
-	border-radius: var(--crm-radius, 8px);
+	border-radius: var(--crm-radius-md, 8px);
 	background: var(--color-background-dark, var(--crm-bg-soft));
 }
 #app-content.crm-app .crm-sales-compose__body,

@@ -63,7 +63,7 @@
 #app-content.crm-app .crm-identity-more {
 	margin-top: 0.75rem;
 	border: 1px solid var(--crm-border, var(--color-border));
-	border-radius: var(--crm-radius, 8px);
+	border-radius: var(--crm-radius-md, 8px);
 	padding: 0;
 }
 

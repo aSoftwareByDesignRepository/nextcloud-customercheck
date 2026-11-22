@@ -100,10 +100,17 @@ describe('CSS design-token compliance (no hardcoded colors)', () => {
     it(`${rel}: raw colours only appear as var() fallbacks`, () => {
       const css = stripComments(readFileSync(file, 'utf8'));
       const offenders = [];
-      for (const { value } of declarationValues(css)) {
+      for (const { value, offset } of declarationValues(css)) {
         const cleaned = stripVarFallbacks(value);
         const match = cleaned.match(RAW_COLOR);
         if (match) {
+          // Documented exception: --crm-qr-canvas must stay light for
+          // scannability in every theme (tokens.css comment).
+          const propStart = css.lastIndexOf('--', offset);
+          const prop = propStart === -1 ? '' : css.slice(propStart, offset).trim();
+          if (rel === 'css/common/tokens.css' && prop === '--crm-qr-canvas') {
+            continue;
+          }
           offenders.push(`${value.trim().slice(0, 120)}  →  offending literal: ${match[0]}`);
         }
       }
@@ -132,13 +139,17 @@ describe('CSS design-token compliance (no hardcoded colors)', () => {
     expect(offenders, `Hex outside tokens.css:\n${offenders.join('\n')}`).toEqual([]);
   });
 
-  it('theme-bound tokens are defined on body (Nextcloud sets --color-* on body)', () => {
+  it('theme-bound tokens are defined on body + themed app surfaces (NC sets --color-* there)', () => {
     const tokens = stripComments(readFileSync(join(cssRoot, 'common', 'tokens.css'), 'utf8'));
-    const bodyBlocks = [...tokens.matchAll(/(^|\})\s*body\s*\{([\s\S]*?)\}/g)].map((m) => m[2]).join('\n');
+    // The theme block selects body AND app surfaces so color-mix resolves
+    // where Nextcloud sets --color-* — match the selector list, then the body.
+    const themed = [...tokens.matchAll(/(^|\})\s*([^{}]*?body[^{}]*?)\{([\s\S]*?)\}/g)]
+      .map((m) => m[3])
+      .join('\n');
+    expect(themed.length).toBeGreaterThan(0);
     for (const token of [
       '--crm-bg-soft',
       '--crm-bg-card',
-      '--crm-surface-muted',
       '--crm-text',
       '--crm-muted',
       '--crm-border',
@@ -153,14 +164,7 @@ describe('CSS design-token compliance (no hardcoded colors)', () => {
       '--crm-danger-on-fill',
       '--crm-danger-ink',
     ]) {
-      expect(bodyBlocks, `${token} must be defined inside body {}`).toContain(`${token}:`);
-    }
-    for (const token of [
-      '--crm-support-brand-plate',
-      '--crm-support-brand-ink',
-      '--crm-support-brand-muted',
-    ]) {
-      expect(bodyBlocks, `${token} must be defined inside body {}`).toContain(`${token}:`);
+      expect(themed, `${token} must be defined inside the body-selected theme block`).toContain(`${token}:`);
     }
   });
 
@@ -179,7 +183,9 @@ describe('CSS design-token compliance (no hardcoded colors)', () => {
     expect(tokens).toContain('--space-1: var(--crm-space-1)');
     expect(tokens).toContain('--space-5: var(--crm-space-5)');
     expect(tokens).toContain('--space-8: var(--crm-space-8)');
-    expect(tokens).toContain('--crm-nav-width: 280px');
+    // Page-rail width has no fleet twin — declared app-locally in app.css.
+    const appCss = stripComments(readFileSync(join(cssRoot, 'app.css'), 'utf8'));
+    expect(appCss).toMatch(/:root\s*\{[^}]*--crm-nav-width:\s*280px/);
     // Must not redefine space-5 as the old rem/20px drift.
     expect(tokens).not.toMatch(/--space-5:\s*1\.25rem/);
     expect(tokens).not.toMatch(/--crm-space-5:\s*1\.25rem/);

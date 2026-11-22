@@ -21,8 +21,8 @@ final class ThemeAdaptabilityContractTest extends TestCase
 	public function testRadiusLgMapsToNextcloudBorderRadiusLarge(): void
 	{
 		$tokens = (string)file_get_contents($this->root . '/css/common/tokens.css');
-		$this->assertStringContainsString('--crm-radius-sm: 6px', $tokens);
-		$this->assertStringContainsString('--crm-radius-md: 12px', $tokens);
+		$this->assertStringContainsString('--crm-radius-sm: var(--border-radius, 6px)', $tokens);
+		$this->assertStringContainsString('--crm-radius-md: var(--border-radius-element, var(--border-radius-large, 12px))', $tokens);
 		$this->assertStringContainsString('--crm-radius-lg: var(--border-radius-large, 16px)', $tokens);
 		$this->assertStringContainsString('--crm-radius-pill: var(--border-radius-pill, 999px)', $tokens);
 		$this->assertStringContainsString('--crm-scrim: color-mix(in srgb, var(--color-main-text)', $tokens);

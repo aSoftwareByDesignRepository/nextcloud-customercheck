@@ -1678,7 +1678,7 @@ $cases = [
 	],
 	[
 		'file' => $root . '/css/app.css',
-		'find' => "background-color: var(--crm-danger-fill) !important;\n\tborder-color: var(--crm-danger-edge, var(--crm-danger-fill)) !important;\n\tcolor: var(--crm-danger-on-fill) !important;",
+		'find' => "background-color: var(--crm-danger-fill) !important;\n\tborder-color: var(--crm-danger-fill) !important;\n\tcolor: var(--crm-danger-on-fill) !important;",
 		'replace' => "background-color: var(--color-error, #cc4646) !important;\n\tborder-color: var(--color-error, #cc4646) !important;\n\tcolor: var(--color-primary-text, #fff) !important;",
 		'test' => 'DesignSystemAlignmentContractTest',
 		'label' => 'danger CTA uses pale color-error fill',
@@ -1889,7 +1889,7 @@ $cases = [
 	],
 	[
 		'file' => $root . '/css/app.css',
-		'find' => "#app-content.crm-app .crm-btn--danger,\n#app-content-wrapper .crm-btn--danger,\ndialog.crm-native-dialog .crm-btn--danger,\n.crm-nc-admin-settings .crm-btn--danger,\n.crm-nc-settings-panel .crm-btn--danger {\n\tbackground-color: var(--crm-danger-fill) !important;\n\tborder-color: var(--crm-danger-edge, var(--crm-danger-fill)) !important;\n\tcolor: var(--crm-danger-on-fill) !important;\n}",
+		'find' => "#app-content.crm-app .crm-btn--danger,\n#app-content-wrapper .crm-btn--danger,\ndialog.crm-native-dialog .crm-btn--danger,\n.crm-nc-admin-settings .crm-btn--danger,\n.crm-nc-settings-panel .crm-btn--danger {\n\tbackground-color: var(--crm-danger-fill) !important;\n\tborder-color: var(--crm-danger-fill) !important;\n\tcolor: var(--crm-danger-on-fill) !important;\n}",
 		'replace' => "#app-content.crm-app .crm-btn--danger,\n#app-content-wrapper .crm-btn--danger,\ndialog.crm-native-dialog .crm-btn--danger,\n.crm-nc-admin-settings .crm-btn--danger,\n.crm-nc-settings-panel .crm-btn--danger {\n\tbackground-color: var(--color-error) !important;\n\tborder-color: var(--color-error) !important;\n\tcolor: var(--color-primary-text) !important;\n}",
 		'test' => 'DesignSystemAlignmentContractTest',
 		'label' => 'crm-btn--danger uses pale color-error fill',

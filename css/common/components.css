@@ -286,8 +286,8 @@ body[data-theme-dark-highcontrast] .form-input.form-select option {
   margin: 0;
   padding: 0;
   cursor: pointer;
-  background-color: var(--crm-color-form-background, var(--arbeitszeitcheck-color-form-background, var(--color-main-background)));
-  border: 1px solid var(--crm-color-form-border, var(--arbeitszeitcheck-color-form-border, var(--color-border)));
+  background-color: var(--customercheck-color-form-background, var(--color-main-background));
+  border: 1px solid var(--customercheck-color-form-border, var(--color-border));
   border-radius: 3px;
   box-sizing: border-box;
   accent-color: var(--color-primary-element);
