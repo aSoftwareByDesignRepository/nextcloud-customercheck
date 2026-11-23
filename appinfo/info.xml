@@ -9,71 +9,73 @@
 	<summary>CRM for Nextcloud — shared customer book, Today/Pulse/Brief, 360°, chase &amp; coaching</summary>
 	<summary lang="de">CRM für Nextcloud — gemeinsames Kundenbuch, Today/Pulse/Brief, 360°, Chase &amp; Coaching</summary>
 	<description><![CDATA[
-# CustomerCheck
+# CustomerCheck — the customer book your team actually opens
 
-The Nextcloud-native CRM for customer work: one place where a workspace
-shares a customer book, shared mailbox, account plans, and operating rituals —
-so the team can see what’s going on, decide what’s next, chase deals and renewals,
-coach the team, and measure the book by joining Check apps and Groupware.
+One shared customer book for the whole team: who is active, what needs a next step, which renewals are coming — on your own Nextcloud, joined with the Check apps and Groupware you already run instead of a second SaaS.
 
-A focused CRM — not Salesforce. Ledgers stay in ProjectCheck, InvoiceCheck, TicketCheck, Files, Mail, Tasks.
+Deliberately focused: numbers stay in ProjectCheck, invoices in InvoiceCheck, tickets in TicketCheck. CustomerCheck turns the same data into a customer-facing workspace.
 
 ## Highlights
 
-- **Today / Pulse / Brief** — act now, measure the book, weekly owned commitments
-- **Company 360** — Ten Command Questions with honest sibling mute reasons
-- **Workspaces** — roles, switcher, fail-closed directory allowlists
-- **My Chase & Pipeline** — next action, quote age, sequences, loss codes, forecast labels (not cash)
-- **KAM coverage** — buying roles, next touch, customer promises
-- **Team coaching** — stuck board, OOO backup (non-stealing), bulk reassign
-- **Universal Review & Conflicts** — shared mail + platform candidates; three-way edit conflicts with reason
-- **Renewal engine** — 60/30/7/0/+7 exactly-once remlog + ICS
-- **Shared mailbox** — folder IMAP + SMTP send with unavoidable shared disclosure
-- **Check Partner hours** — 15-minute quota log with 80 % alert
-- **Integrations** — optional ProjectCheck, InvoiceCheck, TicketCheck, SbdLicenseOps
-- **Accessibility** — WCAG 2.1 AA; responsive from 320 px · EN + DE
-- **Web free (AGPL)** — companion seats never gate the web app
+- **Today, Pulse, Brief** — what to act on now, how the book is doing, and each person's owned commitments for the week
+- **Company 360** — the ten command questions per account, pulling live from sibling apps and honest about what is missing
+- **Chase and pipeline** — next actions, quote age, sequences, loss reasons and forecast labels
+- **Renewals that don't slip** — exactly-once reminders at 60/30/7/0/+7 days, plus an ICS feed for your calendar
+- **Key-account coverage** — buying roles, next touch, open customer promises
+- **Coaching without blame** — stuck-deal board, out-of-office cover that can't steal accounts, bulk reassign
+- **Shared mailbox** — folder-based IMAP plus SMTP send, shared by design: mail here is visible to the workspace
+- **Workspaces with roles** — switcher and fail-closed directory allowlists
+- **Review and conflicts** — shared-mail and platform candidates; three-way edit conflicts ask for a reason instead of silently winning
+- **Check Partner hours** — 15-minute quota log with an 80% alert
+- **Accessible and bilingual** — WCAG 2.1 AA, responsive from 320 px, English and German
 
-## Feedback welcome
+**Free web app (AGPL).** Companion seats never gate the web app.
 
-We improve this app with real-world use. Bug reports, rough edges, and ideas help — open a GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-customercheck/issues) or write to info@software-by-design.de. Your feedback directly shapes what we build next.
+## Clear limits
+
+- CustomerCheck is the relationship layer — ledgers, invoices and tickets stay in their apps.
+- Declared databases: MySQL and PostgreSQL.
 
 ## Requirements
 
 - Nextcloud 32–35
 - PHP 8.2+
-- MySQL/MariaDB or PostgreSQL
+- MySQL or PostgreSQL
 	]]></description>
 	<description lang="de"><![CDATA[
-# CustomerCheck
+# CustomerCheck — das Kundenbuch, das Ihr Team wirklich öffnet
 
-Das Nextcloud-native CRM für Kundenarbeit: ein Arbeitsbereich teilt
-Kundenbuch, gemeinsames Postfach, Account-Pläne und Betriebsrituale —
-damit das Team sieht, was läuft, entscheidet was als Nächstes dran ist,
-Deals und Verlängerungen chase’t, coacht und das Buch misst, indem Check-Apps
-und Groupware verbunden werden statt sie zu ersetzen.
+Ein geteiltes Kundenbuch fürs ganze Team: wer aktiv ist, was den nächsten Schritt braucht, welche Verlängerungen anstehen — auf Ihrer eigenen Nextcloud, verbunden mit den Check-Apps und der Groupware, die Sie schon laufen haben, statt eines zweiten SaaS.
 
-Kein Salesforce. Buchungen bleiben in ProjectCheck, InvoiceCheck, TicketCheck, Files, Mail, Tasks.
+Bewusst fokussiert: Zahlen bleiben in ProjectCheck, Rechnungen in InvoiceCheck, Tickets in TicketCheck. CustomerCheck macht aus denselben Daten einen kundennahen Arbeitsplatz.
 
 ## Highlights
 
-- **Today / Pulse / Brief** — jetzt handeln, Buch messen, wöchentliche Zusagen
-- **Company 360** — Zehn Kommandfragen mit ehrlichen Mute-Gründen bei fehlenden Apps
-- **Arbeitsbereiche** — Rollen, Umschalter, restriktive Freigabelisten
-- **My Chase & Pipeline** — nächste Aktion, Angebotsalter, Sequenzen, Verlustcodes, Forecast-Labels (kein Cash)
-- **KAM-Coverage** — Buying Roles, Next Touch, Kundenversprechen, Meeting-Vorbereitung
-- **Team-Coaching** — Stuck-Board, OOO-Vertretung (ohne Ownership-Diebstahl), Bulk-Reassign
-- **Verlängerungs-Engine** — 60/30/7/0/+7 genau-einmal Remlog + ICS
-- **Gemeinsames Postfach** — Ordner-IMAP + SMTP mit unvermeidbarer Shared-Kennzeichnung
-- **Check-Partner-Stunden** — 15-Minuten-Kontingent mit 80-%-Warnung
-- **Integrationen** — optional ProjectCheck, InvoiceCheck, TicketCheck, SbdLicenseOps
-- **Barrierefreiheit** — WCAG 2.1 AA; responsiv ab 320 px · DE + EN
-- **Web frei (AGPL)** — Companion-Sitze sperren die Web-App nie
+- **Today, Pulse, Brief** — was jetzt dran ist, wie das Kundenbuch steht, und die eigenen Zusagen der Woche
+- **Company 360** — die zehn Kommandofragen je Konto, live aus den Schwester-Apps und ehrlich bei fehlenden Daten
+- **Chase und Pipeline** — nächste Aktionen, Angebotsalter, Sequenzen, Verlustgründe und Forecast-Labels
+- **Verlängerungen, die nicht verpuffen** — Exactly-once-Erinnerungen zu 60/30/7/0/+7 Tagen, plus ICS-Feed fürs Kalender
+- **Key-Account-Abdeckung** — Buying Roles, nächster Kontakt, offene Kundenversprechen
+- **Coaching ohne Schuld** — Stuck-Deal-Board, Urlaubsvertretung ohne Account-Diebstahl, Sammel-Zuweisung
+- **Geteiltes Postfach** — ordnerbasiertes IMAP plus SMTP-Versand, geteilt by design: Mails hier sind fürs Workspace sichtbar
+- **Workspaces mit Rollen** — Switcher und fail-closed Verzeichnis-Allowlists
+- **Review und Konflikte** — Shared-Mail- und Plattform-Kandidaten; Three-Way-Editkonflikte fragen einen Grund, statt lautlos zu gewinnen
+- **Check-Partner-Stunden** — 15-Minuten-Quotenlog mit 80-%-Warnung
+- **Barrierefrei und zweisprachig** — WCAG 2.1 AA, responsive ab 320 px, Englisch und Deutsch
 
-## Feedback willkommen
+**Kostenlose Web-App (AGPL).** Companion-Seats sperren die Web-App nie.
 
-Wir verbessern diese App mit Rückmeldungen aus der Praxis. Fehlerberichte, Stolpersteine und Ideen helfen — öffnen Sie ein GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-customercheck/issues) oder schreiben Sie an info@software-by-design.de. Ihr Feedback prägt direkt, was wir als Nächstes bauen.
-]]></description>
+## Klare Grenzen
+
+- CustomerCheck ist die Beziehungsebene — Ledgers, Rechnungen und Tickets bleiben in ihren Apps.
+- Deklarierte Datenbanken: MySQL und PostgreSQL.
+
+## Voraussetzungen
+
+- Nextcloud 32–35
+- PHP 8.2+
+- MySQL oder PostgreSQL
+	]]></description>
 		<description lang="fr"><![CDATA[
 # CustomerCheck
 
@@ -339,12 +341,6 @@ Vi forbedrer denne appen med bruk i praksis. Feilrapporter, friksjon og idéer h
 - MySQL/MariaDB eller PostgreSQL
 	]]></description>
 
-	<screenshot>https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-customercheck/refs/heads/main/screenshots/appstore/01.png</screenshot>
-	<screenshot>https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-customercheck/refs/heads/main/screenshots/appstore/02.png</screenshot>
-	<screenshot>https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-customercheck/refs/heads/main/screenshots/appstore/03.png</screenshot>
-	<screenshot>https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-customercheck/refs/heads/main/screenshots/appstore/04.png</screenshot>
-	<screenshot>https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-customercheck/refs/heads/main/screenshots/appstore/05.png</screenshot>
-	<screenshot>https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-customercheck/refs/heads/main/screenshots/appstore/06.png</screenshot>
 		<version>1.6.193</version>
 	<licence>AGPL-3.0-or-later</licence>
 	<author mail="info@software-by-design.de" homepage="https://nextcloud.software-by-design.de">Software by Design GbR</author>
@@ -352,6 +348,12 @@ Vi forbedrer denne appen med bruk i praksis. Feilrapporter, friksjon og idéer h
 	<category>organization</category>
 	<website>https://nextcloud.software-by-design.de</website>
 	<bugs>https://github.com/aSoftwareByDesignRepository/nextcloud-customercheck/issues</bugs>
+	<screenshot>https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-customercheck/refs/heads/main/screenshots/appstore/01.png</screenshot>
+	<screenshot>https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-customercheck/refs/heads/main/screenshots/appstore/02.png</screenshot>
+	<screenshot>https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-customercheck/refs/heads/main/screenshots/appstore/03.png</screenshot>
+	<screenshot>https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-customercheck/refs/heads/main/screenshots/appstore/04.png</screenshot>
+	<screenshot>https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-customercheck/refs/heads/main/screenshots/appstore/05.png</screenshot>
+	<screenshot>https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-customercheck/refs/heads/main/screenshots/appstore/06.png</screenshot>
 	<dependencies>
 		<nextcloud min-version="32" max-version="35"/>
 		<php min-version="8.2"/>
