@@ -714,7 +714,7 @@
 
     const fed =
       t('Data from') + ': ProjectCheck ' + (data.fedBy && data.fedBy.projectcheck ? '✓' : '—') +
-      ' · InvoiceCheck ' + (data.fedBy && data.fedBy.invoicecheck ? '✓' : '—') +
+      ' · the invoicing app ' + (data.fedBy && data.fedBy.invoicecheck ? '✓' : '—') +
       ' · TicketCheck ' + (data.fedBy && data.fedBy.ticketcheck ? '✓' : '—');
     const companiesN = m.activeCustomers || 0;
     const overdueCents = Number(m.overdueCents) || 0;

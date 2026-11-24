@@ -110,7 +110,7 @@ final class DisplayLabelService
 	}
 
 	/**
-	 * InvoiceCheck facade v3 aging bucket — text+chip only when present; never invent.
+	 * the invoicing app facade v3 aging bucket — text+chip only when present; never invent.
 	 */
 	public function agingBucket(?string $bucket): ?string
 	{

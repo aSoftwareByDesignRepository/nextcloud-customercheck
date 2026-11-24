@@ -14,7 +14,7 @@ use OCP\Lock\LockedException;
  * Sliding-window counter stored in app config (v1 scale ≤10 users / webhook).
  *
  * Exclusive lock makes the read-modify-write race-safe across PHP-FPM workers
- * (same pattern as InvoiceCheck). Without the lock, concurrent workers can all
+ * (same pattern as the invoicing app). Without the lock, concurrent workers can all
  * observe the same count and bypass the limit.
  */
 class RateLimitService

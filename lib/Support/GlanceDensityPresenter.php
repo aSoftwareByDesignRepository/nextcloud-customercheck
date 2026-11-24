@@ -88,7 +88,7 @@ final class GlanceDensityPresenter
 				$ic
 					? ($unpaid > 0
 						? $l->t('%s unpaid — open money', [(string)$unpaid])
-						: $l->t('All clear · InvoiceCheck'))
+						: $l->t('All clear · the invoicing app'))
 					: $l->t('App not installed — link under Identity'),
 				!$ic ? self::TONE_OFFLINE : ($unpaid > 0 ? self::TONE_ATTENTION : self::TONE_CALM),
 				$ic,

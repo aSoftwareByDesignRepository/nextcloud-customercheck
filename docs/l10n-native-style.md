@@ -7,7 +7,7 @@ English (`en.json`) is the source of truth for meaning. Every other locale must 
 - **Informal address** to the signed-in user (see table). Never mix formal and informal in one locale.
 - **One job per sentence.** Prefer verbs users do: add, open, save, pick, mark done.
 - **No leftover English** in user-facing prose (Workspace, Digest, Follow-up, opt-in, Allowlist, Mailbox, Leak, Brief as a noun for the weekly summary, Manager-Override, Shared Mailbox). Translate the idea.
-- **Keep product / technical tokens:** CustomerCheck, ProjectCheck, TicketCheck, InvoiceCheck, Nextcloud, Talk, CRM, Deal/Deals (product term), Check Partner, CUC2, IMAP, SMTP, PDF, CSV, JSON, API, URL, IBAN, GDPR/DSGVO where that locale expects it, Circle (Nextcloud Circles).
+- **Keep product / technical tokens:** CustomerCheck, ProjectCheck, TicketCheck, the invoicing app, Nextcloud, Talk, CRM, Deal/Deals (product term), Check Partner, CUC2, IMAP, SMTP, PDF, CSV, JSON, API, URL, IBAN, GDPR/DSGVO where that locale expects it, Circle (Nextcloud Circles).
 - **Placeholders must match msgid exactly:** `%s`, `%d`, `%n`, `%1$s`, `%2$s`, `%%`, and any `{name}` forms. Never reorder printf numbered placeholders incorrectly; never drop one.
 - **Punctuation:** use the locale’s normal quotation marks and dashes; do not paste English straight quotes when the locale prefers „…“ / «…» / “…”.
 - **UI labels** (“Add reminder”, “Team & mailbox”, “Edit mailbox: %s”) must be translated — never left in English.

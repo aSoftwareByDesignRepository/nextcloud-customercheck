@@ -7,7 +7,7 @@ namespace OCA\CustomerCheck\Support;
 /**
  * Pure 360 density counters (WP-S1-CUC-360 / AC-S1.3).
  *
- * Unpaid invoice logic mirrors InvoiceCheck receivables candidates
+ * Unpaid invoice logic mirrors the invoicing app receivables candidates
  * ({@see \OCA\InvoiceCheck\Util\ReceivableMath::isReceivableCandidate}) plus
  * CRM legacy aliases and the facade `overdue` flag.
  */

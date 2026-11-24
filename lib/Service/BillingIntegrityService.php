@@ -8,7 +8,7 @@ namespace OCA\CustomerCheck\Service;
  * Billing integrity heuristic — COMMAND-CENTER-SPEC §7.2.
  *
  * Never claims GoBD/tax truth. Pure state machine over facade counts and
- * local license invoice statuses (CRM-owned when InvoiceCheck is absent).
+ * local license invoice statuses (CRM-owned when the invoicing app is absent).
  */
 class BillingIntegrityService
 {
@@ -117,7 +117,7 @@ class BillingIntegrityService
 	}
 
 	/**
-	 * Merge InvoiceCheck counts with local license counts without inventing IC truth.
+	 * Merge the invoicing app counts with local license counts without inventing IC truth.
 	 *
 	 * Rules:
 	 * - IC linked and reports any open/overdue → trust IC for the headline counts.

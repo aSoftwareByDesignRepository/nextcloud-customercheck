@@ -805,7 +805,7 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 		<header class="crm-card__header">
 			<div class="crm-card__header-text">
 				<h2 id="crm-billing-title" class="crm-card__title"><?php p($l->t('Money & invoicing')); ?></h2>
-				<p class="crm-card__lead"><?php p($l->t('What still needs paying — licenses here, InvoiceCheck when linked.')); ?></p>
+				<p class="crm-card__lead"><?php p($l->t('What still needs paying — licenses here, the invoicing app when linked.')); ?></p>
 			</div>
 		</header>
 		<div class="crm-card__body" id="crm-billing-body">
@@ -926,7 +926,7 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 				<li class="crm-linked-status__row" id="crm-invoices" aria-labelledby="crm-invoices-title">
 					<div class="crm-linked-status__main">
 						<h3 id="crm-invoices-title" class="crm-linked-status__title"><?php p($l->t('Invoices')); ?></h3>
-						<p class="crm-muted crm-linked-status__hint"><?php p($l->t('From InvoiceCheck (via ProjectCheck link)')); ?></p>
+						<p class="crm-muted crm-linked-status__hint"><?php p($l->t('From the invoicing app (via ProjectCheck link)')); ?></p>
 					</div>
 					<?php if (!$icCap): ?>
 						<span class="crm-badge crm-badge--neutral"><?php p($l->t('Not installed')); ?></span>
@@ -1054,14 +1054,14 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 		<header class="crm-card__header">
 			<div class="crm-card__header-text">
 				<h2 id="crm-invoices-title" class="crm-card__title"><?php p($l->t('Invoices')); ?></h2>
-				<p class="crm-card__lead"><?php p($l->t('Read-only from InvoiceCheck when linked.')); ?></p>
+				<p class="crm-card__lead"><?php p($l->t('Read-only from the invoicing app when linked.')); ?></p>
 			</div>
 		</header>
 		<div class="crm-card__body">
 			<?php if (empty($_['capabilities']['invoicecheck'])): ?>
 				<div class="crm-empty-state" role="status">
-					<h3 class="crm-empty-state__title"><?php p($l->t('InvoiceCheck missing')); ?></h3>
-					<p class="crm-empty-state__text"><?php p($l->t('InvoiceCheck is not available on this instance.')); ?></p>
+					<h3 class="crm-empty-state__title"><?php p($l->t('The invoicing app missing')); ?></h3>
+					<p class="crm-empty-state__text"><?php p($l->t('The invoicing app is not available on this instance.')); ?></p>
 				</div>
 			<?php elseif (empty($_['pcCustomerId'])): ?>
 				<div class="crm-empty-state" role="status">
@@ -1081,7 +1081,7 @@ $linkedBundleCollapsed = !$ticketsHasData && !$invoicesHasData && !$projectsHasD
 			<?php elseif (($_['invoices'] ?? []) === []): ?>
 				<div class="crm-empty-state" role="status">
 					<h3 class="crm-empty-state__title"><?php p($l->t('No invoices')); ?></h3>
-					<p class="crm-empty-state__text"><?php p($l->t('Invoices for the linked InvoiceCheck customer show up here.')); ?></p>
+					<p class="crm-empty-state__text"><?php p($l->t('Invoices for the linked invoicing app customer show up here.')); ?></p>
 				</div>
 			<?php else: ?>
 			<div class="table-container crm-table--responsive" role="region" tabindex="0" aria-labelledby="crm-invoices-title">

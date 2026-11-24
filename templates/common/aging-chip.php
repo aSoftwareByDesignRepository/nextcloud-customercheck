@@ -1,6 +1,6 @@
 <?php
 /**
- * Aging chip for InvoiceCheck facade v3 — text + badge (not colour-only).
+ * Aging chip for the invoicing app facade v3 — text + badge (not colour-only).
  * Expects optional $agingBucket (string|null) and $daysPastDue (int|null).
  * Renders nothing when agingBucket is missing (feature-detect / null-safe).
  *

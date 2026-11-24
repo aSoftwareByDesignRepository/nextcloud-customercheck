@@ -875,9 +875,9 @@
     "fr": "Numéro",
     "it": "Numero"
   },
-  "Numbers come from this workspace’s companies plus linked ProjectCheck, InvoiceCheck, and TicketCheck when those apps are on.": {
-    "fr": "Les chiffres viennent des entreprises de cette équipe plus ProjectCheck, InvoiceCheck et TicketCheck liés quand ces apps sont actives.",
-    "it": "I numeri arrivano dalle aziende di questo team più ProjectCheck, InvoiceCheck e TicketCheck collegati quando quelle app sono attive."
+  "Numbers come from this workspace’s companies plus linked ProjectCheck, the invoicing app, and TicketCheck when those apps are on.": {
+    "fr": "Les chiffres viennent des entreprises de cette équipe plus ProjectCheck, the invoicing app et TicketCheck liés quand ces apps sont actives.",
+    "it": "I numeri arrivano dalle aziende di questo team più ProjectCheck, the invoicing app e TicketCheck collegati quando quelle app sono attive."
   },
   "of": {
     "fr": "sur",
@@ -1351,9 +1351,9 @@
     "fr": "Factures en retard",
     "it": "Fatture in ritardo"
   },
-  "Overdue rows come from InvoiceCheck for companies linked in this workspace. Open the company to act.": {
-    "fr": "Les lignes en retard viennent d’InvoiceCheck pour les entreprises liées dans cette équipe. Ouvre l’entreprise pour agir.",
-    "it": "Le righe in ritardo arrivano da InvoiceCheck per le aziende collegate in questo team. Apri l’azienda per agire."
+  "Overdue rows come from the invoicing app for companies linked in this workspace. Open the company to act.": {
+    "fr": "Les lignes en retard viennent d’The invoicing app pour les entreprises liées dans cette équipe. Ouvre l’entreprise pour agir.",
+    "it": "Le righe in ritardo arrivano da the invoicing app per le aziende collegate in questo team. Apri l’azienda per agire."
   },
   "Overdue since %s": {
     "fr": "En retard depuis %s",
@@ -1375,9 +1375,9 @@
     "fr": "Aperçu",
     "it": "Panoramica"
   },
-  "Overview from ProjectCheck & InvoiceCheck — not a tax audit.": {
-    "fr": "Aperçu depuis ProjectCheck et InvoiceCheck — pas un audit fiscal.",
-    "it": "Panoramica da ProjectCheck e InvoiceCheck — non un audit fiscale."
+  "Overview from ProjectCheck & The invoicing app — not a tax audit.": {
+    "fr": "Aperçu depuis ProjectCheck et the invoicing app — pas un audit fiscal.",
+    "it": "Panoramica da ProjectCheck e the invoicing app — non un audit fiscale."
   },
   "Overview shows health. Open Money when you need overdue and unpaid details.": {
     "fr": "L’aperçu montre la santé. Ouvre Argent quand tu as besoin des détails en retard et impayés.",

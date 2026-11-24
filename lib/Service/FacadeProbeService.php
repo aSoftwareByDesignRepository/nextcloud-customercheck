@@ -368,7 +368,7 @@ class FacadeProbeService
 	}
 
 	/**
-	 * Overdue receivables from InvoiceCheck (Money overdue bucket).
+	 * Overdue receivables from the invoicing app (Money overdue bucket).
 	 *
 	 * @return list<array<string,mixed>>
 	 */

@@ -138,7 +138,7 @@ if (!$crmListFragment) {
 									<?php if ($key !== 'paid30d' && $canWrite && !empty($row['agreementId'])): ?>
 									<button type="button" class="crm-btn crm-btn--sm crm-btn--secondary" data-crm-payment-reminder="<?php p($row['agreementId']); ?>" data-company-id="<?php p($row['companyId']); ?>"><?php p($l->t('Payment reminder')); ?></button>
 									<?php elseif ($key !== 'paid30d' && empty($row['agreementId'])): ?>
-									<span class="crm-muted"><?php p($l->t('From InvoiceCheck')); ?></span>
+									<span class="crm-muted"><?php p($l->t('From the invoicing app')); ?></span>
 									<?php endif; ?>
 								</div>
 							</td>

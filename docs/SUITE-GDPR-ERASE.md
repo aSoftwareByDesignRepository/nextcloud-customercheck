@@ -6,6 +6,6 @@ covers only what this app must (not) do.
 ## Non-cascade rule (this app)
 
 `CompanyService::gdprErase` and `CompanyMergeService::merge` only touch `crm_*` tables.  
-They must **never** delete ProjectCheck (`pc_*`), InvoiceCheck (`ic_*`), TicketCheck, MaintenanceCheck, or InventoryCheck rows.
+They must **never** delete ProjectCheck (`pc_*`), the invoicing app (`ic_*`), TicketCheck, MaintenanceCheck, or InventoryCheck rows.
 
 Sibling ledgers keep their history; export the CRM company before erase.

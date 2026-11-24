@@ -579,9 +579,9 @@
     "fr": "Valeur brute",
     "it": "Valore grezzo"
   },
-  "Read-only from InvoiceCheck when linked.": {
-    "fr": "Lecture seule depuis InvoiceCheck quand c’est lié.",
-    "it": "Sola lettura da InvoiceCheck quando è collegato."
+  "Read-only from the invoicing app when linked.": {
+    "fr": "Lecture seule depuis the invoicing app quand c’est lié.",
+    "it": "Sola lettura da the invoicing app quando è collegato."
   },
   "Read-only from ProjectCheck when linked.": {
     "fr": "Lecture seule depuis ProjectCheck quand c’est lié.",

@@ -77,19 +77,19 @@
     if (mode === 'invoicecheck') {
       return {
         tone: 'neutral',
-        text: t('Numbers come from InvoiceCheck for this linked customer.'),
+        text: t('Numbers come from the invoicing app for this linked customer.'),
       };
     }
     if (mode === 'licenses_fallback') {
       return {
         tone: 'warning',
-        text: t('InvoiceCheck has no open invoices — showing license payment status instead.'),
+        text: t('The invoicing app has no open invoices — showing license payment status instead.'),
       };
     }
     if (mode === 'licenses') {
       return {
         tone: 'info',
-        text: t('InvoiceCheck is off or not linked — showing license payment status.'),
+        text: t('The invoicing app is off or not linked — showing license payment status.'),
       };
     }
     if (licenseTotal > 0 && licenseNone === licenseTotal) {
@@ -101,21 +101,21 @@
     if (!icAvail && !pcAvail && licenseTotal === 0) {
       return {
         tone: 'info',
-        text: t('No InvoiceCheck / ProjectCheck and no licenses yet. Add a license to track payment here.'),
+        text: t('No invoicing app / ProjectCheck and no licenses yet. Add a license to track payment here.'),
       };
     }
     if (!icAvail && !icLinked) {
       return {
         tone: 'info',
         text: pcAvail
-          ? t('InvoiceCheck is not available. ProjectCheck hours may still show when linked. Add licenses to track payment.')
-          : t('InvoiceCheck and ProjectCheck are not available. Track payment on licenses.'),
+          ? t('The invoicing app is not available. ProjectCheck hours may still show when linked. Add licenses to track payment.')
+          : t('The invoicing app and ProjectCheck are not available. Track payment on licenses.'),
       };
     }
     if (icAvail && !icLinked) {
       return {
         tone: 'warning',
-        text: t('InvoiceCheck is on — link ProjectCheck on this customer to load invoices.'),
+        text: t('The invoicing app is on — link ProjectCheck on this customer to load invoices.'),
       };
     }
     if (licenseUnpaid > 0) {

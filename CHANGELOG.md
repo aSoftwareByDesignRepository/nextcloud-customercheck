@@ -1449,7 +1449,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Chase badge: “New lead waiting too long” instead of Lead SLA
 - Companion: Today **Done** one-tap; Deals inline stage chips; Settings segmented Appearance/Language
 
-### Added / InvoiceCheck facade v3 aging (WP-ECO-CRM)
+### Added / the invoicing app facade v3 aging (WP-ECO-CRM)
 
 - Money + company invoice rows + Pulse overdue attention show `agingBucket` / days past due when present (text+chip); MoneyService stays null-safe if keys missing
 

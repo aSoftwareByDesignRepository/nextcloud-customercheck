@@ -91,7 +91,7 @@ final class PageQuickStartCatalog
 				'steps' => [
 					[
 						'title' => $l->t('1. Read the metrics'),
-						'text' => $l->t('Numbers come from this workspace’s companies plus linked ProjectCheck, InvoiceCheck, and TicketCheck when those apps are on.'),
+						'text' => $l->t('Numbers come from this workspace’s companies plus linked ProjectCheck, the invoicing app, and TicketCheck when those apps are on.'),
 					],
 					[
 						'title' => $l->t('2. Follow the red flags'),
@@ -356,7 +356,7 @@ final class PageQuickStartCatalog
 				'steps' => [
 					[
 						'title' => $l->t('1. Start with overdue'),
-						'text' => $l->t('Overdue rows come from InvoiceCheck for companies linked in this workspace. Open the company to act.'),
+						'text' => $l->t('Overdue rows come from the invoicing app for companies linked in this workspace. Open the company to act.'),
 					],
 					[
 						'title' => $l->t('2. Check unpaid'),
@@ -364,7 +364,7 @@ final class PageQuickStartCatalog
 					],
 					[
 						'title' => $l->t('3. Unknown needs a link'),
-						'text' => $l->t('If InvoiceCheck is not linked, states may show as unknown until you connect the apps.'),
+						'text' => $l->t('If the invoicing app is not linked, states may show as unknown until you connect the apps.'),
 						'href' => $u->linkToRoute('customercheck.page.settings'),
 						'linkLabel' => $l->t('Open Settings'),
 					],

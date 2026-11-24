@@ -2,7 +2,7 @@
 
 Customer relationship management (CRM) for Nextcloud: one place for a workspace’s
 customer book, shared mailbox, renewals, chase, coverage, Pulse, Brief, and
-Team coaching — joining ProjectCheck / InvoiceCheck / TicketCheck instead of
+Team coaching — joining ProjectCheck / the invoicing app / TicketCheck instead of
 replacing them.
 
 Part of the Check app family by [Software by Design](https://nextcloud.software-by-design.de).

@@ -771,9 +771,9 @@
     "fr": "Ajouter un engagement",
     "it": "Aggiungi un impegno"
   },
-  "Add a company or import a list. ProjectCheck and InvoiceCheck are optional — CustomerCheck works alone.": {
-    "fr": "Ajoute une entreprise ou importe une liste. ProjectCheck et InvoiceCheck sont facultatifs — CustomerCheck fonctionne seul.",
-    "it": "Aggiungi un’azienda o importa un elenco. ProjectCheck e InvoiceCheck sono facoltativi — CustomerCheck funziona da solo."
+  "Add a company or import a list. ProjectCheck and the invoicing app are optional — CustomerCheck works alone.": {
+    "fr": "Ajoute une entreprise ou importe une liste. ProjectCheck et the invoicing app sont facultatifs — CustomerCheck fonctionne seul.",
+    "it": "Aggiungi un’azienda o importa un elenco. ProjectCheck e the invoicing app sono facoltativi — CustomerCheck funziona da solo."
   },
   "Add a contact email and open this company first.": {
     "fr": "Ajoute un e-mail de contact et ouvre d’abord cette entreprise.",
@@ -1007,9 +1007,9 @@
     "fr": "Tout va bien",
     "it": "Tutto a posto"
   },
-  "All clear · InvoiceCheck": {
-    "fr": "Tout va bien · InvoiceCheck",
-    "it": "Tutto a posto · InvoiceCheck"
+  "All clear · the invoicing app": {
+    "fr": "Tout va bien · the invoicing app",
+    "it": "Tutto a posto · the invoicing app"
   },
   "All clear — expand if you need the numbers.": {
     "fr": "Tout va bien — déplie si tu as besoin des chiffres.",

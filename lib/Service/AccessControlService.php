@@ -86,7 +86,7 @@ class AccessControlService
 	}
 
 	/**
-	 * Directory door only (same model as BudgetCheck / MobilityCheck).
+	 * Directory door only (same model as BudgetCheck / the mobility app).
 	 *
 	 *     if uid == '': return false
 	 *     if isAppAdmin(uid): return true

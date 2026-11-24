@@ -22,7 +22,7 @@ final class LinkedAppsBundleUxContractTest extends TestCase
 		$this->assertStringContainsString("\$l->t('Linked · none open')", $detail);
 		$this->assertStringContainsString("\$l->t('From ProjectCheck')", $detail);
 		$this->assertStringContainsString("\$l->t('From TicketCheck')", $detail);
-		$this->assertStringContainsString("\$l->t('From InvoiceCheck (via ProjectCheck link)')", $detail);
+		$this->assertStringContainsString("\$l->t('From the invoicing app (via ProjectCheck link)')", $detail);
 
 		$start = (int)strpos($detail, 'id="crm-linked-bundle"');
 		$end = (int)strpos($detail, '</details>', $start);

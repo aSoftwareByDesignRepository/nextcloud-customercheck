@@ -150,7 +150,7 @@ class LicenseKeyEventServiceTest extends TestCase
 	}
 
 	/**
-	 * InvoiceCheck (IC2) must map to CRM product `ic`, never InventoryCheck `iv`.
+	 * the invoicing app (IC2) must map to CRM product `ic`, never InventoryCheck `iv`.
 	 *
 	 * @dataProvider invoiceCheckProductAliases
 	 */

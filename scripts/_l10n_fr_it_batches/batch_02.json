@@ -499,9 +499,9 @@
     "fr": "Du collègue",
     "it": "Dal collega"
   },
-  "From InvoiceCheck": {
-    "fr": "Depuis InvoiceCheck",
-    "it": "Da InvoiceCheck"
+  "From the invoicing app": {
+    "fr": "Depuis the invoicing app",
+    "it": "Da the invoicing app"
   },
   "From Mail": {
     "fr": "Depuis Mail",
@@ -691,9 +691,9 @@
     "fr": "L’en-tête Idempotency-Key (ou idempotencyKey) est obligatoire pour create-or-link.",
     "it": "L’header Idempotency-Key (o idempotencyKey) è obbligatorio per create-or-link."
   },
-  "If InvoiceCheck is not linked, states may show as unknown until you connect the apps.": {
-    "fr": "Si InvoiceCheck n’est pas lié, les états peuvent s’afficher comme inconnus jusqu’à ce que tu connectes les apps.",
-    "it": "Se InvoiceCheck non è collegato, gli stati possono risultare sconosciuti finché non colleghi le app."
+  "If the invoicing app is not linked, states may show as unknown until you connect the apps.": {
+    "fr": "Si the invoicing app n’est pas lié, les états peuvent s’afficher comme inconnus jusqu’à ce que tu connectes les apps.",
+    "it": "Se the invoicing app non è collegato, gli stati possono risultare sconosciuti finché non colleghi le app."
   },
   "IMAP connection failed.": {
     "fr": "Échec de la connexion IMAP.",
@@ -887,13 +887,13 @@
     "fr": "Statut de facture",
     "it": "Stato fattura"
   },
-  "InvoiceCheck is not available on this instance.": {
-    "fr": "InvoiceCheck n’est pas disponible sur cette instance.",
-    "it": "InvoiceCheck non è disponibile su questa istanza."
+  "The invoicing app is not available on this instance.": {
+    "fr": "The invoicing app n’est pas disponible sur cette instance.",
+    "it": "The invoicing app non è disponibile su questa istanza."
   },
-  "InvoiceCheck missing": {
-    "fr": "InvoiceCheck manquant",
-    "it": "InvoiceCheck mancante"
+  "The invoicing app missing": {
+    "fr": "The invoicing app manquant",
+    "it": "The invoicing app mancante"
   },
   "Invoices": {
     "fr": "Factures",

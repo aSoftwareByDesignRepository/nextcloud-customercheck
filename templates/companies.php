@@ -239,7 +239,7 @@ if (!$crmListFragment) {
 								</div>
 								<?php else: ?>
 								<h3 class="crm-empty-state__title"><?php p($l->t('No companies yet')); ?></h3>
-								<p class="crm-empty-state__text"><?php p($l->t('Add a company or import a list. ProjectCheck and InvoiceCheck are optional — CustomerCheck works alone.')); ?></p>
+								<p class="crm-empty-state__text"><?php p($l->t('Add a company or import a list. ProjectCheck and the invoicing app are optional — CustomerCheck works alone.')); ?></p>
 								<div class="crm-empty-state__actions">
 									<?php if (!empty($_['canWrite'])): ?>
 									<a class="crm-btn crm-btn--primary crm-btn--lg" href="<?php p($_['urls']['companyNew'] ?? '#'); ?>"><?php p($l->t('Add company')); ?></a>

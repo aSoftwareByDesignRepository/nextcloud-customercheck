@@ -116,7 +116,7 @@ describe('buildBillingHonesty', () => {
         },
         t,
       ).text,
-    ).toMatch(/InvoiceCheck/i);
+    ).toMatch(/the invoicing app/i);
 
     expect(
       buildBillingHonesty(

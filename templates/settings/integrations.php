@@ -5,7 +5,7 @@
 /** @var array<string, string> $capabilityLabels */
 $capabilityLabels = [
 	'sbdlicenseops' => $l->t('License Ops (sales log)'),
-	'invoicecheck' => $l->t('InvoiceCheck'),
+	'invoicecheck' => $l->t('The invoicing app'),
 	'projectcheck' => $l->t('ProjectCheck (read)'),
 	'ticketcheck' => $l->t('TicketCheck (read)'),
 	'projectcheckWrite' => $l->t('ProjectCheck (write)'),

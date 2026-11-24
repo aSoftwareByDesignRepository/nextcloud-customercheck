@@ -6,7 +6,7 @@ import { deleteCompanyAt } from './helpers/cleanup.js';
 import { fillIsoDate } from './helpers/dates.js';
 
 /**
- * Money card must track license invoice payment even when InvoiceCheck is off.
+ * Money card must track license invoice payment even when the invoicing app is off.
  */
 test.describe('Billing license payment status', () => {
   test.skip(!process.env.NC_ADMIN_USER, 'Requires NC_ADMIN_USER / NC_ADMIN_PASS');
@@ -56,7 +56,7 @@ test.describe('Billing license payment status', () => {
     await expect(page.locator('#crm-billing-body [data-crm-billing-tile="overdue"] .crm-stat-tile__value')).toHaveText('1');
     await expect(page.locator('#crm-billing-body [data-crm-billing-tile="licenses"] .crm-stat-tile__value')).toHaveText('1');
     await expect(page.locator('#crm-billing-body .crm-billing-honesty')).toContainText(
-      /license payment|Lizenz|InvoiceCheck/i,
+      /license payment|Lizenz|The invoicing app/i,
     );
     await expect(page.locator('#crm-billing-body .crm-billing-actions a[href="#crm-contracts"]')).toBeVisible();
 
