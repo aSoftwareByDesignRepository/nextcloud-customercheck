@@ -2664,6 +2664,38 @@ dialog.crm-native-dialog .crm-dl__row dd {
 	min-height: 44px; /* WCAG 2.5.5 target size is defined in CSS px; rem shrinks under NC 15px root font */
 	margin: var(--crm-space-1) 0;
 }
+/* Destructive-confirm switch (e.g. "open access to everyone"): label ink in
+   danger colour so the consequence is visible before the box is ticked. */
+#app-content.crm-app .crm-switch--danger {
+	color: var(--crm-danger-ink, var(--color-error-text, var(--color-error)));
+}
+#app-content.crm-app .crm-stack {
+	display: flex;
+	flex-direction: column;
+	gap: var(--crm-space-3);
+}
+/* .crm-field is a flex column whose gap spaces label→control (family
+   form-controls recipe); --inline lays label and control side by side. */
+#app-content.crm-app .crm-field {
+	display: flex;
+	flex-direction: column;
+	gap: var(--crm-space-1);
+	min-width: 0;
+}
+#app-content.crm-app .crm-field--inline {
+	flex-direction: row;
+	align-items: center;
+	gap: var(--crm-space-2);
+}
+#app-content.crm-app .crm-code,
+dialog.crm-native-dialog .crm-code {
+	font-family: var(--crm-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+	font-size: var(--crm-fs-sm, 0.875rem);
+	padding: 0 var(--crm-space-1);
+	background: var(--crm-bg-soft, var(--color-background-dark));
+	border-radius: var(--crm-radius-sm, 6px);
+	word-break: break-all;
+}
 #app-content.crm-app .crm-inline-actions {
 	display: flex;
 	flex-wrap: wrap;
@@ -2941,6 +2973,14 @@ dialog.crm-native-dialog .crm-advanced > .crm-form--stack {
 	min-height: 3rem;
 	font-size: 1.125rem;
 	padding: 0.65rem 1.25rem;
+}
+/* Compact inline controls (dense table cells, e.g. buying-role selects).
+   WCAG 2.5.8 floor 24px is respected; primary inputs keep the 44px default. */
+#app-content.crm-app .crm-input--sm,
+dialog.crm-native-dialog .crm-input--sm {
+	min-height: 2.25rem;
+	padding: var(--crm-space-1) var(--crm-space-2);
+	font-size: var(--crm-fs-sm, 0.875rem);
 }
 
 #app-content.crm-app .crm-linked-bundle {
@@ -6480,6 +6520,10 @@ dialog.crm-native-dialog label.crm-check {
 }
 #app-content.crm-app .crm-import-stat--choice {
 	border-color: var(--color-element-warning, var(--color-warning-text, var(--color-warning)));
+}
+#app-content.crm-app .crm-import-stat--skip {
+	border-style: dashed;
+	border-color: var(--crm-muted, var(--color-text-maxcontrast));
 }
 #app-content.crm-app .crm-import-actions {
 	display: flex;

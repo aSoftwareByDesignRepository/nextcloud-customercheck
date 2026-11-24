@@ -12,7 +12,7 @@
 			<h2 id="section-checklists-heading" class="crm-card__title"><?php p($l->t('Checklist templates')); ?></h2>
 			<p class="crm-muted"><?php p($l->t('Make a step list once. On any deal, tap Checklist → From template — no typing the same handoffs again.')); ?></p>
 		</div>
-		<div class="crm-card__actions">
+		<div class="crm-card__header-actions">
 			<button type="button" class="crm-btn crm-btn--primary" id="crm-cl-tmpl-new"><?php p($l->t('New template')); ?></button>
 		</div>
 	</header>
