@@ -26,8 +26,47 @@ final class L10nNativeQualityContractTest extends TestCase
 		$glossary = dirname(__DIR__, 2) . '/docs/l10n-glossary.md';
 		self::assertFileExists($glossary);
 		$body = (string) file_get_contents($glossary);
-		foreach (['My email', 'Sales Inbox', 'Assign', 'Churned', 'Manager override', 'workspace'] as $term) {
+		foreach (['My email', 'Sales Inbox', 'Assign', 'Churned', 'Manager override', 'workspace', 'the invoicing app'] as $term) {
 			self::assertStringContainsString($term, $body, "l10n-glossary.md must pin {$term}");
+		}
+	}
+
+	/**
+	 * Regression pin (l10n_parity_gap_after_copy class): a brand->generic msgid
+	 * rename must carry its msgstrs. Every 'invoicing app' sibling-reference
+	 * msgid must exist with a non-identity, canonical-term msgstr in each
+	 * maintained non-en base catalog — identity/missing means English renders.
+	 */
+	public function testGenericSiblingRefsCarryNativeMsgstrs(): void
+	{
+		$root = dirname(__DIR__, 2) . '/l10n';
+		$en = json_decode((string) file_get_contents($root . '/en.json'), true, 512, JSON_THROW_ON_ERROR);
+		$family = array_values(array_filter(
+			array_keys($en['translations'] ?? []),
+			static fn (string $k): bool => str_contains(strtolower($k), 'invoicing app')
+		));
+		self::assertNotEmpty($family, 'expected the generic sibling-ref msgid family in en.json');
+
+		$canonicalTerm = [
+			'de' => 'Rechnungs-App', 'da' => 'fakturering', 'es' => 'facturación',
+			'fr' => 'facturation', 'it' => 'fatturazione', 'nb' => 'fakturering',
+			'nl' => 'facturatie', 'pl' => 'faktur', 'sv' => 'fakturering',
+			'pt' => 'fatura', 'pt_BR' => 'fatura', 'tr' => 'faturalama',
+			'zh_CN' => '开票', 'zh_TW' => '開票', 'ru' => 'счет',
+		];
+		foreach ($canonicalTerm as $lang => $term) {
+			$cat = json_decode((string) file_get_contents($root . '/' . $lang . '.json'), true, 512, JSON_THROW_ON_ERROR)['translations'] ?? [];
+			foreach ($family as $key) {
+				self::assertArrayHasKey($key, $cat, "{$lang}.json dropped msgid: {$key}");
+				self::assertNotSame('', $cat[$key], "{$lang}.json empty msgstr for {$key}");
+				if ($key !== 'The invoicing app') {
+					self::assertNotSame($key, $cat[$key], "{$lang}.json renders English for {$key}");
+				}
+				self::assertTrue(
+					mb_stripos($cat[$key], $term) !== false,
+					"{$lang}.json must use the pinned sibling-ref term '{$term}' for {$key}"
+				);
+			}
 		}
 	}
 

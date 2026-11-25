@@ -1675,7 +1675,7 @@ OC.L10N.register(
 		"Nextcloud group" : "Nextcloud group",
 		"Nextcloud instance ID" : "Nextcloud instance ID",
 		"No Google client secret saved yet." : "No Google client secret saved yet.",
-		"No the invoicing app \/ ProjectCheck and no licenses yet. Add a license to track payment here." : "No the invoicing app \/ ProjectCheck and no licenses yet. Add a license to track payment here.",
+		"No invoicing app \/ ProjectCheck and no licenses yet. Add a license to track payment here." : "No invoicing app \/ ProjectCheck and no licenses yet. Add a license to track payment here.",
 		"No Microsoft client secret saved yet." : "No Microsoft client secret saved yet.",
 		"No PDF linked." : "No PDF linked.",
 		"No account plans yet" : "No account plans yet",
