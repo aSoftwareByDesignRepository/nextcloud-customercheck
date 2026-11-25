@@ -1312,6 +1312,7 @@
 		"The invoicing app is off or not linked — showing license payment status.": "開票應用已關閉或未關聯——顯示授權付款狀態。",
 		"The invoicing app is on — link ProjectCheck on this customer to load invoices.": "開票應用已開啟——請在此客戶上關聯 ProjectCheck 以載入發票。",
 		"The invoicing app missing": "缺少開票應用",
+		"the invoicing app": "開票應用",
 		"Invoices": "發票",
 		"Invoices and overdue cash": "發票與逾期款項",
 		"Invoices for the linked invoicing app customer show up here.": "關聯開票應用客戶的發票顯示在此。",

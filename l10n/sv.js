@@ -1313,6 +1313,7 @@ OC.L10N.register(
 		"The invoicing app is off or not linked — showing license payment status." : "Faktureringsappen är av eller inte länkad — visar licensbetalningsstatus.",
 		"The invoicing app is on — link ProjectCheck on this customer to load invoices." : "Faktureringsappen är på — länka ProjectCheck på den här kunden för att ladda fakturor.",
 		"The invoicing app missing" : "Faktureringsappen saknas",
+		"the invoicing app" : "faktureringsappen",
 		"Invoices" : "Fakturor",
 		"Invoices and overdue cash" : "Fakturor och försenade kontanter",
 		"Invoices for the linked invoicing app customer show up here." : "Fakturor för den länkade kunden i faktureringsappen visas här.",

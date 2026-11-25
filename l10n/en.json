@@ -1312,6 +1312,7 @@
 		"The invoicing app is off or not linked — showing license payment status.": "The invoicing app is off or not linked — showing license payment status.",
 		"The invoicing app is on — link ProjectCheck on this customer to load invoices.": "The invoicing app is on — link ProjectCheck on this customer to load invoices.",
 		"The invoicing app missing": "The invoicing app missing",
+		"the invoicing app": "the invoicing app",
 		"Invoices": "Invoices",
 		"Invoices and overdue cash": "Invoices and overdue cash",
 		"Invoices for the linked invoicing app customer show up here.": "Invoices for the linked invoicing app customer show up here.",
@@ -3199,13 +3200,6 @@
 		"this workspace": "this workspace",
 		"undo via snapshot": "undo via snapshot",
 		"will be skipped": "will be skipped",
-		"…and %s more.": "…and %s more.",
-		"Invoices for the linked invoicing app customer show up here.": "Invoices for the linked invoicing app customer show up here.",
-		"No invoicing app / ProjectCheck and no licenses yet. Add a license to track payment here.": "No invoicing app / ProjectCheck and no licenses yet. Add a license to track payment here.",
-		"Numbers come from the invoicing app for this linked customer.": "Numbers come from the invoicing app for this linked customer.",
-		"Numbers come from this workspace’s companies plus linked ProjectCheck, the invoicing app, and TicketCheck when those apps are on.": "Numbers come from this workspace’s companies plus linked ProjectCheck, the invoicing app, and TicketCheck when those apps are on.",
-		"Overdue rows come from the invoicing app for companies linked in this workspace. Open the company to act.": "Overdue rows come from the invoicing app for companies linked in this workspace. Open the company to act.",
-		"Read-only from the invoicing app when linked.": "Read-only from the invoicing app when linked.",
-		"What still needs paying — licenses here, the invoicing app when linked.": "What still needs paying — licenses here, the invoicing app when linked."
+		"…and %s more.": "…and %s more."
 	}
 }

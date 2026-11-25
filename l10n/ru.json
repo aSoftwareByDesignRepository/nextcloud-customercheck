@@ -1312,6 +1312,7 @@
 		"The invoicing app is off or not linked — showing license payment status.": "Приложение для выставления счетов выключено или не связано — показывается статус оплаты лицензий.",
 		"The invoicing app is on — link ProjectCheck on this customer to load invoices.": "Приложение для выставления счетов включено — свяжите ProjectCheck на этом заказчике, чтобы загрузить счета.",
 		"The invoicing app missing": "Приложение для выставления счетов отсутствует",
+		"the invoicing app": "приложение для выставления счетов",
 		"Invoices": "Счета",
 		"Invoices and overdue cash": "Счета и просроченные деньги",
 		"Invoices for the linked invoicing app customer show up here.": "Счета для связанного заказчика приложения для выставления счетов появляются здесь.",

@@ -1312,6 +1312,7 @@
 		"The invoicing app is off or not linked — showing license payment status.": "Faktureringsappen er slået fra eller ikke linket — viser licensbetalingsstatus.",
 		"The invoicing app is on — link ProjectCheck on this customer to load invoices.": "Faktureringsappen er tændt — link ProjectCheck på denne kunde for at indlæse fakturaer.",
 		"The invoicing app missing": "Faktureringsappen mangler",
+		"the invoicing app": "faktureringsappen",
 		"Invoices": "Fakturaer",
 		"Invoices and overdue cash": "Fakturaer og forfaldne kontanter",
 		"Invoices for the linked invoicing app customer show up here.": "Fakturaer for den linkede kunde i faktureringsappen vises her.",

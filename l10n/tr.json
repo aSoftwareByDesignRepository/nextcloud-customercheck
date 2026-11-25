@@ -1312,6 +1312,7 @@
 		"The invoicing app is off or not linked — showing license payment status.": "Faturalama uygulaması kapalı veya bağlı değil — lisans ödeme durumu gösteriliyor.",
 		"The invoicing app is on — link ProjectCheck on this customer to load invoices.": "Faturalama uygulaması açık — faturaları yüklemek için bu müşteride ProjectCheck'i bağla.",
 		"The invoicing app missing": "Faturalama uygulaması eksik",
+		"the invoicing app": "faturalama uygulaması",
 		"Invoices": "Faturalar",
 		"Invoices and overdue cash": "Faturalar ve gecikmiş para",
 		"Invoices for the linked invoicing app customer show up here.": "Bağlı faturalama uygulaması müşterisinin faturaları burada görünür.",

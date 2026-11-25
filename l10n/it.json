@@ -1312,6 +1312,7 @@
 		"The invoicing app is off or not linked — showing license payment status.": "L'applicazione di fatturazione è spenta o non collegata — mostro lo stato di pagamento delle licenze.",
 		"The invoicing app is on — link ProjectCheck on this customer to load invoices.": "L'applicazione di fatturazione è attiva — collega ProjectCheck su questo cliente per caricare le fatture.",
 		"The invoicing app missing": "Applicazione di fatturazione mancante",
+		"the invoicing app": "l'applicazione di fatturazione",
 		"Invoices": "Fatture",
 		"Invoices and overdue cash": "Fatture e contanti scaduti",
 		"Invoices for the linked invoicing app customer show up here.": "Le fatture del cliente collegato dell'applicazione di fatturazione appaiono qui.",

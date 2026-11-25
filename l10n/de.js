@@ -1313,6 +1313,7 @@ OC.L10N.register(
 		"The invoicing app is off or not linked — showing license payment status." : "Die Rechnungs-App ist aus oder nicht verknüpft — zeige Lizenz-Zahlungsstatus.",
 		"The invoicing app is on — link ProjectCheck on this customer to load invoices." : "Die Rechnungs-App ist an — verknüpfe ProjectCheck bei diesem Kunden, um Rechnungen zu laden.",
 		"The invoicing app missing" : "Rechnungs-App fehlt",
+		"the invoicing app" : "die Rechnungs-App",
 		"Invoices" : "Rechnungen",
 		"Invoices and overdue cash" : "Rechnungen und überfälliges Cash",
 		"Invoices for the linked invoicing app customer show up here." : "Rechnungen für den verknüpften Rechnungs-App-Kunden erscheinen hier.",
