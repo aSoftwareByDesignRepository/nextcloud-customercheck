@@ -41,6 +41,7 @@ use OCP\IL10N;
 use OCP\IRequest;
 use OCP\IUserManager;
 use OCP\IUserSession;
+use OCP\AppFramework\Http\Attribute\PublicPage;
 
 /**
  * Companion mobile API v1 (COMPANION-APP §9) — `/apps/customercheck/api/mobile/*`.
@@ -83,6 +84,7 @@ class MobileController extends Controller
 		private readonly IUserManager $userManager,
 		private readonly IAppManager $appManager,
 		private readonly IL10N $l10n,
+		private readonly \OCA\CustomerCheck\Agent\AgentContext $agentContext,
 		private readonly ?DealChecklistService $dealChecklists = null,
 	) {
 		parent::__construct($appName, $request);
@@ -107,6 +109,7 @@ class MobileController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	#[PublicPage]
 	public function workspaces(): JSONResponse
 	{
 		return $this->guard(function (): JSONResponse {
@@ -124,6 +127,7 @@ class MobileController extends Controller
 	 */
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	#[PublicPage]
 	public function countries(): JSONResponse
 	{
 		return $this->guard(function (): JSONResponse {
@@ -144,6 +148,7 @@ class MobileController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	#[PublicPage]
 	public function today(int $workspaceId): JSONResponse
 	{
 		return $this->guard(function () use ($workspaceId): JSONResponse {
@@ -159,6 +164,7 @@ class MobileController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	#[PublicPage]
 	public function companies(int $workspaceId, string $q = ''): JSONResponse
 	{
 		return $this->guard(function () use ($workspaceId, $q): JSONResponse {
@@ -181,6 +187,7 @@ class MobileController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	#[PublicPage]
 	public function companyDetail(int $workspaceId, int $id): JSONResponse
 	{
 		return $this->guard(function () use ($workspaceId, $id): JSONResponse {
@@ -194,6 +201,7 @@ class MobileController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	#[PublicPage]
 	public function createCompany(int $workspaceId): JSONResponse
 	{
 		return $this->guard(function () use ($workspaceId): JSONResponse {
@@ -228,6 +236,7 @@ class MobileController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	#[PublicPage]
 	public function updateCompany(int $workspaceId, int $id): JSONResponse
 	{
 		return $this->guard(function () use ($workspaceId, $id): JSONResponse {
@@ -248,6 +257,7 @@ class MobileController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	#[PublicPage]
 	public function createPerson(int $workspaceId, int $id): JSONResponse
 	{
 		return $this->guard(function () use ($workspaceId, $id): JSONResponse {
@@ -270,6 +280,7 @@ class MobileController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	#[PublicPage]
 	public function updatePerson(int $workspaceId, int $id): JSONResponse
 	{
 		return $this->guard(function () use ($workspaceId, $id): JSONResponse {
@@ -287,6 +298,7 @@ class MobileController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	#[PublicPage]
 	public function createDeal(int $workspaceId, int $id): JSONResponse
 	{
 		return $this->guard(function () use ($workspaceId, $id): JSONResponse {
@@ -321,6 +333,7 @@ class MobileController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	#[PublicPage]
 	public function companyFiles(int $workspaceId, int $id): JSONResponse
 	{
 		return $this->guard(function () use ($workspaceId, $id): JSONResponse {
@@ -350,6 +363,7 @@ class MobileController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	#[PublicPage]
 	public function members(int $workspaceId): JSONResponse
 	{
 		return $this->guard(function () use ($workspaceId): JSONResponse {
@@ -373,6 +387,7 @@ class MobileController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	#[PublicPage]
 	public function checklistTemplates(int $workspaceId): JSONResponse
 	{
 		return $this->guard(function () use ($workspaceId): JSONResponse {
@@ -388,6 +403,7 @@ class MobileController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	#[PublicPage]
 	public function dealChecklist(int $workspaceId, int $id): JSONResponse
 	{
 		return $this->guard(function () use ($workspaceId, $id): JSONResponse {
@@ -405,6 +421,7 @@ class MobileController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	#[PublicPage]
 	public function applyChecklistTemplate(int $workspaceId, int $id): JSONResponse
 	{
 		return $this->guard(function () use ($workspaceId, $id): JSONResponse {
@@ -444,6 +461,7 @@ class MobileController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	#[PublicPage]
 	public function updateChecklistItem(int $workspaceId, int $id): JSONResponse
 	{
 		return $this->guard(function () use ($workspaceId, $id): JSONResponse {
@@ -584,6 +602,7 @@ class MobileController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	#[PublicPage]
 	public function activities(int $workspaceId, int $open = 1, int $companyId = 0): JSONResponse
 	{
 		return $this->guard(function () use ($workspaceId, $open, $companyId): JSONResponse {
@@ -604,6 +623,7 @@ class MobileController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	#[PublicPage]
 	public function createActivity(int $workspaceId): JSONResponse
 	{
 		return $this->guard(function () use ($workspaceId): JSONResponse {
@@ -662,6 +682,7 @@ class MobileController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	#[PublicPage]
 	public function updateActivity(int $workspaceId, int $id): JSONResponse
 	{
 		return $this->guard(function () use ($workspaceId, $id): JSONResponse {
@@ -683,6 +704,7 @@ class MobileController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	#[PublicPage]
 	public function doneActivity(int $workspaceId, int $id): JSONResponse
 	{
 		return $this->guard(function () use ($workspaceId, $id): JSONResponse {
@@ -701,6 +723,7 @@ class MobileController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	#[PublicPage]
 	public function doneChecklistItem(int $workspaceId, int $id): JSONResponse
 	{
 		return $this->guard(function () use ($workspaceId, $id): JSONResponse {
@@ -729,6 +752,7 @@ class MobileController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	#[PublicPage]
 	public function deals(int $workspaceId, int $companyId = 0): JSONResponse
 	{
 		return $this->guard(function () use ($workspaceId, $companyId): JSONResponse {
@@ -752,6 +776,7 @@ class MobileController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	#[PublicPage]
 	public function dealStage(int $workspaceId, int $id): JSONResponse
 	{
 		return $this->guard(function () use ($workspaceId, $id): JSONResponse {
@@ -779,6 +804,7 @@ class MobileController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	#[PublicPage]
 	public function agreements(int $workspaceId, int $expiringWithinDays = 60, int $companyId = 0): JSONResponse
 	{
 		return $this->guard(function () use ($workspaceId, $expiringWithinDays, $companyId): JSONResponse {
@@ -1007,6 +1033,11 @@ class MobileController extends Controller
 	 */
 	private function requireUid(): string
 	{
+		// Scoped agent token: the middleware armed a request-scoped
+		// principal — no session, no setUser(). Fall through to session auth.
+		if ($this->agentContext->isArmed()) {
+			return (string)$this->agentContext->uid();
+		}
 		$user = $this->userSession->getUser();
 		if ($user === null) {
 			throw new \OCA\CustomerCheck\Exception\NotAuthenticatedException('Authentication required.');
@@ -1038,6 +1069,12 @@ class MobileController extends Controller
 	 */
 	private function assertSafeMutationChannel(): void
 	{
+		// Agent credentials are validated end-to-end by AgentAuthMiddleware
+		// (resolve + scope + confirm gate + mutation budget) — no session,
+		// no CSRF surface exists to protect.
+		if ($this->agentContext->isArmed()) {
+			return;
+		}
 		if ($this->request->passesCSRFCheck()) {
 			return;
 		}

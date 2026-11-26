@@ -17,6 +17,8 @@ use OCP\User\Events\UserDeletedEvent;
 use OCA\CustomerCheck\Middleware\AppAccessMiddleware;
 use OCA\CustomerCheck\Middleware\SessionRateLimitMiddleware;
 use OCA\CustomerCheck\Notification\Notifier;
+use OCA\CustomerCheck\Repair\EnsureAgentTables;
+use OCA\CustomerCheck\Repair\UninstallAgentTables;
 use OCA\CustomerCheck\Repair\BackupBeforeUpdate;
 use OCA\CustomerCheck\Repair\BootstrapDefaultWorkspace;
 use OCA\CustomerCheck\Repair\EnsureCustomerCheckSchema;
@@ -96,6 +98,49 @@ class Application extends App implements IBootstrap
 			);
 		});
 		$context->registerMiddleware(SessionRateLimitMiddleware::class);
+
+		// _shared/agent-auth pack — scoped AI-agent tokens (suite MCP contract)
+		$context->registerService(\OCA\CustomerCheck\Agent\AgentManifest::class, function ($c) {
+			return new \OCA\CustomerCheck\Agent\AgentManifest(
+				'customercheck',
+				\dirname(__DIR__, 2) . '/appinfo/agent-manifest.json'
+			);
+		});
+		$context->registerService(\OCA\CustomerCheck\Agent\AgentSeatGate::class, function ($c) {
+			return new \OCA\CustomerCheck\Agent\CustomerCheckAgentSeatGate(
+				$c->get(\OCA\CustomerCheck\Service\LicenseService::class)
+			);
+		});
+		$context->registerService(\OCA\CustomerCheck\Agent\AgentAccessGate::class, function ($c) {
+			return new \OCA\CustomerCheck\Agent\CustomerCheckAgentAccessGate(
+				$c->get(AccessControlService::class),
+				$c->get(\OCP\IGroupManager::class)
+			);
+		});
+		$context->registerService(\OCA\CustomerCheck\Middleware\AgentAuthMiddleware::class, function ($c) {
+			return new \OCA\CustomerCheck\Middleware\AgentAuthMiddleware(
+				$c->get(\OCP\IRequest::class),
+				$c->get(\OCA\CustomerCheck\Agent\AgentContext::class),
+				$c->get(\OCA\CustomerCheck\Agent\AgentTokenService::class),
+				$c->get(\OCA\CustomerCheck\Agent\AgentManifest::class),
+				$c->get(\OCA\CustomerCheck\Agent\AgentSeatGate::class),
+				$c->get(\OCA\CustomerCheck\Agent\AgentAuditMapper::class),
+				$c->get(\Psr\Log\LoggerInterface::class),
+				'customercheck'
+			);
+		});
+		$context->registerMiddleware(\OCA\CustomerCheck\Middleware\AgentAuthMiddleware::class);
+
+		$context->registerService(EnsureAgentTables::class, function ($c): EnsureAgentTables {
+			return new EnsureAgentTables(
+				$c->get(\OCP\IDBConnection::class),
+			);
+		});
+		$context->registerService(UninstallAgentTables::class, function ($c): UninstallAgentTables {
+			return new UninstallAgentTables(
+				$c->get(\OCP\IDBConnection::class),
+			);
+		});
 
 		$context->registerService(EnsureCustomerCheckSchema::class, fn ($c) => new EnsureCustomerCheckSchema($c->get(\OCP\IDBConnection::class), $c->get(\OCP\IConfig::class)));
 		$context->registerService(BootstrapDefaultWorkspace::class, fn ($c) => new BootstrapDefaultWorkspace(
@@ -505,6 +550,7 @@ class Application extends App implements IBootstrap
 			$c->get(\OCA\CustomerCheck\Db\WorkspaceMemberMapper::class),
 		));
 		$context->registerEventListener(UserDeletedEvent::class, UserDeletedListener::class);
+		$context->registerEventListener(UserDeletedEvent::class, \OCA\CustomerCheck\Listener\AgentUserDeletedListener::class);
 	}
 
 	public function boot(IBootContext $context): void

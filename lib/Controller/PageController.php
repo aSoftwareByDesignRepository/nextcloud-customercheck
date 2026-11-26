@@ -81,6 +81,7 @@ class PageController extends Controller
 		private readonly WorkspaceService $workspaceService,
 		private readonly WorkspaceSettingsSectionCatalog $workspaceSettingsSections,
 		private readonly AppSettingsSectionCatalog $appSettingsSections,
+		private readonly \OCA\CustomerCheck\Agent\AgentSettingsPayload $agentSettings,
 		private readonly \OCA\CustomerCheck\ConfigTransfer\TransferReceiptStore $transferReceipts,
 		private readonly IURLGenerator $urlGenerator,
 		private readonly IL10N $l10n,
@@ -1283,11 +1284,12 @@ class PageController extends Controller
 		// window.CustomerCheckApi/CustomerCheckMessaging contract the synced
 		// transfer.js expects, so it must load before transfer.js.
 		$isTransferSection = $section === 'transfer';
+		$isAgentSection = $section === 'agent';
 		$this->registerFrontEndAssets(
 			'pages/settings',
 			null,
-			$isTransferSection ? ['common/transfer'] : [],
-			$isTransferSection ? ['transfer-bridge', 'transfer'] : [],
+			($isTransferSection ? ['common/transfer'] : []) + ($isAgentSection ? ['agent-access'] : []),
+			($isTransferSection ? ['transfer-bridge', 'transfer'] : []) + ($isAgentSection ? ['agent-access'] : []),
 		);
 		$uid = $this->accessControl->currentUserId();
 		$settings = $this->settings->getForUser($uid);
@@ -1335,6 +1337,7 @@ class PageController extends Controller
 					: '',
 				'isSystemAdmin' => $uid !== '' && $this->accessControl->isSystemAdmin($uid),
 				'transferLastReceipt' => $this->transferReceipts->lastReceipt(),
+				'agentAccess' => $isAgentSection && $canManage ? $this->agentSettings->payload($uid) : null,
 			],
 			true,
 		);

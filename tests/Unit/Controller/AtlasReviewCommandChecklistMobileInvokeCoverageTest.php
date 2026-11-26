@@ -614,6 +614,7 @@ final class AtlasReviewCommandChecklistMobileInvokeCoverageTest extends TestCase
 			$userManager,
 			$appManager,
 			$this->createMock(\OCP\IL10N::class),
+			new \OCA\CustomerCheck\Agent\AgentContext(),
 			$checklists,
 		);
 
@@ -674,6 +675,7 @@ final class AtlasReviewCommandChecklistMobileInvokeCoverageTest extends TestCase
 			$userManager,
 			$appManager,
 			$this->createMock(\OCP\IL10N::class),
+			new \OCA\CustomerCheck\Agent\AgentContext(),
 			$checklists,
 		);
 		foreach ([

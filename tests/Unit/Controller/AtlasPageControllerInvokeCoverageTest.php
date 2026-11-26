@@ -285,6 +285,7 @@ final class AtlasPageControllerInvokeCoverageTest extends TestCase
 			$workspaceService,
 			new WorkspaceSettingsSectionCatalog(),
 			new AppSettingsSectionCatalog(),
+			$this->createMock(\OCA\CustomerCheck\Agent\AgentSettingsPayload::class),
 			new TransferReceiptStore($this->appConfig(), 'customercheck'),
 			$this->urls(),
 			$l10n,

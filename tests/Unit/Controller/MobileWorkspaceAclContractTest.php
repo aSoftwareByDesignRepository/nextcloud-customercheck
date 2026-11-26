@@ -132,6 +132,7 @@ final class MobileWorkspaceAclContractTest extends TestCase
 			$this->createMock(IUserManager::class),
 			$this->appManager,
 			$l10n ?? $this->createMock(\OCP\IL10N::class),
+			new \OCA\CustomerCheck\Agent\AgentContext(),
 		);
 	}
 

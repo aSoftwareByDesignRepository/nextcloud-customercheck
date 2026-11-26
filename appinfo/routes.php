@@ -45,7 +45,7 @@ return [
 		// Keep the requirement literal (route files load without the app autoloader).
 		// tests/Unit/Controller/AppSettingsPagesContractTest pins it to AppSettingsSectionCatalog::routeRequirement().
 		['name' => 'page#appSettingsSection', 'url' => '/app-settings/{section}', 'verb' => 'GET',
-			'requirements' => ['section' => 'access|jobs|tokens|license|product-codes|personal-mail|transfer']],
+			'requirements' => ['section' => 'access|jobs|tokens|license|product-codes|personal-mail|transfer|agent']],
 		['name' => 'page#supportUs', 'url' => '/support-us', 'verb' => 'GET'],
 		['name' => 'page#getTheApp', 'url' => '/get-the-app', 'verb' => 'GET'],
 
@@ -314,6 +314,17 @@ return [
 		['name' => 'mobile_mail#savePersonalMailboxSignature', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/personal-mailboxes/{id}/signature', 'verb' => 'PUT', 'requirements' => ['workspaceId' => '\d+', 'id' => '\d+']],
 		['name' => 'mobile_mail#beginPersonalMailOAuth', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/personal-mailboxes/oauth/{provider}', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\d+', 'provider' => 'google|microsoft']],
 		['name' => 'mobile_mail#completePersonalMailOAuth', 'url' => '/api/mobile/v1/workspaces/{workspaceId}/personal-mailboxes/oauth/complete', 'verb' => 'POST', 'requirements' => ['workspaceId' => '\d+']],
+
+		// ── Agent (AI/MCP) surface. The manifest is readable by any valid
+		// agent token OR a session user; token administration is session+CSRF
+		// only — AgentAuthMiddleware denies agent credentials on these paths.
+		['name' => 'agent_manifest#show', 'url' => '/agent/v1/manifest', 'verb' => 'GET'],
+		['name' => 'agent_token#index', 'url' => '/agent/v1/tokens', 'verb' => 'GET'],
+		['name' => 'agent_token#mint', 'url' => '/agent/v1/tokens', 'verb' => 'POST'],
+		['name' => 'agent_token#audit', 'url' => '/agent/v1/audit', 'verb' => 'GET'],
+		['name' => 'agent_token#updatePolicy', 'url' => '/agent/v1/policy', 'verb' => 'POST'],
+		['name' => 'agent_token#revoke', 'url' => '/agent/v1/tokens/{id}/revoke', 'verb' => 'POST', 'requirements' => ['id' => '\\d+']],
+		['name' => 'agent_token#rotate', 'url' => '/agent/v1/tokens/{id}/rotate', 'verb' => 'POST', 'requirements' => ['id' => '\\d+']],
 
 		// ── Public token routes (no session; token validated in controller) ──
 		['name' => 'feed#renewals', 'url' => '/feed/{token}/renewals.ics', 'verb' => 'GET'],

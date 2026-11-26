@@ -382,6 +382,7 @@ Vi forbedrer denne appen med bruk i praksis. Feilrapporter, friksjon og idéer h
 		<install>
 			<step>OCA\CustomerCheck\Repair\EnsureCustomerCheckSchema</step>
 			<step>OCA\CustomerCheck\Repair\BootstrapDefaultWorkspace</step>
+			<step>OCA\CustomerCheck\Repair\EnsureAgentTables</step>
 		</install>
 		<pre-migration>
 			<step>OCA\CustomerCheck\Repair\BackupBeforeUpdate</step>
@@ -389,9 +390,11 @@ Vi forbedrer denne appen med bruk i praksis. Feilrapporter, friksjon og idéer h
 		<post-migration>
 			<step>OCA\CustomerCheck\Repair\EnsureCustomerCheckSchema</step>
 			<step>OCA\CustomerCheck\Repair\BootstrapDefaultWorkspace</step>
+			<step>OCA\CustomerCheck\Repair\EnsureAgentTables</step>
 		</post-migration>
 		<uninstall>
 			<step>OCA\CustomerCheck\Repair\UninstallDropTables</step>
+			<step>OCA\CustomerCheck\Repair\UninstallAgentTables</step>
 		</uninstall>
 	</repair-steps>
 </info>

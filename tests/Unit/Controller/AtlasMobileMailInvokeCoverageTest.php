@@ -165,6 +165,7 @@ final class AtlasMobileMailInvokeCoverageTest extends TestCase
 			$rateLimit,
 			$l10n,
 			$userManager,
+			new \OCA\CustomerCheck\Agent\AgentContext(),
 		);
 
 		return [$ctrl];

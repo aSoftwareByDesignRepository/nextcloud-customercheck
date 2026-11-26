@@ -24,6 +24,7 @@ final class AppSettingsSectionCatalog
 		'product-codes',
 		'personal-mail',
 		'transfer',
+		'agent',
 	];
 
 	public function isSection(string $section): bool
@@ -46,6 +47,7 @@ final class AppSettingsSectionCatalog
 			'product-codes' => $l->t('Agreement catalogue'),
 			'personal-mail' => $l->t('Personal email OAuth'),
 			'transfer' => $l->t('Transfer configuration'),
+			'agent' => $l->t('AI access (MCP)'),
 			default => $l->t('App settings'),
 		};
 	}
@@ -60,6 +62,7 @@ final class AppSettingsSectionCatalog
 			'product-codes' => $l->t('Catalogue'),
 			'personal-mail' => $l->t('Mail OAuth'),
 			'transfer' => $l->t('Transfer'),
+			'agent' => $l->t('AI access'),
 			default => $l->t('App'),
 		};
 	}
@@ -74,6 +77,7 @@ final class AppSettingsSectionCatalog
 			'product-codes' => $l->t('Labels and kinds for agreements across CustomerCheck.'),
 			'personal-mail' => $l->t('Google and Microsoft OAuth apps so people can connect their email without a password.'),
 			'transfer' => $l->t('Copy all settings, catalogues and data between a test and a production instance — one encrypted file, dry-run before anything is written.'),
+			'agent' => $l->t('Issue and manage scoped tokens for AI agents (MCP). Each token is limited to the tools declared in the app manifest — read tools and small writes, never admin surfaces.'),
 			default => $l->t('Access control, reminders, tokens, mobile license, and the agreement catalogue.'),
 		};
 	}

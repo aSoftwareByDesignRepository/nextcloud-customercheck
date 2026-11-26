@@ -1,0 +1,239 @@
+/* "AI access (MCP)" section — pack styles.
+ * Token scales only (design-system mandate): spacing/type/radii come from
+ * the app's crm-token block; colors are NC --color-* vars + color-mix.
+ * Mobile-first: token list renders as labelled cards, becoming a real
+ * table at ≥768px.
+ */
+
+.crm-agent {
+	margin-bottom: var(--crm-space-6, 32px);
+}
+
+.crm-agent-empty {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: var(--crm-space-3, 12px);
+	padding: var(--crm-space-5, 24px);
+	border: 1px dashed var(--color-border-maxcontrast, var(--crm-border));
+	border-radius: var(--crm-radius-md, 8px);
+	background: color-mix(in srgb, var(--color-main-background) 96%, var(--color-primary-element));
+}
+.crm-agent-empty__text {
+	margin: 0;
+	color: var(--color-text-maxcontrast, var(--crm-muted));
+}
+
+/* Token table — cards by default (mobile), real table ≥768px. */
+.crm-agent-tablewrap { overflow: visible; }
+.crm-agent-table { width: 100%; border-collapse: collapse; }
+.crm-agent-table thead {
+	position: absolute;
+	width: 1px; height: 1px;
+	margin: -1px; padding: 0;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	white-space: nowrap; border: 0;
+}
+.crm-agent-table,
+.crm-agent-table tbody,
+.crm-agent-table tr,
+.crm-agent-table td { display: block; width: 100%; }
+.crm-agent-table tbody tr {
+	display: grid;
+	gap: var(--crm-space-1, 4px);
+	padding: var(--crm-space-3, 12px) var(--crm-space-4, 16px);
+	margin-bottom: var(--crm-space-3, 12px);
+	border: 1px solid var(--color-border-dark, var(--crm-border));
+	border-radius: var(--crm-radius-md, 8px);
+	background: var(--color-main-background, var(--crm-bg-card));
+}
+.crm-agent-table td { border: 0; padding: 0; }
+.crm-agent-table td[data-cell]::before {
+	content: attr(data-cell);
+	display: block;
+	font-size: var(--crm-fs-xs, 0.75rem);
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	color: var(--color-text-maxcontrast, var(--crm-muted));
+	margin-bottom: 2px;
+}
+.crm-agent-table .crm-row-actions {
+	display: flex;
+	gap: var(--crm-space-2, 8px);
+	flex-wrap: wrap;
+	padding-top: var(--crm-space-2, 8px);
+}
+.crm-agent-row--inactive .crm-agent-label,
+.crm-agent-row--inactive .crm-agent-owner {
+	opacity: 0.6;
+}
+
+@media (min-width: 768px) {
+	.crm-agent-table thead {
+		position: static;
+		width: auto; height: auto;
+		margin: 0;
+		overflow: visible;
+		clip: auto;
+		white-space: normal;
+	}
+	.crm-agent-table { display: table; }
+	.crm-agent-table thead { display: table-header-group; }
+	.crm-agent-table tbody { display: table-row-group; }
+	.crm-agent-table tr { display: table-row; }
+	.crm-agent-table tbody tr {
+		display: table-row;
+		padding: 0;
+		margin-bottom: 0;
+		border: 0;
+		border-bottom: 1px solid var(--color-border-dark, var(--crm-border));
+		border-radius: 0;
+		background: transparent;
+	}
+	.crm-agent-table td,
+	.crm-agent-table th {
+		display: table-cell;
+		padding: var(--crm-space-2, 8px) var(--crm-space-3, 12px);
+		vertical-align: top;
+		text-align: left;
+	}
+	.crm-agent-table td[data-cell]::before { content: none; }
+	.crm-agent-table .crm-row-actions { justify-content: flex-end; padding-top: var(--crm-space-2, 8px); }
+}
+
+.crm-agent-label { font-weight: 600; margin-right: var(--crm-space-2, 8px); }
+.crm-agent-owner {
+	margin-left: var(--crm-space-2, 8px);
+	font-size: var(--crm-fs-xs, 0.75rem);
+	color: var(--color-text-maxcontrast, var(--crm-muted));
+}
+.crm-agent-scopes {
+	display: inline-flex;
+	flex-wrap: wrap;
+	gap: var(--crm-space-1, 4px);
+}
+.crm-agent-never {
+	color: var(--color-text-maxcontrast, var(--crm-muted));
+	font-style: italic;
+}
+
+/* Badge fallback — apps whose shell lacks a pill+dot badge get the recipe
+ * locally so scope badges never render as bare text (no color-only state). */
+.crm-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--crm-space-1, 4px);
+	padding: 1px var(--crm-space-2, 8px);
+	margin: 0 var(--crm-space-1, 4px) var(--crm-space-1, 4px) 0;
+	border-radius: 999px;
+	font-size: var(--crm-fs-xs, 0.75rem);
+	font-weight: 600;
+	line-height: 1.6;
+	border: 1px solid transparent;
+}
+.crm-badge::before {
+	content: '';
+	width: 6px; height: 6px;
+	border-radius: 50%;
+	background: currentColor;
+	flex-shrink: 0;
+}
+.crm-badge--neutral {
+	color: var(--color-text-maxcontrast);
+	background: color-mix(in srgb, var(--color-main-background) 85%, var(--color-text-maxcontrast));
+	border-color: color-mix(in srgb, var(--color-main-background) 70%, var(--color-text-maxcontrast));
+}
+.crm-badge--info {
+	color: var(--color-primary-element-text);
+	background: var(--color-primary-element);
+}
+
+/* Scope chips (custom preset) — multi-select per design-system chips recipe. */
+.crm-agent-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--crm-space-2, 8px);
+}
+.crm-agent-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--crm-space-1, 4px);
+	padding: var(--crm-space-1, 4px) var(--crm-space-3, 12px);
+	border: 1px solid var(--color-border-dark, var(--crm-border));
+	border-radius: 999px;
+	cursor: pointer;
+	font-size: var(--crm-fs-s, 0.875rem);
+	min-height: 44px;
+	background: var(--color-main-background);
+}
+.crm-agent-chip:has(:checked) {
+	border-color: var(--color-primary-element);
+	background: color-mix(in srgb, var(--color-main-background) 88%, var(--color-primary-element));
+}
+.crm-agent-chip input { accent-color: var(--color-primary-element); }
+.crm-agent-chip:focus-within {
+	outline: 2px solid var(--color-primary-element);
+	outline-offset: 2px;
+}
+
+/* One-time secret + config block */
+.crm-agent-secret-dialog { max-width: min(92vw, 560px); }
+.crm-agent-config {
+	width: 100%;
+	font-family: var(--crm-font-mono, monospace);
+	font-size: var(--crm-fs-s, 0.8125rem);
+	padding: var(--crm-space-2, 8px);
+	border: 1px solid var(--color-border-dark, var(--crm-border));
+	border-radius: var(--crm-radius-md, 8px);
+	background: color-mix(in srgb, var(--color-main-background) 94%, var(--color-text-maxcontrast));
+	color: var(--color-main-text);
+	resize: vertical;
+}
+#crm-agent-secret {
+	font-family: var(--crm-font-mono, monospace);
+}
+
+.crm-agent-actions {
+	margin-top: var(--crm-space-3, 12px);
+}
+
+.crm-agent-selfmint {
+	margin-top: var(--crm-space-5, 24px);
+}
+.crm-checkbox-label {
+	display: flex;
+	align-items: center;
+	gap: var(--crm-space-2, 8px);
+	min-height: 44px;
+	cursor: pointer;
+}
+
+.crm-visually-hidden {
+	position: absolute;
+	width: 1px; height: 1px;
+	margin: -1px; padding: 0;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	white-space: nowrap; border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.crm-agent *,
+	.crm-agent *::before,
+	.crm-agent *::after {
+		transition: none !important;
+		animation: none !important;
+	}
+}
+
+@media (forced-colors: active) {
+	.crm-badge,
+	.crm-agent-chip {
+		border: 1px solid CanvasText;
+	}
+	.crm-badge::before {
+		background: CanvasText;
+	}
+}

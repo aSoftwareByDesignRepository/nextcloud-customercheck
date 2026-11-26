@@ -1,0 +1,978 @@
+{
+  "schemaVersion": 1,
+  "appId": "customercheck",
+  "agentExposure": "declared",
+  "tools": [
+    {
+      "name": "crm_list_workspaces",
+      "kind": "read",
+      "riskClass": 0,
+      "route": "mobile#workspaces",
+      "method": "GET",
+      "path": "/api/mobile/v1/workspaces",
+      "scope": "customercheck:workspaces:read",
+      "label": "List workspaces",
+      "description": "List the workspaces the token user may use on mobile."
+    },
+    {
+      "name": "crm_list_members",
+      "kind": "read",
+      "riskClass": 0,
+      "route": "mobile#members",
+      "method": "GET",
+      "path": "/api/mobile/v1/workspaces/{workspaceId}/members",
+      "scope": "customercheck:workspaces:read",
+      "label": "List workspace members",
+      "description": "List members (uid, display name, role) of a workspace the token user may write.",
+      "params": {
+        "workspaceId": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        }
+      }
+    },
+    {
+      "name": "crm_get_today",
+      "kind": "read",
+      "riskClass": 0,
+      "route": "mobile#today",
+      "method": "GET",
+      "path": "/api/mobile/v1/workspaces/{workspaceId}/today",
+      "scope": "customercheck:today:read",
+      "label": "Today list",
+      "description": "Get the workspace Today items for the token user.",
+      "params": {
+        "workspaceId": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        }
+      }
+    },
+    {
+      "name": "crm_list_countries",
+      "kind": "read",
+      "riskClass": 0,
+      "route": "mobile#countries",
+      "method": "GET",
+      "path": "/api/mobile/v1/countries",
+      "scope": "customercheck:meta:read",
+      "label": "List countries",
+      "description": "Country lookup table for company forms."
+    },
+    {
+      "name": "crm_list_companies",
+      "kind": "read",
+      "riskClass": 0,
+      "route": "mobile#companies",
+      "method": "GET",
+      "path": "/api/mobile/v1/workspaces/{workspaceId}/companies",
+      "scope": "customercheck:companies:read",
+      "label": "List companies",
+      "description": "List companies in a workspace, optionally filtered by name.",
+      "params": {
+        "workspaceId": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        },
+        "q": {
+          "type": "string",
+          "required": false,
+          "description": "Substring filter on company name."
+        },
+        "limit": {
+          "type": "integer",
+          "required": false,
+          "description": "Max rows (server-capped)."
+        },
+        "offset": {
+          "type": "integer",
+          "required": false
+        }
+      }
+    },
+    {
+      "name": "crm_get_company",
+      "kind": "read",
+      "riskClass": 0,
+      "route": "mobile#companyDetail",
+      "method": "GET",
+      "path": "/api/mobile/v1/workspaces/{workspaceId}/companies/{id}",
+      "scope": "customercheck:companies:read",
+      "label": "Company detail",
+      "description": "Read one company inside a workspace.",
+      "params": {
+        "workspaceId": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        },
+        "id": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        }
+      }
+    },
+    {
+      "name": "crm_list_company_files",
+      "kind": "read",
+      "riskClass": 0,
+      "route": "mobile#companyFiles",
+      "method": "GET",
+      "path": "/api/mobile/v1/workspaces/{workspaceId}/companies/{id}/files",
+      "scope": "customercheck:files:read",
+      "label": "List company files",
+      "description": "List files attached to the company's Nextcloud folder.",
+      "params": {
+        "workspaceId": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        },
+        "id": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        }
+      }
+    },
+    {
+      "name": "crm_list_deals",
+      "kind": "read",
+      "riskClass": 0,
+      "route": "mobile#deals",
+      "method": "GET",
+      "path": "/api/mobile/v1/workspaces/{workspaceId}/deals",
+      "scope": "customercheck:deals:read",
+      "label": "List deals",
+      "description": "List open deals in a workspace, optionally filtered by company.",
+      "params": {
+        "workspaceId": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        },
+        "companyId": {
+          "type": "integer",
+          "required": false
+        },
+        "limit": {
+          "type": "integer",
+          "required": false
+        }
+      }
+    },
+    {
+      "name": "crm_list_activities",
+      "kind": "read",
+      "riskClass": 0,
+      "route": "mobile#activities",
+      "method": "GET",
+      "path": "/api/mobile/v1/workspaces/{workspaceId}/activities",
+      "scope": "customercheck:activities:read",
+      "label": "List activities",
+      "description": "List the token user's activities in a workspace.",
+      "params": {
+        "workspaceId": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        },
+        "open": {
+          "type": "integer",
+          "required": false,
+          "description": "1 = only open activities, 0 = all."
+        },
+        "companyId": {
+          "type": "integer",
+          "required": false
+        },
+        "limit": {
+          "type": "integer",
+          "required": false
+        }
+      }
+    },
+    {
+      "name": "crm_list_agreements",
+      "kind": "read",
+      "riskClass": 0,
+      "route": "mobile#agreements",
+      "method": "GET",
+      "path": "/api/mobile/v1/workspaces/{workspaceId}/agreements",
+      "scope": "customercheck:agreements:read",
+      "label": "List agreements",
+      "description": "List agreements in a workspace, optionally filtered by expiry horizon and company.",
+      "params": {
+        "workspaceId": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        },
+        "expiringWithinDays": {
+          "type": "integer",
+          "required": false,
+          "description": "Only agreements expiring within N days (0 = all)."
+        },
+        "companyId": {
+          "type": "integer",
+          "required": false
+        },
+        "limit": {
+          "type": "integer",
+          "required": false
+        }
+      }
+    },
+    {
+      "name": "crm_list_checklist_templates",
+      "kind": "read",
+      "riskClass": 0,
+      "route": "mobile#checklistTemplates",
+      "method": "GET",
+      "path": "/api/mobile/v1/workspaces/{workspaceId}/checklist-templates",
+      "scope": "customercheck:checklists:read",
+      "label": "List checklist templates",
+      "description": "List deal checklist templates in a workspace.",
+      "params": {
+        "workspaceId": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        }
+      }
+    },
+    {
+      "name": "crm_get_deal_checklist",
+      "kind": "read",
+      "riskClass": 0,
+      "route": "mobile#dealChecklist",
+      "method": "GET",
+      "path": "/api/mobile/v1/workspaces/{workspaceId}/deals/{id}/checklist",
+      "scope": "customercheck:checklists:read",
+      "label": "Deal checklist",
+      "description": "List checklist items on a deal.",
+      "params": {
+        "workspaceId": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        },
+        "id": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter (deal id)."
+        }
+      }
+    },
+    {
+      "name": "crm_list_mail_inbox",
+      "kind": "read",
+      "riskClass": 0,
+      "route": "mobile_mail#inbox",
+      "method": "GET",
+      "path": "/api/mobile/v1/workspaces/{workspaceId}/mail/inbox",
+      "scope": "customercheck:mail:read",
+      "label": "Mail inbox",
+      "description": "List mail the token user may read in a workspace.",
+      "params": {
+        "workspaceId": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        },
+        "tab": {
+          "type": "string",
+          "required": false,
+          "description": "Inbox tab (e.g. mine)."
+        },
+        "limit": {
+          "type": "integer",
+          "required": false
+        },
+        "mailboxId": {
+          "type": "integer",
+          "required": false
+        }
+      }
+    },
+    {
+      "name": "crm_get_mail_message",
+      "kind": "read",
+      "riskClass": 0,
+      "route": "mobile_mail#message",
+      "method": "GET",
+      "path": "/api/mobile/v1/workspaces/{workspaceId}/mail/{id}",
+      "scope": "customercheck:mail:read",
+      "label": "Mail message",
+      "description": "Read one mail message the token user may read.",
+      "params": {
+        "workspaceId": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        },
+        "id": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        }
+      }
+    },
+    {
+      "name": "crm_list_mail_accounts",
+      "kind": "read",
+      "riskClass": 0,
+      "route": "mobile_mail#sendAccounts",
+      "method": "GET",
+      "path": "/api/mobile/v1/workspaces/{workspaceId}/mail/send-accounts",
+      "scope": "customercheck:mail:read",
+      "label": "Mail send accounts",
+      "description": "List the sender identities available in a workspace.",
+      "params": {
+        "workspaceId": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        }
+      }
+    },
+    {
+      "name": "crm_create_company",
+      "kind": "write",
+      "riskClass": 1,
+      "route": "mobile#createCompany",
+      "method": "POST",
+      "path": "/api/mobile/v1/workspaces/{workspaceId}/companies",
+      "idempotency": "clientRequestId",
+      "scope": "customercheck:companies:write",
+      "label": "Create company",
+      "description": "Create a company in a workspace the token user may write.",
+      "params": {
+        "workspaceId": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        },
+        "name": {
+          "type": "string",
+          "required": true
+        },
+        "website": {
+          "type": "string",
+          "required": false
+        },
+        "email": {
+          "type": "string",
+          "required": false
+        },
+        "phone": {
+          "type": "string",
+          "required": false
+        },
+        "country": {
+          "type": "string",
+          "required": false
+        },
+        "industry": {
+          "type": "string",
+          "required": false
+        },
+        "notes": {
+          "type": "string",
+          "required": false
+        },
+        "slug": {
+          "type": "string",
+          "required": false
+        },
+        "idempotencyKey": {
+          "type": "string",
+          "required": false,
+          "description": "Companion outbox key — safe replay of this create."
+        }
+      }
+    },
+    {
+      "name": "crm_update_company",
+      "kind": "write",
+      "riskClass": 2,
+      "confirm": "required",
+      "route": "mobile#updateCompany",
+      "method": "PUT",
+      "path": "/api/mobile/v1/workspaces/{workspaceId}/companies/{id}",
+      "scope": "customercheck:companies:write",
+      "label": "Update company",
+      "description": "Modify an existing company (state transition — confirm required).",
+      "idempotency": "natural",
+      "params": {
+        "workspaceId": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        },
+        "id": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        },
+        "name": {
+          "type": "string",
+          "required": false
+        },
+        "website": {
+          "type": "string",
+          "required": false
+        },
+        "email": {
+          "type": "string",
+          "required": false
+        },
+        "phone": {
+          "type": "string",
+          "required": false
+        },
+        "country": {
+          "type": "string",
+          "required": false
+        },
+        "industry": {
+          "type": "string",
+          "required": false
+        },
+        "notes": {
+          "type": "string",
+          "required": false
+        },
+        "updatedAt": {
+          "type": "string",
+          "required": false,
+          "description": "Optimistic-lock precondition from a previous read."
+        }
+      }
+    },
+    {
+      "name": "crm_create_person",
+      "kind": "write",
+      "riskClass": 1,
+      "route": "mobile#createPerson",
+      "method": "POST",
+      "path": "/api/mobile/v1/workspaces/{workspaceId}/companies/{id}/persons",
+      "idempotency": "clientRequestId",
+      "scope": "customercheck:persons:write",
+      "label": "Create contact",
+      "description": "Add a contact person to a company in a workspace the token user may write.",
+      "params": {
+        "workspaceId": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        },
+        "id": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter (company id)."
+        },
+        "name": {
+          "type": "string",
+          "required": true
+        },
+        "email": {
+          "type": "string",
+          "required": false
+        },
+        "role": {
+          "type": "string",
+          "required": false
+        },
+        "phone": {
+          "type": "string",
+          "required": false
+        },
+        "notes": {
+          "type": "string",
+          "required": false
+        },
+        "isPrimary": {
+          "type": "boolean",
+          "required": false
+        },
+        "idempotencyKey": {
+          "type": "string",
+          "required": false,
+          "description": "Companion outbox key — safe replay of this create."
+        }
+      }
+    },
+    {
+      "name": "crm_update_person",
+      "kind": "write",
+      "riskClass": 2,
+      "confirm": "required",
+      "route": "mobile#updatePerson",
+      "method": "PUT",
+      "path": "/api/mobile/v1/workspaces/{workspaceId}/persons/{id}",
+      "scope": "customercheck:persons:write",
+      "label": "Update contact",
+      "description": "Modify an existing contact person (state transition — confirm required).",
+      "idempotency": "natural",
+      "params": {
+        "workspaceId": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        },
+        "id": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        },
+        "name": {
+          "type": "string",
+          "required": false
+        },
+        "email": {
+          "type": "string",
+          "required": false
+        },
+        "role": {
+          "type": "string",
+          "required": false
+        },
+        "phone": {
+          "type": "string",
+          "required": false
+        },
+        "notes": {
+          "type": "string",
+          "required": false
+        },
+        "updatedAt": {
+          "type": "string",
+          "required": false,
+          "description": "Optimistic-lock precondition from a previous read."
+        }
+      }
+    },
+    {
+      "name": "crm_create_deal",
+      "kind": "write",
+      "riskClass": 1,
+      "route": "mobile#createDeal",
+      "method": "POST",
+      "path": "/api/mobile/v1/workspaces/{workspaceId}/companies/{id}/deals",
+      "idempotency": "clientRequestId",
+      "scope": "customercheck:deals:write",
+      "label": "Create deal",
+      "description": "Create a deal on a company in a workspace the token user may write.",
+      "params": {
+        "workspaceId": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        },
+        "id": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter (company id)."
+        },
+        "title": {
+          "type": "string",
+          "required": true
+        },
+        "stage": {
+          "type": "string",
+          "required": false,
+          "description": "Pipeline stage (defaults to lead)."
+        },
+        "valueCents": {
+          "type": "integer",
+          "required": false
+        },
+        "products": {
+          "type": "string",
+          "required": false
+        },
+        "notes": {
+          "type": "string",
+          "required": false
+        },
+        "personId": {
+          "type": "integer",
+          "required": false
+        },
+        "leadSource": {
+          "type": "string",
+          "required": false
+        },
+        "expectedClose": {
+          "type": "string",
+          "required": false,
+          "description": "ISO date."
+        },
+        "forecastBucket": {
+          "type": "string",
+          "required": false
+        },
+        "idempotencyKey": {
+          "type": "string",
+          "required": false,
+          "description": "Companion outbox key — safe replay of this create."
+        }
+      }
+    },
+    {
+      "name": "crm_change_deal_stage",
+      "kind": "write",
+      "riskClass": 2,
+      "confirm": "required",
+      "route": "mobile#dealStage",
+      "method": "POST",
+      "path": "/api/mobile/v1/workspaces/{workspaceId}/deals/{id}/stage",
+      "scope": "customercheck:deals:write",
+      "label": "Change deal stage",
+      "description": "Move a deal to another pipeline stage (state transition — confirm required).",
+      "idempotency": "natural",
+      "params": {
+        "workspaceId": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        },
+        "id": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        },
+        "stage": {
+          "type": "string",
+          "required": true
+        },
+        "lostReason": {
+          "type": "string",
+          "required": false
+        },
+        "updatedAt": {
+          "type": "string",
+          "required": false,
+          "description": "Optimistic-lock precondition from a previous read."
+        }
+      }
+    },
+    {
+      "name": "crm_create_activity",
+      "kind": "write",
+      "riskClass": 1,
+      "route": "mobile#createActivity",
+      "method": "POST",
+      "path": "/api/mobile/v1/workspaces/{workspaceId}/activities",
+      "idempotency": "clientRequestId",
+      "scope": "customercheck:activities:write",
+      "label": "Create activity",
+      "description": "Create an activity (task/call/note) in a workspace the token user may write.",
+      "params": {
+        "workspaceId": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        },
+        "companyId": {
+          "type": "integer",
+          "required": true
+        },
+        "title": {
+          "type": "string",
+          "required": true
+        },
+        "summary": {
+          "type": "string",
+          "required": false,
+          "description": "Alias of title."
+        },
+        "type": {
+          "type": "string",
+          "required": false
+        },
+        "details": {
+          "type": "string",
+          "required": false
+        },
+        "dueDate": {
+          "type": "string",
+          "required": false,
+          "description": "ISO date."
+        },
+        "dueOn": {
+          "type": "string",
+          "required": false,
+          "description": "Alias of dueDate."
+        },
+        "dealId": {
+          "type": "integer",
+          "required": false
+        },
+        "agreementId": {
+          "type": "integer",
+          "required": false
+        },
+        "idempotencyKey": {
+          "type": "string",
+          "required": false,
+          "description": "Companion outbox key — safe replay of this create."
+        }
+      }
+    },
+    {
+      "name": "crm_update_activity",
+      "kind": "write",
+      "riskClass": 2,
+      "confirm": "required",
+      "route": "mobile#updateActivity",
+      "method": "PUT",
+      "path": "/api/mobile/v1/workspaces/{workspaceId}/activities/{id}",
+      "scope": "customercheck:activities:write",
+      "label": "Update activity",
+      "description": "Modify an existing activity (state transition — confirm required).",
+      "idempotency": "natural",
+      "params": {
+        "workspaceId": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        },
+        "id": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        },
+        "title": {
+          "type": "string",
+          "required": false
+        },
+        "summary": {
+          "type": "string",
+          "required": false
+        },
+        "type": {
+          "type": "string",
+          "required": false
+        },
+        "details": {
+          "type": "string",
+          "required": false
+        },
+        "dueDate": {
+          "type": "string",
+          "required": false
+        },
+        "dueOn": {
+          "type": "string",
+          "required": false
+        },
+        "companyId": {
+          "type": "integer",
+          "required": false
+        },
+        "dealId": {
+          "type": "integer",
+          "required": false
+        },
+        "agreementId": {
+          "type": "integer",
+          "required": false
+        },
+        "updatedAt": {
+          "type": "string",
+          "required": false,
+          "description": "Optimistic-lock precondition from a previous read."
+        }
+      }
+    },
+    {
+      "name": "crm_complete_activity",
+      "kind": "write",
+      "riskClass": 2,
+      "confirm": "required",
+      "route": "mobile#doneActivity",
+      "method": "POST",
+      "path": "/api/mobile/v1/workspaces/{workspaceId}/activities/{id}/done",
+      "scope": "customercheck:activities:write",
+      "label": "Complete activity",
+      "description": "Mark an activity done or reopen it (state transition — confirm required).",
+      "idempotency": "natural",
+      "params": {
+        "workspaceId": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        },
+        "id": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        },
+        "done": {
+          "type": "boolean",
+          "required": false,
+          "description": "Defaults to true."
+        },
+        "updatedAt": {
+          "type": "string",
+          "required": false,
+          "description": "Optimistic-lock precondition from a previous read."
+        }
+      }
+    },
+    {
+      "name": "crm_apply_checklist_template",
+      "kind": "write",
+      "riskClass": 1,
+      "route": "mobile#applyChecklistTemplate",
+      "method": "POST",
+      "path": "/api/mobile/v1/workspaces/{workspaceId}/deals/{id}/checklist/from-template",
+      "idempotency": "clientRequestId",
+      "scope": "customercheck:checklists:write",
+      "label": "Apply checklist template",
+      "description": "Instantiate a checklist template on a deal.",
+      "params": {
+        "workspaceId": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        },
+        "id": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter (deal id)."
+        },
+        "templateId": {
+          "type": "integer",
+          "required": true
+        },
+        "mode": {
+          "type": "string",
+          "required": false,
+          "description": "append (default) or replace."
+        },
+        "idempotencyKey": {
+          "type": "string",
+          "required": false,
+          "description": "Companion outbox key — safe replay of this apply."
+        }
+      }
+    },
+    {
+      "name": "crm_update_checklist_item",
+      "kind": "write",
+      "riskClass": 2,
+      "confirm": "required",
+      "route": "mobile#updateChecklistItem",
+      "method": "PUT",
+      "path": "/api/mobile/v1/workspaces/{workspaceId}/checklist-items/{id}",
+      "scope": "customercheck:checklists:write",
+      "label": "Update checklist item",
+      "description": "Edit a checklist item's title, assignee or due date (state transition — confirm required).",
+      "idempotency": "natural",
+      "params": {
+        "workspaceId": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        },
+        "id": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        },
+        "title": {
+          "type": "string",
+          "required": false
+        },
+        "assigneeUserId": {
+          "type": "string",
+          "required": false
+        },
+        "assignee": {
+          "type": "string",
+          "required": false,
+          "description": "Alias of assigneeUserId."
+        },
+        "dueOn": {
+          "type": "string",
+          "required": false,
+          "description": "ISO date."
+        },
+        "updatedAt": {
+          "type": "string",
+          "required": false,
+          "description": "Optimistic-lock precondition from a previous read."
+        }
+      }
+    },
+    {
+      "name": "crm_complete_checklist_item",
+      "kind": "write",
+      "riskClass": 2,
+      "confirm": "required",
+      "route": "mobile#doneChecklistItem",
+      "method": "POST",
+      "path": "/api/mobile/v1/workspaces/{workspaceId}/checklist-items/{id}/done",
+      "scope": "customercheck:checklists:write",
+      "label": "Complete checklist item",
+      "description": "Mark a checklist item done, optionally with evidence (state transition — confirm required).",
+      "idempotency": "natural",
+      "params": {
+        "workspaceId": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        },
+        "id": {
+          "type": "integer",
+          "required": true,
+          "description": "Path parameter."
+        },
+        "evidenceNote": {
+          "type": "string",
+          "required": false
+        },
+        "evidence": {
+          "type": "string",
+          "required": false,
+          "description": "Alias of evidenceNote."
+        },
+        "note": {
+          "type": "string",
+          "required": false,
+          "description": "Alias of evidenceNote."
+        },
+        "updatedAt": {
+          "type": "string",
+          "required": false,
+          "description": "Optimistic-lock precondition from a previous read."
+        }
+      }
+    }
+  ],
+  "deny": [
+    "mobile#bootstrap",
+    "mobile#registerPush",
+    "mobile#unregisterPush",
+    "mobile#linkChecklistFile",
+    "mobile#uploadChecklistFile",
+    "mobile_mail#send",
+    "mobile_mail#stageAttachment",
+    "mobile_mail#connectPersonalMailbox",
+    "mobile_mail#savePersonalMailboxFolders",
+    "mobile_mail#refreshPersonalMailboxFolders",
+    "mobile_mail#disconnectPersonalMailbox",
+    "mobile_mail#syncPersonalMailbox",
+    "mobile_mail#savePersonalMailboxSignature",
+    "mobile_mail#beginPersonalMailOAuth",
+    "mobile_mail#completePersonalMailOAuth",
+    "today_api#widgetSnapshot"
+  ]
+}

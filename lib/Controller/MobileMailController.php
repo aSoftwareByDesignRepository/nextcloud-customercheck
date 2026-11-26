@@ -29,6 +29,7 @@ use OCP\AppFramework\Http\JSONResponse;
 use OCP\IRequest;
 use OCP\IUserManager;
 use OCP\IUserSession;
+use OCP\AppFramework\Http\Attribute\PublicPage;
 
 /**
  * Companion personal/team inbox APIs — CUC-PERSONAL-MAIL-1 M3 / MH-13.
@@ -52,12 +53,14 @@ class MobileMailController extends Controller
 		private readonly RateLimitService $rateLimit,
 		private readonly \OCP\IL10N $l10n,
 		private readonly IUserManager $userManager,
+		private readonly \OCA\CustomerCheck\Agent\AgentContext $agentContext,
 	) {
 		parent::__construct($appName, $request);
 	}
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	#[PublicPage]
 	public function inbox(int $workspaceId): JSONResponse
 	{
 		try {
@@ -83,6 +86,7 @@ class MobileMailController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	#[PublicPage]
 	public function message(int $workspaceId, int $id): JSONResponse
 	{
 		try {
@@ -120,6 +124,7 @@ class MobileMailController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
+	#[PublicPage]
 	public function sendAccounts(int $workspaceId): JSONResponse
 	{
 		try {
@@ -408,6 +413,10 @@ class MobileMailController extends Controller
 
 	private function requireUser(): string
 	{
+		// Scoped agent token (middleware-armed principal) before session auth.
+		if ($this->agentContext->isArmed()) {
+			return (string)$this->agentContext->uid();
+		}
 		$user = $this->userSession->getUser();
 		if ($user === null) {
 			throw new AccessDeniedException('AUTH_REQUIRED');
@@ -429,6 +438,9 @@ class MobileMailController extends Controller
 	 */
 	private function assertSafeMutationChannel(): void
 	{
+		if ($this->agentContext->isArmed()) {
+			return;
+		}
 		if ($this->request->passesCSRFCheck()) {
 			return;
 		}
