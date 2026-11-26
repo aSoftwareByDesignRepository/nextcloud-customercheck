@@ -196,4 +196,34 @@ TXT;
 		$clean = "Line one\n\nLine two with dashes ---- still fine";
 		$this->assertSame($clean, MailPreviewText::stripMimeDebris($clean));
 	}
+
+	// ---------- issue nextcloud-ticketcheck#11 parity: readable mail text ----------
+
+	public function testStripHtmlDropsHeadStyleScriptAndKeepsBreaks(): void
+	{
+		$out = MailPreviewText::stripHtml(
+			'<html><head><style>body{font-family:Arial}</style></head>'
+			. '<body><p>Hallo<br>Team,</p><script>alert(1)</script></body></html>'
+		);
+		$this->assertStringContainsString("Hallo\nTeam", $out);
+		$this->assertStringNotContainsString('font-family', $out);
+		$this->assertStringNotContainsString('alert', $out);
+	}
+
+	public function testStripHtmlDecodesNbspToSpace(): void
+	{
+		$out = MailPreviewText::stripHtml('<p>a&nbsp;b</p>');
+		$this->assertStringContainsString('a b', $out);
+		$this->assertStringNotContainsString("\xC2\xA0", $out);
+	}
+
+	public function testMultipartPartCharsetIsHonored(): void
+	{
+		// ISO-8859-15 euro sign — mis-guessed as Windows-1252 it becomes ¤.
+		$mime = "Content-Type: multipart/alternative; boundary=q\r\n\r\n"
+			. "--q\r\nContent-Type: text/plain; charset=ISO-8859-15\r\n\r\n"
+			. "Preis " . chr(0xA4) . "\r\n--q--\r\n";
+		$out = MailPreviewText::extractBestMimePart($mime);
+		$this->assertStringContainsString('Preis €', $out);
+	}
 }

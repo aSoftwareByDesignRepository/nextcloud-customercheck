@@ -70,7 +70,11 @@ final class MailPreviewText
 			}
 			$ct = self::headerValue($headers, 'content-type');
 			$cte = self::headerValue($headers, 'content-transfer-encoding');
-			$decoded = self::decodeByTransferEncoding($body, $cte);
+			$charset = '';
+			if (preg_match('/charset\s*=\s*"?([a-z0-9._-]+)"?/i', $ct, $cm) === 1) {
+				$charset = $cm[1];
+			}
+			$decoded = self::decodeByTransferEncoding($body, $cte, $charset);
 			$ctLower = mb_strtolower($ct);
 			if (str_starts_with($ctLower, 'text/plain')) {
 				$plain = $decoded;
@@ -193,11 +197,25 @@ final class MailPreviewText
 		if (!$hasTag) {
 			return $raw;
 		}
-		// Drop executable / style blocks before strip_tags so their contents are not left as text.
-		$scrubbed = preg_replace('#<(script|style)\b[^>]*>.*?</\1>#is', '', $raw) ?? $raw;
+		// Drop executable / style / non-rendered blocks before strip_tags so
+		// their contents are not left as text.
+		$scrubbed = preg_replace('/<!--.*?-->/s', '', $raw) ?? $raw;
+		$scrubbed = preg_replace('#<(script|style|head|title|template|noscript|svg)\b[^>]*>.*?</\1>#is', '', $scrubbed) ?? $scrubbed;
+		// Block-level boundaries become line breaks BEFORE tag removal —
+		// bare strip_tags glues every word in the mail together.
+		$scrubbed = preg_replace('/<br\b[^>]*>/i', "\n", $scrubbed) ?? $scrubbed;
+		$scrubbed = preg_replace('/<hr\b[^>]*>/i', "\n", $scrubbed) ?? $scrubbed;
+		$scrubbed = preg_replace('/<(p|blockquote|tr)\b[^>]*>/i', "\n", $scrubbed) ?? $scrubbed;
+		$scrubbed = preg_replace('/<li\b[^>]*>/i', "\n- ", $scrubbed) ?? $scrubbed;
+		$scrubbed = preg_replace('#</(p|div|table|tr|ul|ol|h[1-6]|blockquote|pre|section|article|header|footer|form|fieldset|dl|dt|dd|address|main|aside|nav|figure|figcaption)>#i', "\n", $scrubbed) ?? $scrubbed;
+		$scrubbed = preg_replace('#</(td|th)>#i', "\t", $scrubbed) ?? $scrubbed;
 		$text = html_entity_decode(strip_tags($scrubbed), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+		if (!is_string($text)) {
+			$text = strip_tags($raw);
+		}
+		$text = str_replace("\xC2\xA0", ' ', $text); // &nbsp; → normal space
 
-		return is_string($text) ? $text : strip_tags($raw);
+		return $text;
 	}
 
 	/**
@@ -285,18 +303,48 @@ final class MailPreviewText
 		return trim($m[1]);
 	}
 
-	private static function decodeByTransferEncoding(string $body, string $cte): string
+	private static function decodeByTransferEncoding(string $body, string $cte, string $charset = ''): string
 	{
 		$cte = mb_strtolower(trim($cte));
 		if ($cte === 'base64') {
 			$decoded = base64_decode(preg_replace('/\s+/', '', $body) ?? $body, true);
-			return is_string($decoded) ? $decoded : $body;
-		}
-		if ($cte === 'quoted-printable' || $cte === 'qp') {
+			$body = is_string($decoded) ? $decoded : $body;
+		} elseif ($cte === 'quoted-printable' || $cte === 'qp') {
 			$decoded = quoted_printable_decode($body);
-			return is_string($decoded) && $decoded !== '' ? $decoded : $body;
+			$body = is_string($decoded) && $decoded !== '' ? $decoded : $body;
 		}
 
-		return $body;
+		return self::declaredCharsetToUtf8($body, $charset);
+	}
+
+	/**
+	 * Convert bytes under the part's declared charset to UTF-8.
+	 * The name is wire data: iconv returns false and mb_convert_encoding
+	 * throws ValueError on unknown charsets — both attempts are guarded.
+	 * iconv first: it covers charsets mbstring lacks (e.g. windows-1250).
+	 */
+	private static function declaredCharsetToUtf8(string $body, string $charset): string
+	{
+		$charset = mb_strtolower(trim($charset, " \t\"'"));
+		if ($charset === '' || $body === ''
+			|| in_array($charset, ['utf-8', 'utf8', 'us-ascii', 'ascii'], true)) {
+			return $body;
+		}
+		$converted = false;
+		if (function_exists('iconv')) {
+			$converted = @iconv($charset, 'UTF-8//IGNORE', $body);
+		}
+		if (!is_string($converted) || $converted === '') {
+			try {
+				$converted = @mb_convert_encoding($body, 'UTF-8', $charset);
+			} catch (\Throwable) {
+				$converted = false;
+			}
+		}
+		if (is_string($converted) && $converted !== '' && mb_check_encoding($converted, 'UTF-8')) {
+			return $converted;
+		}
+
+		return $body; // ensureUtf8 later repairs undeclared/broken bytes
 	}
 }
