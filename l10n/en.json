@@ -3247,6 +3247,12 @@
 		"Token revoked.": "Token revoked.",
 		"Action failed.": "Action failed.",
 		"Users can now create their own AI tokens.": "Users can now create their own AI tokens.",
-		"Only administrators can connect AI assistants.": "Only administrators can connect AI assistants."
+		"Only administrators can connect AI assistants.": "Only administrators can connect AI assistants.",
+		"Endpoint": "Endpoint",
+		"Events": "Events",
+		"Last delivery": "Last delivery",
+		"State": "State",
+		"Webhook endpoints": "Webhook endpoints",
+		"Your AI assistant can register endpoints that receive a signed notification whenever it changes something here. They belong to you — test or revoke them any time.": "Your AI assistant can register endpoints that receive a signed notification whenever it changes something here. They belong to you — test or revoke them any time."
 	}
 }
