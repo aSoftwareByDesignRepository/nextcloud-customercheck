@@ -3247,7 +3247,23 @@
 		"Token revoked.": "Jeton révoqué.",
 		"Action failed.": "L’action a échoué.",
 		"Users can now create their own AI tokens.": "Les utilisateurs peuvent désormais créer leurs propres jetons IA.",
-		"Only administrators can connect AI assistants.": "Seuls les administrateurs peuvent connecter des assistants IA."
+		"Only administrators can connect AI assistants.": "Seuls les administrateurs peuvent connecter des assistants IA.",
+		"Endpoint": "Point de terminaison",
+		"Events": "Événements",
+		"Last delivery": "Dernière remise",
+		"State": "État",
+		"Webhook endpoints": "Points de terminaison webhook",
+		"Your AI assistant can register endpoints that receive a signed notification whenever it changes something here. They belong to you — test or revoke them any time.": "Ton assistant IA peut enregistrer des points de terminaison qui reçoivent une notification signée chaque fois qu’il modifie quelque chose ici. Ils t’appartiennent — teste-les ou révoque-les à tout moment.",
+		"All events": "Tous les événements",
+		"Could not queue the test.": "Impossible de mettre le test en file.",
+		"Disabled": "Désactivé",
+		"Endpoint revoked.": "Point de terminaison révoqué.",
+		"Endpoints could not be loaded.": "Les points de terminaison n’ont pas pu être chargés.",
+		"No webhook endpoints yet.": "Pas encore de points de terminaison webhook.",
+		"Pending events are dropped — your AI can register a new endpoint any time.": "Les événements en attente sont abandonnés — ton IA peut enregistrer un nouveau point de terminaison à tout moment.",
+		"Stop notifications to": "Arrêter les notifications vers",
+		"Test": "Tester",
+		"Test notification queued — check your endpoint.": "Notification de test mise en file — vérifie ton point de terminaison."
 	},
 	"pluralForm": "nplurals=2; plural=(n > 1);"
 }

@@ -3247,6 +3247,22 @@
 		"Token revoked.": "Token widerrufen.",
 		"Action failed.": "Aktion fehlgeschlagen.",
 		"Users can now create their own AI tokens.": "Benutzer können jetzt eigene KI-Token erstellen.",
-		"Only administrators can connect AI assistants.": "Nur Admins können KI-Assistenten verbinden."
+		"Only administrators can connect AI assistants.": "Nur Admins können KI-Assistenten verbinden.",
+		"Endpoint": "Endpunkt",
+		"Events": "Ereignisse",
+		"Last delivery": "Letzte Zustellung",
+		"State": "Status",
+		"Webhook endpoints": "Webhook-Endpunkte",
+		"Your AI assistant can register endpoints that receive a signed notification whenever it changes something here. They belong to you — test or revoke them any time.": "Dein KI-Assistent kann Endpunkte registrieren, die eine signierte Benachrichtigung erhalten, wenn er hier etwas ändert. Die Endpunkte gehören dir — teste oder widerrufe sie jederzeit.",
+		"All events": "Alle Ereignisse",
+		"Could not queue the test.": "Der Test konnte nicht eingereiht werden.",
+		"Disabled": "Deaktiviert",
+		"Endpoint revoked.": "Endpunkt widerrufen.",
+		"Endpoints could not be loaded.": "Endpunkte konnten nicht geladen werden.",
+		"No webhook endpoints yet.": "Noch keine Webhook-Endpunkte.",
+		"Pending events are dropped — your AI can register a new endpoint any time.": "Ausstehende Ereignisse werden verworfen — deine KI kann jederzeit einen neuen Endpunkt registrieren.",
+		"Stop notifications to": "Benachrichtigungen an",
+		"Test": "Test",
+		"Test notification queued — check your endpoint.": "Testbenachrichtigung eingereiht — prüfe deinen Endpunkt."
 	}
 }

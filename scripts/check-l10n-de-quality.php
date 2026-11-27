@@ -108,6 +108,8 @@ $allowExact = [
 	'Malta' => true, // German name is identical
 	'Portugal' => true, // German name is identical
 	'Phase: %s' => true, // "Phase" is the correct German word — identical by nature
+	'Test' => true, // "der Test" is the correct German word — identical by nature
+	'Token' => true, // "das Token" is the correct German word — identical by nature
 ];
 
 /**
