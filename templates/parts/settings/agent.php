@@ -118,7 +118,7 @@ $crm_tokens = is_array($crm_state['tokens']) ? $crm_state['tokens'] : [];
 	<dialog id="crm-agent-mint-dialog" class="crm-dialog crm-agent-mint-dialog" aria-labelledby="crm-agent-mint-h">
 		<div class="crm-dialog__body">
 			<h3 id="crm-agent-mint-h"><?php p($l->t('Connect your AI')); ?></h3>
-			<form id="crm-agent-mint-form" novalidate>
+			<form id="crm-agent-mint-form" class="crm-form-stack" novalidate>
 				<div class="crm-form-row">
 					<label for="crm-agent-label"><?php p($l->t('Label')); ?></label>
 					<input type="text" id="crm-agent-label" name="label" maxlength="190" required autocomplete="off" placeholder="<?php p($l->t('Claude on my laptop')); ?>">
