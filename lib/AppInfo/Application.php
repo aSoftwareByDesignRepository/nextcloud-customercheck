@@ -126,7 +126,8 @@ class Application extends App implements IBootstrap
 				$c->get(\OCA\CustomerCheck\Agent\AgentSeatGate::class),
 				$c->get(\OCA\CustomerCheck\Agent\AgentAuditMapper::class),
 				$c->get(\Psr\Log\LoggerInterface::class),
-				'customercheck'
+				'customercheck',
+				$c->query(\OCA\CustomerCheck\Agent\AgentWebhookDispatcher::class)
 			);
 		});
 		$context->registerMiddleware(\OCA\CustomerCheck\Middleware\AgentAuthMiddleware::class);
