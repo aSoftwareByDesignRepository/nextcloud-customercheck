@@ -102,6 +102,25 @@ $crm_tokens = is_array($crm_state['tokens']) ? $crm_state['tokens'] : [];
 	</div>
 	<?php endif; ?>
 
+	<div class="crm-agent-webhooks" id="crm-agent-webhooks">
+		<h3 class="crm-agent-sub-h" id="crm-agent-webhooks-h"><?php p($l->t('Webhook endpoints')); ?></h3>
+		<p class="crm-form-row__hint"><?php p($l->t('Your AI assistant can register endpoints that receive a signed notification whenever it changes something here. They belong to you — test or revoke them any time.')); ?></p>
+		<div class="crm-table-wrap crm-agent-tablewrap" tabindex="0" role="region" aria-labelledby="crm-agent-webhooks-h">
+			<table class="crm-table crm-table--cards crm-agent-table" id="crm-agent-webhook-table">
+				<thead>
+					<tr>
+						<th scope="col"><?php p($l->t('Endpoint')); ?></th>
+						<th scope="col"><?php p($l->t('Events')); ?></th>
+						<th scope="col"><?php p($l->t('State')); ?></th>
+						<th scope="col"><?php p($l->t('Last delivery')); ?></th>
+						<th scope="col"><span class="crm-visually-hidden"><?php p($l->t('Actions')); ?></span></th>
+					</tr>
+				</thead>
+				<tbody id="crm-agent-webhook-tbody"></tbody>
+			</table>
+		</div>
+	</div>
+
 	<?php if ($crm_state['isAdmin']): ?>
 	<div class="crm-form-row crm-agent-selfmint">
 		<input type="hidden" name="agent_self_mint" value="0">

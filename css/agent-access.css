@@ -477,6 +477,14 @@ dialog.crm-agent-revoke-dialog:not([open]) {
 	font-size: var(--crm-fs-sm);
 	line-height: var(--crm-line-base);
 }
+.crm-agent-sub-h {
+	margin: var(--crm-space-6, 32px) 0 var(--crm-space-1, 4px);
+	font-size: var(--crm-fs-lg, 1.125rem);
+	line-height: var(--crm-line-tight, 1.25);
+}
+.crm-agent-webhooks > .crm-form-row__hint {
+	margin-bottom: var(--crm-space-3, 12px);
+}
 
 /* Inline field error (mint dialog) — family field-errors recipe: danger
    ink, small type; next-step copy lives in the text the server fields-map
