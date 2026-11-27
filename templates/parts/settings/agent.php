@@ -63,8 +63,7 @@ $crm_tokens = is_array($crm_state['tokens']) ? $crm_state['tokens'] : [];
 			<tbody id="crm-agent-tbody">
 				<?php foreach ($crm_tokens as $crm_tok): ?>
 				<tr data-token-id="<?php p((string)($crm_tok['id'] ?? '')); ?>" data-token-label="<?php p((string)($crm_tok['label'] ?? '')); ?>"<?php if (($crm_tok['state'] ?? '') !== 'active'): ?> class="crm-agent-row--inactive"<?php endif; ?>>
-					<td data-cell="<?php p($l->t('Label')); ?>">
-						<span class="crm-agent-label"><?php p((string)($crm_tok['label'] ?? '')); ?></span>
+					<td data-cell="<?php p($l->t('Label')); ?>" class="crm-agent-label-cell"><span class="crm-agent-labelcell"><span class="crm-agent-label" title="<?php p((string)($crm_tok['label'] ?? '')); ?>"><?php p((string)($crm_tok['label'] ?? '')); ?></span>
 						<?php if (($crm_tok['state'] ?? '') === 'revoked'): ?>
 							<span class="crm-badge crm-badge--neutral"><?php p($l->t('Revoked')); ?></span>
 						<?php elseif (($crm_tok['state'] ?? '') === 'expired'): ?>
@@ -74,9 +73,8 @@ $crm_tokens = is_array($crm_state['tokens']) ? $crm_state['tokens'] : [];
 						<?php endif; ?>
 						<?php if ($crm_state['isAdmin'] && ($crm_tok['userId'] ?? '') !== ''): ?>
 							<span class="crm-agent-owner"><?php p((string)$crm_tok['userId']); ?></span>
-						<?php endif; ?>
-					</td>
-					<td data-cell="<?php p($l->t('Scopes')); ?>">
+						<?php endif; ?></span></td>
+					<td data-cell="<?php p($l->t('Scopes')); ?>" class="crm-agent-scopes-cell">
 						<span class="crm-agent-scopes">
 						<?php foreach (($crm_tok['scopes'] ?? []) as $crm_scope): ?>
 							<span class="crm-badge crm-badge--neutral crm-agent-scope" title="<?php p((string)$crm_scope); ?>"><?php p((string)($crm_state['scopeLabels'][$crm_scope] ?? $crm_scope)); ?></span>

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace OCA\CustomerCheck\Tests\Unit\BackgroundJob;
 
+use OCA\CustomerCheck\BackgroundJob\AgentWebhookDeliverJob;
 use OCA\CustomerCheck\BackgroundJob\AgreementStatusRecomputeJob;
 use OCA\CustomerCheck\BackgroundJob\EntityRevisionPurgeJob;
 use OCA\CustomerCheck\BackgroundJob\InvoicePaidPollJob;
@@ -34,6 +35,7 @@ final class UpgradeBackupSharedLockTest extends TestCase
 {
 	/** Every app BackgroundJob — the whole family is wired into the contract. */
 	private const JOB_CLASSES = [
+		AgentWebhookDeliverJob::class,
 		AgreementStatusRecomputeJob::class,
 		EntityRevisionPurgeJob::class,
 		InvoicePaidPollJob::class,
